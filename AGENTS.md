@@ -16,7 +16,7 @@ ApproveDesk is an approval workflow application: organizations submit documents,
 | Component   | Decision                                          |
 |-------------|---------------------------------------------------|
 | Framework   | Laravel 13.x (PHP 8.3–8.5)                        |
-| Frontend    | Livewire 3 + Alpine.js + Tailwind CSS             |
+| Frontend    | Livewire 4 + Alpine.js + Tailwind CSS 4 + Flux UI |
 | Database    | MySQL 8.0+/MariaDB 10.6+ in production; SQLite for dev/tests |
 | Queue/Cache | `database` driver (file cache) — Redis only optional later |
 | Auth        | Official Livewire starter kit + spatie/laravel-permission |
@@ -84,7 +84,7 @@ app/
 
 ## Testing Policy
 
-- Pest (skeleton default). Feature tests per topology, unit tests for engine/actions/services, factories for all models.
+- PHPUnit (skeleton default for Laravel 13). Feature tests per topology, unit tests for engine/actions/services, factories for all models.
 - Tests run on SQLite in-memory — they must not depend on MySQL-only behavior.
 - CI enforces `--min=80` coverage on `app/`; `WorkflowEngine` is expected at 100%.
 - Browser tests (Laravel Dusk) only for the submission wizard and approval modal flows; keep the set small.

@@ -42,7 +42,7 @@ The seeder creates an admin user for local use only — credentials are printed 
 ```bash
 php artisan test                      # full suite (SQLite in-memory)
 php artisan test --parallel           # faster — run before pushing
-php artisan test --coverage --min=80  # same gate as CI
+vendor/bin/phpunit --coverage-clover=coverage.xml && php scripts/coverage-gate.php coverage.xml 80   # same gate as CI
 ./vendor/bin/pint --dirty             # format changed files
 php artisan migrate:fresh --seed      # reset dev database
 php artisan schedule:work             # run scheduler locally (escalations, digests)
