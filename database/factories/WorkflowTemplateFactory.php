@@ -32,6 +32,8 @@ class WorkflowTemplateFactory extends Factory
     /**
      * Sequential chain of steps, each assigned to the given approvers
      * (one user per step, in order).
+     *
+     * @param  array<int, User|int>  $approvers
      */
     public function sequential(array $approvers): static
     {

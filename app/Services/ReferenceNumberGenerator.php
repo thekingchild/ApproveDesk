@@ -31,7 +31,9 @@ class ReferenceNumberGenerator
         }
 
         // Fall back to a time-based tail that cannot collide in practice.
-        return sprintf('%s-%d-%05d', $prefix, $year, ($base + 26) + (now()->timestamp % 100000));
+        $tail = ((int) now()->getTimestamp()) % 100_000;
+
+        return sprintf('%s-%d-%05d', $prefix, $year, ($base + 26) + $tail);
     }
 
     private function exists(string $candidate): bool

@@ -5,6 +5,7 @@ namespace Database\Factories;
 use App\Enums\SubmissionPriority;
 use App\Enums\SubmissionStatus;
 use App\Enums\SubmissionType;
+use App\Models\Department;
 use App\Models\Submission;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -39,6 +40,9 @@ class SubmissionFactory extends Factory
         return $this->state(fn () => ['priority' => $priority]);
     }
 
+    /**
+     * @param  Department|int  $department
+     */
     public function byDepartment($department): static
     {
         return $this->state(fn () => ['department_id' => $department]);

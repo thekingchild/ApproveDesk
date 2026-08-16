@@ -6,7 +6,6 @@
  *
  * Usage: php scripts/coverage-gate.php coverage.xml 80
  */
-
 $report = $argv[1] ?? 'coverage.xml';
 $threshold = (float) ($argv[2] ?? 80);
 
@@ -43,6 +42,6 @@ if ($statements === 0) {
 }
 
 $percentage = round(($covered / $statements) * 100, 2);
-printf("Line coverage (app/): %.2f%% (%d/%d statements) — threshold %.2f%%%s", $percentage, $covered, $statements, $threshold, PHP_EOL);
+printf('Line coverage (app/): %.2f%% (%d/%d statements) — threshold %.2f%%%s', $percentage, $covered, $statements, $threshold, PHP_EOL);
 
 exit($percentage >= $threshold ? 0 : 1);

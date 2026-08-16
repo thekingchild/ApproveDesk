@@ -6,6 +6,7 @@ use App\Enums\WorkflowActionType;
 use Database\Factories\WorkflowActionFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
 use RuntimeException;
 
@@ -23,6 +24,10 @@ use RuntimeException;
  * @property string|null $ip_address
  * @property string|null $user_agent
  * @property Carbon|null $created_at
+ * @property-read WorkflowInstance $instance
+ * @property-read WorkflowTemplateStep $step
+ * @property-read User $actor
+ * @property-read User|null $delegate
  */
 class WorkflowAction extends Model
 {
@@ -54,22 +59,34 @@ class WorkflowAction extends Model
         });
     }
 
-    public function instance()
+    /**
+     * @return BelongsTo<WorkflowInstance, $this>
+     */
+    public function instance(): BelongsTo
     {
         return $this->belongsTo(WorkflowInstance::class, 'instance_id');
     }
 
-    public function step()
+    /**
+     * @return BelongsTo<WorkflowTemplateStep, $this>
+     */
+    public function step(): BelongsTo
     {
         return $this->belongsTo(WorkflowTemplateStep::class, 'step_id');
     }
 
-    public function actor()
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function actor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'actor_id');
     }
 
-    public function delegate()
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function delegate(): BelongsTo
     {
         return $this->belongsTo(User::class, 'delegated_to');
     }

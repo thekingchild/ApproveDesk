@@ -9,6 +9,7 @@ use Database\Factories\WorkflowTemplateStepFactory;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
 use Spatie\Permission\Models\Role;
 
@@ -20,13 +21,14 @@ use Spatie\Permission\Models\Role;
  * @property StepType $step_type
  * @property int|null $quorum_count
  * @property AssigneeType $assignee_type
- * @property array $assignee_ids
- * @property array|null $conditions
+ * @property array<int, int> $assignee_ids
+ * @property array<string, mixed>|null $conditions
  * @property int|null $timeout_hours
  * @property TimeoutAction|null $timeout_action
  * @property bool $allow_delegation
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
+ * @property-read WorkflowTemplate $template
  */
 class WorkflowTemplateStep extends Model
 {
@@ -53,7 +55,10 @@ class WorkflowTemplateStep extends Model
         ];
     }
 
-    public function template()
+    /**
+     * @return BelongsTo<WorkflowTemplate, $this>
+     */
+    public function template(): BelongsTo
     {
         return $this->belongsTo(WorkflowTemplate::class, 'template_id');
     }
@@ -64,7 +69,7 @@ class WorkflowTemplateStep extends Model
      *
      * @return Collection<int, User>
      */
-    public function assignedUsers()
+    public function assignedUsers(): Collection
     {
         $ids = $this->assignee_ids ?? [];
 

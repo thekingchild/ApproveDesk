@@ -5,6 +5,7 @@ namespace App\Models;
 use Database\Factories\SubmissionFileFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
 
 /**
@@ -38,12 +39,18 @@ class SubmissionFile extends Model
         ];
     }
 
-    public function submission()
+    /**
+     * @return BelongsTo<Submission, $this>
+     */
+    public function submission(): BelongsTo
     {
         return $this->belongsTo(Submission::class);
     }
 
-    public function uploader()
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function uploader(): BelongsTo
     {
         return $this->belongsTo(User::class, 'uploaded_by');
     }

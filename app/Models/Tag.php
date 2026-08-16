@@ -5,6 +5,7 @@ namespace App\Models;
 use Database\Factories\TagFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Support\Str;
 
 /**
@@ -26,7 +27,10 @@ class Tag extends Model
         });
     }
 
-    public function submissions()
+    /**
+     * @return MorphToMany<Submission, $this>
+     */
+    public function submissions(): MorphToMany
     {
         return $this->morphedByMany(Submission::class, 'taggable');
     }

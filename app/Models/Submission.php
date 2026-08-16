@@ -6,14 +6,21 @@ use App\Enums\SubmissionPriority;
 use App\Enums\SubmissionStatus;
 use App\Enums\SubmissionType;
 use App\Services\ReferenceNumberGenerator;
+use Database\Factories\SubmissionFactory;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
- * @property string $reference_number
+ * @property string|null $reference_number
  * @property SubmissionType $type
  * @property string $title
  * @property string|null $body
@@ -22,12 +29,19 @@ use Illuminate\Support\Carbon;
  * @property SubmissionPriority $priority
  * @property Carbon|null $due_date
  * @property SubmissionStatus $status
- * @property array|null $metadata
+ * @property array<string, mixed>|null $metadata
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
+ * @property-read User $submitter
+ * @property-read Department|null $department
+ * @property-read Collection<int, SubmissionFile> $files
+ * @property-read WorkflowInstance|null $workflowInstance
+ * @property-read Collection<int, Comment> $comments
+ * @property-read Collection<int, Tag> $tags
  */
 class Submission extends Model
 {
+    /** @use HasFactory<SubmissionFactory> */
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
@@ -55,32 +69,50 @@ class Submission extends Model
         });
     }
 
-    public function submitter()
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function submitter(): BelongsTo
     {
         return $this->belongsTo(User::class, 'submitter_id');
     }
 
-    public function department()
+    /**
+     * @return BelongsTo<Department, $this>
+     */
+    public function department(): BelongsTo
     {
         return $this->belongsTo(Department::class);
     }
 
-    public function files()
+    /**
+     * @return HasMany<SubmissionFile, $this>
+     */
+    public function files(): HasMany
     {
         return $this->hasMany(SubmissionFile::class);
     }
 
-    public function workflowInstance()
+    /**
+     * @return HasOne<WorkflowInstance, $this>
+     */
+    public function workflowInstance(): HasOne
     {
         return $this->hasOne(WorkflowInstance::class);
     }
 
-    public function comments()
+    /**
+     * @return MorphMany<Comment, $this>
+     */
+    public function comments(): MorphMany
     {
         return $this->morphMany(Comment::class, 'commentable');
     }
 
-    public function tags()
+    /**
+     * @return MorphToMany<Tag, $this>
+     */
+    public function tags(): MorphToMany
     {
         return $this->morphToMany(Tag::class, 'taggable');
     }

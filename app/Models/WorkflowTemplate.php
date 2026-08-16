@@ -4,8 +4,11 @@ namespace App\Models;
 
 use App\Enums\SubmissionType;
 use Database\Factories\WorkflowTemplateFactory;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
 /**
@@ -18,6 +21,8 @@ use Illuminate\Support\Carbon;
  * @property int $created_by
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
+ * @property-read Collection<int, WorkflowTemplateStep> $steps
+ * @property-read User $creator
  */
 class WorkflowTemplate extends Model
 {
@@ -37,18 +42,27 @@ class WorkflowTemplate extends Model
         ];
     }
 
-    public function steps()
+    /**
+     * @return HasMany<WorkflowTemplateStep, $this>
+     */
+    public function steps(): HasMany
     {
         return $this->hasMany(WorkflowTemplateStep::class, 'template_id')
             ->orderBy('step_order');
     }
 
-    public function instances()
+    /**
+     * @return HasMany<WorkflowInstance, $this>
+     */
+    public function instances(): HasMany
     {
         return $this->hasMany(WorkflowInstance::class, 'template_id');
     }
 
-    public function creator()
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
     }

@@ -5,6 +5,8 @@ namespace App\Models;
 use Database\Factories\DepartmentFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
 /**
@@ -22,27 +24,42 @@ class Department extends Model
 
     protected $fillable = ['name', 'parent_id', 'manager_id'];
 
-    public function parent()
+    /**
+     * @return BelongsTo<Department, $this>
+     */
+    public function parent(): BelongsTo
     {
         return $this->belongsTo(self::class, 'parent_id');
     }
 
-    public function children()
+    /**
+     * @return HasMany<Department, $this>
+     */
+    public function children(): HasMany
     {
         return $this->hasMany(self::class, 'parent_id');
     }
 
-    public function manager()
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function manager(): BelongsTo
     {
         return $this->belongsTo(User::class, 'manager_id');
     }
 
-    public function users()
+    /**
+     * @return HasMany<User, $this>
+     */
+    public function users(): HasMany
     {
         return $this->hasMany(User::class);
     }
 
-    public function submissions()
+    /**
+     * @return HasMany<Submission, $this>
+     */
+    public function submissions(): HasMany
     {
         return $this->hasMany(Submission::class);
     }

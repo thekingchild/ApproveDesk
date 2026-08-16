@@ -6,7 +6,10 @@ namespace App\Models;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
@@ -31,6 +34,8 @@ use Spatie\Permission\Traits\HasRoles;
  * @property string|null $avatar
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
+ * @property-read Department|null $department
+ * @property-read Collection<int, Submission> $submissions
  */
 #[Fillable(['name', 'email', 'password'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
@@ -54,12 +59,18 @@ class User extends Authenticatable implements PasskeyUser
         ];
     }
 
-    public function department()
+    /**
+     * @return BelongsTo<Department, $this>
+     */
+    public function department(): BelongsTo
     {
         return $this->belongsTo(Department::class);
     }
 
-    public function submissions()
+    /**
+     * @return HasMany<Submission, $this>
+     */
+    public function submissions(): HasMany
     {
         return $this->hasMany(Submission::class, 'submitter_id');
     }
