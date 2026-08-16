@@ -26,6 +26,9 @@ use Spatie\Permission\Traits\HasRoles;
  * @property string|null $two_factor_recovery_codes
  * @property Carbon|null $two_factor_confirmed_at
  * @property string|null $remember_token
+ * @property int|null $department_id
+ * @property bool $is_active
+ * @property string|null $avatar
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -46,7 +49,19 @@ class User extends Authenticatable implements PasskeyUser
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'department_id' => 'integer',
+            'is_active' => 'boolean',
         ];
+    }
+
+    public function department()
+    {
+        return $this->belongsTo(Department::class);
+    }
+
+    public function submissions()
+    {
+        return $this->hasMany(Submission::class, 'submitter_id');
     }
 
     /**
