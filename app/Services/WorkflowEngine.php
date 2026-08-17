@@ -9,6 +9,7 @@ use App\Enums\WorkflowStatus;
 use App\Events\WorkflowAdvanced;
 use App\Events\WorkflowCompleted;
 use App\Events\WorkflowRejected;
+use App\Events\WorkflowReturned;
 use App\Exceptions\WorkflowException;
 use App\Models\Submission;
 use App\Models\User;
@@ -227,6 +228,36 @@ class WorkflowEngine
     }
 
     /**
+     * Reactivate an instance that was put on hold by a return-for-revision.
+     * The current step is preserved, so the chain resumes where it stopped.
+     */
+    public function resume(WorkflowInstance $instance): WorkflowInstance
+    {
+        $resumed = DB::transaction(function () use ($instance): WorkflowInstance {
+            /** @var WorkflowInstance $instance */
+            $instance = WorkflowInstance::query()
+                ->whereKey($instance->getKey())
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($instance->status !== WorkflowStatus::OnHold) {
+                throw WorkflowException::instanceNotActive($instance->status->value);
+            }
+
+            $instance->update(['status' => WorkflowStatus::Active]);
+
+            $instance->submission->update(['status' => SubmissionStatus::InReview]);
+
+            return $instance;
+        });
+
+        // Re-notify the approvers of the step the chain resumes on.
+        $this->dispatchEvents($resumed);
+
+        return $resumed;
+    }
+
+    /**
      * Domain events fire only after the transaction commits, so listeners
      * never observe uncommitted state.
      */
@@ -237,6 +268,8 @@ class WorkflowEngine
                 event(new WorkflowCompleted($instance));
             } elseif ($instance->wasRejected) {
                 event(new WorkflowRejected($instance));
+            } elseif ($instance->status === WorkflowStatus::OnHold) {
+                event(new WorkflowReturned($instance));
             } else {
                 event(new WorkflowAdvanced($instance));
             }

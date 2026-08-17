@@ -2,9 +2,17 @@
 
 namespace App\Providers;
 
+use App\Events\SubmissionCreated;
+use App\Events\WorkflowAdvanced;
+use App\Events\WorkflowCompleted;
+use App\Events\WorkflowRejected;
+use App\Events\WorkflowReturned;
+use App\Listeners\NotifyCurrentApprovers;
+use App\Listeners\NotifySubmitterOfDecision;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
@@ -31,6 +39,22 @@ class AppServiceProvider extends ServiceProvider
 
         // super-admin holds every ability implicitly; no permission matrix entry.
         Gate::before(fn ($user, string $ability) => $user->hasRole('super-admin') ? true : null);
+
+        $this->registerWorkflowListeners();
+    }
+
+    /**
+     * Explicit event-to-listener wiring for the notification side effects.
+     * Domain logic stays inside WorkflowEngine; these only inform humans.
+     */
+    private function registerWorkflowListeners(): void
+    {
+        Event::listen(SubmissionCreated::class, NotifyCurrentApprovers::class);
+        Event::listen(WorkflowAdvanced::class, NotifyCurrentApprovers::class);
+
+        Event::listen(WorkflowCompleted::class, NotifySubmitterOfDecision::class);
+        Event::listen(WorkflowRejected::class, NotifySubmitterOfDecision::class);
+        Event::listen(WorkflowReturned::class, NotifySubmitterOfDecision::class);
     }
 
     /**

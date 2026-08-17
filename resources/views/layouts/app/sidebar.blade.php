@@ -11,10 +11,24 @@
             </flux:sidebar.header>
 
             <flux:sidebar.nav>
-                <flux:sidebar.group :heading="__('Platform')" class="grid">
+                <flux:sidebar.group :heading="__('Approvals')" class="grid">
                     <flux:sidebar.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>
                         {{ __('Dashboard') }}
                     </flux:sidebar.item>
+                    <flux:sidebar.item icon="inbox" :href="route('approvals.inbox')" :current="request()->routeIs('approvals.*')" wire:navigate>
+                        {{ __('Approvals') }}
+                    </flux:sidebar.item>
+                </flux:sidebar.group>
+
+                <flux:sidebar.group :heading="__('Submissions')" class="grid">
+                    <flux:sidebar.item icon="folder" :href="route('submissions.index')" :current="request()->routeIs('submissions.index')" wire:navigate>
+                        {{ __('My submissions') }}
+                    </flux:sidebar.item>
+                    @can('create', \App\Models\Submission::class)
+                        <flux:sidebar.item icon="plus-circle" :href="route('submissions.create')" :current="request()->routeIs('submissions.create')" wire:navigate>
+                            {{ __('New submission') }}
+                        </flux:sidebar.item>
+                    @endcan
                 </flux:sidebar.group>
             </flux:sidebar.nav>
 

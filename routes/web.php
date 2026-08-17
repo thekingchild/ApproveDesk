@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\InstallController;
+use App\Http\Controllers\SubmissionFileDownloadController;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'welcome')->name('home');
@@ -25,6 +26,17 @@ Route::middleware(['auth', 'verified', 'can:settings.manage'])->group(function (
 });
 
 Route::middleware(['auth', 'verified'])->group(function (): void {
+    Route::livewire('submissions', 'pages::submissions.index')->name('submissions.index');
+    Route::livewire('submissions/create', 'pages::submissions.create')
+        ->middleware('can:create,App\Models\Submission')
+        ->name('submissions.create');
+    Route::livewire('submissions/{submission}', 'pages::submissions.show')->name('submissions.show');
+    Route::livewire('approvals/inbox', 'pages::approvals.inbox')->name('approvals.inbox');
+
+    Route::get('submissions/{submission}/files/{file}', SubmissionFileDownloadController::class)
+        ->middleware('signed')
+        ->name('submissions.files.download');
+
     Route::view('dashboard', 'dashboard')->name('dashboard');
 });
 
