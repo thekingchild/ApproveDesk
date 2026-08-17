@@ -21,7 +21,7 @@ All notable changes to ApproveDesk are documented here. The project follows
 - Sanitized TipTap submission bodies, signed PDF/image previews, MIME-restricted uploads, and advanced submission filters.
 - Information-request pause/response/resume, guarded manual escalation, and immediate/daily/weekly/in-app notification preferences.
 - Step-level SLA deadlines with scheduled escalation, automatic approval/rejection outcomes, and overdue indicators.
-- Admin approval analytics with period-based performance metrics, daily activity charts, bottleneck detection, operational follow-up, and CSV export.
+- Admin approval analytics with period-based performance metrics, daily activity charts, bottleneck detection, operational follow-up, and CSV, Excel, and PDF exports.
 - End-to-end Phase 1 acceptance coverage for three-level approval and rejection flows.
 
 ### Security

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\AnalyticsExportFormat;
 use App\Services\AnalyticsService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -18,6 +19,7 @@ class AnalyticsExportRequest extends FormRequest
     {
         return [
             'days' => ['required', 'integer', Rule::in(AnalyticsService::PERIODS)],
+            'format' => ['required', Rule::enum(AnalyticsExportFormat::class)],
         ];
     }
 }

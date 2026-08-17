@@ -16,6 +16,7 @@ use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Livewire\Livewire;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 use Tests\TestCase;
 
 class AnalyticsTest extends TestCase
@@ -103,7 +104,9 @@ class AnalyticsTest extends TestCase
             ->assertOk()
             ->assertSee('Approval analytics')
             ->assertSee('Daily workflow activity')
-            ->assertSee('Step bottlenecks');
+            ->assertSee('Step bottlenecks')
+            ->assertSee('Excel workbook')
+            ->assertSee('PDF report');
 
         Livewire::actingAs($admin)
             ->test('pages::admin.analytics')
@@ -118,26 +121,74 @@ class AnalyticsTest extends TestCase
         $this->resolvedWorkflow(WorkflowStatus::Completed, WorkflowActionType::Approve, '2026-08-10 08:00:00', '2026-08-10 12:00:00');
 
         $response = $this->actingAs($this->admin)
-            ->get(route('admin.analytics.export', ['days' => 30]));
+            ->get(route('admin.analytics.export', ['days' => 30, 'format' => 'csv']));
 
         $response->assertOk()
             ->assertHeader('content-type', 'text/csv; charset=UTF-8')
             ->assertDownload('approval-analytics-2026-07-19-to-2026-08-17.csv');
 
-        $csv = $response->streamedContent();
+        $csv = $response->getContent();
+        $this->assertIsString($csv);
         $this->assertStringContainsString('ApproveDesk approval analytics', $csv);
         $this->assertStringContainsString('"Purchase approvals","Finance review"', $csv);
 
         $this->actingAs(User::factory()->create()->assignRole('submitter'))
-            ->get(route('admin.analytics.export', ['days' => 30]))
+            ->get(route('admin.analytics.export', ['days' => 30, 'format' => 'csv']))
             ->assertForbidden();
+    }
+
+    public function test_admin_can_export_a_formatted_excel_workbook(): void
+    {
+        $this->resolvedWorkflow(WorkflowStatus::Completed, WorkflowActionType::Approve, '2026-08-10 08:00:00', '2026-08-10 12:00:00');
+
+        $response = $this->actingAs($this->admin)
+            ->get(route('admin.analytics.export', ['days' => 30, 'format' => 'xlsx']));
+
+        $response->assertOk()
+            ->assertHeader('content-type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            ->assertDownload('approval-analytics-2026-07-19-to-2026-08-17.xlsx');
+
+        $contents = $response->getContent();
+        $this->assertIsString($contents);
+        $temporary = tempnam(sys_get_temp_dir(), 'analytics-test-');
+        $this->assertNotFalse($temporary);
+
+        try {
+            file_put_contents($temporary, $contents);
+            $workbook = IOFactory::load($temporary);
+            $this->assertSame(['Summary', 'Daily Activity', 'Bottlenecks', 'Active Workflows'], $workbook->getSheetNames());
+            $this->assertSame('ApproveDesk approval analytics', $workbook->getSheetByName('Summary')?->getCell('A1')->getValue());
+            $this->assertSame(1, $workbook->getSheetByName('Summary')?->getCell('B5')->getValue());
+            $this->assertSame('Finance review', $workbook->getSheetByName('Bottlenecks')?->getCell('B2')->getValue());
+            $this->assertSame('0.0%', $workbook->getSheetByName('Summary')?->getStyle('B10')->getNumberFormat()->getFormatCode());
+            $workbook->disconnectWorksheets();
+        } finally {
+            unlink($temporary);
+        }
+    }
+
+    public function test_admin_can_export_a_rendered_pdf_report(): void
+    {
+        $this->resolvedWorkflow(WorkflowStatus::Completed, WorkflowActionType::Approve, '2026-08-10 08:00:00', '2026-08-10 12:00:00');
+
+        $response = $this->actingAs($this->admin)
+            ->get(route('admin.analytics.export', ['days' => 30, 'format' => 'pdf']));
+
+        $response->assertOk()
+            ->assertHeader('content-type', 'application/pdf')
+            ->assertDownload('approval-analytics-2026-07-19-to-2026-08-17.pdf');
+
+        $contents = $response->getContent();
+        $this->assertIsString($contents);
+        $this->assertStringStartsWith('%PDF-', $contents);
+        $this->assertGreaterThan(5_000, strlen($contents));
     }
 
     public function test_export_rejects_an_unsupported_period(): void
     {
         $this->actingAs($this->admin)
-            ->get(route('admin.analytics.export', ['days' => 31]))
-            ->assertSessionHasErrors('days');
+            ->get(route('admin.analytics.export', ['days' => 31, 'format' => 'docx']))
+            ->assertSessionHasErrors(['days', 'format']);
     }
 
     private function resolvedWorkflow(

@@ -63,9 +63,14 @@ new #[Title('Approval analytics')] class extends Component {
                 <flux:select.option value="30">{{ __('Last 30 days') }}</flux:select.option>
                 <flux:select.option value="90">{{ __('Last 90 days') }}</flux:select.option>
             </flux:select>
-            <flux:button :href="route('admin.analytics.export', ['days' => $days])" icon="arrow-down-tray">
-                {{ __('Export CSV') }}
-            </flux:button>
+            <flux:dropdown>
+                <flux:button icon="arrow-down-tray" icon-trailing="chevron-down">{{ __('Export') }}</flux:button>
+                <flux:menu>
+                    <flux:menu.item :href="route('admin.analytics.export', ['days' => $days, 'format' => 'csv'])" icon="document-text">{{ __('CSV data') }}</flux:menu.item>
+                    <flux:menu.item :href="route('admin.analytics.export', ['days' => $days, 'format' => 'xlsx'])" icon="table-cells">{{ __('Excel workbook') }}</flux:menu.item>
+                    <flux:menu.item :href="route('admin.analytics.export', ['days' => $days, 'format' => 'pdf'])" icon="document-arrow-down">{{ __('PDF report') }}</flux:menu.item>
+                </flux:menu>
+            </flux:dropdown>
         </div>
     </div>
 
