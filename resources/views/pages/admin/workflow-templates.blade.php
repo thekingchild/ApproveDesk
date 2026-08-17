@@ -7,6 +7,7 @@ use App\DTOs\WorkflowTemplateStepData;
 use App\Enums\AssigneeType;
 use App\Enums\StepType;
 use App\Enums\SubmissionType;
+use App\Enums\TimeoutAction;
 use App\Models\Department;
 use App\Models\User;
 use App\Models\WorkflowTemplate;
@@ -118,6 +119,8 @@ new #[Title('Workflow templates')] class extends Component {
                 : (string) data_get($step->conditions, 'rules.0.value', ''),
             'trueStep' => data_get($step->conditions, 'true_step'),
             'falseStep' => data_get($step->conditions, 'false_step'),
+            'timeoutHours' => $step->timeout_hours,
+            'timeoutAction' => $step->timeout_action?->value ?? '',
         ])->values()->all();
 
         $this->modal('template-form')->show();
@@ -198,6 +201,8 @@ new #[Title('Workflow templates')] class extends Component {
             'steps.*.conditionValue' => ['nullable', 'string', 'max:1000'],
             'steps.*.trueStep' => ['nullable', 'integer', 'min:1', 'max:20'],
             'steps.*.falseStep' => ['nullable', 'integer', 'min:1', 'max:20'],
+            'steps.*.timeoutHours' => ['nullable', 'integer', 'min:1', 'max:8760'],
+            'steps.*.timeoutAction' => ['nullable', Rule::enum(TimeoutAction::class)],
         ]);
 
         if ($validated['isDefault'] && ! $validated['isActive']) {
@@ -242,6 +247,24 @@ new #[Title('Workflow templates')] class extends Component {
             $conditions = $stepType === StepType::Conditional
                 ? $this->conditionalConfiguration($step, $index, $stepCount)
                 : null;
+            $timeoutHours = ! $automatic && filled($step['timeoutHours'] ?? null)
+                ? (int) $step['timeoutHours']
+                : null;
+            $timeoutAction = ! $automatic && filled($step['timeoutAction'] ?? null)
+                ? TimeoutAction::from($step['timeoutAction'])
+                : null;
+
+            if (($timeoutHours === null) !== ($timeoutAction === null)) {
+                throw ValidationException::withMessages([
+                    "steps.{$index}.timeoutHours" => __('Set both an SLA duration and timeout action, or leave both empty.'),
+                ]);
+            }
+
+            if ($timeoutAction === TimeoutAction::Escalate && $index + 1 >= $stepCount) {
+                throw ValidationException::withMessages([
+                    "steps.{$index}.timeoutAction" => __('The final step cannot escalate because no later step exists.'),
+                ]);
+            }
 
             return new WorkflowTemplateStepData(
                 name: $step['name'],
@@ -251,6 +274,8 @@ new #[Title('Workflow templates')] class extends Component {
                 assigneeIds: $automatic ? [] : $ids,
                 allowDelegation: ! $automatic && (bool) ($step['allowDelegation'] ?? true),
                 conditions: $conditions,
+                timeoutHours: $timeoutHours,
+                timeoutAction: $timeoutAction,
             );
         })->all();
 
@@ -292,6 +317,8 @@ new #[Title('Workflow templates')] class extends Component {
             'conditionValue' => '',
             'trueStep' => null,
             'falseStep' => null,
+            'timeoutHours' => null,
+            'timeoutAction' => '',
         ];
     }
 
@@ -539,6 +566,18 @@ new #[Title('Workflow templates')] class extends Component {
                                 @endif
 
                                 @if (! in_array($step['stepType'], ['conditional', 'auto'], true))
+                                    <div class="grid gap-4 sm:col-span-3 sm:grid-cols-2">
+                                        <flux:input wire:model="steps.{{ $index }}.timeoutHours" type="number" min="1" max="8760" :label="__('SLA duration (hours)')" :placeholder="__('No deadline')" :disabled="$editingTemplateUsed" />
+                                        <flux:select wire:model="steps.{{ $index }}.timeoutAction" :label="__('When overdue')" :disabled="$editingTemplateUsed">
+                                            <flux:select.option value="">{{ __('No automatic action') }}</flux:select.option>
+                                            <flux:select.option value="escalate">{{ __('Escalate to next step') }}</flux:select.option>
+                                            <flux:select.option value="auto_approve">{{ __('Automatically approve') }}</flux:select.option>
+                                            <flux:select.option value="auto_reject">{{ __('Automatically reject') }}</flux:select.option>
+                                        </flux:select>
+                                        <flux:error name="steps.{{ $index }}.timeoutHours" />
+                                        <flux:error name="steps.{{ $index }}.timeoutAction" />
+                                    </div>
+
                                     <div class="sm:col-span-3">
                                         <flux:checkbox wire:model="steps.{{ $index }}.allowDelegation" :label="__('Allow assigned approvers to delegate')" :disabled="$editingTemplateUsed" />
                                     </div>

@@ -107,6 +107,9 @@ new #[Title('Approvals')] class extends Component {
                                 <flux:badge color="{{ ['active' => 'blue', 'on_hold' => 'amber', 'completed' => 'lime', 'rejected' => 'red', 'cancelled' => 'zinc'][$instance->status->value] ?? 'zinc' }}">
                                     {{ str_replace('_', ' ', $instance->status->value) }}
                                 </flux:badge>
+                                @if ($instance->isOverdue())
+                                    <flux:badge color="red">{{ __('Overdue') }}</flux:badge>
+                                @endif
                                 @if ($submission->priority->value !== 'normal')
                                     <flux:badge color="{{ ['urgent' => 'red', 'high' => 'amber', 'low' => 'zinc'][$submission->priority->value] ?? 'zinc' }}">{{ $submission->priority->value }}</flux:badge>
                                 @endif

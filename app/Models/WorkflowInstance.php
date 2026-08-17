@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\WorkflowStatus;
+use Carbon\CarbonInterface;
 use Database\Factories\WorkflowInstanceFactory;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -18,6 +19,7 @@ use Illuminate\Support\Carbon;
  * @property int|null $current_step_id
  * @property WorkflowStatus $status
  * @property Carbon $started_at
+ * @property Carbon|null $step_started_at
  * @property Carbon|null $completed_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -41,7 +43,7 @@ class WorkflowInstance extends Model
     public ?WorkflowTemplateStep $advancedToStep = null;
 
     protected $fillable = [
-        'submission_id', 'template_id', 'current_step_id', 'status', 'started_at', 'completed_at',
+        'submission_id', 'template_id', 'current_step_id', 'status', 'started_at', 'step_started_at', 'completed_at',
     ];
 
     protected function casts(): array
@@ -49,8 +51,27 @@ class WorkflowInstance extends Model
         return [
             'status' => WorkflowStatus::class,
             'started_at' => 'datetime',
+            'step_started_at' => 'datetime',
             'completed_at' => 'datetime',
         ];
+    }
+
+    public function deadlineAt(): ?CarbonInterface
+    {
+        $hours = $this->currentStep?->timeout_hours;
+
+        return $hours !== null && $this->step_started_at !== null
+            ? $this->step_started_at->addHours($hours)
+            : null;
+    }
+
+    public function isOverdue(): bool
+    {
+        $deadline = $this->deadlineAt();
+
+        return $this->status === WorkflowStatus::Active
+            && $deadline !== null
+            && $deadline->lessThanOrEqualTo(now());
     }
 
     /**

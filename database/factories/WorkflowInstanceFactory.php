@@ -21,6 +21,7 @@ class WorkflowInstanceFactory extends Factory
             'current_step_id' => null,
             'status' => WorkflowStatus::Active,
             'started_at' => now(),
+            'step_started_at' => now(),
             'completed_at' => null,
         ];
     }

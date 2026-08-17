@@ -38,6 +38,7 @@ new #[Title('Submission')] class extends Component {
         $this->submission = $submission->load([
             'submitter', 'department', 'files.uploader',
             'workflowInstance.template.steps',
+            'workflowInstance.currentStep',
             'workflowInstance.actions.actor',
         ]);
     }
@@ -320,6 +321,13 @@ new #[Title('Submission')] class extends Component {
             <flux:badge color="{{ ['low' => 'zinc', 'normal' => 'blue', 'high' => 'amber', 'urgent' => 'red'][$submission->priority->value] ?? 'zinc' }}">
                 {{ $submission->priority->value }}
             </flux:badge>
+            @if ($submission->workflowInstance?->deadlineAt())
+                <flux:badge :color="$submission->workflowInstance->isOverdue() ? 'red' : 'zinc'">
+                    {{ $submission->workflowInstance->isOverdue()
+                        ? __('Overdue')
+                        : __('Due').' '.$submission->workflowInstance->deadlineAt()->diffForHumans() }}
+                </flux:badge>
+            @endif
         </div>
     </div>
 

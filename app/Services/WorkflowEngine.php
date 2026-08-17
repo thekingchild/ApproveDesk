@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\StepType;
 use App\Enums\SubmissionStatus;
+use App\Enums\TimeoutAction;
 use App\Enums\WorkflowActionType;
 use App\Enums\WorkflowStatus;
 use App\Events\WorkflowAdvanced;
@@ -52,6 +53,7 @@ class WorkflowEngine
                 'current_step_id' => $template->steps->first()->id,
                 'status' => WorkflowStatus::Active,
                 'started_at' => now(),
+                'step_started_at' => now(),
             ]);
 
             $submission->update(['status' => SubmissionStatus::InReview]);
@@ -112,6 +114,7 @@ class WorkflowEngine
                 WorkflowActionType::Comment => $instance, // state-neutral, audit-only
                 WorkflowActionType::Delegate,
                 WorkflowActionType::AutoApprove,
+                WorkflowActionType::AutoReject,
                 WorkflowActionType::ConditionMatched,
                 WorkflowActionType::ConditionNotMatched => throw WorkflowException::unsupportedStepType($action->value),
             };
@@ -165,6 +168,38 @@ class WorkflowEngine
         DB::afterCommit(fn () => event(new WorkflowDelegated($delegation)));
 
         return $delegation;
+    }
+
+    public function processTimeout(WorkflowInstance $instance): WorkflowInstance
+    {
+        $applied = DB::transaction(function () use ($instance): WorkflowInstance {
+            /** @var WorkflowInstance $instance */
+            $instance = WorkflowInstance::query()
+                ->whereKey($instance->getKey())
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $step = $instance->currentStep;
+            $deadline = $instance->deadlineAt();
+
+            if ($instance->status !== WorkflowStatus::Active
+                || $step === null
+                || $step->timeout_action === null
+                || $deadline === null
+                || $deadline->isFuture()) {
+                return $instance;
+            }
+
+            return match ($step->timeout_action) {
+                TimeoutAction::AutoApprove => $this->applyTimedApproval($instance, $step),
+                TimeoutAction::AutoReject => $this->applyTimedRejection($instance, $step),
+                TimeoutAction::Escalate => $this->applyTimedEscalation($instance, $step),
+            };
+        });
+
+        $this->dispatchEvents($applied);
+
+        return $applied;
     }
 
     /**
@@ -322,6 +357,48 @@ class WorkflowEngine
         return $this->resolveAutomaticSteps($this->advance($instance));
     }
 
+    private function applyTimedApproval(
+        WorkflowInstance $instance,
+        WorkflowTemplateStep $step,
+    ): WorkflowInstance {
+        $this->recordSystemAction(
+            $instance,
+            $step,
+            WorkflowActionType::AutoApprove,
+            'Step automatically approved after its SLA deadline elapsed.',
+        );
+
+        return $this->resolveAutomaticSteps($this->advance($instance));
+    }
+
+    private function applyTimedRejection(
+        WorkflowInstance $instance,
+        WorkflowTemplateStep $step,
+    ): WorkflowInstance {
+        $this->recordSystemAction(
+            $instance,
+            $step,
+            WorkflowActionType::AutoReject,
+            'Submission automatically rejected after the step SLA deadline elapsed.',
+        );
+
+        return $this->applyRejection($instance);
+    }
+
+    private function applyTimedEscalation(
+        WorkflowInstance $instance,
+        WorkflowTemplateStep $step,
+    ): WorkflowInstance {
+        $this->recordSystemAction(
+            $instance,
+            $step,
+            WorkflowActionType::Escalate,
+            'Step automatically escalated after its SLA deadline elapsed.',
+        );
+
+        return $this->applyEscalation($instance);
+    }
+
     private function isStepSatisfied(WorkflowInstance $instance): bool
     {
         $step = $instance->currentStep;
@@ -365,7 +442,10 @@ class WorkflowEngine
             return $this->complete($instance);
         }
 
-        $instance->update(['current_step_id' => $nextStep->id]);
+        $instance->update([
+            'current_step_id' => $nextStep->id,
+            'step_started_at' => now(),
+        ]);
 
         $instance->advancedToStep = $nextStep;
 
@@ -449,7 +529,10 @@ class WorkflowEngine
             throw WorkflowException::invalidCondition($step->name, "target step {$target} does not exist");
         }
 
-        $instance->update(['current_step_id' => $nextStep->id]);
+        $instance->update([
+            'current_step_id' => $nextStep->id,
+            'step_started_at' => now(),
+        ]);
         $instance->advancedToStep = $nextStep;
 
         return $instance;
@@ -476,6 +559,7 @@ class WorkflowEngine
     {
         $instance->update([
             'current_step_id' => null,
+            'step_started_at' => null,
             'status' => WorkflowStatus::Completed,
             'completed_at' => now(),
         ]);
@@ -532,7 +616,10 @@ class WorkflowEngine
                 throw WorkflowException::instanceNotActive($instance->status->value);
             }
 
-            $instance->update(['status' => WorkflowStatus::Active]);
+            $instance->update([
+                'status' => WorkflowStatus::Active,
+                'step_started_at' => now(),
+            ]);
 
             $instance->submission->update(['status' => SubmissionStatus::InReview]);
 

@@ -4,6 +4,7 @@ namespace App\DTOs;
 
 use App\Enums\AssigneeType;
 use App\Enums\StepType;
+use App\Enums\TimeoutAction;
 
 final readonly class WorkflowTemplateStepData
 {
@@ -19,5 +20,7 @@ final readonly class WorkflowTemplateStepData
         public array $assigneeIds,
         public bool $allowDelegation,
         public ?array $conditions = null,
+        public ?int $timeoutHours = null,
+        public ?TimeoutAction $timeoutAction = null,
     ) {}
 }

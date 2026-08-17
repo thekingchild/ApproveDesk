@@ -110,7 +110,7 @@ new #[Title('My submissions')] class extends Component {
             ->when($this->organizationView && ctype_digit($this->departmentFilter), fn ($query) => $query->where('department_id', (int) $this->departmentFilter))
             ->when($this->validDate($this->dateFrom), fn ($query) => $query->whereDate('created_at', '>=', $this->dateFrom))
             ->when($this->validDate($this->dateTo), fn ($query) => $query->whereDate('created_at', '<=', $this->dateTo))
-            ->with(['submitter', 'workflowInstance'])
+            ->with(['submitter', 'workflowInstance.currentStep'])
             ->latest()
             ->paginate(15);
     }
@@ -191,6 +191,9 @@ new #[Title('My submissions')] class extends Component {
                         <flux:badge :color="$this->badgeColors()[$submission->status->value] ?? 'zinc'">
                             {{ str_replace('_', ' ', $submission->status->value) }}
                         </flux:badge>
+                        @if ($submission->workflowInstance?->isOverdue())
+                            <flux:badge color="red" class="ms-1">{{ __('Overdue') }}</flux:badge>
+                        @endif
                     </flux:table.cell>
                     <flux:table.cell>{{ ucfirst($submission->priority->value) }}</flux:table.cell>
                     <flux:table.cell class="text-zinc-500">{{ $submission->updated_at?->diffForHumans() }}</flux:table.cell>

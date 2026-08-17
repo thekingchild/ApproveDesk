@@ -38,6 +38,8 @@ final class CreateWorkflowTemplateAction
                     'assignee_ids' => $step->assigneeIds,
                     'allow_delegation' => $step->allowDelegation,
                     'conditions' => $step->conditions,
+                    'timeout_hours' => $step->timeoutHours,
+                    'timeout_action' => $step->timeoutAction,
                 ]);
             }
 

@@ -56,6 +56,8 @@ final class UpdateWorkflowTemplateAction
                         'assignee_ids' => $step->assigneeIds,
                         'allow_delegation' => $step->allowDelegation,
                         'conditions' => $step->conditions,
+                        'timeout_hours' => $step->timeoutHours,
+                        'timeout_action' => $step->timeoutAction,
                     ]);
                 }
             }
@@ -74,6 +76,8 @@ final class UpdateWorkflowTemplateAction
             'assignee_ids' => $this->sortedIds($step->assignee_ids),
             'allow_delegation' => $step->allow_delegation,
             'conditions' => $step->conditions,
+            'timeout_hours' => $step->timeout_hours,
+            'timeout_action' => $step->timeout_action?->value,
         ])->values()->all();
 
         $incoming = collect($data->steps)->map(fn ($step) => [
@@ -84,6 +88,8 @@ final class UpdateWorkflowTemplateAction
             'assignee_ids' => $this->sortedIds($step->assigneeIds),
             'allow_delegation' => $step->allowDelegation,
             'conditions' => $step->conditions,
+            'timeout_hours' => $step->timeoutHours,
+            'timeout_action' => $step->timeoutAction?->value,
         ])->values()->all();
 
         return $current !== $incoming;

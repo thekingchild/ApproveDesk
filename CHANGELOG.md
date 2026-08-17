@@ -20,6 +20,7 @@ All notable changes to ApproveDesk are documented here. The project follows
 - Conditional submission-data routing and append-only system-audited automatic approval steps.
 - Sanitized TipTap submission bodies, signed PDF/image previews, MIME-restricted uploads, and advanced submission filters.
 - Information-request pause/response/resume, guarded manual escalation, and immediate/daily/weekly/in-app notification preferences.
+- Step-level SLA deadlines with scheduled escalation, automatic approval/rejection outcomes, and overdue indicators.
 - End-to-end Phase 1 acceptance coverage for three-level approval and rejection flows.
 
 ### Security

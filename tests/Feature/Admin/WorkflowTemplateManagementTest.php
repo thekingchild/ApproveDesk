@@ -4,6 +4,7 @@ namespace Tests\Feature\Admin;
 
 use App\Enums\AssigneeType;
 use App\Enums\StepType;
+use App\Enums\TimeoutAction;
 use App\Models\Department;
 use App\Models\Submission;
 use App\Models\User;
@@ -184,6 +185,31 @@ class WorkflowTemplateManagementTest extends TestCase
             ->firstOrFail();
 
         $this->assertFalse($step->allow_delegation);
+    }
+
+    public function test_admin_can_configure_a_step_sla_and_timeout_action(): void
+    {
+        $approver = User::factory()->create();
+
+        Livewire::actingAs($this->admin)
+            ->test('pages::admin.workflow-templates')
+            ->call('createTemplate')
+            ->set('name', 'Timed approval flow')
+            ->set('submissionTypes', ['document'])
+            ->set('steps.0.assigneeIds', [$approver->id])
+            ->set('steps.0.timeoutHours', 24)
+            ->set('steps.0.timeoutAction', TimeoutAction::AutoReject->value)
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $step = WorkflowTemplate::query()
+            ->where('name', 'Timed approval flow')
+            ->firstOrFail()
+            ->steps
+            ->firstOrFail();
+
+        $this->assertSame(24, $step->timeout_hours);
+        $this->assertSame(TimeoutAction::AutoReject, $step->timeout_action);
     }
 
     public function test_admin_can_create_conditional_and_automatic_steps(): void
