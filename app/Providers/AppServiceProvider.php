@@ -9,14 +9,18 @@ use App\Events\WorkflowDelegated;
 use App\Events\WorkflowInformationRequested;
 use App\Events\WorkflowRejected;
 use App\Events\WorkflowReturned;
+use App\Listeners\DispatchWebhookDeliveries;
 use App\Listeners\NotifyCurrentApprovers;
 use App\Listeners\NotifyDelegate;
 use App\Listeners\NotifySubmitterOfDecision;
 use Carbon\CarbonImmutable;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use Spatie\Permission\PermissionRegistrar;
@@ -43,6 +47,11 @@ class AppServiceProvider extends ServiceProvider
         // super-admin holds every ability implicitly; no permission matrix entry.
         Gate::before(fn ($user, string $ability) => $user->hasRole('super-admin') ? true : null);
 
+        RateLimiter::for('api', fn (Request $request): Limit => Limit::perMinute(60)
+            ->by((string) ($request->user()?->getAuthIdentifier() ?? $request->ip())));
+
+        RateLimiter::for('approval-links', fn (Request $request): Limit => Limit::perMinute(10)->by($request->ip()));
+
         $this->registerWorkflowListeners();
     }
 
@@ -60,6 +69,14 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(WorkflowRejected::class, NotifySubmitterOfDecision::class);
         Event::listen(WorkflowReturned::class, NotifySubmitterOfDecision::class);
         Event::listen(WorkflowInformationRequested::class, NotifySubmitterOfDecision::class);
+
+        Event::listen(SubmissionCreated::class, DispatchWebhookDeliveries::class);
+        Event::listen(WorkflowAdvanced::class, DispatchWebhookDeliveries::class);
+        Event::listen(WorkflowCompleted::class, DispatchWebhookDeliveries::class);
+        Event::listen(WorkflowRejected::class, DispatchWebhookDeliveries::class);
+        Event::listen(WorkflowReturned::class, DispatchWebhookDeliveries::class);
+        Event::listen(WorkflowInformationRequested::class, DispatchWebhookDeliveries::class);
+        Event::listen(WorkflowDelegated::class, DispatchWebhookDeliveries::class);
     }
 
     /**

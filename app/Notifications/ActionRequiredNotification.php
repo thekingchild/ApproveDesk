@@ -5,6 +5,7 @@ namespace App\Notifications;
 use App\Models\Submission;
 use App\Models\User;
 use App\Notifications\Concerns\RespectsNotificationFrequency;
+use App\Support\EmailApprovalLinks;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -30,6 +31,9 @@ class ActionRequiredNotification extends Notification implements ShouldQueue
 
     public function toMail(User $notifiable): MailMessage
     {
+        $instance = $this->submission->workflowInstance()->with('currentStep')->firstOrFail();
+        $step = $instance->currentStep;
+
         return (new MailMessage)
             ->subject("[{$this->submission->reference_number}] Action required: {$this->submission->title}")
             ->greeting('Hello '.$notifiable->name.',')
@@ -37,7 +41,8 @@ class ActionRequiredNotification extends Notification implements ShouldQueue
             ->line('Title: '.$this->submission->title)
             ->line('Submitted by: '.$this->submission->submitter->name)
             ->line('Priority: '.$this->submission->priority->value)
-            ->action('Review submission', route('submissions.show', $this->submission))
+            ->action('Review and approve securely', EmailApprovalLinks::confirmationUrl($instance, $step, $notifiable))
+            ->line('This secure link expires in '.EmailApprovalLinks::expirationHours().' hours. Opening it does not approve automatically; you must confirm the action.')
             ->line('Thank you for keeping approvals moving.');
     }
 

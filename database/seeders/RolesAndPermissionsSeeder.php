@@ -18,7 +18,7 @@ class RolesAndPermissionsSeeder extends Seeder
     private const MATRIX = [
         'admin' => [
             'submissions.view.all', 'templates.manage', 'users.manage',
-            'departments.manage', 'settings.manage', 'reports.view',
+            'departments.manage', 'settings.manage', 'reports.view', 'webhooks.manage',
         ],
         'department-head' => ['submissions.view.all', 'approvals.act', 'submissions.create', 'submissions.view.own'],
         'approver' => ['approvals.act'],

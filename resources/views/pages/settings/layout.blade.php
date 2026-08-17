@@ -4,9 +4,11 @@
             <flux:navlist.item :href="route('profile.edit')" wire:navigate>{{ __('Profile') }}</flux:navlist.item>
             <flux:navlist.item :href="route('notifications.edit')" wire:navigate>{{ __('Notifications') }}</flux:navlist.item>
             <flux:navlist.item :href="route('security.edit')" wire:navigate>{{ __('Security') }}</flux:navlist.item>
+            <flux:navlist.item :href="route('api-tokens.edit')" wire:navigate>{{ __('API tokens') }}</flux:navlist.item>
             <flux:navlist.item :href="route('appearance.edit')" wire:navigate>{{ __('Appearance') }}</flux:navlist.item>
             @if (auth()->user()?->can('settings.manage'))
                 <flux:navlist.item :href="route('settings.branding')" wire:navigate>{{ __('Branding') }}</flux:navlist.item>
+                <flux:navlist.item :href="route('settings.approvals')" wire:navigate>{{ __('Approvals') }}</flux:navlist.item>
             @endif
         </flux:navlist>
     </div>

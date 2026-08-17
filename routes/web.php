@@ -1,11 +1,23 @@
 <?php
 
 use App\Http\Controllers\AnalyticsExportController;
+use App\Http\Controllers\EmailApprovalController;
 use App\Http\Controllers\InstallController;
+use App\Http\Controllers\OAuthController;
 use App\Http\Controllers\SubmissionFileDownloadController;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'welcome')->name('home');
+
+Route::middleware('guest')->prefix('auth')->name('oauth.')->group(function (): void {
+    Route::get('{provider}/redirect', [OAuthController::class, 'redirect'])->name('redirect');
+    Route::get('{provider}/callback', [OAuthController::class, 'callback'])->name('callback');
+});
+
+Route::middleware(['signed', 'throttle:approval-links'])->prefix('email-approvals')->name('approvals.email.')->group(function (): void {
+    Route::get('{instance}/{step}/{approver}', [EmailApprovalController::class, 'show'])->name('confirm');
+    Route::post('{instance}/{step}/{approver}', [EmailApprovalController::class, 'approve'])->name('approve');
+});
 
 /*
  | First-run installer. Availability is enforced by EnsureAppConfigured:
@@ -24,6 +36,7 @@ Route::prefix('install')->name('install.')->group(function (): void {
 
 Route::middleware(['auth', 'verified', 'can:settings.manage'])->group(function (): void {
     Route::livewire('settings/branding', 'pages::settings.branding')->name('settings.branding');
+    Route::livewire('settings/approvals', 'pages::settings.approvals')->name('settings.approvals');
 });
 
 Route::middleware(['auth', 'verified', 'can:viewAny,App\Models\User'])->group(function (): void {
@@ -36,6 +49,10 @@ Route::middleware(['auth', 'verified', 'can:viewAny,App\Models\Department'])->gr
 
 Route::middleware(['auth', 'verified', 'can:viewAny,App\Models\WorkflowTemplate'])->group(function (): void {
     Route::livewire('admin/workflow-templates', 'pages::admin.workflow-templates')->name('admin.workflow-templates.index');
+});
+
+Route::middleware(['auth', 'verified', 'can:viewAny,App\Models\WebhookEndpoint'])->group(function (): void {
+    Route::livewire('admin/webhooks', 'pages::admin.webhooks')->name('admin.webhooks.index');
 });
 
 Route::middleware(['auth', 'verified', 'can:reports.view'])->prefix('admin')->name('admin.')->group(function (): void {

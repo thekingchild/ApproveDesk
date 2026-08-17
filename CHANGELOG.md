@@ -6,6 +6,8 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-08-17
+
 ### Added
 
 - Laravel 13, Livewire 4, Flux UI, and Tailwind CSS application scaffold.
@@ -22,6 +24,10 @@ All notable changes to ApproveDesk are documented here. The project follows
 - Information-request pause/response/resume, guarded manual escalation, and immediate/daily/weekly/in-app notification preferences.
 - Step-level SLA deadlines with scheduled escalation, automatic approval/rejection outcomes, and overdue indicators.
 - Admin approval analytics with period-based performance metrics, daily activity charts, bottleneck detection, operational follow-up, and CSV, Excel, and PDF exports.
+- Personal Sanctum API tokens, versioned submission/approval REST endpoints, and signed, retried outbound workflow webhooks with an endpoint-management screen.
+- One-click email approvals with an administrator-selectable signed-link lifetime (1–720 hours), confirmation screen, stale-step protection, throttling, and policy authorization.
+- Google and Microsoft OpenID Connect login with state validation, PKCE, verified identity linking, and registration-policy enforcement.
+- Production container packaging for Docker Compose, EasyPanel, Coolify, and compatible platforms, while retaining cPanel/Plesk deployment support.
 - End-to-end Phase 1 acceptance coverage for three-level approval and rejection flows.
 
 ### Security

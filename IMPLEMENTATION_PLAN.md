@@ -68,9 +68,15 @@ Guiding principle: **build the workflow engine first, test-first, in isolation.*
 - Admin analytics (approval rates, turnaround, bottleneck detection) with charts; CSV/Excel/PDF exports.
 - Public REST API behind Sanctum tokens; outbound webhooks on state changes.
 
-## Phase 4 — Enterprise Integrations (6–10 weeks, on demand)
+## Phase 4 — v2 Access & Deployment (complete)
 
-LDAP/AD, SSO (OAuth2), email-based one-click approval via signed URLs (72h expiry), digital signatures, WhatsApp/SMS hooks (Africa's Talking/Twilio), PWA offline mode, localizations.
+- Google and Microsoft OpenID Connect login with OAuth state validation and PKCE.
+- Email approval links with an administrator-selectable 1–720 hour lifetime, signed confirmation/action URLs, assignment policies, throttling, and stale-step rejection.
+- Production Docker image and Compose stack for EasyPanel, Coolify, and compatible container platforms; cPanel and Plesk remain first-class deployment targets.
+
+**Exit:** provider and approval-link feature tests are green; the container configuration validates; full CI, static analysis, formatting, and production asset builds pass.
+
+Potential work after v2 is intentionally not part of this implementation. See [ROADMAP.md](ROADMAP.md).
 
 ---
 
@@ -82,7 +88,7 @@ LDAP/AD, SSO (OAuth2), email-based one-click approval via signed URLs (72h expir
 | M1 | `v1.0.0` | Phase 1 MVP |
 | M2 | `v1.1.0` | Phase 2 topologies |
 | M3 | `v1.2.0` | Phase 3 SLA/analytics/API |
-| M4 | `v2.0.0` | Phase 4 (breaking/feature major) |
+| M4 | `v2.0.0` | Signed email approvals, Google/Microsoft login, container deployment |
 
 Tags deploy to production automatically (see [docs/CI-CD.md](docs/CI-CD.md)). CHANGELOG.md updated with every release.
 

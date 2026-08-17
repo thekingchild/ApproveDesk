@@ -18,6 +18,7 @@ use Illuminate\Support\Str;
 use Laravel\Fortify\Contracts\PasskeyUser;
 use Laravel\Fortify\PasskeyAuthenticatable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
+use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 
 /**
@@ -39,13 +40,14 @@ use Spatie\Permission\Traits\HasRoles;
  * @property Carbon|null $updated_at
  * @property-read Department|null $department
  * @property-read Collection<int, Submission> $submissions
+ * @property-read Collection<int, OAuthIdentity> $oauthIdentities
  */
-#[Fillable(['name', 'email', 'password', 'department_id', 'is_active', 'email_verified_at', 'notification_frequency', 'last_notification_digest_at'])]
+#[Fillable(['name', 'email', 'password', 'department_id', 'is_active', 'email_verified_at', 'notification_frequency', 'last_notification_digest_at', 'avatar'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable implements PasskeyUser
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, HasRoles, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
+    use HasApiTokens, HasFactory, HasRoles, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
 
     /** @var array<string, mixed> */
     protected $attributes = [
@@ -83,6 +85,12 @@ class User extends Authenticatable implements PasskeyUser
     public function submissions(): HasMany
     {
         return $this->hasMany(Submission::class, 'submitter_id');
+    }
+
+    /** @return HasMany<OAuthIdentity, $this> */
+    public function oauthIdentities(): HasMany
+    {
+        return $this->hasMany(OAuthIdentity::class);
     }
 
     /**

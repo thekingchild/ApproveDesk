@@ -1,6 +1,6 @@
 # ApproveDesk
 
-Approval Workflow Application — submit documents, notes, and memos; route them through configurable approval chains (single, sequential, parallel, quorum, conditional, auto-approve, delegation) with an immutable audit trail, notifications, and dashboards. Built on **Laravel 13** (PHP 8.3+) with Livewire 4, Alpine.js, Tailwind CSS and Flux UI, deployable on ordinary **cPanel/Plesk shared hosting** — no Docker, no Redis required.
+Approval Workflow Application — submit documents, notes, and memos; route them through configurable approval chains (single, sequential, parallel, quorum, conditional, auto-approve, delegation) with an immutable audit trail, notifications, and dashboards. **ApproveDesk v2.0.0** is built on Laravel 13 (PHP 8.3+) with Livewire 4, Alpine.js, Tailwind CSS and Flux UI. It deploys to ordinary cPanel/Plesk shared hosting without Docker or Redis, and now also ships a production container for EasyPanel, Coolify, Docker Compose, and compatible platforms.
 
 ## Documentation Index
 
@@ -11,6 +11,9 @@ Approval Workflow Application — submit documents, notes, and memos; route them
 | [docs/CI-CD.md](docs/CI-CD.md) | Pipelines, branching, releases, deploy automation |
 | [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | Local setup and daily commands |
 | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Installer runbook, cPanel/Plesk bring-up, hardening |
+| [docs/AUTHENTICATION.md](docs/AUTHENTICATION.md) | Signed email approvals and Google/Microsoft login setup |
+| [docs/API.md](docs/API.md) | Personal API tokens, v1 REST endpoints, and signed webhooks |
+| [ROADMAP.md](ROADMAP.md) | Candidate post-v2 work (planning only) |
 
 ## Quick Start (development)
 
@@ -29,8 +32,8 @@ Dev and tests run on SQLite; no MySQL needed locally.
 
 ## First Deployment (any new server)
 
-Upload the release bundle, open the domain, and follow the **web installer** at `/install`: server requirements check → database connection → migrations & seed → first admin account → branded login. Panel-specific steps: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+Upload the release bundle or deploy the container image, open the domain, and follow the **web installer** at `/install`: server requirements check → database connection → migrations & seed → first admin account → branded login. Platform-specific steps: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ## Status
 
-Phase 0 (toolchain, scaffold, CI foundation) is the current milestone — see the [implementation plan](IMPLEMENTATION_PLAN.md).
+Phases 0–4 are implemented as v2.0.0. Future candidates are documented separately in the [roadmap](ROADMAP.md) and are not implemented.

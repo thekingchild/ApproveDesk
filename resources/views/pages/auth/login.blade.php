@@ -7,6 +7,26 @@
 
         <x-passkey-verify />
 
+        @if ($providers = \App\Support\OAuthProviders::enabledProviders())
+            <div class="grid gap-3">
+                @foreach ($providers as $provider)
+                    <flux:button :href="route('oauth.redirect', $provider->value)" variant="outline" class="w-full">
+                        {{ __('Continue with :provider', ['provider' => $provider->label()]) }}
+                    </flux:button>
+                @endforeach
+            </div>
+
+            <div class="flex items-center gap-3 text-xs uppercase tracking-wide text-zinc-400">
+                <flux:separator class="flex-1" />
+                <span>{{ __('or') }}</span>
+                <flux:separator class="flex-1" />
+            </div>
+        @endif
+
+        @error('oauth')
+            <flux:callout variant="danger" icon="exclamation-triangle">{{ $message }}</flux:callout>
+        @enderror
+
         <form method="POST" action="{{ route('login.store') }}" class="flex flex-col gap-6">
             @csrf
 

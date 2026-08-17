@@ -24,7 +24,7 @@ final class SubmitSubmissionAction
             if ($instance === null) {
                 $submission->update(['status' => 'pending']);
                 $instance = $this->engine->initialize($submission);
-                event(new SubmissionCreated($submission, $instance));
+                DB::afterCommit(fn () => event(new SubmissionCreated($submission, $instance)));
             } else {
                 $this->engine->resume($instance);
             }

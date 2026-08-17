@@ -1,0 +1,79 @@
+<?php
+
+namespace App\Actions\Auth;
+
+use App\DTOs\OAuthUserData;
+use App\Models\OAuthIdentity;
+use App\Models\User;
+use App\Support\Branding;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
+
+final class ResolveOAuthUserAction
+{
+    public function execute(OAuthUserData $data): User
+    {
+        return DB::transaction(function () use ($data): User {
+            $identity = OAuthIdentity::query()
+                ->with('user')
+                ->where('provider', $data->provider)
+                ->where('provider_user_id', $data->providerUserId)
+                ->lockForUpdate()
+                ->first();
+
+            if ($identity !== null) {
+                $identity->update(['email' => $data->email, 'avatar' => $data->avatar]);
+
+                return $this->ensureActive($identity->user);
+            }
+
+            $user = User::query()->where('email', $data->email)->lockForUpdate()->first();
+
+            if ($user === null) {
+                if (! Branding::registrationOpen()) {
+                    throw ValidationException::withMessages([
+                        'oauth' => __('No ApproveDesk account exists for this email address and registration is disabled.'),
+                    ]);
+                }
+
+                $user = User::create([
+                    'name' => $data->name,
+                    'email' => $data->email,
+                    'email_verified_at' => now(),
+                    'password' => Str::password(48),
+                    'avatar' => $data->avatar,
+                    'is_active' => true,
+                ]);
+                $user->syncRoles(['submitter']);
+            }
+
+            $this->ensureActive($user);
+
+            if (OAuthIdentity::query()->where('user_id', $user->id)->where('provider', $data->provider)->exists()) {
+                throw ValidationException::withMessages([
+                    'oauth' => __('This account is already linked to a different :provider identity.', ['provider' => $data->provider->label()]),
+                ]);
+            }
+
+            OAuthIdentity::create([
+                'user_id' => $user->id,
+                'provider' => $data->provider,
+                'provider_user_id' => $data->providerUserId,
+                'email' => $data->email,
+                'avatar' => $data->avatar,
+            ]);
+
+            return $user;
+        });
+    }
+
+    private function ensureActive(User $user): User
+    {
+        if (! $user->is_active) {
+            throw ValidationException::withMessages(['oauth' => __('Your account has been deactivated.')]);
+        }
+
+        return $user;
+    }
+}

@@ -2,7 +2,7 @@
 
 How changes travel from a developer's machine (or an AI agent) to production on shared hosting. Companion docs: [DEVELOPMENT.md](DEVELOPMENT.md) (local setup), [DEPLOYMENT.md](DEPLOYMENT.md) (server procedures).
 
-Platform: **GitHub Actions**. Target hosts: cPanel (SSH/rsync, FTP fallback) and Plesk (Git pull deployment). Both hosts run the same artifact; first-run setup on any new server is done via the web installer at `/install`.
+Platform: **GitHub Actions**. Target hosts: cPanel (SSH/rsync, FTP fallback), Plesk (Git pull deployment), and Dockerfile-based platforms such as EasyPanel and Coolify. Shared hosts run the same release artifact; container platforms build the checked-in production image. First-run setup on any new server is done via the web installer at `/install`.
 
 ---
 

@@ -1,0 +1,39 @@
+- generic [ref=f1e1]:
+  - generic [ref=f1e2]:
+    - generic [ref=f1e3]:
+      - link [ref=f1e5] [cursor=pointer]:
+        - /url: http://127.0.0.1:8010
+      - blockquote [ref=f1e10]:
+        - generic [ref=f1e11]: Approvals, clearly tracked.
+        - contentinfo [ref=f1e12]:
+          - generic [ref=f1e13]: ApproveDesk
+    - generic [ref=f1e16]:
+      - generic [ref=f1e17]:
+        - generic [ref=f1e18]: Log in to your account
+        - generic [ref=f1e19]: Enter your email and password below to log in
+      - generic [ref=f1e21]:
+        - button "Sign in with a passkey" [ref=f1e23]
+        - generic [ref=f1e27]: Or continue with email
+      - generic [ref=f1e32]:
+        - generic [ref=f1e33]:
+          - generic [ref=f1e34]: Email address
+          - textbox "Email address" [active] [ref=f1e36]:
+            - /placeholder: email@example.com
+        - generic [ref=f1e37]:
+          - generic [ref=f1e38]:
+            - generic [ref=f1e39]: Password
+            - generic [ref=f1e40]:
+              - textbox "Password" [ref=f1e41]
+              - button "Toggle password visibility" [ref=f1e43]
+          - link "Forgot your password?" [ref=f1e47] [cursor=pointer]:
+            - /url: http://127.0.0.1:8010/forgot-password
+        - generic [ref=f1e48]:
+          - checkbox "Remember me" [ref=f1e49]
+          - generic [ref=f1e51]: Remember me
+        - button "Log in" [ref=f1e53]
+      - generic [ref=f1e59]:
+        - text: Don't have an account?
+        - link "Sign up" [ref=f1e60] [cursor=pointer]:
+          - /url: http://127.0.0.1:8010/register
+  - generic:
+    - status

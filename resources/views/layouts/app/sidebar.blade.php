@@ -31,7 +31,7 @@
                     @endcan
                 </flux:sidebar.group>
 
-                @if (auth()->user()->can('viewAny', \App\Models\User::class) || auth()->user()->can('viewAny', \App\Models\Department::class) || auth()->user()->can('viewAny', \App\Models\WorkflowTemplate::class) || auth()->user()->can('reports.view'))
+                @if (auth()->user()->can('viewAny', \App\Models\User::class) || auth()->user()->can('viewAny', \App\Models\Department::class) || auth()->user()->can('viewAny', \App\Models\WorkflowTemplate::class) || auth()->user()->can('reports.view') || auth()->user()->can('viewAny', \App\Models\WebhookEndpoint::class))
                     <flux:sidebar.group :heading="__('Administration')" class="grid">
                         @can('viewAny', \App\Models\User::class)
                             <flux:sidebar.item icon="users" :href="route('admin.users.index')" :current="request()->routeIs('admin.users.*')" wire:navigate>
@@ -51,6 +51,11 @@
                         @can('reports.view')
                             <flux:sidebar.item icon="chart-bar" :href="route('admin.analytics.index')" :current="request()->routeIs('admin.analytics.*')" wire:navigate>
                                 {{ __('Analytics') }}
+                            </flux:sidebar.item>
+                        @endcan
+                        @can('viewAny', \App\Models\WebhookEndpoint::class)
+                            <flux:sidebar.item icon="rss" :href="route('admin.webhooks.index')" :current="request()->routeIs('admin.webhooks.*')" wire:navigate>
+                                {{ __('Webhooks') }}
                             </flux:sidebar.item>
                         @endcan
                     </flux:sidebar.group>

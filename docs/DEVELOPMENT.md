@@ -76,5 +76,5 @@ CI stays on SQLite; MySQL parity is a pre-release manual step (or opt-in `--grou
 - [ ] Authorization via Policy classes, not role checks
 - [ ] New statuses/types are PHP enums with string columns (no MySQL ENUMs)
 - [ ] Eager loading on every relationship used in views (no N+1)
-- [ ] No new runtime dependency on Redis/Docker/Node/long-running processes
+- [ ] Shared-hosting deployments still have no runtime dependency on Redis, Docker, Node, or a long-running worker
 - [ ] Migrations are additive (never edit merged migrations)

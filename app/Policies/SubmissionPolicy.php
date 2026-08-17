@@ -83,4 +83,25 @@ class SubmissionPolicy
     {
         return $this->view($user, $submission);
     }
+
+    public function approveViaEmail(User $user, Submission $submission): bool
+    {
+        if (! $user->is_active) {
+            return false;
+        }
+
+        $instance = $submission->workflowInstance()->first();
+        $step = $instance?->currentStep;
+
+        if ($instance === null || $step === null) {
+            return false;
+        }
+
+        return $step->assignedUsers()->contains($user)
+            || Delegation::query()->active()
+                ->where('instance_id', $instance->id)
+                ->where('step_id', $step->id)
+                ->where('delegate_id', $user->id)
+                ->exists();
+    }
 }

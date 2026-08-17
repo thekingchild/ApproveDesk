@@ -1,0 +1,63 @@
+name: approvedesk
+
+services:
+  app:
+    build:
+      context: .
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    environment:
+      APP_NAME: ApproveDesk
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_URL: "${APP_URL:-http://localhost:8080}"
+      APP_KEY: "${APP_KEY:?Generate APP_KEY with: php artisan key:generate --show}"
+      DB_CONNECTION: mysql
+      DB_HOST: database
+      DB_PORT: 3306
+      DB_DATABASE: "${DB_DATABASE:-approvedesk}"
+      DB_USERNAME: "${DB_USERNAME:-approvedesk}"
+      DB_PASSWORD: "${DB_PASSWORD:?Set DB_PASSWORD}"
+      CACHE_STORE: file
+      QUEUE_CONNECTION: database
+      SESSION_DRIVER: file
+      MAIL_MAILER: "${MAIL_MAILER:-log}"
+      MAIL_HOST: "${MAIL_HOST:-}"
+      MAIL_PORT: "${MAIL_PORT:-587}"
+      MAIL_USERNAME: "${MAIL_USERNAME:-}"
+      MAIL_PASSWORD: "${MAIL_PASSWORD:-}"
+      MAIL_ENCRYPTION: "${MAIL_ENCRYPTION:-tls}"
+      MAIL_FROM_ADDRESS: "${MAIL_FROM_ADDRESS:-approvals@example.com}"
+      GOOGLE_CLIENT_ID: "${GOOGLE_CLIENT_ID:-}"
+      GOOGLE_CLIENT_SECRET: "${GOOGLE_CLIENT_SECRET:-}"
+      GOOGLE_REDIRECT_URI: "${GOOGLE_REDIRECT_URI:-}"
+      MICROSOFT_CLIENT_ID: "${MICROSOFT_CLIENT_ID:-}"
+      MICROSOFT_CLIENT_SECRET: "${MICROSOFT_CLIENT_SECRET:-}"
+      MICROSOFT_REDIRECT_URI: "${MICROSOFT_REDIRECT_URI:-}"
+      MICROSOFT_TENANT: "${MICROSOFT_TENANT:-organizations}"
+    volumes:
+      - approvedesk-storage:/var/www/html/storage
+    depends_on:
+      database:
+        condition: service_healthy
+
+  database:
+    image: mariadb:11.4
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: "${DB_DATABASE:-approvedesk}"
+      MARIADB_USER: "${DB_USERNAME:-approvedesk}"
+      MARIADB_PASSWORD: "${DB_PASSWORD:?Set DB_PASSWORD}"
+      MARIADB_ROOT_PASSWORD: "${DB_ROOT_PASSWORD:?Set DB_ROOT_PASSWORD}"
+    volumes:
+      - approvedesk-database:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  approvedesk-storage:
+  approvedesk-database:
