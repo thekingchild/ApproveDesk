@@ -1,8 +1,8 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/livewire-starter-kit",
+    "name": "approvedesk/approvedesk",
     "type": "project",
-    "description": "The official Laravel starter kit for Livewire.",
+    "description": "A shared-hosting-friendly document approval workflow application.",
     "keywords": [
         "laravel",
         "framework"

@@ -3,7 +3,6 @@
 namespace App\Actions\WorkflowTemplates;
 
 use App\DTOs\WorkflowTemplateData;
-use App\Enums\StepType;
 use App\Models\User;
 use App\Models\WorkflowTemplate;
 use Illuminate\Support\Facades\DB;
@@ -33,7 +32,8 @@ final class CreateWorkflowTemplateAction
                 $template->steps()->create([
                     'step_order' => $index + 1,
                     'name' => $step->name,
-                    'step_type' => StepType::Sequential,
+                    'step_type' => $step->stepType,
+                    'quorum_count' => $step->quorumCount,
                     'assignee_type' => $step->assigneeType,
                     'assignee_ids' => $step->assigneeIds,
                 ]);

@@ -5,6 +5,7 @@ use App\Actions\WorkflowTemplates\UpdateWorkflowTemplateAction;
 use App\DTOs\WorkflowTemplateData;
 use App\DTOs\WorkflowTemplateStepData;
 use App\Enums\AssigneeType;
+use App\Enums\StepType;
 use App\Enums\SubmissionType;
 use App\Models\Department;
 use App\Models\User;
@@ -40,7 +41,7 @@ new #[Title('Workflow templates')] class extends Component {
 
     public bool $isActive = true;
 
-    /** @var array<int, array{name: string, assigneeType: string, assigneeIds: array<int, int>}> */
+    /** @var array<int, array{name: string, stepType: string, quorumCount: int|null, assigneeType: string, assigneeIds: array<int, int>}> */
     public array $steps = [];
 
     public function mount(): void
@@ -105,6 +106,8 @@ new #[Title('Workflow templates')] class extends Component {
         $this->isActive = $template->is_active;
         $this->steps = $template->steps->map(fn ($step) => [
             'name' => $step->name,
+            'stepType' => $step->step_type->value,
+            'quorumCount' => $step->quorum_count,
             'assigneeType' => $step->assignee_type->value,
             'assigneeIds' => $step->assignee_ids,
         ])->values()->all();
@@ -168,6 +171,12 @@ new #[Title('Workflow templates')] class extends Component {
             'isActive' => ['required', 'boolean'],
             'steps' => ['required', 'array', 'min:1', 'max:20'],
             'steps.*.name' => ['required', 'string', 'max:255'],
+            'steps.*.stepType' => ['required', Rule::in([
+                StepType::Sequential->value,
+                StepType::Parallel->value,
+                StepType::Quorum->value,
+            ])],
+            'steps.*.quorumCount' => ['nullable', 'integer', 'min:1'],
             'steps.*.assigneeType' => ['required', Rule::enum(AssigneeType::class)],
             'steps.*.assigneeIds' => ['required', 'array', 'min:1'],
             'steps.*.assigneeIds.*' => ['required', 'integer'],
@@ -189,9 +198,27 @@ new #[Title('Workflow templates')] class extends Component {
             $type = AssigneeType::from($step['assigneeType']);
             $ids = array_values(array_unique(array_map('intval', $step['assigneeIds'])));
             $this->guardAssigneesExist($type, $ids, $index);
+            $assigneeCount = $this->resolvedAssigneeCount($type, $ids);
+
+            if ($assigneeCount < 1) {
+                throw ValidationException::withMessages([
+                    "steps.{$index}.assigneeIds" => __('Select an assignment with at least one active user.'),
+                ]);
+            }
+
+            $stepType = StepType::from($step['stepType']);
+            $quorumCount = isset($step['quorumCount']) && $step['quorumCount'] !== ''
+                ? (int) $step['quorumCount']
+                : null;
+
+            if ($stepType === StepType::Quorum) {
+                $this->guardQuorumIsPossible($quorumCount, $assigneeCount, $index);
+            }
 
             return new WorkflowTemplateStepData(
                 name: $step['name'],
+                stepType: $stepType,
+                quorumCount: $stepType === StepType::Quorum ? $quorumCount : null,
                 assigneeType: $type,
                 assigneeIds: $ids,
             );
@@ -220,11 +247,13 @@ new #[Title('Workflow templates')] class extends Component {
         Flux::toast($message, variant: 'success');
     }
 
-    /** @return array{name: string, assigneeType: string, assigneeIds: array<int, int>} */
+    /** @return array{name: string, stepType: string, quorumCount: int|null, assigneeType: string, assigneeIds: array<int, int>} */
     private function blankStep(int $number): array
     {
         return [
             'name' => 'Approval Level '.$number,
+            'stepType' => StepType::Sequential->value,
+            'quorumCount' => null,
             'assigneeType' => AssigneeType::User->value,
             'assigneeIds' => [],
         ];
@@ -246,6 +275,31 @@ new #[Title('Workflow templates')] class extends Component {
         }
     }
 
+    private function guardQuorumIsPossible(?int $required, int $assigneeCount, int $index): void
+    {
+        if ($required === null || $required > $assigneeCount) {
+            throw ValidationException::withMessages([
+                "steps.{$index}.quorumCount" => __("Quorum must be between 1 and {$assigneeCount} active assignees."),
+            ]);
+        }
+    }
+
+    /** @param array<int, int> $ids */
+    private function resolvedAssigneeCount(AssigneeType $type, array $ids): int
+    {
+        return match ($type) {
+            AssigneeType::User => User::query()->where('is_active', true)->whereKey($ids)->count(),
+            AssigneeType::Role => User::query()
+                ->where('is_active', true)
+                ->role(Role::query()->whereKey($ids)->pluck('name')->all())
+                ->count(),
+            AssigneeType::Department => User::query()
+                ->where('is_active', true)
+                ->whereIn('department_id', $ids)
+                ->count(),
+        };
+    }
+
     private function resetForm(): void
     {
         $this->resetValidation();
@@ -262,7 +316,7 @@ new #[Title('Workflow templates')] class extends Component {
     <div class="flex flex-wrap items-start justify-between gap-3">
         <div>
             <flux:heading size="lg">{{ __('Workflow templates') }}</flux:heading>
-            <flux:subheading>{{ __('Configure sequential approval chains by submission type.') }}</flux:subheading>
+            <flux:subheading>{{ __('Configure sequential and parallel approval chains by submission type.') }}</flux:subheading>
         </div>
         <flux:button variant="primary" icon="plus" wire:click="createTemplate" data-test="create-template">{{ __('Add template') }}</flux:button>
     </div>
@@ -349,15 +403,27 @@ new #[Title('Workflow templates')] class extends Component {
                     <flux:card wire:key="template-step-{{ $index }}">
                         <div class="flex items-start gap-3">
                             <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-sm font-semibold dark:bg-zinc-800">{{ $index + 1 }}</div>
-                            <div class="grid flex-1 gap-4 sm:grid-cols-2">
+                            <div class="grid flex-1 gap-4 sm:grid-cols-3">
                                 <flux:input wire:model="steps.{{ $index }}.name" :label="__('Step name')" :disabled="$editingTemplateUsed" />
+                                <flux:select wire:model="steps.{{ $index }}.stepType" :label="__('Step behavior')" :disabled="$editingTemplateUsed">
+                                    <flux:select.option value="sequential">{{ __('Sequential — one approval') }}</flux:select.option>
+                                    <flux:select.option value="parallel">{{ __('Parallel — all must approve') }}</flux:select.option>
+                                    <flux:select.option value="quorum">{{ __('Quorum — N must approve') }}</flux:select.option>
+                                </flux:select>
                                 <flux:select wire:model="steps.{{ $index }}.assigneeType" wire:change="resetAssignees({{ $index }})" :label="__('Assign by')" :disabled="$editingTemplateUsed">
                                     @foreach (AssigneeType::cases() as $type)
                                         <flux:select.option :value="$type->value">{{ str($type->value)->title() }}</flux:select.option>
                                     @endforeach
                                 </flux:select>
 
-                                <div class="sm:col-span-2">
+                                @if ($step['stepType'] === 'quorum')
+                                    <div class="sm:col-span-3">
+                                        <flux:input wire:model="steps.{{ $index }}.quorumCount" type="number" min="1" :label="__('Approvals required')" :disabled="$editingTemplateUsed" />
+                                        <flux:error name="steps.{{ $index }}.quorumCount" />
+                                    </div>
+                                @endif
+
+                                <div class="sm:col-span-3">
                                     <flux:checkbox.group wire:model="steps.{{ $index }}.assigneeIds" :label="__('Assignees')" class="grid max-h-40 gap-2 overflow-y-auto sm:grid-cols-2">
                                         @foreach ($step['assigneeType'] === 'role' ? $this->roles : ($step['assigneeType'] === 'department' ? $this->departments : $this->users) as $assignee)
                                             <flux:checkbox :value="$assignee->id" :label="$assignee->name" :disabled="$editingTemplateUsed" />

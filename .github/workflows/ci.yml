@@ -5,6 +5,12 @@ on:
     branches:
       - main
   pull_request:
+  workflow_call:
+    inputs:
+      ref:
+        description: Git ref to validate
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -22,6 +28,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          ref: ${{ inputs.ref || github.ref }}
 
       - name: Setup PHP
         uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
@@ -31,19 +38,31 @@ jobs:
           tools: composer:v2
           coverage: pcov
 
-      - name: Setup Application
-        run: composer setup
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Prepare application
+        run: |
+          cp .env.example .env
+          php artisan key:generate
 
       - name: Dependency audit
         run: composer audit --no-dev
 
-      - name: Lint, static analysis, tests
-        run: composer ci:check
+      - name: Lint
+        run: composer lint:check
+
+      - name: Static analysis
+        run: composer types:check
+
+      - name: Parallel tests
+        run: php artisan test --parallel
 
       - name: Coverage gate (80% on app/)
         run: |
-          php -d pcov.enabled=1 vendor/bin/phpunit --coverage-clover=coverage.xml
+          php -d pcov.enabled=1 -d pcov.directory=app vendor/bin/phpunit --coverage-clover=coverage.xml
           php scripts/coverage-gate.php coverage.xml 80
+          php scripts/coverage-gate.php coverage.xml 100 app/Services/WorkflowEngine.php
 
       - name: Upload coverage artifact
         if: always()

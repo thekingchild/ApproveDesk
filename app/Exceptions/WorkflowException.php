@@ -35,4 +35,11 @@ class WorkflowException extends RuntimeException
     {
         return new self("Step type [{$stepType}] is not implemented yet.");
     }
+
+    public static function invalidQuorum(string $step, ?int $required, int $assignees): self
+    {
+        $threshold = $required === null ? 'not set' : (string) $required;
+
+        return new self("Step [{$step}] has invalid quorum [{$threshold}]; it requires between 1 and {$assignees} active assignees.");
+    }
 }

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\AssigneeType;
 use App\Enums\SubmissionStatus;
+use App\Enums\WorkflowActionType;
 use App\Enums\WorkflowStatus;
 use App\Models\Submission;
 use App\Models\User;
@@ -87,6 +88,15 @@ final class ReportService
 
         return WorkflowInstance::query()
             ->where('status', WorkflowStatus::Active)
+            ->whereDoesntHave('actions', function (Builder $query) use ($user): void {
+                $query->where('actor_id', $user->id)
+                    ->whereColumn('workflow_actions.step_id', 'workflow_instances.current_step_id')
+                    ->whereIn('action', [
+                        WorkflowActionType::Approve,
+                        WorkflowActionType::Reject,
+                        WorkflowActionType::Return,
+                    ]);
+            })
             ->whereHas('currentStep', function (Builder $query) use ($user, $roleIds): void {
                 $query->where(function (Builder $assigned) use ($user, $roleIds): void {
                     $assigned->where(function (Builder $users) use ($user): void {

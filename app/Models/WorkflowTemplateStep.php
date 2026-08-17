@@ -74,9 +74,9 @@ class WorkflowTemplateStep extends Model
         $ids = $this->assignee_ids ?? [];
 
         return match ($this->assignee_type) {
-            AssigneeType::User => User::whereIn('id', $ids)->get(),
-            AssigneeType::Role => User::role($this->resolveRoleNames($ids))->get(),
-            AssigneeType::Department => User::whereIn('department_id', $ids)->get(),
+            AssigneeType::User => User::where('is_active', true)->whereIn('id', $ids)->get(),
+            AssigneeType::Role => User::where('is_active', true)->role($this->resolveRoleNames($ids))->get(),
+            AssigneeType::Department => User::where('is_active', true)->whereIn('department_id', $ids)->get(),
         };
     }
 

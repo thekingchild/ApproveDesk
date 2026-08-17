@@ -43,11 +43,19 @@ new #[Title('Submission')] class extends Component {
 
         return $instance->template->steps->map(function ($step) use ($instance, $actions) {
             $stepActions = $actions->get($step->id, collect());
+            $assignedUsers = $step->assignedUsers();
+            $approvalCount = $stepActions->where('action', WorkflowActionType::Approve)->unique('actor_id')->count();
+            $requiredApprovals = match ($step->step_type) {
+                \App\Enums\StepType::Sequential => 1,
+                \App\Enums\StepType::Parallel => $assignedUsers->count(),
+                \App\Enums\StepType::Quorum => $step->quorum_count,
+                default => null,
+            };
 
             $state = match (true) {
                 $stepActions->contains('action', WorkflowActionType::Reject) => 'rejected',
+                $instance->current_step_id === $step->id && in_array($instance->status->value, ['active', 'on_hold'], true) => 'active',
                 $stepActions->contains('action', WorkflowActionType::Approve) => 'done',
-                $instance->current_step_id === $step->id && $instance->status->value === 'active' => 'active',
                 default => 'pending',
             };
 
@@ -55,7 +63,8 @@ new #[Title('Submission')] class extends Component {
                 'name' => $step->name,
                 'order' => $step->step_order,
                 'state' => $state,
-                'actors' => $step->assignedUsers()->pluck('name')->implode(', '),
+                'actors' => $assignedUsers->pluck('name')->implode(', '),
+                'progress' => $requiredApprovals === null ? null : "{$approvalCount} / {$requiredApprovals} approvals",
                 'acted_at' => $stepActions->first()?->created_at?->format('d M Y H:i'),
             ];
         })->all();
@@ -200,6 +209,7 @@ new #[Title('Submission')] class extends Component {
                             <div>
                                 <p class="text-sm font-medium">{{ $loop->iteration }}. {{ $step['name'] }}</p>
                                 <p class="text-xs text-zinc-500">{{ $step['actors'] }}</p>
+                                @if ($step['progress'])<p class="text-xs text-zinc-500">{{ $step['progress'] }}</p>@endif
                                 @if ($step['acted_at'])<p class="text-xs text-zinc-400">{{ $step['acted_at'] }}</p>@endif
                             </div>
                         </li>

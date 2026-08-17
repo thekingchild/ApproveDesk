@@ -65,6 +65,19 @@ class WorkflowTemplateStepTest extends TestCase
         $this->assertCount(3, $step->assignedUsers());
     }
 
+    public function test_inactive_users_are_not_resolved_as_assignees(): void
+    {
+        $active = User::factory()->create();
+        $inactive = User::factory()->create(['is_active' => false]);
+
+        $step = WorkflowTemplateStep::factory()->create([
+            'assignee_type' => 'user',
+            'assignee_ids' => [$active->id, $inactive->id],
+        ]);
+
+        $this->assertSame([$active->id], $step->assignedUsers()->pluck('id')->all());
+    }
+
     public function test_template_steps_are_ordered_by_step_order(): void
     {
         $template = WorkflowTemplate::factory()

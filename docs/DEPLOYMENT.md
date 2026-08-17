@@ -52,8 +52,8 @@ Security notes for operators:
 Find the right PHP binary via MultiPHP Manager (e.g. `/opt/cpanel/ea-php83/root/usr/bin/php`). The scheduler itself launches the queue worker on shared hosting (`routes/console.php`):
 
 ```php
-Schedule::command('queue:work --stop-when-empty --max-time=55')
-    ->everyMinute()->withoutOverlapping()->onOneServer();
+Schedule::command('queue:work --stop-when-empty --tries=3 --timeout=90')
+    ->everyMinute()->withoutOverlapping();
 ```
 
 **Optional .htaccess hardening** (force HTTPS, protect sensitive paths):

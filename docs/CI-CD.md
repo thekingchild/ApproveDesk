@@ -17,15 +17,20 @@ Platform: **GitHub Actions**. Target hosts: cPanel (SSH/rsync, FTP fallback) and
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| `ci.yml` — **Quality** | every push + PR | Pint lint → Pest tests (SQLite, parallel, ≥80% coverage) → Vite asset build → upload build artifact |
+| `ci.yml` — **Quality** | every push + PR | Pint lint → PHPStan → PHPUnit tests (SQLite, parallel, ≥80% coverage) → Vite asset build → upload build artifact |
 | `deploy-staging.yml` | push to `main` | Quality (re-run) → build release bundle → rsync/Git-deploy to staging → post-deploy script |
 | `deploy-production.yml` | push of `v*` tag | Quality → build release bundle → deploy to production (manual approval gate) → smoke check → tag release on GitHub |
 
 Local equivalent before pushing (this is the CI contract — same commands):
 
 ```bash
-./vendor/bin/pint --dirty
-php artisan test --parallel --coverage --min=80
+./vendor/bin/pint --dirty --test
+./vendor/bin/phpstan analyse --memory-limit=1G
+php artisan test --parallel
+# With PCOV/Xdebug installed:
+php -d pcov.enabled=1 -d pcov.directory=app vendor/bin/phpunit --coverage-clover=coverage.xml
+php scripts/coverage-gate.php coverage.xml 80
+php scripts/coverage-gate.php coverage.xml 100 app/Services/WorkflowEngine.php
 npm run build
 ```
 
@@ -99,96 +104,46 @@ GitHub **Environments**: `staging` and `production` (production requires manual 
 
 | Secret | Used by | Notes |
 |---|---|---|
-| `STAGING_HOST` / `STAGING_USER` / `STAGING_SSH_KEY` | staging deploy | SSH key of a jailed-shell cPanel/Plesk user |
-| `PRODUCTION_HOST` / `PRODUCTION_USER` / `PRODUCTION_SSH_KEY` | production deploy | dedicated deploy user, least privilege |
+| `STAGING_HOST` / `STAGING_USER` / `STAGING_SSH_KEY` / `STAGING_KNOWN_HOSTS` | staging deploy | SSH key plus a trusted `known_hosts` entry for the jailed-shell user |
+| `PRODUCTION_HOST` / `PRODUCTION_USER` / `PRODUCTION_SSH_KEY` / `PRODUCTION_KNOWN_HOSTS` | production deploy | dedicated deploy user, least privilege, with pinned host identity |
 | `DEPLOY_PATH` | both | e.g. `/home/user/approval_workflow` or `/var/www/vhosts/example.com/approvaldesk` |
+
+Set an `APP_URL` environment variable in each GitHub Environment for its post-deploy `/up` smoke check.
 
 Never in the repo: `APP_KEY`, DB passwords, mail credentials — those live only in the server's `.env`, created by the installer or admin. CI never needs application secrets.
 
-## 5. Release bundle
+## 5. Release build
 
-Built once in CI (not on the host — shared hosting has no Node):
+Built in the deployment workflow (not on the host — shared hosting has no Node):
 
 ```yaml
   # inside deploy workflows, after Quality passes
-  - name: Build release bundle
+  - name: Build release
     run: |
       composer install --prefer-dist --no-dev --optimize-autoloader --classmap-authoritative --no-interaction
       npm ci && npm run build
-      rm -rf node_modules tests .github docs storage/logs/*
-      tar -czf release-${GITHUB_SHA}.tar.gz .
 ```
 
-`storage/` skeleton subdirs are preserved via `.gitkeep`. The bundle keeps `vendor/` and `public/build/` so the host needs neither Composer nor Node for routine deploys.
+The deployment's `rsync` excludes development files and persistent server paths. It transfers `vendor/` and `public/build/`, so the host needs neither Composer nor Node for routine deploys.
 
-## 6. Deploy — Plesk (preferred when available)
+## 6. Automated SSH deployment
 
-Plesk deploys via its Git integration; the workflow only needs to notify/pull, or you let Plesk pull `main`/tags on its own webhook:
+The checked-in staging and production workflows use the same host-neutral sequence for cPanel or Plesk:
 
-```yaml
-  deploy:
-    needs: [php, assets]
-    runs-on: ubuntu-latest
-    environment: production        # manual approval gate
-    steps:
-      - uses: actions/checkout@v4
-        with: { fetch-depth: 0 }
-      - name: Trigger Plesk git deploy
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.PRODUCTION_HOST }}
-          username: ${{ secrets.PRODUCTION_USER }}
-          key: ${{ secrets.PRODUCTION_SSH_KEY }}
-          script: |
-            cd ${{ secrets.DEPLOY_PATH }}
-            git fetch --tags && git checkout ${{ github.ref_name }}
-            bash deploy/post-deploy.sh
-```
-
-`deploy/post-deploy.sh` (kept in the repo, executed on the host):
-
-```bash
-#!/bin/bash
-set -e
-cd "$(dirname "$0")/.."
-
-# Vendor & assets arrive via the release bundle/Git; guard if missing:
-[ -d vendor ] || composer install --no-dev --optimize-autoloader --no-interaction
-
-php artisan migrate --force
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
-php artisan event:cache
-
-echo "Deployed: $(date -u +%FT%TZ)"
-```
+1. Re-run the reusable Quality workflow against the exact deployment ref.
+2. Install production PHP dependencies and build frontend assets on GitHub's runner.
+3. Verify the SSH host against the environment's pinned `known_hosts` secret.
+4. `rsync --delete` the release while preserving `.env`, uploads, logs, caches, and sessions.
+5. Execute the checked-in [`deploy/post-deploy.sh`](../deploy/post-deploy.sh), which enters maintenance mode, migrates, rebuilds caches, restarts queue workers, and always brings the app back up.
+6. Probe the environment's `APP_URL/up` endpoint with retries.
 
 Maintaining the one-minute cron (`schedule:run`) is documented in [DEPLOYMENT.md](DEPLOYMENT.md) — it is server setup, not per-release.
 
-## 7. Deploy — cPanel (no Plesk Git)
+## 7. Panel-specific notes
 
-Requires **SSH access** (jailed shell is fine). Pattern: build bundle in CI → `rsync` over SSH → run post-deploy script.
+**cPanel:** SSH access is required for automation (jailed shell is fine). Keep the application outside `public_html` and point the domain document root/front controller at its `public/` directory as described in [DEPLOYMENT.md](DEPLOYMENT.md).
 
-```yaml
-      - name: Upload release
-        run: |
-          rsync -az --delete --exclude '.env' \
-            --exclude 'storage/app' --exclude 'storage/logs' \
-            --exclude 'storage/framework/sessions' --exclude 'storage/framework/cache' \
-            ./ ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST }}:${{ secrets.DEPLOY_PATH }}/
-      - name: Finalize on server
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.PRODUCTION_HOST }}
-          username: ${{ secrets.PRODUCTION_USER }}
-          key: ${{ secrets.PRODUCTION_SSH_KEY }}
-          script: |
-            cd ${{ secrets.DEPLOY_PATH }}
-            bash deploy/post-deploy.sh
-```
-
-`--delete` with those excluses keeps user uploads, logs, sessions and the live `.env` intact.
+**Plesk:** set the vhost document root to `approvedesk/public`. Plesk Git deployment remains an optional alternative, but the provided GitHub workflow uses SSH/rsync consistently across both panel types.
 
 **FTP fallback** (host without SSH): use `SamKirkland/FTP-Deploy-Action@v5` to upload the bundle, then run `post-deploy.sh` once via cPanel Terminal or a one-off cron entry. First-time server setup on either panel still goes through the `/install` wizard — see [DEPLOYMENT.md](DEPLOYMENT.md).
 
@@ -205,7 +160,7 @@ Laravel's health route `/up` (enable in `bootstrap/app.php`) plus an authenticat
 
 ## 9. Rollback
 
-1. In GitHub, re-run the production workflow pinned to the previous tag — or locally: `git tag -f v1.0.1 <previous-sha> && git push origin v1.0.1 -f` (rare; prefer a forward-fix release).
+1. Run **Deploy Production** manually and provide the previous immutable release tag as `release_ref`.
 2. Database rollbacks are **forward-only**: write a corrective migration; never `migrate:rollback` in production (audit integrity).
 3. Verify `/up`, login, and one approval round-trip after any rollback.
 

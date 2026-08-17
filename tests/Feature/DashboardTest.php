@@ -2,11 +2,14 @@
 
 namespace Tests\Feature;
 
+use App\Enums\StepType;
 use App\Enums\SubmissionStatus;
+use App\Enums\WorkflowActionType;
 use App\Models\Submission;
 use App\Models\User;
 use App\Models\WorkflowInstance;
 use App\Models\WorkflowTemplate;
+use App\Models\WorkflowTemplateStep;
 use App\Services\ReportService;
 use App\Services\WorkflowEngine;
 use Database\Seeders\RolesAndPermissionsSeeder;
@@ -123,5 +126,28 @@ class DashboardTest extends TestCase
         $this->assertTrue($report['can_approve']);
         $this->assertSame(1, $report['action_required']);
         $this->assertSame(0, $report['pending_others']);
+    }
+
+    public function test_parallel_approver_moves_to_pending_others_after_acting(): void
+    {
+        $approver = User::factory()->create()->assignRole('approver');
+        $colleague = User::factory()->create()->assignRole('approver');
+        $submitter = User::factory()->create()->assignRole('submitter');
+        $template = WorkflowTemplate::factory()->default()->create();
+        WorkflowTemplateStep::factory()->forTemplate($template, 1)->create([
+            'step_type' => StepType::Parallel,
+            'assignee_ids' => [$approver->id, $colleague->id],
+        ]);
+        $submission = Submission::factory()->for($submitter, 'submitter')->create();
+        $instance = app(WorkflowEngine::class)->initialize($submission);
+
+        $before = app(ReportService::class)->dashboard($approver);
+        $this->assertSame(1, $before['action_required']);
+
+        app(WorkflowEngine::class)->processAction($instance, $approver, WorkflowActionType::Approve);
+
+        $after = app(ReportService::class)->dashboard($approver);
+        $this->assertSame(0, $after['action_required']);
+        $this->assertSame(1, $after['pending_others']);
     }
 }

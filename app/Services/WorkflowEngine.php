@@ -161,13 +161,28 @@ class WorkflowEngine
             ->where('instance_id', $instance->id)
             ->where('step_id', $step->id)
             ->where('action', WorkflowActionType::Approve)
-            ->count();
+            ->distinct()
+            ->count('actor_id');
 
         return match ($step->step_type) {
             StepType::Sequential => $approvals >= 1,
-            // Parallel/quorum arrive in Phase 2; conditional/auto in Phase 3.
+            StepType::Parallel => $approvals >= $step->assignedUsers()->unique('id')->count(),
+            StepType::Quorum => $this->isQuorumSatisfied($step, $approvals),
+            // Conditional and auto-approve arrive later in Phase 2.
             default => throw WorkflowException::unsupportedStepType($step->step_type->value),
         };
+    }
+
+    private function isQuorumSatisfied(WorkflowTemplateStep $step, int $approvals): bool
+    {
+        $assigneeCount = $step->assignedUsers()->unique('id')->count();
+        $required = $step->quorum_count;
+
+        if ($required === null || $required < 1 || $required > $assigneeCount) {
+            throw WorkflowException::invalidQuorum($step->name, $required, $assigneeCount);
+        }
+
+        return $approvals >= $required;
     }
 
     private function advance(WorkflowInstance $instance): WorkflowInstance
@@ -248,6 +263,10 @@ class WorkflowEngine
 
             $instance->submission->update(['status' => SubmissionStatus::InReview]);
 
+            // Resuming does not change step, but it does need the same
+            // current-approver notification emitted after an advance.
+            $instance->advancedToStep = $instance->currentStep;
+
             return $instance;
         });
 
@@ -270,7 +289,7 @@ class WorkflowEngine
                 event(new WorkflowRejected($instance));
             } elseif ($instance->status === WorkflowStatus::OnHold) {
                 event(new WorkflowReturned($instance));
-            } else {
+            } elseif ($instance->advancedToStep !== null) {
                 event(new WorkflowAdvanced($instance));
             }
         });

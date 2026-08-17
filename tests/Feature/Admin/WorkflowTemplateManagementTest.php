@@ -52,11 +52,13 @@ class WorkflowTemplateManagementTest extends TestCase
             ->set('steps', [
                 [
                     'name' => 'Department review',
+                    'stepType' => StepType::Sequential->value,
                     'assigneeType' => AssigneeType::User->value,
                     'assigneeIds' => [$firstApprover->id],
                 ],
                 [
                     'name' => 'Executive review',
+                    'stepType' => StepType::Sequential->value,
                     'assigneeType' => AssigneeType::User->value,
                     'assigneeIds' => [$secondApprover->id],
                 ],
@@ -98,6 +100,8 @@ class WorkflowTemplateManagementTest extends TestCase
     {
         $role = Role::findByName('approver');
         $department = Department::factory()->create();
+        User::factory()->create()->assignRole('approver');
+        User::factory()->create(['department_id' => $department->id]);
 
         Livewire::actingAs($this->admin)
             ->test('pages::admin.workflow-templates')
@@ -107,11 +111,13 @@ class WorkflowTemplateManagementTest extends TestCase
             ->set('steps', [
                 [
                     'name' => 'Approver review',
+                    'stepType' => StepType::Parallel->value,
                     'assigneeType' => AssigneeType::Role->value,
                     'assigneeIds' => [$role->id],
                 ],
                 [
                     'name' => 'Department review',
+                    'stepType' => StepType::Sequential->value,
                     'assigneeType' => AssigneeType::Department->value,
                     'assigneeIds' => [$department->id],
                 ],
@@ -124,10 +130,55 @@ class WorkflowTemplateManagementTest extends TestCase
             ->firstOrFail()
             ->steps;
 
+        $this->assertSame(StepType::Parallel, $steps[0]->step_type);
         $this->assertSame(AssigneeType::Role, $steps[0]->assignee_type);
         $this->assertSame([$role->id], $steps[0]->assignee_ids);
         $this->assertSame(AssigneeType::Department, $steps[1]->assignee_type);
         $this->assertSame([$department->id], $steps[1]->assignee_ids);
+    }
+
+    public function test_admin_can_configure_a_quorum_threshold(): void
+    {
+        $approvers = User::factory()->count(3)->create();
+
+        Livewire::actingAs($this->admin)
+            ->test('pages::admin.workflow-templates')
+            ->call('createTemplate')
+            ->set('name', 'Committee quorum flow')
+            ->set('submissionTypes', ['document'])
+            ->set('steps.0.stepType', StepType::Quorum->value)
+            ->set('steps.0.quorumCount', 2)
+            ->set('steps.0.assigneeIds', $approvers->pluck('id')->all())
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $step = WorkflowTemplate::query()
+            ->where('name', 'Committee quorum flow')
+            ->firstOrFail()
+            ->steps
+            ->first();
+
+        $this->assertSame(StepType::Quorum, $step->step_type);
+        $this->assertSame(2, $step->quorum_count);
+        $this->assertSame($approvers->pluck('id')->all(), $step->assignee_ids);
+    }
+
+    public function test_quorum_cannot_exceed_active_resolved_assignees(): void
+    {
+        $approvers = User::factory()->count(2)->create();
+
+        Livewire::actingAs($this->admin)
+            ->test('pages::admin.workflow-templates')
+            ->call('createTemplate')
+            ->set('name', 'Impossible committee flow')
+            ->set('submissionTypes', ['note'])
+            ->set('steps.0.stepType', StepType::Quorum->value)
+            ->set('steps.0.quorumCount', 3)
+            ->set('steps.0.assigneeIds', $approvers->pluck('id')->all())
+            ->call('save')
+            ->assertHasErrors(['steps.0.quorumCount']);
+
+        $this->assertDatabaseMissing('workflow_templates', ['name' => 'Impossible committee flow']);
     }
 
     public function test_used_template_steps_are_immutable_but_metadata_can_change(): void

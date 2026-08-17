@@ -174,6 +174,7 @@ class PhaseOneAcceptanceTest extends TestCase
     {
         return [
             'name' => $name,
+            'stepType' => 'sequential',
             'assigneeType' => 'user',
             'assigneeIds' => [$approver->id],
         ];
