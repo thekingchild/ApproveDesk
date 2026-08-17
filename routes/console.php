@@ -1,5 +1,6 @@
 <?php
 
+use App\Jobs\PurgeExpiredDelegations;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -13,3 +14,5 @@ Artisan::command('inspire', function () {
 Schedule::command('queue:work --stop-when-empty --tries=3 --timeout=90')
     ->everyMinute()
     ->withoutOverlapping();
+
+Schedule::job(new PurgeExpiredDelegations)->daily();

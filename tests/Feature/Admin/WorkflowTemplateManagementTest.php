@@ -163,6 +163,29 @@ class WorkflowTemplateManagementTest extends TestCase
         $this->assertSame($approvers->pluck('id')->all(), $step->assignee_ids);
     }
 
+    public function test_admin_can_disable_delegation_for_a_step(): void
+    {
+        $approver = User::factory()->create();
+
+        Livewire::actingAs($this->admin)
+            ->test('pages::admin.workflow-templates')
+            ->call('createTemplate')
+            ->set('name', 'Non-delegable flow')
+            ->set('submissionTypes', ['request'])
+            ->set('steps.0.assigneeIds', [$approver->id])
+            ->set('steps.0.allowDelegation', false)
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $step = WorkflowTemplate::query()
+            ->where('name', 'Non-delegable flow')
+            ->firstOrFail()
+            ->steps
+            ->firstOrFail();
+
+        $this->assertFalse($step->allow_delegation);
+    }
+
     public function test_quorum_cannot_exceed_active_resolved_assignees(): void
     {
         $approvers = User::factory()->count(2)->create();

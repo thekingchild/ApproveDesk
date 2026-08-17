@@ -5,9 +5,11 @@ namespace App\Providers;
 use App\Events\SubmissionCreated;
 use App\Events\WorkflowAdvanced;
 use App\Events\WorkflowCompleted;
+use App\Events\WorkflowDelegated;
 use App\Events\WorkflowRejected;
 use App\Events\WorkflowReturned;
 use App\Listeners\NotifyCurrentApprovers;
+use App\Listeners\NotifyDelegate;
 use App\Listeners\NotifySubmitterOfDecision;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
@@ -51,6 +53,7 @@ class AppServiceProvider extends ServiceProvider
     {
         Event::listen(SubmissionCreated::class, NotifyCurrentApprovers::class);
         Event::listen(WorkflowAdvanced::class, NotifyCurrentApprovers::class);
+        Event::listen(WorkflowDelegated::class, NotifyDelegate::class);
 
         Event::listen(WorkflowCompleted::class, NotifySubmitterOfDecision::class);
         Event::listen(WorkflowRejected::class, NotifySubmitterOfDecision::class);

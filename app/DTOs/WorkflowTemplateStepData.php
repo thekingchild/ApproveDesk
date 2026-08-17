@@ -14,5 +14,6 @@ final readonly class WorkflowTemplateStepData
         public ?int $quorumCount,
         public AssigneeType $assigneeType,
         public array $assigneeIds,
+        public bool $allowDelegation,
     ) {}
 }

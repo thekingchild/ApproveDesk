@@ -150,4 +150,22 @@ class DashboardTest extends TestCase
         $this->assertSame(0, $after['action_required']);
         $this->assertSame(1, $after['pending_others']);
     }
+
+    public function test_delegated_work_moves_from_the_delegator_dashboard_to_the_delegate(): void
+    {
+        $delegator = User::factory()->create()->assignRole('approver');
+        $delegate = User::factory()->create()->assignRole('approver');
+        $submitter = User::factory()->create()->assignRole('submitter');
+        WorkflowTemplate::factory()->default()->sequential([$delegator])->create();
+        $submission = Submission::factory()->for($submitter, 'submitter')->create();
+        $instance = app(WorkflowEngine::class)->initialize($submission);
+
+        app(WorkflowEngine::class)->delegate($instance, $delegator, $delegate, now()->addDay());
+
+        $delegatorReport = app(ReportService::class)->dashboard($delegator);
+        $delegateReport = app(ReportService::class)->dashboard($delegate);
+
+        $this->assertSame(0, $delegatorReport['action_required']);
+        $this->assertSame(1, $delegateReport['action_required']);
+    }
 }

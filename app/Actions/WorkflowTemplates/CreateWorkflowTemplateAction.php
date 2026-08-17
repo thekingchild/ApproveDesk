@@ -36,6 +36,7 @@ final class CreateWorkflowTemplateAction
                     'quorum_count' => $step->quorumCount,
                     'assignee_type' => $step->assigneeType,
                     'assignee_ids' => $step->assigneeIds,
+                    'allow_delegation' => $step->allowDelegation,
                 ]);
             }
 

@@ -3,6 +3,7 @@
 namespace App\Policies;
 
 use App\Enums\SubmissionStatus;
+use App\Models\Delegation;
 use App\Models\Submission;
 use App\Models\User;
 use App\Models\WorkflowAction;
@@ -24,6 +25,14 @@ class SubmissionPolicy
         }
 
         if ($instance->currentStep?->assignedUsers()->contains($user)) {
+            return true;
+        }
+
+        if (Delegation::query()->active()
+            ->where('instance_id', $instance->id)
+            ->where('step_id', $instance->current_step_id)
+            ->where('delegate_id', $user->id)
+            ->exists()) {
             return true;
         }
 

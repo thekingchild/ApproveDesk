@@ -41,7 +41,7 @@ new #[Title('Workflow templates')] class extends Component {
 
     public bool $isActive = true;
 
-    /** @var array<int, array{name: string, stepType: string, quorumCount: int|null, assigneeType: string, assigneeIds: array<int, int>}> */
+    /** @var array<int, array{name: string, stepType: string, quorumCount: int|null, assigneeType: string, assigneeIds: array<int, int>, allowDelegation: bool}> */
     public array $steps = [];
 
     public function mount(): void
@@ -110,6 +110,7 @@ new #[Title('Workflow templates')] class extends Component {
             'quorumCount' => $step->quorum_count,
             'assigneeType' => $step->assignee_type->value,
             'assigneeIds' => $step->assignee_ids,
+            'allowDelegation' => $step->allow_delegation,
         ])->values()->all();
 
         $this->modal('template-form')->show();
@@ -180,6 +181,7 @@ new #[Title('Workflow templates')] class extends Component {
             'steps.*.assigneeType' => ['required', Rule::enum(AssigneeType::class)],
             'steps.*.assigneeIds' => ['required', 'array', 'min:1'],
             'steps.*.assigneeIds.*' => ['required', 'integer'],
+            'steps.*.allowDelegation' => ['sometimes', 'boolean'],
         ]);
 
         if ($validated['isDefault'] && ! $validated['isActive']) {
@@ -221,6 +223,7 @@ new #[Title('Workflow templates')] class extends Component {
                 quorumCount: $stepType === StepType::Quorum ? $quorumCount : null,
                 assigneeType: $type,
                 assigneeIds: $ids,
+                allowDelegation: (bool) ($step['allowDelegation'] ?? true),
             );
         })->all();
 
@@ -247,7 +250,7 @@ new #[Title('Workflow templates')] class extends Component {
         Flux::toast($message, variant: 'success');
     }
 
-    /** @return array{name: string, stepType: string, quorumCount: int|null, assigneeType: string, assigneeIds: array<int, int>} */
+    /** @return array{name: string, stepType: string, quorumCount: int|null, assigneeType: string, assigneeIds: array<int, int>, allowDelegation: bool} */
     private function blankStep(int $number): array
     {
         return [
@@ -256,6 +259,7 @@ new #[Title('Workflow templates')] class extends Component {
             'quorumCount' => null,
             'assigneeType' => AssigneeType::User->value,
             'assigneeIds' => [],
+            'allowDelegation' => true,
         ];
     }
 
@@ -422,6 +426,10 @@ new #[Title('Workflow templates')] class extends Component {
                                         <flux:error name="steps.{{ $index }}.quorumCount" />
                                     </div>
                                 @endif
+
+                                <div class="sm:col-span-3">
+                                    <flux:checkbox wire:model="steps.{{ $index }}.allowDelegation" :label="__('Allow assigned approvers to delegate')" :disabled="$editingTemplateUsed" />
+                                </div>
 
                                 <div class="sm:col-span-3">
                                     <flux:checkbox.group wire:model="steps.{{ $index }}.assigneeIds" :label="__('Assignees')" class="grid max-h-40 gap-2 overflow-y-auto sm:grid-cols-2">

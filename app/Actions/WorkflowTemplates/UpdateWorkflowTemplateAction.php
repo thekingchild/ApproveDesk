@@ -54,6 +54,7 @@ final class UpdateWorkflowTemplateAction
                         'quorum_count' => $step->quorumCount,
                         'assignee_type' => $step->assigneeType,
                         'assignee_ids' => $step->assigneeIds,
+                        'allow_delegation' => $step->allowDelegation,
                     ]);
                 }
             }
@@ -70,6 +71,7 @@ final class UpdateWorkflowTemplateAction
             'quorum_count' => $step->quorum_count,
             'assignee_type' => $step->assignee_type->value,
             'assignee_ids' => $this->sortedIds($step->assignee_ids),
+            'allow_delegation' => $step->allow_delegation,
         ])->values()->all();
 
         $incoming = collect($data->steps)->map(fn ($step) => [
@@ -78,6 +80,7 @@ final class UpdateWorkflowTemplateAction
             'quorum_count' => $step->quorumCount,
             'assignee_type' => $step->assigneeType->value,
             'assignee_ids' => $this->sortedIds($step->assigneeIds),
+            'allow_delegation' => $step->allowDelegation,
         ])->values()->all();
 
         return $current !== $incoming;

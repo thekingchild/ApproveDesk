@@ -42,4 +42,9 @@ class WorkflowException extends RuntimeException
 
         return new self("Step [{$step}] has invalid quorum [{$threshold}]; it requires between 1 and {$assignees} active assignees.");
     }
+
+    public static function delegationNotAllowed(string $reason): self
+    {
+        return new self("Delegation is not allowed: {$reason}.");
+    }
 }

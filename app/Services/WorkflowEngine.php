@@ -8,15 +8,18 @@ use App\Enums\WorkflowActionType;
 use App\Enums\WorkflowStatus;
 use App\Events\WorkflowAdvanced;
 use App\Events\WorkflowCompleted;
+use App\Events\WorkflowDelegated;
 use App\Events\WorkflowRejected;
 use App\Events\WorkflowReturned;
 use App\Exceptions\WorkflowException;
+use App\Models\Delegation;
 use App\Models\Submission;
 use App\Models\User;
 use App\Models\WorkflowAction;
 use App\Models\WorkflowInstance;
 use App\Models\WorkflowTemplate;
 use App\Models\WorkflowTemplateStep;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -96,6 +99,51 @@ class WorkflowEngine
         return $applied;
     }
 
+    public function delegate(
+        WorkflowInstance $instance,
+        User $delegator,
+        User $delegate,
+        CarbonInterface $expiresAt,
+        ?string $comment = null,
+    ): Delegation {
+        $delegation = DB::transaction(function () use ($instance, $delegator, $delegate, $expiresAt, $comment): Delegation {
+            /** @var WorkflowInstance $instance */
+            $instance = WorkflowInstance::query()
+                ->whereKey($instance->getKey())
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $this->authorizeDelegation($instance, $delegator, $delegate, $expiresAt);
+            $step = $instance->currentStep;
+
+            $delegation = Delegation::create([
+                'instance_id' => $instance->id,
+                'step_id' => $step->id,
+                'delegator_id' => $delegator->id,
+                'delegate_id' => $delegate->id,
+                'starts_at' => now(),
+                'expires_at' => $expiresAt,
+            ]);
+
+            WorkflowAction::create([
+                'instance_id' => $instance->id,
+                'step_id' => $step->id,
+                'actor_id' => $delegator->id,
+                'action' => WorkflowActionType::Delegate,
+                'comment' => $comment ?? 'Delegated until '.$expiresAt->toIso8601String(),
+                'delegated_to' => $delegate->id,
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+            ]);
+
+            return $delegation->load(['instance.submission', 'delegator', 'delegate', 'step']);
+        });
+
+        DB::afterCommit(fn () => event(new WorkflowDelegated($delegation)));
+
+        return $delegation;
+    }
+
     /**
      * @throws WorkflowException when the actor may not perform this action
      */
@@ -111,14 +159,89 @@ class WorkflowEngine
             throw WorkflowException::actorNotAssigned($actor->email, 'none');
         }
 
-        if (! $step->assignedUsers()->contains($actor)) {
+        $directlyAssigned = $step->assignedUsers()->contains($actor);
+        $delegated = $this->hasActiveIncomingDelegation($instance, $step, $actor);
+
+        if (! $directlyAssigned && ! $delegated) {
             throw WorkflowException::actorNotAssigned($actor->email, $step->name);
+        }
+
+        if ($directlyAssigned
+            && $action !== WorkflowActionType::Comment
+            && $this->hasActiveOutgoingDelegation($instance, $step, $actor)) {
+            throw WorkflowException::delegationNotAllowed('your authority is currently delegated');
         }
 
         // Comments are repeatable; state-changing actions are one per actor per step.
         if ($action !== WorkflowActionType::Comment && $this->hasActedOn($instance, $step, $actor)) {
             throw WorkflowException::duplicateAction($actor->email);
         }
+    }
+
+    private function authorizeDelegation(
+        WorkflowInstance $instance,
+        User $delegator,
+        User $delegate,
+        CarbonInterface $expiresAt,
+    ): void {
+        if ($instance->status !== WorkflowStatus::Active) {
+            throw WorkflowException::instanceNotActive($instance->status->value);
+        }
+
+        $step = $instance->currentStep;
+
+        if ($step === null || ! $step->allow_delegation) {
+            throw WorkflowException::delegationNotAllowed('the current step disables it');
+        }
+
+        if (! $step->assignedUsers()->contains($delegator)) {
+            throw WorkflowException::actorNotAssigned($delegator->email, $step->name);
+        }
+
+        if ($this->hasActedOn($instance, $step, $delegator)) {
+            throw WorkflowException::delegationNotAllowed('you have already decided this step');
+        }
+
+        if (! $delegate->is_active || $delegate->is($delegator)) {
+            throw WorkflowException::delegationNotAllowed('select a different active user');
+        }
+
+        if ($expiresAt->lessThanOrEqualTo(now())) {
+            throw WorkflowException::delegationNotAllowed('the expiry must be in the future');
+        }
+
+        if ($step->assignedUsers()->contains($delegate)
+            || $this->hasActiveIncomingDelegation($instance, $step, $delegate)) {
+            throw WorkflowException::delegationNotAllowed('the delegate already holds a seat on this step');
+        }
+
+        if ($this->hasActiveOutgoingDelegation($instance, $step, $delegator)) {
+            throw WorkflowException::delegationNotAllowed('you already have an active delegation');
+        }
+    }
+
+    private function hasActiveIncomingDelegation(
+        WorkflowInstance $instance,
+        WorkflowTemplateStep $step,
+        User $user,
+    ): bool {
+        return Delegation::query()->active()
+            ->where('instance_id', $instance->id)
+            ->where('step_id', $step->id)
+            ->where('delegate_id', $user->id)
+            ->exists();
+    }
+
+    private function hasActiveOutgoingDelegation(
+        WorkflowInstance $instance,
+        WorkflowTemplateStep $step,
+        User $user,
+    ): bool {
+        return Delegation::query()->active()
+            ->where('instance_id', $instance->id)
+            ->where('step_id', $step->id)
+            ->where('delegator_id', $user->id)
+            ->exists();
     }
 
     private function applyApproval(WorkflowInstance $instance): WorkflowInstance

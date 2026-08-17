@@ -82,4 +82,10 @@ class WorkflowInstance extends Model
     {
         return $this->hasMany(WorkflowAction::class, 'instance_id')->orderBy('created_at')->orderBy('id');
     }
+
+    /** @return HasMany<Delegation, $this> */
+    public function delegations(): HasMany
+    {
+        return $this->hasMany(Delegation::class, 'instance_id');
+    }
 }

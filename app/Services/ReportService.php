@@ -97,31 +97,44 @@ final class ReportService
                         WorkflowActionType::Return,
                     ]);
             })
-            ->whereHas('currentStep', function (Builder $query) use ($user, $roleIds): void {
-                $query->where(function (Builder $assigned) use ($user, $roleIds): void {
-                    $assigned->where(function (Builder $users) use ($user): void {
-                        $users->where('assignee_type', AssigneeType::User)
-                            ->whereJsonContains('assignee_ids', $user->id);
+            ->where(function (Builder $eligible) use ($user, $roleIds): void {
+                $eligible->whereHas('currentStep', function (Builder $query) use ($user, $roleIds): void {
+                    $query->where(function (Builder $assigned) use ($user, $roleIds): void {
+                        $assigned->where(function (Builder $users) use ($user): void {
+                            $users->where('assignee_type', AssigneeType::User)
+                                ->whereJsonContains('assignee_ids', $user->id);
+                        });
+
+                        if ($roleIds !== []) {
+                            $assigned->orWhere(function (Builder $roles) use ($roleIds): void {
+                                $roles->where('assignee_type', AssigneeType::Role)
+                                    ->where(function (Builder $ids) use ($roleIds): void {
+                                        foreach ($roleIds as $roleId) {
+                                            $ids->orWhereJsonContains('assignee_ids', $roleId);
+                                        }
+                                    });
+                            });
+                        }
+
+                        if ($user->department_id !== null) {
+                            $assigned->orWhere(function (Builder $departments) use ($user): void {
+                                $departments->where('assignee_type', AssigneeType::Department)
+                                    ->whereJsonContains('assignee_ids', $user->department_id);
+                            });
+                        }
                     });
-
-                    if ($roleIds !== []) {
-                        $assigned->orWhere(function (Builder $roles) use ($roleIds): void {
-                            $roles->where('assignee_type', AssigneeType::Role)
-                                ->where(function (Builder $ids) use ($roleIds): void {
-                                    foreach ($roleIds as $roleId) {
-                                        $ids->orWhereJsonContains('assignee_ids', $roleId);
-                                    }
-                                });
-                        });
-                    }
-
-                    if ($user->department_id !== null) {
-                        $assigned->orWhere(function (Builder $departments) use ($user): void {
-                            $departments->where('assignee_type', AssigneeType::Department)
-                                ->whereJsonContains('assignee_ids', $user->department_id);
-                        });
-                    }
+                })->orWhereHas('delegations', function (Builder $query) use ($user): void {
+                    $query->where('starts_at', '<=', now())
+                        ->where('expires_at', '>', now())
+                        ->where('delegate_id', $user->id)
+                        ->whereColumn('delegations.step_id', 'workflow_instances.current_step_id');
                 });
+            })
+            ->whereDoesntHave('delegations', function (Builder $query) use ($user): void {
+                $query->where('starts_at', '<=', now())
+                    ->where('expires_at', '>', now())
+                    ->where('delegator_id', $user->id)
+                    ->whereColumn('delegations.step_id', 'workflow_instances.current_step_id');
             });
     }
 }

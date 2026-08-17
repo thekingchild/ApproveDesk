@@ -20,29 +20,48 @@ new #[Title('Approvals')] class extends Component {
 
         // Instances I have been involved in (acted on)…
         $involved = WorkflowInstance::query()
-            ->with(['submission.submitter', 'currentStep', 'actions'])
+            ->with(['submission.submitter', 'currentStep', 'actions', 'delegations'])
             ->whereHas('actions', fn ($query) => $query->where('actor_id', $user->id))
             ->get();
 
         // …plus active instances whose current step is assigned to me.
         $assigned = WorkflowInstance::query()
             ->where('status', WorkflowStatus::Active)
-            ->with(['submission.submitter', 'currentStep', 'actions'])
+            ->with(['submission.submitter', 'currentStep', 'actions', 'delegations'])
             ->get()
-            ->filter(fn ($instance) => $instance->currentStep?->assignedUsers()->contains($user));
+            ->filter(function ($instance) use ($user): bool {
+                $activeDelegations = $instance->delegations->filter(fn ($delegation) => $delegation->step_id === $instance->current_step_id
+                    && $delegation->starts_at <= now()
+                    && $delegation->expires_at > now());
+                $delegatedToUser = $activeDelegations->contains('delegate_id', $user->id);
+                $delegatedByUser = $activeDelegations->contains('delegator_id', $user->id);
+
+                return $delegatedToUser
+                    || ($instance->currentStep?->assignedUsers()->contains($user) && ! $delegatedByUser);
+            });
 
         return $assigned->concat($involved)
             ->unique('id')
-            ->map(fn ($instance) => [
-                'instance' => $instance,
-                'needs_me' => $instance->status === WorkflowStatus::Active
-                    && $instance->currentStep?->assignedUsers()->contains($user)
-                    && ! $instance->actions
-                        ->where('step_id', $instance->current_step_id)
-                        ->where('actor_id', $user->id)
-                        ->whereIn('action', ['approve', 'reject', 'return'])
-                        ->isNotEmpty(),
-            ])
+            ->map(function ($instance) use ($user): array {
+                $activeDelegations = $instance->delegations->filter(fn ($delegation) => $delegation->step_id === $instance->current_step_id
+                    && $delegation->starts_at <= now()
+                    && $delegation->expires_at > now());
+                $delegatedToUser = $activeDelegations->contains('delegate_id', $user->id);
+                $delegatedByUser = $activeDelegations->contains('delegator_id', $user->id);
+                $isEligible = $delegatedToUser
+                    || ($instance->currentStep?->assignedUsers()->contains($user) && ! $delegatedByUser);
+
+                return [
+                    'instance' => $instance,
+                    'needs_me' => $instance->status === WorkflowStatus::Active
+                        && $isEligible
+                        && ! $instance->actions
+                            ->where('step_id', $instance->current_step_id)
+                            ->where('actor_id', $user->id)
+                            ->whereIn('action', ['approve', 'reject', 'return'])
+                            ->isNotEmpty(),
+                ];
+            })
             ->sortByDesc(fn ($item) => $item['instance']->submission->updated_at)
             ->values()
             ->all();

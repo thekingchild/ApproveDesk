@@ -3,11 +3,14 @@
 use App\Enums\WorkflowActionType;
 use App\Exceptions\WorkflowException;
 use App\Models\Comment;
+use App\Models\Delegation;
 use App\Models\Submission;
+use App\Models\User;
 use App\Services\WorkflowEngine;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -18,6 +21,12 @@ new #[Title('Submission')] class extends Component {
     public string $comment = '';
 
     public string $actionComment = '';
+
+    public string $delegateUserId = '';
+
+    public string $delegationExpiresAt = '';
+
+    public string $delegationComment = '';
 
     public function mount(Submission $submission): void
     {
@@ -82,7 +91,23 @@ new #[Title('Submission')] class extends Component {
         $user = Auth::user();
         $step = $instance->currentStep;
 
-        if ($step === null || ! $step->assignedUsers()->contains($user)) {
+        if ($step === null) {
+            return false;
+        }
+
+        $direct = $step->assignedUsers()->contains($user);
+        $incoming = Delegation::query()->active()
+            ->where('instance_id', $instance->id)
+            ->where('step_id', $step->id)
+            ->where('delegate_id', $user->id)
+            ->exists();
+        $outgoing = $direct && Delegation::query()->active()
+            ->where('instance_id', $instance->id)
+            ->where('step_id', $step->id)
+            ->where('delegator_id', $user->id)
+            ->exists();
+
+        if ((! $direct && ! $incoming) || $outgoing) {
             return false;
         }
 
@@ -91,6 +116,68 @@ new #[Title('Submission')] class extends Component {
             ->where('actor_id', $user->id)
             ->whereIn('action', ['approve', 'reject', 'return'])
             ->isNotEmpty();
+    }
+
+    #[Computed]
+    public function canDelegate(): bool
+    {
+        $instance = $this->submission->workflowInstance;
+        $step = $instance?->currentStep;
+        $user = Auth::user();
+
+        return $instance?->status->value === 'active'
+            && $step?->allow_delegation
+            && $step->assignedUsers()->contains($user)
+            && ! Delegation::query()->active()
+                ->where('instance_id', $instance->id)
+                ->where('step_id', $step->id)
+                ->where('delegator_id', $user->id)
+                ->exists()
+            && ! $instance->actions
+                ->where('step_id', $step->id)
+                ->where('actor_id', $user->id)
+                ->whereIn('action', ['approve', 'reject', 'return'])
+                ->isNotEmpty();
+    }
+
+    #[Computed]
+    public function delegateCandidates(): \Illuminate\Database\Eloquent\Collection
+    {
+        $step = $this->submission->workflowInstance?->currentStep;
+        $excluded = $step?->assignedUsers()->pluck('id')->all() ?? [];
+
+        return User::query()
+            ->where('is_active', true)
+            ->whereKeyNot(Auth::id())
+            ->whereNotIn('id', $excluded)
+            ->orderBy('name')
+            ->get();
+    }
+
+    public function delegateApproval(): void
+    {
+        $validated = $this->validate([
+            'delegateUserId' => ['required', 'integer', Rule::exists(User::class, 'id')->where('is_active', true)],
+            'delegationExpiresAt' => ['required', 'date', 'after:now'],
+            'delegationComment' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        try {
+            app(WorkflowEngine::class)->delegate(
+                $this->submission->workflowInstance,
+                Auth::user(),
+                User::query()->findOrFail((int) $validated['delegateUserId']),
+                \Illuminate\Support\Carbon::parse($validated['delegationExpiresAt']),
+                $validated['delegationComment'] ?: null,
+            );
+        } catch (WorkflowException $exception) {
+            $this->addError('delegateUserId', $exception->getMessage());
+
+            return;
+        }
+
+        Flux::toast('Approval delegated.', variant: 'success');
+        $this->redirect(route('submissions.show', $this->submission), navigate: true);
     }
 
     public function act(string $action): void
@@ -275,6 +362,11 @@ new #[Title('Submission')] class extends Component {
                 <flux:modal.trigger name="return-modal">
                     <flux:button variant="subtle" data-test="return">{{ __('Return for revision') }}</flux:button>
                 </flux:modal.trigger>
+                @if ($this->canDelegate)
+                    <flux:modal.trigger name="delegate-modal">
+                        <flux:button variant="ghost" icon="user-plus">{{ __('Delegate') }}</flux:button>
+                    </flux:modal.trigger>
+                @endif
             </div>
 
             <flux:modal name="reject-modal" variant="danger">
@@ -285,6 +377,28 @@ new #[Title('Submission')] class extends Component {
                     <flux:modal.close><flux:button variant="ghost">{{ __('Cancel') }}</flux:button></flux:modal.close>
                     <flux:button variant="danger" wire:click="act('reject')">{{ __('Confirm rejection') }}</flux:button>
                 </div>
+            </flux:modal>
+
+            <flux:modal name="delegate-modal">
+                <form wire:submit="delegateApproval" class="space-y-4">
+                    <div>
+                        <flux:heading size="md">{{ __('Delegate this approval') }}</flux:heading>
+                        <flux:subheading>{{ __('Your decision authority transfers until the selected expiry.') }}</flux:subheading>
+                    </div>
+                    <flux:select wire:model="delegateUserId" :label="__('Delegate')">
+                        <flux:select.option value="">{{ __('Select a user') }}</flux:select.option>
+                        @foreach ($this->delegateCandidates as $candidate)
+                            <flux:select.option :value="$candidate->id">{{ $candidate->name }} — {{ $candidate->email }}</flux:select.option>
+                        @endforeach
+                    </flux:select>
+                    <flux:error name="delegateUserId" />
+                    <flux:input wire:model="delegationExpiresAt" type="datetime-local" :label="__('Expires at')" />
+                    <flux:textarea wire:model="delegationComment" :label="__('Note (optional)')" rows="2" />
+                    <div class="flex justify-end gap-2">
+                        <flux:modal.close><flux:button variant="ghost">{{ __('Cancel') }}</flux:button></flux:modal.close>
+                        <flux:button type="submit" variant="primary">{{ __('Delegate approval') }}</flux:button>
+                    </div>
+                </form>
             </flux:modal>
 
             <flux:modal name="return-modal">
