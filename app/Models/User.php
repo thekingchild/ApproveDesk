@@ -37,7 +37,7 @@ use Spatie\Permission\Traits\HasRoles;
  * @property-read Department|null $department
  * @property-read Collection<int, Submission> $submissions
  */
-#[Fillable(['name', 'email', 'password'])]
+#[Fillable(['name', 'email', 'password', 'department_id', 'is_active', 'email_verified_at'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable implements PasskeyUser
 {

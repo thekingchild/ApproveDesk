@@ -25,6 +25,18 @@ Route::middleware(['auth', 'verified', 'can:settings.manage'])->group(function (
     Route::livewire('settings/branding', 'pages::settings.branding')->name('settings.branding');
 });
 
+Route::middleware(['auth', 'verified', 'can:viewAny,App\Models\User'])->group(function (): void {
+    Route::livewire('admin/users', 'pages::admin.users')->name('admin.users.index');
+});
+
+Route::middleware(['auth', 'verified', 'can:viewAny,App\Models\Department'])->group(function (): void {
+    Route::livewire('admin/departments', 'pages::admin.departments')->name('admin.departments.index');
+});
+
+Route::middleware(['auth', 'verified', 'can:viewAny,App\Models\WorkflowTemplate'])->group(function (): void {
+    Route::livewire('admin/workflow-templates', 'pages::admin.workflow-templates')->name('admin.workflow-templates.index');
+});
+
 Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::livewire('submissions', 'pages::submissions.index')->name('submissions.index');
     Route::livewire('submissions/create', 'pages::submissions.create')
@@ -37,7 +49,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         ->middleware('signed')
         ->name('submissions.files.download');
 
-    Route::view('dashboard', 'dashboard')->name('dashboard');
+    Route::livewire('dashboard', 'pages::dashboard')->name('dashboard');
 });
 
 require __DIR__.'/settings.php';

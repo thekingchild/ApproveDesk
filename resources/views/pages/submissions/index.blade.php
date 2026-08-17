@@ -11,6 +11,12 @@ new #[Title('My submissions')] class extends Component {
 
     public string $statusFilter = '';
 
+    #[\Livewire\Attributes\Computed]
+    public function organizationView(): bool
+    {
+        return Auth::user()->can('submissions.view.all');
+    }
+
     /** @var array<string, string> */
     protected function statuses(): array
     {
@@ -43,9 +49,9 @@ new #[Title('My submissions')] class extends Component {
     public function submissions(): \Illuminate\Contracts\Pagination\LengthAwarePaginator
     {
         return Submission::query()
-            ->where('submitter_id', Auth::id())
+            ->when(! $this->organizationView, fn ($query) => $query->where('submitter_id', Auth::id()))
             ->when($this->statusFilter !== '', fn ($query) => $query->where('status', $this->statusFilter))
-            ->with('workflowInstance')
+            ->with(['submitter', 'workflowInstance'])
             ->latest()
             ->paginate(15);
     }
@@ -54,8 +60,10 @@ new #[Title('My submissions')] class extends Component {
 <div class="space-y-6">
     <div class="flex items-center justify-between">
         <div>
-            <flux:heading size="lg">{{ __('My submissions') }}</flux:heading>
-            <flux:subheading>{{ __('Documents, notes, and memos you have submitted.') }}</flux:subheading>
+            <flux:heading size="lg">{{ $this->organizationView ? __('All submissions') : __('My submissions') }}</flux:heading>
+            <flux:subheading>
+                {{ $this->organizationView ? __('Documents, notes, and memos across the organization.') : __('Documents, notes, and memos you have submitted.') }}
+            </flux:subheading>
         </div>
 
         @can('create', \App\Models\Submission::class)
@@ -75,6 +83,7 @@ new #[Title('My submissions')] class extends Component {
         <flux:table.columns>
             <flux:table.column>{{ __('Reference') }}</flux:table.column>
             <flux:table.column>{{ __('Title') }}</flux:table.column>
+            @if ($this->organizationView)<flux:table.column>{{ __('Submitter') }}</flux:table.column>@endif
             <flux:table.column>{{ __('Type') }}</flux:table.column>
             <flux:table.column>{{ __('Status') }}</flux:table.column>
             <flux:table.column>{{ __('Priority') }}</flux:table.column>
@@ -88,6 +97,7 @@ new #[Title('My submissions')] class extends Component {
                     <flux:table.cell>
                         <flux:link :href="route('submissions.show', $submission)" wire:navigate>{{ Str::limit($submission->title, 60) }}</flux:link>
                     </flux:table.cell>
+                    @if ($this->organizationView)<flux:table.cell>{{ $submission->submitter->name }}</flux:table.cell>@endif
                     <flux:table.cell>{{ ucfirst($submission->type->value) }}</flux:table.cell>
                     <flux:table.cell>
                         <flux:badge :color="$this->badgeColors()[$submission->status->value] ?? 'zinc'">
@@ -99,7 +109,7 @@ new #[Title('My submissions')] class extends Component {
                 </flux:table.row>
             @empty
                 <flux:table.row>
-                    <flux:table.cell colspan="6" class="text-center text-zinc-500">{{ __('No submissions yet.') }}</flux:table.cell>
+                    <flux:table.cell :colspan="$this->organizationView ? 7 : 6" class="text-center text-zinc-500">{{ __('No submissions yet.') }}</flux:table.cell>
                 </flux:table.row>
             @endforelse
         </flux:table.rows>

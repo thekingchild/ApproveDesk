@@ -22,6 +22,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read Collection<int, WorkflowTemplateStep> $steps
+ * @property-read Collection<int, WorkflowInstance> $instances
  * @property-read User $creator
  */
 class WorkflowTemplate extends Model

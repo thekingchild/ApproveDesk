@@ -22,7 +22,7 @@
 
                 <flux:sidebar.group :heading="__('Submissions')" class="grid">
                     <flux:sidebar.item icon="folder" :href="route('submissions.index')" :current="request()->routeIs('submissions.index')" wire:navigate>
-                        {{ __('My submissions') }}
+                        {{ auth()->user()->can('submissions.view.all') ? __('All submissions') : __('My submissions') }}
                     </flux:sidebar.item>
                     @can('create', \App\Models\Submission::class)
                         <flux:sidebar.item icon="plus-circle" :href="route('submissions.create')" :current="request()->routeIs('submissions.create')" wire:navigate>
@@ -30,6 +30,26 @@
                         </flux:sidebar.item>
                     @endcan
                 </flux:sidebar.group>
+
+                @if (auth()->user()->can('viewAny', \App\Models\User::class) || auth()->user()->can('viewAny', \App\Models\Department::class) || auth()->user()->can('viewAny', \App\Models\WorkflowTemplate::class))
+                    <flux:sidebar.group :heading="__('Administration')" class="grid">
+                        @can('viewAny', \App\Models\User::class)
+                            <flux:sidebar.item icon="users" :href="route('admin.users.index')" :current="request()->routeIs('admin.users.*')" wire:navigate>
+                                {{ __('Users') }}
+                            </flux:sidebar.item>
+                        @endcan
+                        @can('viewAny', \App\Models\Department::class)
+                            <flux:sidebar.item icon="building-office" :href="route('admin.departments.index')" :current="request()->routeIs('admin.departments.*')" wire:navigate>
+                                {{ __('Departments') }}
+                            </flux:sidebar.item>
+                        @endcan
+                        @can('viewAny', \App\Models\WorkflowTemplate::class)
+                            <flux:sidebar.item icon="arrows-right-left" :href="route('admin.workflow-templates.index')" :current="request()->routeIs('admin.workflow-templates.*')" wire:navigate>
+                                {{ __('Workflow templates') }}
+                            </flux:sidebar.item>
+                        @endcan
+                    </flux:sidebar.group>
+                @endif
             </flux:sidebar.nav>
 
             <flux:spacer />

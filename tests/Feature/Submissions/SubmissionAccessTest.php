@@ -122,5 +122,9 @@ class SubmissionAccessTest extends TestCase
         $this->actingAs($this->submitter)
             ->get(route('submissions.files.download', [$this->submission, $file]))
             ->assertForbidden();
+
+        // A valid signed URL is not an authorization bypass if it is shared.
+        $stranger = User::factory()->create()->assignRole('viewer');
+        $this->actingAs($stranger)->get($signed)->assertForbidden();
     }
 }

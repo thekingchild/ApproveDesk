@@ -41,7 +41,9 @@ class ApproverInboxTest extends TestCase
             ->sequential([$this->firstApprover, $this->secondApprover])
             ->create();
 
-        $this->submission = Submission::factory()->for($this->submitter, 'submitter')->create();
+        $this->submission = Submission::factory()->for($this->submitter, 'submitter')->create([
+            'title' => 'Quarterly expense approval',
+        ]);
 
         app(WorkflowEngine::class)->initialize($this->submission);
     }
