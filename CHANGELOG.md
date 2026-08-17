@@ -18,6 +18,8 @@ All notable changes to ApproveDesk are documented here. The project follows
 - Shared-hosting database queue schedule and staging/production deployment automation.
 - Time-limited approval delegation with delegate notifications and scheduled expiry cleanup.
 - Conditional submission-data routing and append-only system-audited automatic approval steps.
+- Sanitized TipTap submission bodies, signed PDF/image previews, MIME-restricted uploads, and advanced submission filters.
+- Information-request pause/response/resume, guarded manual escalation, and immediate/daily/weekly/in-app notification preferences.
 - End-to-end Phase 1 acceptance coverage for three-level approval and rejection flows.
 
 ### Security

@@ -6,6 +6,7 @@ Route::middleware(['auth'])->group(function () {
     Route::redirect('settings', 'settings/profile');
 
     Route::livewire('settings/profile', 'pages::settings.profile')->name('profile.edit');
+    Route::livewire('settings/notifications', 'pages::settings.notifications')->name('notifications.edit');
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {

@@ -5,6 +5,7 @@ namespace App\Notifications;
 use App\Enums\SubmissionStatus;
 use App\Models\Submission;
 use App\Models\User;
+use App\Notifications\Concerns\RespectsNotificationFrequency;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -17,6 +18,7 @@ use Illuminate\Notifications\Notification;
 class SubmissionDecidedNotification extends Notification implements ShouldQueue
 {
     use Queueable;
+    use RespectsNotificationFrequency;
 
     public function __construct(
         public readonly Submission $submission,
@@ -28,7 +30,7 @@ class SubmissionDecidedNotification extends Notification implements ShouldQueue
      */
     public function via(User $notifiable): array
     {
-        return ['mail', 'database'];
+        return $this->preferredChannels($notifiable);
     }
 
     public function toMail(User $notifiable): MailMessage
@@ -47,6 +49,11 @@ class SubmissionDecidedNotification extends Notification implements ShouldQueue
             SubmissionStatus::Returned => [
                 "[{$this->submission->reference_number}] Returned for revision: {$this->submission->title}",
                 'Your submission was returned for revision.',
+                $this->lastDecisionComment(),
+            ],
+            SubmissionStatus::AwaitingInformation => [
+                "[{$this->submission->reference_number}] Information requested: {$this->submission->title}",
+                'An approver requested more information for your submission.',
                 $this->lastDecisionComment(),
             ],
             default => [
@@ -88,7 +95,7 @@ class SubmissionDecidedNotification extends Notification implements ShouldQueue
         $instance = $this->submission->workflowInstance()->first();
 
         return $instance?->actions()
-            ->whereIn('action', ['reject', 'return'])
+            ->whereIn('action', ['reject', 'return', 'request_information'])
             ->latest('id')
             ->first()
             ?->comment;

@@ -10,5 +10,6 @@ enum SubmissionStatus: string
     case Approved = 'approved';
     case Rejected = 'rejected';
     case Returned = 'returned';
+    case AwaitingInformation = 'awaiting_information';
     case Withdrawn = 'withdrawn';
 }

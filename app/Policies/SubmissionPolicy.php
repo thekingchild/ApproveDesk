@@ -56,13 +56,22 @@ class SubmissionPolicy
     public function submit(User $user, Submission $submission): bool
     {
         return $submission->submitter_id === $user->id
-            && in_array($submission->status, [SubmissionStatus::Draft, SubmissionStatus::Returned], true);
+            && in_array($submission->status, [
+                SubmissionStatus::Draft,
+                SubmissionStatus::Returned,
+                SubmissionStatus::AwaitingInformation,
+            ], true);
     }
 
     public function withdraw(User $user, Submission $submission): bool
     {
         return $submission->submitter_id === $user->id
-            && in_array($submission->status, [SubmissionStatus::Pending, SubmissionStatus::InReview, SubmissionStatus::Returned], true);
+            && in_array($submission->status, [
+                SubmissionStatus::Pending,
+                SubmissionStatus::InReview,
+                SubmissionStatus::Returned,
+                SubmissionStatus::AwaitingInformation,
+            ], true);
     }
 
     public function comment(User $user, Submission $submission): bool

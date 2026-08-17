@@ -7,6 +7,7 @@ enum WorkflowActionType: string
     case Approve = 'approve';
     case Reject = 'reject';
     case Return = 'return';
+    case RequestInformation = 'request_information';
     case Delegate = 'delegate';
     case Comment = 'comment';
     case Escalate = 'escalate';

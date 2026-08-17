@@ -1,6 +1,7 @@
 <?php
 
 use App\Jobs\PurgeExpiredDelegations;
+use App\Jobs\SendNotificationDigests;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -16,3 +17,4 @@ Schedule::command('queue:work --stop-when-empty --tries=3 --timeout=90')
     ->withoutOverlapping();
 
 Schedule::job(new PurgeExpiredDelegations)->daily();
+Schedule::job(new SendNotificationDigests)->dailyAt('08:00');

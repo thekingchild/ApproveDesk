@@ -52,4 +52,14 @@ class WorkflowException extends RuntimeException
     {
         return new self("Conditional step [{$step}] is invalid: {$reason}.");
     }
+
+    public static function escalationNotAllowed(string $reason): self
+    {
+        return new self("Escalation is not allowed: {$reason}.");
+    }
+
+    public static function commentRequired(string $action): self
+    {
+        return new self("A comment is required for the [{$action}] action.");
+    }
 }

@@ -4,6 +4,7 @@ namespace App\Notifications;
 
 use App\Models\Delegation;
 use App\Models\User;
+use App\Notifications\Concerns\RespectsNotificationFrequency;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -12,13 +13,14 @@ use Illuminate\Notifications\Notification;
 class DelegationAssignedNotification extends Notification implements ShouldQueue
 {
     use Queueable;
+    use RespectsNotificationFrequency;
 
     public function __construct(public readonly Delegation $delegation) {}
 
     /** @return array<int, string> */
     public function via(User $notifiable): array
     {
-        return ['mail', 'database'];
+        return $this->preferredChannels($notifiable);
     }
 
     public function toMail(User $notifiable): MailMessage

@@ -94,7 +94,7 @@ final class ReportService
                     ->whereIn('action', [
                         WorkflowActionType::Approve,
                         WorkflowActionType::Reject,
-                        WorkflowActionType::Return,
+                        WorkflowActionType::Escalate,
                     ]);
             })
             ->where(function (Builder $eligible) use ($user, $roleIds): void {

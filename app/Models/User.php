@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\NotificationFrequency;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -31,18 +32,25 @@ use Spatie\Permission\Traits\HasRoles;
  * @property string|null $remember_token
  * @property int|null $department_id
  * @property bool $is_active
+ * @property NotificationFrequency $notification_frequency
+ * @property Carbon|null $last_notification_digest_at
  * @property string|null $avatar
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read Department|null $department
  * @property-read Collection<int, Submission> $submissions
  */
-#[Fillable(['name', 'email', 'password', 'department_id', 'is_active', 'email_verified_at'])]
+#[Fillable(['name', 'email', 'password', 'department_id', 'is_active', 'email_verified_at', 'notification_frequency', 'last_notification_digest_at'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable implements PasskeyUser
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, HasRoles, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
+
+    /** @var array<string, mixed> */
+    protected $attributes = [
+        'notification_frequency' => 'immediate',
+    ];
 
     /**
      * Get the attributes that should be cast.
@@ -56,6 +64,8 @@ class User extends Authenticatable implements PasskeyUser
             'password' => 'hashed',
             'department_id' => 'integer',
             'is_active' => 'boolean',
+            'notification_frequency' => NotificationFrequency::class,
+            'last_notification_digest_at' => 'datetime',
         ];
     }
 

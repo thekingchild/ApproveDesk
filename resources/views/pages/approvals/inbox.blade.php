@@ -58,7 +58,7 @@ new #[Title('Approvals')] class extends Component {
                         && ! $instance->actions
                             ->where('step_id', $instance->current_step_id)
                             ->where('actor_id', $user->id)
-                            ->whereIn('action', ['approve', 'reject', 'return'])
+                            ->whereIn('action', ['approve', 'reject', 'escalate'])
                             ->isNotEmpty(),
                 ];
             })

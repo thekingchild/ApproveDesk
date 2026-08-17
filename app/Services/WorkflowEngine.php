@@ -9,6 +9,7 @@ use App\Enums\WorkflowStatus;
 use App\Events\WorkflowAdvanced;
 use App\Events\WorkflowCompleted;
 use App\Events\WorkflowDelegated;
+use App\Events\WorkflowInformationRequested;
 use App\Events\WorkflowRejected;
 use App\Events\WorkflowReturned;
 use App\Exceptions\WorkflowException;
@@ -83,6 +84,15 @@ class WorkflowEngine
 
             $this->authorize($instance, $actor, $action);
 
+            if (in_array($action, [
+                WorkflowActionType::Reject,
+                WorkflowActionType::Return,
+                WorkflowActionType::RequestInformation,
+                WorkflowActionType::Escalate,
+            ], true) && trim((string) $comment) === '') {
+                throw WorkflowException::commentRequired($action->value);
+            }
+
             WorkflowAction::create([
                 'instance_id' => $instance->id,
                 'step_id' => $instance->current_step_id,
@@ -97,9 +107,10 @@ class WorkflowEngine
                 WorkflowActionType::Approve => $this->applyApproval($instance),
                 WorkflowActionType::Reject => $this->applyRejection($instance),
                 WorkflowActionType::Return => $this->applyReturn($instance),
+                WorkflowActionType::RequestInformation => $this->applyInformationRequest($instance),
+                WorkflowActionType::Escalate => $this->applyEscalation($instance),
                 WorkflowActionType::Comment => $instance, // state-neutral, audit-only
                 WorkflowActionType::Delegate,
-                WorkflowActionType::Escalate,
                 WorkflowActionType::AutoApprove,
                 WorkflowActionType::ConditionMatched,
                 WorkflowActionType::ConditionNotMatched => throw WorkflowException::unsupportedStepType($action->value),
@@ -286,6 +297,29 @@ class WorkflowEngine
         $instance->submission->update(['status' => SubmissionStatus::Returned]);
 
         return $instance;
+    }
+
+    private function applyInformationRequest(WorkflowInstance $instance): WorkflowInstance
+    {
+        $instance->update(['status' => WorkflowStatus::OnHold]);
+        $instance->submission->update(['status' => SubmissionStatus::AwaitingInformation]);
+        $instance->informationRequested = true;
+
+        return $instance;
+    }
+
+    private function applyEscalation(WorkflowInstance $instance): WorkflowInstance
+    {
+        $hasLaterStep = WorkflowTemplateStep::query()
+            ->where('template_id', $instance->template_id)
+            ->where('step_order', '>', $instance->currentStep->step_order)
+            ->exists();
+
+        if (! $hasLaterStep) {
+            throw WorkflowException::escalationNotAllowed('the current workflow has no later step');
+        }
+
+        return $this->resolveAutomaticSteps($this->advance($instance));
     }
 
     private function isStepSatisfied(WorkflowInstance $instance): bool
@@ -476,7 +510,7 @@ class WorkflowEngine
             ->whereIn('action', [
                 WorkflowActionType::Approve,
                 WorkflowActionType::Reject,
-                WorkflowActionType::Return,
+                WorkflowActionType::Escalate,
             ])
             ->exists();
     }
@@ -527,7 +561,9 @@ class WorkflowEngine
             } elseif ($instance->wasRejected) {
                 event(new WorkflowRejected($instance));
             } elseif ($instance->status === WorkflowStatus::OnHold) {
-                event(new WorkflowReturned($instance));
+                event($instance->informationRequested
+                    ? new WorkflowInformationRequested($instance)
+                    : new WorkflowReturned($instance));
             } elseif ($instance->advancedToStep !== null) {
                 event(new WorkflowAdvanced($instance));
             }

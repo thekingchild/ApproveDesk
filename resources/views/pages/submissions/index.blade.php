@@ -73,6 +73,7 @@ new #[Title('My submissions')] class extends Component {
             'approved' => 'Approved',
             'rejected' => 'Rejected',
             'returned' => 'Returned',
+            'awaiting_information' => 'Awaiting information',
             'withdrawn' => 'Withdrawn',
         ];
     }
@@ -87,6 +88,7 @@ new #[Title('My submissions')] class extends Component {
             'approved' => 'lime',
             'rejected' => 'red',
             'returned' => 'amber',
+            'awaiting_information' => 'amber',
             'withdrawn' => 'zinc',
         ];
     }

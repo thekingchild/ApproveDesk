@@ -6,6 +6,7 @@ use App\Events\SubmissionCreated;
 use App\Events\WorkflowAdvanced;
 use App\Events\WorkflowCompleted;
 use App\Events\WorkflowDelegated;
+use App\Events\WorkflowInformationRequested;
 use App\Events\WorkflowRejected;
 use App\Events\WorkflowReturned;
 use App\Listeners\NotifyCurrentApprovers;
@@ -58,6 +59,7 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(WorkflowCompleted::class, NotifySubmitterOfDecision::class);
         Event::listen(WorkflowRejected::class, NotifySubmitterOfDecision::class);
         Event::listen(WorkflowReturned::class, NotifySubmitterOfDecision::class);
+        Event::listen(WorkflowInformationRequested::class, NotifySubmitterOfDecision::class);
     }
 
     /**

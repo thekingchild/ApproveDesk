@@ -28,6 +28,8 @@ new #[Title('Submission')] class extends Component {
 
     public string $delegationComment = '';
 
+    public string $resubmissionComment = '';
+
     public ?int $previewFileId = null;
 
     public function mount(Submission $submission): void
@@ -69,6 +71,7 @@ new #[Title('Submission')] class extends Component {
                 $instance->current_step_id === $step->id && in_array($instance->status->value, ['active', 'on_hold'], true) => 'active',
                 $stepActions->contains(fn ($action) => in_array($action->action, [
                     WorkflowActionType::Approve,
+                    WorkflowActionType::Escalate,
                     WorkflowActionType::AutoApprove,
                     WorkflowActionType::ConditionMatched,
                     WorkflowActionType::ConditionNotMatched,
@@ -122,7 +125,7 @@ new #[Title('Submission')] class extends Component {
         return ! $instance->actions
             ->where('step_id', $step->id)
             ->where('actor_id', $user->id)
-            ->whereIn('action', ['approve', 'reject', 'return'])
+            ->whereIn('action', ['approve', 'reject', 'escalate'])
             ->isNotEmpty();
     }
 
@@ -144,7 +147,7 @@ new #[Title('Submission')] class extends Component {
             && ! $instance->actions
                 ->where('step_id', $step->id)
                 ->where('actor_id', $user->id)
-                ->whereIn('action', ['approve', 'reject', 'return'])
+                ->whereIn('action', ['approve', 'reject', 'escalate'])
                 ->isNotEmpty();
     }
 
@@ -192,8 +195,8 @@ new #[Title('Submission')] class extends Component {
     {
         $this->resetValidation();
 
-        if (in_array($action, ['reject', 'return'], true) && trim($this->actionComment) === '') {
-            $this->addError('actionComment', 'A comment is required when rejecting or returning.');
+        if (in_array($action, ['reject', 'return', 'request_information', 'escalate'], true) && trim($this->actionComment) === '') {
+            $this->addError('actionComment', 'A comment is required for this action.');
 
             return;
         }
@@ -247,6 +250,19 @@ new #[Title('Submission')] class extends Component {
     {
         $this->authorize('submit', $this->submission);
 
+        if ($this->submission->status === \App\Enums\SubmissionStatus::AwaitingInformation) {
+            $validated = $this->validate([
+                'resubmissionComment' => ['required', 'string', 'max:5000'],
+            ]);
+
+            Comment::create([
+                'commentable_id' => $this->submission->id,
+                'commentable_type' => Submission::class,
+                'author_id' => Auth::id(),
+                'body' => $validated['resubmissionComment'],
+            ]);
+        }
+
         app(\App\Actions\Submissions\SubmitSubmissionAction::class)->execute($this->submission);
 
         Flux::toast('Resubmitted for approval.', variant: 'success');
@@ -298,7 +314,7 @@ new #[Title('Submission')] class extends Component {
         </div>
 
         <div class="flex items-center gap-2">
-            <flux:badge color="{{ ['draft' => 'zinc', 'in_review' => 'blue', 'approved' => 'lime', 'rejected' => 'red', 'returned' => 'amber', 'withdrawn' => 'zinc', 'pending' => 'blue'][$submission->status->value] ?? 'zinc' }}">
+            <flux:badge color="{{ ['draft' => 'zinc', 'in_review' => 'blue', 'approved' => 'lime', 'rejected' => 'red', 'returned' => 'amber', 'awaiting_information' => 'amber', 'withdrawn' => 'zinc', 'pending' => 'blue'][$submission->status->value] ?? 'zinc' }}">
                 {{ str_replace('_', ' ', $submission->status->value) }}
             </flux:badge>
             <flux:badge color="{{ ['low' => 'zinc', 'normal' => 'blue', 'high' => 'amber', 'urgent' => 'red'][$submission->priority->value] ?? 'zinc' }}">
@@ -403,7 +419,7 @@ new #[Title('Submission')] class extends Component {
     @if ($this->canAct)
         <flux:card class="border-blue-200 dark:border-blue-900">
             <flux:heading size="sm">{{ __('Your decision') }}</flux:heading>
-            <flux:textarea wire:model="actionComment" :label="__('Comment (required for reject / return)')" rows="3" class="mt-3" />
+            <flux:textarea wire:model="actionComment" :label="__('Comment (required for reject, return, information request, or escalation)')" rows="3" class="mt-3" />
             <flux:error name="actionComment" />
 
             <div class="mt-4 flex flex-wrap gap-3">
@@ -413,6 +429,12 @@ new #[Title('Submission')] class extends Component {
                 </flux:modal.trigger>
                 <flux:modal.trigger name="return-modal">
                     <flux:button variant="subtle" data-test="return">{{ __('Return for revision') }}</flux:button>
+                </flux:modal.trigger>
+                <flux:modal.trigger name="information-modal">
+                    <flux:button variant="subtle" data-test="request-information">{{ __('Request information') }}</flux:button>
+                </flux:modal.trigger>
+                <flux:modal.trigger name="escalate-modal">
+                    <flux:button variant="ghost" data-test="escalate">{{ __('Escalate') }}</flux:button>
                 </flux:modal.trigger>
                 @if ($this->canDelegate)
                     <flux:modal.trigger name="delegate-modal">
@@ -462,6 +484,26 @@ new #[Title('Submission')] class extends Component {
                     <flux:button variant="subtle" wire:click="act('return')">{{ __('Confirm return') }}</flux:button>
                 </div>
             </flux:modal>
+
+            <flux:modal name="information-modal">
+                <flux:heading size="md">{{ __('Request more information?') }}</flux:heading>
+                <flux:subheading class="mt-1">{{ __('The workflow pauses at this step until the submitter responds and resubmits.') }}</flux:subheading>
+                <flux:textarea wire:model="actionComment" :label="__('What information is required?')" rows="3" class="mt-4" />
+                <div class="mt-4 flex gap-2">
+                    <flux:modal.close><flux:button variant="ghost">{{ __('Cancel') }}</flux:button></flux:modal.close>
+                    <flux:button variant="subtle" wire:click="act('request_information')">{{ __('Send request') }}</flux:button>
+                </div>
+            </flux:modal>
+
+            <flux:modal name="escalate-modal">
+                <flux:heading size="md">{{ __('Escalate to the next step?') }}</flux:heading>
+                <flux:subheading class="mt-1">{{ __('Your current step will be bypassed and the next configured approvers will be notified.') }}</flux:subheading>
+                <flux:textarea wire:model="actionComment" :label="__('Reason for escalation')" rows="3" class="mt-4" />
+                <div class="mt-4 flex gap-2">
+                    <flux:modal.close><flux:button variant="ghost">{{ __('Cancel') }}</flux:button></flux:modal.close>
+                    <flux:button variant="primary" wire:click="act('escalate')">{{ __('Confirm escalation') }}</flux:button>
+                </div>
+            </flux:modal>
         </flux:card>
     @endif
 
@@ -496,8 +538,14 @@ new #[Title('Submission')] class extends Component {
     @endcan
 
     @can('submit', $submission)
-        @if ($submission->status->value === 'returned')
-            <flux:button variant="primary" wire:click="resubmit" data-test="resubmit">{{ __('Resubmit for approval') }}</flux:button>
+        @if (in_array($submission->status->value, ['returned', 'awaiting_information'], true))
+            <div class="space-y-3">
+                @if ($submission->status->value === 'awaiting_information')
+                    <flux:textarea wire:model="resubmissionComment" :label="__('Response to the information request')" rows="3" />
+                    <flux:error name="resubmissionComment" />
+                @endif
+                <flux:button variant="primary" wire:click="resubmit" data-test="resubmit">{{ __('Resubmit for approval') }}</flux:button>
+            </div>
         @endif
     @endcan
 </div>

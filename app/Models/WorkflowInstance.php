@@ -36,6 +36,8 @@ class WorkflowInstance extends Model
 
     public bool $wasRejected = false;
 
+    public bool $informationRequested = false;
+
     public ?WorkflowTemplateStep $advancedToStep = null;
 
     protected $fillable = [
