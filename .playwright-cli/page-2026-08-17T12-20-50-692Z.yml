@@ -1,0 +1,80 @@
+- generic [active] [ref=f1e119]:
+  - generic [ref=f1e120]:
+    - link "ApproveDesk" [ref=f1e122] [cursor=pointer]:
+      - /url: http://127.0.0.1:8001/dashboard
+    - navigation [ref=f1e127]:
+      - generic [ref=f1e128]:
+        - generic [ref=f1e129]: Approvals
+        - generic [ref=f1e131]:
+          - link "Dashboard" [ref=f1e133] [cursor=pointer]:
+            - /url: http://127.0.0.1:8001/dashboard
+          - link "Approvals" [ref=f1e139] [cursor=pointer]:
+            - /url: http://127.0.0.1:8001/approvals/inbox
+      - generic [ref=f1e144]:
+        - generic [ref=f1e145]: Submissions
+        - generic [ref=f1e147]:
+          - link "My submissions" [ref=f1e149] [cursor=pointer]:
+            - /url: http://127.0.0.1:8001/submissions
+          - link "New submission" [ref=f1e155] [cursor=pointer]:
+            - /url: http://127.0.0.1:8001/submissions/create
+    - navigation [ref=f1e161]:
+      - link "Repository" [ref=f1e163] [cursor=pointer]:
+        - /url: https://github.com/laravel/livewire-starter-kit
+      - link "Documentation" [ref=f1e172] [cursor=pointer]:
+        - /url: https://laravel.com/docs/starter-kits#livewire
+    - button "SS Sam Submitter" [ref=f1e178]:
+      - generic [ref=f1e179]: SS
+      - generic [ref=f1e182]: Sam Submitter
+  - generic [ref=f1e188]:
+    - generic [ref=f1e189]: New submission
+    - generic [ref=f1e190]: Drafts auto-save every 30 seconds while you type.
+    - generic [ref=f1e191]:
+      - generic [ref=f1e192]: 1. Details
+      - generic [ref=f1e193]: 2. Attachments
+      - generic [ref=f1e194]: 3. Review
+    - generic [ref=f1e195]:
+      - generic [ref=f1e196]:
+        - generic [ref=f1e197]:
+          - generic [ref=f1e198]: Type
+          - combobox "Type" [ref=f1e199]:
+            - option "Document"
+            - option "Note"
+            - option "Memo" [selected]
+            - option "Request"
+        - generic [ref=f1e200]:
+          - generic [ref=f1e201]: Priority
+          - combobox "Priority" [ref=f1e202]:
+            - option "Low"
+            - option "Normal" [selected]
+            - option "High"
+            - option "Urgent"
+        - generic [ref=f1e204]:
+          - generic [ref=f1e205]: Title
+          - textbox "Title" [ref=f1e207]:
+            - /placeholder: What is this about?
+        - generic [ref=f1e208]:
+          - generic [ref=f1e209]: Body
+          - generic [ref=f1e210]:
+            - generic [ref=f1e211]:
+              - button "¶" [ref=f1e212]
+              - button "H2" [ref=f1e213]
+              - button "H3" [ref=f1e214]
+              - button "B" [ref=f1e215]
+              - button "I" [ref=f1e216]
+              - button "S" [ref=f1e217]
+              - button "• List" [ref=f1e218]
+              - button "1. List" [ref=f1e219]
+              - button "Quote" [ref=f1e220]
+              - button "Code" [ref=f1e221]
+              - button "↶" [ref=f1e222]
+              - button "↷" [ref=f1e223]
+            - textbox [ref=f1e225]:
+              - paragraph [ref=f1e226]
+        - generic [ref=f1e227]:
+          - generic [ref=f1e228]: Due date (optional)
+          - textbox "Due date (optional)" [ref=f1e230]
+      - generic [ref=f1e232]:
+        - button "Save draft" [ref=f1e233]
+        - button "Continue" [ref=f1e239]
+  - generic:
+    - status

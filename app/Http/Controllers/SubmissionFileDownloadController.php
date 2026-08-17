@@ -23,6 +23,17 @@ class SubmissionFileDownloadController extends Controller
 
         abort_unless(Storage::disk($file->disk)->exists($file->stored_path), 404);
 
+        if ($request->boolean('preview')) {
+            abort_unless($file->isPreviewable(), 415);
+
+            return Storage::disk($file->disk)->response(
+                $file->stored_path,
+                $file->original_name,
+                ['Content-Type' => $file->mime_type, 'X-Content-Type-Options' => 'nosniff'],
+                'inline',
+            );
+        }
+
         return Storage::disk($file->disk)->download($file->stored_path, $file->original_name);
     }
 }

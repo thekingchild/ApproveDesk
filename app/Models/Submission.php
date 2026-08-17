@@ -6,7 +6,9 @@ use App\Enums\SubmissionPriority;
 use App\Enums\SubmissionStatus;
 use App\Enums\SubmissionType;
 use App\Services\ReferenceNumberGenerator;
+use App\Services\RichTextSanitizer;
 use Database\Factories\SubmissionFactory;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -58,6 +60,16 @@ class Submission extends Model
             'due_date' => 'date',
             'metadata' => 'array',
         ];
+    }
+
+    /** @return Attribute<string|null, string|null> */
+    protected function body(): Attribute
+    {
+        return Attribute::make(
+            set: fn (?string $value): ?string => $value === null
+                ? null
+                : app(RichTextSanitizer::class)->sanitize($value),
+        );
     }
 
     protected static function booted(): void

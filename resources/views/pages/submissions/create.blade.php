@@ -47,7 +47,7 @@ new #[Title('New submission')] class extends Component {
             'body' => ['nullable', 'string', 'max:65535'],
             'priority' => ['required', 'in:low,normal,high,urgent'],
             'due_date' => ['nullable', 'date', 'after:today'],
-            'attachments.*' => ['file', 'max:10240'],
+            'attachments.*' => ['file', 'max:10240', 'mimes:pdf,jpg,jpeg,png,gif,webp,doc,docx,xls,xlsx,csv,txt'],
         ];
     }
 
@@ -209,14 +209,28 @@ new #[Title('New submission')] class extends Component {
                 </div>
 
                 <div class="sm:col-span-2">
-                    <flux:textarea wire:model="body" :label="__('Body')" rows="8" placeholder="{{ __('Write the note, memo, or request details…') }}" />
+                    <label class="mb-2 block text-sm font-medium">{{ __('Body') }}</label>
+                    <div
+                        x-data="richTextEditor(@js($body))"
+                        x-modelable="content"
+                        wire:model="body"
+                        class="overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900"
+                    >
+                        <div class="flex flex-wrap gap-1 border-b border-zinc-200 p-2 dark:border-zinc-700">
+                            @foreach (['paragraph' => '¶', 'heading2' => 'H2', 'heading3' => 'H3', 'bold' => 'B', 'italic' => 'I', 'strike' => 'S', 'bulletList' => '• List', 'orderedList' => '1. List', 'blockquote' => 'Quote', 'codeBlock' => 'Code', 'undo' => '↶', 'redo' => '↷'] as $command => $label)
+                                <button type="button" class="rounded px-2 py-1 text-xs font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800" x-on:click="command('{{ $command }}')">{{ $label }}</button>
+                            @endforeach
+                        </div>
+                        <div wire:ignore x-ref="editor"></div>
+                    </div>
+                    <flux:error name="body" />
                 </div>
 
                 <flux:input wire:model="due_date" type="date" :label="__('Due date (optional)')" />
             </div>
         @elseif ($step === 2)
             <div>
-                <flux:input type="file" wire:model="attachments" multiple :label="__('Attachments')" />
+                <flux:input type="file" wire:model="attachments" multiple accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.doc,.docx,.xls,.xlsx,.csv,.txt" :label="__('Attachments')" />
                 <flux:error name="attachments.*" />
 
                 @if (count($attachments))
@@ -251,7 +265,7 @@ new #[Title('New submission')] class extends Component {
                     @if ($due_date)<div><dt class="text-xs text-zinc-500">{{ __('Due date') }}</dt><dd class="font-medium">{{ $due_date }}</dd></div>@endif
                     <div><dt class="text-xs text-zinc-500">{{ __('Files') }}</dt>
                         <dd class="font-medium">{{ count($attachments) + $this->savedFiles->count() }}</dd></div>
-                    @if ($body)<div class="sm:col-span-2"><dt class="text-xs text-zinc-500">{{ __('Body') }}</dt><dd class="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">{{ $body }}</dd></div>@endif
+                    @if ($body)<div class="sm:col-span-2"><dt class="text-xs text-zinc-500">{{ __('Body') }}</dt><dd class="prose prose-sm dark:prose-invert max-w-none">{!! app(\App\Services\RichTextSanitizer::class)->sanitize($body) !!}</dd></div>@endif
                 </dl>
             </flux:card>
         @endif

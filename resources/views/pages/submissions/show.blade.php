@@ -28,6 +28,8 @@ new #[Title('Submission')] class extends Component {
 
     public string $delegationComment = '';
 
+    public ?int $previewFileId = null;
+
     public function mount(Submission $submission): void
     {
         $this->authorize('view', $submission);
@@ -260,6 +262,32 @@ new #[Title('Submission')] class extends Component {
             ['submission' => $this->submission->id, 'file' => $file->id],
         );
     }
+
+    #[Computed]
+    public function previewFile(): ?\App\Models\SubmissionFile
+    {
+        return $this->submission->files->firstWhere('id', $this->previewFileId);
+    }
+
+    public function openPreview(int $fileId): void
+    {
+        $file = $this->submission->files->firstWhere('id', $fileId);
+        abort_unless($file?->isPreviewable(), 404);
+        $this->authorize('downloadFiles', $this->submission);
+
+        $this->previewFileId = $file->id;
+        unset($this->previewFile);
+        $this->modal('file-preview')->show();
+    }
+
+    public function previewUrl(\App\Models\SubmissionFile $file): string
+    {
+        return URL::temporarySignedRoute(
+            'submissions.files.download',
+            now()->addMinutes(30),
+            ['submission' => $this->submission->id, 'file' => $file->id, 'preview' => 1],
+        );
+    }
 } ?>
 
 <div class="space-y-6">
@@ -336,7 +364,7 @@ new #[Title('Submission')] class extends Component {
     @if ($submission->body)
         <flux:card>
             <flux:heading size="sm">{{ __('Body') }}</flux:heading>
-            <div class="prose prose-sm mt-3 max-w-none whitespace-pre-wrap dark:prose-invert">{{ $submission->body }}</div>
+            <div class="prose prose-sm mt-3 max-w-none dark:prose-invert">{!! app(\App\Services\RichTextSanitizer::class)->sanitize($submission->body) !!}</div>
         </flux:card>
     @endif
 
@@ -347,11 +375,29 @@ new #[Title('Submission')] class extends Component {
                 @foreach ($submission->files as $file)
                     <li class="flex items-center justify-between gap-3">
                         <span>📎 {{ $file->original_name }} <span class="text-xs text-zinc-400">({{ number_format($file->size_bytes / 1024) }} KB)</span></span>
-                        <flux:link :href="$this->fileUrl($file)" target="_blank">{{ __('Download') }}</flux:link>
+                        <span class="flex items-center gap-3">
+                            @if ($file->isPreviewable())
+                                <flux:button size="xs" variant="ghost" wire:click="openPreview({{ $file->id }})">{{ __('Preview') }}</flux:button>
+                            @endif
+                            <flux:link :href="$this->fileUrl($file)" target="_blank">{{ __('Download') }}</flux:link>
+                        </span>
                     </li>
                 @endforeach
             </ul>
         </flux:card>
+
+        <flux:modal name="file-preview" class="w-full max-w-5xl">
+            @if ($this->previewFile)
+                <flux:heading size="md">{{ $this->previewFile->original_name }}</flux:heading>
+                <div class="mt-4 overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-900">
+                    @if (str_starts_with($this->previewFile->mime_type, 'image/'))
+                        <img src="{{ $this->previewUrl($this->previewFile) }}" alt="{{ $this->previewFile->original_name }}" class="mx-auto max-h-[70vh] object-contain" />
+                    @else
+                        <iframe src="{{ $this->previewUrl($this->previewFile) }}" title="{{ $this->previewFile->original_name }}" class="h-[70vh] w-full"></iframe>
+                    @endif
+                </div>
+            @endif
+        </flux:modal>
     @endif
 
     @if ($this->canAct)

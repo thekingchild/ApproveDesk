@@ -23,6 +23,14 @@ use Illuminate\Support\Carbon;
  */
 class SubmissionFile extends Model
 {
+    private const PREVIEWABLE_MIME_TYPES = [
+        'application/pdf',
+        'image/jpeg',
+        'image/png',
+        'image/gif',
+        'image/webp',
+    ];
+
     /** @use HasFactory<SubmissionFileFactory> */
     use HasFactory;
 
@@ -37,6 +45,11 @@ class SubmissionFile extends Model
             'size_bytes' => 'integer',
             'is_redacted' => 'boolean',
         ];
+    }
+
+    public function isPreviewable(): bool
+    {
+        return in_array($this->mime_type, self::PREVIEWABLE_MIME_TYPES, true);
     }
 
     /**

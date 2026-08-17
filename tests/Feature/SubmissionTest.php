@@ -64,4 +64,14 @@ class SubmissionTest extends TestCase
         $this->assertCount(2, $submission->files);
         $this->assertNotNull($submission->workflowInstance);
     }
+
+    public function test_submission_body_is_sanitized_before_storage(): void
+    {
+        $submission = Submission::factory()->create([
+            'body' => '<p onclick="bad()">Safe <strong>content</strong></p><script>alert(1)</script>',
+        ]);
+
+        $this->assertSame('<p>Safe <strong>content</strong></p>', $submission->body);
+        $this->assertSame($submission->body, $submission->fresh()->body);
+    }
 }

@@ -6,6 +6,7 @@ use App\Models\Submission;
 use App\Models\SubmissionFile;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Validator;
 
 /**
  * Stores uploaded attachments on the private local disk (outside the
@@ -20,6 +21,11 @@ final class AttachSubmissionFilesAction
      */
     public function execute(Submission $submission, User $uploader, array $files): array
     {
+        Validator::make(
+            ['files' => $files],
+            ['files.*' => ['file', 'max:10240', 'mimes:pdf,jpg,jpeg,png,gif,webp,doc,docx,xls,xlsx,csv,txt']],
+        )->validate();
+
         return collect($files)->map(function (UploadedFile $file) use ($submission, $uploader): SubmissionFile {
             return SubmissionFile::create([
                 'submission_id' => $submission->id,

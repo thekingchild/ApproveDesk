@@ -1,0 +1,76 @@
+- generic [active] [ref=f1e1]:
+  - generic [ref=f1e2]:
+    - link "ApproveDesk" [ref=f1e4] [cursor=pointer]:
+      - /url: http://127.0.0.1:8001/dashboard
+    - navigation [ref=f1e9]:
+      - generic [ref=f1e10]:
+        - generic [ref=f1e11]: Approvals
+        - generic [ref=f1e13]:
+          - link "Dashboard" [ref=f1e15] [cursor=pointer]:
+            - /url: http://127.0.0.1:8001/dashboard
+          - link "Approvals" [ref=f1e21] [cursor=pointer]:
+            - /url: http://127.0.0.1:8001/approvals/inbox
+      - generic [ref=f1e26]:
+        - generic [ref=f1e27]: Submissions
+        - generic [ref=f1e29]:
+          - link "My submissions" [ref=f1e31] [cursor=pointer]:
+            - /url: http://127.0.0.1:8001/submissions
+          - link "New submission" [ref=f1e37] [cursor=pointer]:
+            - /url: http://127.0.0.1:8001/submissions/create
+    - navigation [ref=f1e43]:
+      - link "Repository" [ref=f1e45] [cursor=pointer]:
+        - /url: https://github.com/laravel/livewire-starter-kit
+      - link "Documentation" [ref=f1e54] [cursor=pointer]:
+        - /url: https://laravel.com/docs/starter-kits#livewire
+    - button "SS Sam Submitter" [ref=f1e60]:
+      - generic [ref=f1e61]: SS
+      - generic [ref=f1e64]: Sam Submitter
+  - generic [ref=f1e70]:
+    - generic [ref=f1e71]:
+      - generic [ref=f1e72]:
+        - generic [ref=f1e73]: Dashboard
+        - generic [ref=f1e74]: Your submissions and approval work at a glance.
+      - link "New submission" [ref=f1e75] [cursor=pointer]:
+        - /url: http://127.0.0.1:8001/submissions/create
+    - region "My submissions" [ref=f1e79]:
+      - generic [ref=f1e80]:
+        - generic [ref=f1e81]: My submissions
+        - link "View submissions" [ref=f1e82] [cursor=pointer]:
+          - /url: http://127.0.0.1:8001/submissions
+      - generic [ref=f1e83]:
+        - generic [ref=f1e84]:
+          - paragraph [ref=f1e85]: Total
+          - generic [ref=f1e86]:
+            - paragraph [ref=f1e87]: "0"
+            - generic [ref=f1e88]: Total
+        - generic [ref=f1e89]:
+          - paragraph [ref=f1e90]: In review
+          - generic [ref=f1e91]:
+            - paragraph [ref=f1e92]: "0"
+            - generic [ref=f1e93]: In review
+        - generic [ref=f1e94]:
+          - paragraph [ref=f1e95]: Approved
+          - generic [ref=f1e96]:
+            - paragraph [ref=f1e97]: "0"
+            - generic [ref=f1e98]: Approved
+        - generic [ref=f1e99]:
+          - paragraph [ref=f1e100]: Rejected
+          - generic [ref=f1e101]:
+            - paragraph [ref=f1e102]: "0"
+            - generic [ref=f1e103]: Rejected
+    - generic [ref=f1e104]:
+      - generic [ref=f1e105]:
+        - generic [ref=f1e106]: Recently updated
+        - generic [ref=f1e107]: "0"
+      - table [ref=f1e109]:
+        - rowgroup [ref=f1e110]:
+          - row [ref=f1e111]:
+            - columnheader "Reference" [ref=f1e112]
+            - columnheader "Title" [ref=f1e113]
+            - columnheader "Status" [ref=f1e114]
+            - columnheader "Updated" [ref=f1e115]
+        - rowgroup [ref=f1e116]:
+          - row [ref=f1e117]:
+            - cell "No submissions yet." [ref=f1e118]
+  - generic:
+    - status

@@ -127,4 +127,49 @@ class SubmissionAccessTest extends TestCase
         $stranger = User::factory()->create()->assignRole('viewer');
         $this->actingAs($stranger)->get($signed)->assertForbidden();
     }
+
+    public function test_supported_attachments_can_be_previewed_inline_through_signed_urls(): void
+    {
+        Storage::fake('local');
+        $file = SubmissionFile::factory()
+            ->for($this->submission)
+            ->for($this->submitter, 'uploader')
+            ->create([
+                'stored_path' => 'submissions/1/preview.pdf',
+                'mime_type' => 'application/pdf',
+                'original_name' => 'preview.pdf',
+            ]);
+        Storage::disk('local')->put($file->stored_path, '%PDF-preview');
+        $signed = URL::temporarySignedRoute(
+            'submissions.files.download',
+            now()->addMinutes(10),
+            ['submission' => $this->submission->id, 'file' => $file->id, 'preview' => 1],
+        );
+
+        $response = $this->actingAs($this->submitter)->get($signed);
+
+        $response->assertOk();
+        $response->assertHeader('content-type', 'application/pdf');
+        $this->assertStringContainsString('inline', (string) $response->headers->get('content-disposition'));
+    }
+
+    public function test_unsupported_attachments_cannot_be_forced_into_inline_preview(): void
+    {
+        Storage::fake('local');
+        $file = SubmissionFile::factory()
+            ->for($this->submission)
+            ->for($this->submitter, 'uploader')
+            ->create([
+                'stored_path' => 'submissions/1/archive.zip',
+                'mime_type' => 'application/zip',
+            ]);
+        Storage::disk('local')->put($file->stored_path, 'zip-content');
+        $signed = URL::temporarySignedRoute(
+            'submissions.files.download',
+            now()->addMinutes(10),
+            ['submission' => $this->submission->id, 'file' => $file->id, 'preview' => 1],
+        );
+
+        $this->actingAs($this->submitter)->get($signed)->assertUnsupportedMediaType();
+    }
 }

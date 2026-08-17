@@ -105,6 +105,21 @@ class CreateSubmissionTest extends TestCase
         Storage::disk('local')->assertExists($submission->files->first()->stored_path);
     }
 
+    public function test_executable_attachments_are_rejected_by_mime_validation(): void
+    {
+        Storage::fake('local');
+
+        Livewire::actingAs($this->submitter)
+            ->test('pages::submissions.create')
+            ->set('title', 'Unsafe attachment attempt')
+            ->call('next')
+            ->set('attachments', [UploadedFile::fake()->create('payload.php', 10, 'application/x-php')])
+            ->call('submit')
+            ->assertHasErrors(['attachments.0']);
+
+        $this->assertSame(0, Submission::query()->count());
+    }
+
     public function test_wizard_is_gated_by_permission(): void
     {
         $approver = User::factory()->create()->assignRole('viewer');
