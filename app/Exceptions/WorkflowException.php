@@ -47,4 +47,9 @@ class WorkflowException extends RuntimeException
     {
         return new self("Delegation is not allowed: {$reason}.");
     }
+
+    public static function invalidCondition(string $step, string $reason): self
+    {
+        return new self("Conditional step [{$step}] is invalid: {$reason}.");
+    }
 }

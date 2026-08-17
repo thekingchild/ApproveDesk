@@ -41,7 +41,7 @@ new #[Title('Workflow templates')] class extends Component {
 
     public bool $isActive = true;
 
-    /** @var array<int, array{name: string, stepType: string, quorumCount: int|null, assigneeType: string, assigneeIds: array<int, int>, allowDelegation: bool}> */
+    /** @var array<int, array<string, mixed>> */
     public array $steps = [];
 
     public function mount(): void
@@ -111,6 +111,13 @@ new #[Title('Workflow templates')] class extends Component {
             'assigneeType' => $step->assignee_type->value,
             'assigneeIds' => $step->assignee_ids,
             'allowDelegation' => $step->allow_delegation,
+            'conditionField' => data_get($step->conditions, 'rules.0.field', 'priority'),
+            'conditionOperator' => data_get($step->conditions, 'rules.0.operator', 'equals'),
+            'conditionValue' => is_array(data_get($step->conditions, 'rules.0.value'))
+                ? implode(', ', data_get($step->conditions, 'rules.0.value'))
+                : (string) data_get($step->conditions, 'rules.0.value', ''),
+            'trueStep' => data_get($step->conditions, 'true_step'),
+            'falseStep' => data_get($step->conditions, 'false_step'),
         ])->values()->all();
 
         $this->modal('template-form')->show();
@@ -176,12 +183,21 @@ new #[Title('Workflow templates')] class extends Component {
                 StepType::Sequential->value,
                 StepType::Parallel->value,
                 StepType::Quorum->value,
+                StepType::Conditional->value,
+                StepType::Auto->value,
             ])],
             'steps.*.quorumCount' => ['nullable', 'integer', 'min:1'],
             'steps.*.assigneeType' => ['required', Rule::enum(AssigneeType::class)],
-            'steps.*.assigneeIds' => ['required', 'array', 'min:1'],
+            'steps.*.assigneeIds' => ['array'],
             'steps.*.assigneeIds.*' => ['required', 'integer'],
             'steps.*.allowDelegation' => ['sometimes', 'boolean'],
+            'steps.*.conditionField' => ['nullable', 'string', 'max:100'],
+            'steps.*.conditionOperator' => ['nullable', Rule::in([
+                'equals', 'not_equals', 'in', 'not_in', 'gt', 'gte', 'lt', 'lte', 'contains', 'present',
+            ])],
+            'steps.*.conditionValue' => ['nullable', 'string', 'max:1000'],
+            'steps.*.trueStep' => ['nullable', 'integer', 'min:1', 'max:20'],
+            'steps.*.falseStep' => ['nullable', 'integer', 'min:1', 'max:20'],
         ]);
 
         if ($validated['isDefault'] && ! $validated['isActive']) {
@@ -196,19 +212,25 @@ new #[Title('Workflow templates')] class extends Component {
             ]);
         }
 
-        $stepData = collect($validated['steps'])->map(function (array $step, int $index): WorkflowTemplateStepData {
+        $stepCount = count($validated['steps']);
+        $stepData = collect($validated['steps'])->map(function (array $step, int $index) use ($stepCount): WorkflowTemplateStepData {
             $type = AssigneeType::from($step['assigneeType']);
             $ids = array_values(array_unique(array_map('intval', $step['assigneeIds'])));
-            $this->guardAssigneesExist($type, $ids, $index);
-            $assigneeCount = $this->resolvedAssigneeCount($type, $ids);
+            $stepType = StepType::from($step['stepType']);
+            $automatic = in_array($stepType, [StepType::Conditional, StepType::Auto], true);
+            $assigneeCount = 0;
 
-            if ($assigneeCount < 1) {
-                throw ValidationException::withMessages([
-                    "steps.{$index}.assigneeIds" => __('Select an assignment with at least one active user.'),
-                ]);
+            if (! $automatic) {
+                $this->guardAssigneesExist($type, $ids, $index);
+                $assigneeCount = $this->resolvedAssigneeCount($type, $ids);
+
+                if ($assigneeCount < 1) {
+                    throw ValidationException::withMessages([
+                        "steps.{$index}.assigneeIds" => __('Select an assignment with at least one active user.'),
+                    ]);
+                }
             }
 
-            $stepType = StepType::from($step['stepType']);
             $quorumCount = isset($step['quorumCount']) && $step['quorumCount'] !== ''
                 ? (int) $step['quorumCount']
                 : null;
@@ -217,13 +239,18 @@ new #[Title('Workflow templates')] class extends Component {
                 $this->guardQuorumIsPossible($quorumCount, $assigneeCount, $index);
             }
 
+            $conditions = $stepType === StepType::Conditional
+                ? $this->conditionalConfiguration($step, $index, $stepCount)
+                : null;
+
             return new WorkflowTemplateStepData(
                 name: $step['name'],
                 stepType: $stepType,
                 quorumCount: $stepType === StepType::Quorum ? $quorumCount : null,
                 assigneeType: $type,
-                assigneeIds: $ids,
-                allowDelegation: (bool) ($step['allowDelegation'] ?? true),
+                assigneeIds: $automatic ? [] : $ids,
+                allowDelegation: ! $automatic && (bool) ($step['allowDelegation'] ?? true),
+                conditions: $conditions,
             );
         })->all();
 
@@ -250,7 +277,7 @@ new #[Title('Workflow templates')] class extends Component {
         Flux::toast($message, variant: 'success');
     }
 
-    /** @return array{name: string, stepType: string, quorumCount: int|null, assigneeType: string, assigneeIds: array<int, int>, allowDelegation: bool} */
+    /** @return array<string, mixed> */
     private function blankStep(int $number): array
     {
         return [
@@ -260,6 +287,55 @@ new #[Title('Workflow templates')] class extends Component {
             'assigneeType' => AssigneeType::User->value,
             'assigneeIds' => [],
             'allowDelegation' => true,
+            'conditionField' => 'priority',
+            'conditionOperator' => 'equals',
+            'conditionValue' => '',
+            'trueStep' => null,
+            'falseStep' => null,
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $step
+     * @return array<string, mixed>
+     */
+    private function conditionalConfiguration(array $step, int $index, int $stepCount): array
+    {
+        $field = trim((string) ($step['conditionField'] ?? ''));
+        $operator = (string) ($step['conditionOperator'] ?? '');
+
+        if (! in_array($field, ['type', 'title', 'priority', 'department_id', 'submitter_id', 'due_date'], true)
+            && preg_match('/^metadata(?:\.[A-Za-z0-9_-]+)+$/', $field) !== 1) {
+            throw ValidationException::withMessages([
+                "steps.{$index}.conditionField" => __('Use a supported submission field or metadata.key path.'),
+            ]);
+        }
+
+        $trueStep = filled($step['trueStep'] ?? null) ? (int) $step['trueStep'] : null;
+        $falseStep = filled($step['falseStep'] ?? null) ? (int) $step['falseStep'] : null;
+
+        foreach (['trueStep' => $trueStep, 'falseStep' => $falseStep] as $key => $target) {
+            if ($target !== null && ($target <= $index + 1 || $target > $stepCount)) {
+                throw ValidationException::withMessages([
+                    "steps.{$index}.{$key}" => __('A branch must target a later step or completion.'),
+                ]);
+            }
+        }
+
+        $value = (string) ($step['conditionValue'] ?? '');
+        if (in_array($operator, ['in', 'not_in'], true)) {
+            $value = array_values(array_filter(array_map('trim', explode(',', $value)), fn (string $item): bool => $item !== ''));
+        }
+
+        return [
+            'match' => 'all',
+            'rules' => [[
+                'field' => $field,
+                'operator' => $operator,
+                'value' => $value,
+            ]],
+            'true_step' => $trueStep,
+            'false_step' => $falseStep,
         ];
     }
 
@@ -320,7 +396,7 @@ new #[Title('Workflow templates')] class extends Component {
     <div class="flex flex-wrap items-start justify-between gap-3">
         <div>
             <flux:heading size="lg">{{ __('Workflow templates') }}</flux:heading>
-            <flux:subheading>{{ __('Configure sequential and parallel approval chains by submission type.') }}</flux:subheading>
+            <flux:subheading>{{ __('Configure manual, conditional, and automatic approval chains by submission type.') }}</flux:subheading>
         </div>
         <flux:button variant="primary" icon="plus" wire:click="createTemplate" data-test="create-template">{{ __('Add template') }}</flux:button>
     </div>
@@ -413,12 +489,20 @@ new #[Title('Workflow templates')] class extends Component {
                                     <flux:select.option value="sequential">{{ __('Sequential — one approval') }}</flux:select.option>
                                     <flux:select.option value="parallel">{{ __('Parallel — all must approve') }}</flux:select.option>
                                     <flux:select.option value="quorum">{{ __('Quorum — N must approve') }}</flux:select.option>
+                                    <flux:select.option value="conditional">{{ __('Conditional — route by submission data') }}</flux:select.option>
+                                    <flux:select.option value="auto">{{ __('Automatic approval') }}</flux:select.option>
                                 </flux:select>
-                                <flux:select wire:model="steps.{{ $index }}.assigneeType" wire:change="resetAssignees({{ $index }})" :label="__('Assign by')" :disabled="$editingTemplateUsed">
-                                    @foreach (AssigneeType::cases() as $type)
-                                        <flux:select.option :value="$type->value">{{ str($type->value)->title() }}</flux:select.option>
-                                    @endforeach
-                                </flux:select>
+                                @if (! in_array($step['stepType'], ['conditional', 'auto'], true))
+                                    <flux:select wire:model="steps.{{ $index }}.assigneeType" wire:change="resetAssignees({{ $index }})" :label="__('Assign by')" :disabled="$editingTemplateUsed">
+                                        @foreach (AssigneeType::cases() as $type)
+                                            <flux:select.option :value="$type->value">{{ str($type->value)->title() }}</flux:select.option>
+                                        @endforeach
+                                    </flux:select>
+                                @else
+                                    <div class="rounded-lg bg-zinc-50 p-3 text-sm text-zinc-500 dark:bg-zinc-800/60">
+                                        {{ $step['stepType'] === 'auto' ? __('No approver is required.') : __('The system evaluates this step automatically.') }}
+                                    </div>
+                                @endif
 
                                 @if ($step['stepType'] === 'quorum')
                                     <div class="sm:col-span-3">
@@ -427,18 +511,47 @@ new #[Title('Workflow templates')] class extends Component {
                                     </div>
                                 @endif
 
-                                <div class="sm:col-span-3">
-                                    <flux:checkbox wire:model="steps.{{ $index }}.allowDelegation" :label="__('Allow assigned approvers to delegate')" :disabled="$editingTemplateUsed" />
-                                </div>
+                                @if ($step['stepType'] === 'conditional')
+                                    <div class="grid gap-4 sm:col-span-3 sm:grid-cols-3">
+                                        <flux:input wire:model="steps.{{ $index }}.conditionField" :label="__('Field')" placeholder="priority or metadata.amount" :disabled="$editingTemplateUsed" />
+                                        <flux:select wire:model="steps.{{ $index }}.conditionOperator" :label="__('Operator')" :disabled="$editingTemplateUsed">
+                                            @foreach (['equals' => 'Equals', 'not_equals' => 'Does not equal', 'in' => 'In comma-separated list', 'not_in' => 'Not in list', 'gt' => 'Greater than', 'gte' => 'At least', 'lt' => 'Less than', 'lte' => 'At most', 'contains' => 'Contains', 'present' => 'Is present'] as $value => $label)
+                                                <flux:select.option :value="$value">{{ __($label) }}</flux:select.option>
+                                            @endforeach
+                                        </flux:select>
+                                        <flux:input wire:model="steps.{{ $index }}.conditionValue" :label="__('Value')" :disabled="$editingTemplateUsed || $step['conditionOperator'] === 'present'" />
+                                        <flux:select wire:model="steps.{{ $index }}.trueStep" :label="__('When true')" :disabled="$editingTemplateUsed">
+                                            <flux:select.option value="">{{ __('Complete workflow') }}</flux:select.option>
+                                            @foreach ($steps as $targetIndex => $targetStep)
+                                                @if ($targetIndex > $index)<flux:select.option :value="$targetIndex + 1">{{ ($targetIndex + 1).'. '.$targetStep['name'] }}</flux:select.option>@endif
+                                            @endforeach
+                                        </flux:select>
+                                        <flux:select wire:model="steps.{{ $index }}.falseStep" :label="__('When false')" :disabled="$editingTemplateUsed">
+                                            <flux:select.option value="">{{ __('Complete workflow') }}</flux:select.option>
+                                            @foreach ($steps as $targetIndex => $targetStep)
+                                                @if ($targetIndex > $index)<flux:select.option :value="$targetIndex + 1">{{ ($targetIndex + 1).'. '.$targetStep['name'] }}</flux:select.option>@endif
+                                            @endforeach
+                                        </flux:select>
+                                    </div>
+                                    <flux:error name="steps.{{ $index }}.conditionField" />
+                                    <flux:error name="steps.{{ $index }}.trueStep" />
+                                    <flux:error name="steps.{{ $index }}.falseStep" />
+                                @endif
 
-                                <div class="sm:col-span-3">
-                                    <flux:checkbox.group wire:model="steps.{{ $index }}.assigneeIds" :label="__('Assignees')" class="grid max-h-40 gap-2 overflow-y-auto sm:grid-cols-2">
-                                        @foreach ($step['assigneeType'] === 'role' ? $this->roles : ($step['assigneeType'] === 'department' ? $this->departments : $this->users) as $assignee)
-                                            <flux:checkbox :value="$assignee->id" :label="$assignee->name" :disabled="$editingTemplateUsed" />
-                                        @endforeach
-                                    </flux:checkbox.group>
-                                    <flux:error name="steps.{{ $index }}.assigneeIds" />
-                                </div>
+                                @if (! in_array($step['stepType'], ['conditional', 'auto'], true))
+                                    <div class="sm:col-span-3">
+                                        <flux:checkbox wire:model="steps.{{ $index }}.allowDelegation" :label="__('Allow assigned approvers to delegate')" :disabled="$editingTemplateUsed" />
+                                    </div>
+
+                                    <div class="sm:col-span-3">
+                                        <flux:checkbox.group wire:model="steps.{{ $index }}.assigneeIds" :label="__('Assignees')" class="grid max-h-40 gap-2 overflow-y-auto sm:grid-cols-2">
+                                            @foreach ($step['assigneeType'] === 'role' ? $this->roles : ($step['assigneeType'] === 'department' ? $this->departments : $this->users) as $assignee)
+                                                <flux:checkbox :value="$assignee->id" :label="$assignee->name" :disabled="$editingTemplateUsed" />
+                                            @endforeach
+                                        </flux:checkbox.group>
+                                        <flux:error name="steps.{{ $index }}.assigneeIds" />
+                                    </div>
+                                @endif
                             </div>
 
                             @unless ($editingTemplateUsed)

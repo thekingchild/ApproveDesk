@@ -55,6 +55,7 @@ final class UpdateWorkflowTemplateAction
                         'assignee_type' => $step->assigneeType,
                         'assignee_ids' => $step->assigneeIds,
                         'allow_delegation' => $step->allowDelegation,
+                        'conditions' => $step->conditions,
                     ]);
                 }
             }
@@ -72,6 +73,7 @@ final class UpdateWorkflowTemplateAction
             'assignee_type' => $step->assignee_type->value,
             'assignee_ids' => $this->sortedIds($step->assignee_ids),
             'allow_delegation' => $step->allow_delegation,
+            'conditions' => $step->conditions,
         ])->values()->all();
 
         $incoming = collect($data->steps)->map(fn ($step) => [
@@ -81,6 +83,7 @@ final class UpdateWorkflowTemplateAction
             'assignee_type' => $step->assigneeType->value,
             'assignee_ids' => $this->sortedIds($step->assigneeIds),
             'allow_delegation' => $step->allowDelegation,
+            'conditions' => $step->conditions,
         ])->values()->all();
 
         return $current !== $incoming;

@@ -21,6 +21,7 @@ use App\Models\WorkflowTemplate;
 use App\Models\WorkflowTemplateStep;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
 
 /**
  * Orchestrates every workflow state transition. All mutations to
@@ -30,6 +31,8 @@ use Illuminate\Support\Facades\DB;
  */
 class WorkflowEngine
 {
+    public function __construct(private readonly SubmissionConditionEvaluator $conditionEvaluator) {}
+
     /**
      * Bind a submission to its template and activate the first step.
      */
@@ -41,7 +44,7 @@ class WorkflowEngine
             throw WorkflowException::templateWithoutSteps($template->name);
         }
 
-        return DB::transaction(function () use ($submission, $template): WorkflowInstance {
+        $instance = DB::transaction(function () use ($submission, $template): WorkflowInstance {
             $instance = WorkflowInstance::create([
                 'submission_id' => $submission->id,
                 'template_id' => $template->id,
@@ -52,8 +55,14 @@ class WorkflowEngine
 
             $submission->update(['status' => SubmissionStatus::InReview]);
 
-            return $instance;
+            return $this->resolveAutomaticSteps($instance);
         });
+
+        if ($instance->wasCompleted) {
+            $this->dispatchEvents($instance);
+        }
+
+        return $instance;
     }
 
     /**
@@ -90,7 +99,10 @@ class WorkflowEngine
                 WorkflowActionType::Return => $this->applyReturn($instance),
                 WorkflowActionType::Comment => $instance, // state-neutral, audit-only
                 WorkflowActionType::Delegate,
-                WorkflowActionType::Escalate => throw WorkflowException::unsupportedStepType($action->value),
+                WorkflowActionType::Escalate,
+                WorkflowActionType::AutoApprove,
+                WorkflowActionType::ConditionMatched,
+                WorkflowActionType::ConditionNotMatched => throw WorkflowException::unsupportedStepType($action->value),
             };
         });
 
@@ -250,7 +262,7 @@ class WorkflowEngine
             return $instance;
         }
 
-        return $this->advance($instance);
+        return $this->resolveAutomaticSteps($this->advance($instance));
     }
 
     private function applyRejection(WorkflowInstance $instance): WorkflowInstance
@@ -291,8 +303,7 @@ class WorkflowEngine
             StepType::Sequential => $approvals >= 1,
             StepType::Parallel => $approvals >= $step->assignedUsers()->unique('id')->count(),
             StepType::Quorum => $this->isQuorumSatisfied($step, $approvals),
-            // Conditional and auto-approve arrive later in Phase 2.
-            default => throw WorkflowException::unsupportedStepType($step->step_type->value),
+            StepType::Conditional, StepType::Auto => throw WorkflowException::unsupportedStepType($step->step_type->value),
         };
     }
 
@@ -317,21 +328,126 @@ class WorkflowEngine
             ->first();
 
         if ($nextStep === null) {
-            $instance->update([
-                'status' => WorkflowStatus::Completed,
-                'completed_at' => now(),
-            ]);
-
-            $instance->submission->update(['status' => SubmissionStatus::Approved]);
-
-            $instance->wasCompleted = true;
-
-            return $instance;
+            return $this->complete($instance);
         }
 
         $instance->update(['current_step_id' => $nextStep->id]);
 
         $instance->advancedToStep = $nextStep;
+
+        return $instance;
+    }
+
+    private function resolveAutomaticSteps(WorkflowInstance $instance): WorkflowInstance
+    {
+        $maximumTransitions = WorkflowTemplateStep::query()
+            ->where('template_id', $instance->template_id)
+            ->count() + 1;
+
+        for ($transition = 0; $transition < $maximumTransitions; $transition++) {
+            $instance->refresh();
+            $step = $instance->currentStep;
+
+            if ($instance->status !== WorkflowStatus::Active || $step === null) {
+                return $instance;
+            }
+
+            if ($step->step_type === StepType::Auto) {
+                $this->recordSystemAction($instance, $step, WorkflowActionType::AutoApprove, 'Automatically approved by workflow policy.');
+                $instance = $this->advance($instance);
+
+                continue;
+            }
+
+            if ($step->step_type === StepType::Conditional) {
+                $instance = $this->routeConditionalStep($instance, $step);
+
+                continue;
+            }
+
+            return $instance;
+        }
+
+        throw WorkflowException::invalidCondition('automatic routing', 'too many automatic transitions');
+    }
+
+    private function routeConditionalStep(
+        WorkflowInstance $instance,
+        WorkflowTemplateStep $step,
+    ): WorkflowInstance {
+        $conditions = $step->conditions;
+
+        if (! is_array($conditions)
+            || ! array_key_exists('true_step', $conditions)
+            || ! array_key_exists('false_step', $conditions)) {
+            throw WorkflowException::invalidCondition($step->name, 'true_step and false_step targets are required');
+        }
+
+        try {
+            $matched = $this->conditionEvaluator->evaluate($instance->submission, $conditions);
+        } catch (InvalidArgumentException $exception) {
+            throw WorkflowException::invalidCondition($step->name, $exception->getMessage());
+        }
+
+        $this->recordSystemAction(
+            $instance,
+            $step,
+            $matched ? WorkflowActionType::ConditionMatched : WorkflowActionType::ConditionNotMatched,
+            $matched ? 'Condition matched; followed the true branch.' : 'Condition did not match; followed the false branch.',
+        );
+
+        $target = $matched ? $conditions['true_step'] : $conditions['false_step'];
+
+        if ($target === null) {
+            return $this->complete($instance);
+        }
+
+        if (! is_int($target) || $target <= $step->step_order) {
+            throw WorkflowException::invalidCondition($step->name, 'each branch must target a forward step or completion');
+        }
+
+        $nextStep = WorkflowTemplateStep::query()
+            ->where('template_id', $instance->template_id)
+            ->where('step_order', $target)
+            ->first();
+
+        if ($nextStep === null) {
+            throw WorkflowException::invalidCondition($step->name, "target step {$target} does not exist");
+        }
+
+        $instance->update(['current_step_id' => $nextStep->id]);
+        $instance->advancedToStep = $nextStep;
+
+        return $instance;
+    }
+
+    private function recordSystemAction(
+        WorkflowInstance $instance,
+        WorkflowTemplateStep $step,
+        WorkflowActionType $action,
+        string $comment,
+    ): void {
+        WorkflowAction::create([
+            'instance_id' => $instance->id,
+            'step_id' => $step->id,
+            'actor_id' => null,
+            'action' => $action,
+            'comment' => $comment,
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+        ]);
+    }
+
+    private function complete(WorkflowInstance $instance): WorkflowInstance
+    {
+        $instance->update([
+            'current_step_id' => null,
+            'status' => WorkflowStatus::Completed,
+            'completed_at' => now(),
+        ]);
+
+        $instance->submission->update(['status' => SubmissionStatus::Approved]);
+        $instance->wasCompleted = true;
 
         return $instance;
     }

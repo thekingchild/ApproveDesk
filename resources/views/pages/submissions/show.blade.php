@@ -53,6 +53,7 @@ new #[Title('Submission')] class extends Component {
         return $instance->template->steps->map(function ($step) use ($instance, $actions) {
             $stepActions = $actions->get($step->id, collect());
             $assignedUsers = $step->assignedUsers();
+            $automatic = in_array($step->step_type, [\App\Enums\StepType::Conditional, \App\Enums\StepType::Auto], true);
             $approvalCount = $stepActions->where('action', WorkflowActionType::Approve)->unique('actor_id')->count();
             $requiredApprovals = match ($step->step_type) {
                 \App\Enums\StepType::Sequential => 1,
@@ -64,7 +65,12 @@ new #[Title('Submission')] class extends Component {
             $state = match (true) {
                 $stepActions->contains('action', WorkflowActionType::Reject) => 'rejected',
                 $instance->current_step_id === $step->id && in_array($instance->status->value, ['active', 'on_hold'], true) => 'active',
-                $stepActions->contains('action', WorkflowActionType::Approve) => 'done',
+                $stepActions->contains(fn ($action) => in_array($action->action, [
+                    WorkflowActionType::Approve,
+                    WorkflowActionType::AutoApprove,
+                    WorkflowActionType::ConditionMatched,
+                    WorkflowActionType::ConditionNotMatched,
+                ], true)) => 'done',
                 default => 'pending',
             };
 
@@ -72,7 +78,7 @@ new #[Title('Submission')] class extends Component {
                 'name' => $step->name,
                 'order' => $step->step_order,
                 'state' => $state,
-                'actors' => $assignedUsers->pluck('name')->implode(', '),
+                'actors' => $automatic ? __('System') : $assignedUsers->pluck('name')->implode(', '),
                 'progress' => $requiredApprovals === null ? null : "{$approvalCount} / {$requiredApprovals} approvals",
                 'acted_at' => $stepActions->first()?->created_at?->format('d M Y H:i'),
             ];
@@ -314,8 +320,8 @@ new #[Title('Submission')] class extends Component {
                 <ul class="mt-4 space-y-3">
                     @foreach ($submission->workflowInstance->actions as $entry)
                         <li class="text-sm">
-                            <span class="font-medium">{{ $entry->actor->name }}</span>
-                            <flux:badge class="mx-1" color="{{ ['approve' => 'lime', 'reject' => 'red', 'return' => 'amber', 'comment' => 'zinc', 'delegate' => 'blue', 'escalate' => 'blue'][$entry->action->value] ?? 'zinc' }}">{{ $entry->action->value }}</flux:badge>
+                            <span class="font-medium">{{ $entry->actor?->name ?? __('System') }}</span>
+                            <flux:badge class="mx-1" color="{{ ['approve' => 'lime', 'auto_approve' => 'lime', 'condition_matched' => 'blue', 'condition_not_matched' => 'zinc', 'reject' => 'red', 'return' => 'amber', 'comment' => 'zinc', 'delegate' => 'blue', 'escalate' => 'blue'][$entry->action->value] ?? 'zinc' }}">{{ str($entry->action->value)->replace('_', ' ') }}</flux:badge>
                             <span class="text-xs text-zinc-400">{{ $entry->created_at?->format('d M Y H:i') }}</span>
                             @if ($entry->comment)<p class="mt-1 rounded-md bg-zinc-50 p-2 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">{{ $entry->comment }}</p>@endif
                         </li>

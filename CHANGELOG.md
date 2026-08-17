@@ -17,6 +17,7 @@ All notable changes to ApproveDesk are documented here. The project follows
 - Administration for users, roles, departments, and sequential workflow templates.
 - Shared-hosting database queue schedule and staging/production deployment automation.
 - Time-limited approval delegation with delegate notifications and scheduled expiry cleanup.
+- Conditional submission-data routing and append-only system-audited automatic approval steps.
 - End-to-end Phase 1 acceptance coverage for three-level approval and rejection flows.
 
 ### Security

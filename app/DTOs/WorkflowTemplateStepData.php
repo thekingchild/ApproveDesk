@@ -7,7 +7,10 @@ use App\Enums\StepType;
 
 final readonly class WorkflowTemplateStepData
 {
-    /** @param array<int, int> $assigneeIds */
+    /**
+     * @param  array<int, int>  $assigneeIds
+     * @param  array<string, mixed>|null  $conditions
+     */
     public function __construct(
         public string $name,
         public StepType $stepType,
@@ -15,5 +18,6 @@ final readonly class WorkflowTemplateStepData
         public AssigneeType $assigneeType,
         public array $assigneeIds,
         public bool $allowDelegation,
+        public ?array $conditions = null,
     ) {}
 }

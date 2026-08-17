@@ -37,6 +37,7 @@ final class CreateWorkflowTemplateAction
                     'assignee_type' => $step->assigneeType,
                     'assignee_ids' => $step->assigneeIds,
                     'allow_delegation' => $step->allowDelegation,
+                    'conditions' => $step->conditions,
                 ]);
             }
 

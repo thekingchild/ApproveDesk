@@ -186,6 +186,71 @@ class WorkflowTemplateManagementTest extends TestCase
         $this->assertFalse($step->allow_delegation);
     }
 
+    public function test_admin_can_create_conditional_and_automatic_steps(): void
+    {
+        $standardApprover = User::factory()->create();
+        $executiveApprover = User::factory()->create();
+
+        Livewire::actingAs($this->admin)
+            ->test('pages::admin.workflow-templates')
+            ->call('createTemplate')
+            ->set('name', 'Value-based automation')
+            ->set('submissionTypes', ['memo'])
+            ->set('steps', [
+                [
+                    'name' => 'Route by amount',
+                    'stepType' => StepType::Conditional->value,
+                    'quorumCount' => null,
+                    'assigneeType' => AssigneeType::User->value,
+                    'assigneeIds' => [],
+                    'allowDelegation' => false,
+                    'conditionField' => 'metadata.amount',
+                    'conditionOperator' => 'gte',
+                    'conditionValue' => '10000',
+                    'trueStep' => 3,
+                    'falseStep' => 2,
+                ],
+                [
+                    'name' => 'Standard review',
+                    'stepType' => StepType::Sequential->value,
+                    'quorumCount' => null,
+                    'assigneeType' => AssigneeType::User->value,
+                    'assigneeIds' => [$standardApprover->id],
+                    'allowDelegation' => true,
+                ],
+                [
+                    'name' => 'Automatic policy check',
+                    'stepType' => StepType::Auto->value,
+                    'quorumCount' => null,
+                    'assigneeType' => AssigneeType::User->value,
+                    'assigneeIds' => [],
+                    'allowDelegation' => false,
+                ],
+                [
+                    'name' => 'Executive review',
+                    'stepType' => StepType::Sequential->value,
+                    'quorumCount' => null,
+                    'assigneeType' => AssigneeType::User->value,
+                    'assigneeIds' => [$executiveApprover->id],
+                    'allowDelegation' => true,
+                ],
+            ])
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $steps = WorkflowTemplate::query()
+            ->where('name', 'Value-based automation')
+            ->firstOrFail()
+            ->steps;
+
+        $this->assertSame(StepType::Conditional, $steps[0]->step_type);
+        $this->assertSame('metadata.amount', data_get($steps[0]->conditions, 'rules.0.field'));
+        $this->assertSame(3, $steps[0]->conditions['true_step']);
+        $this->assertSame(StepType::Auto, $steps[2]->step_type);
+        $this->assertSame([], $steps[2]->assignee_ids);
+        $this->assertFalse($steps[2]->allow_delegation);
+    }
+
     public function test_quorum_cannot_exceed_active_resolved_assignees(): void
     {
         $approvers = User::factory()->count(2)->create();

@@ -17,7 +17,7 @@ use RuntimeException;
  * @property int $id
  * @property int $instance_id
  * @property int $step_id
- * @property int $actor_id
+ * @property int|null $actor_id
  * @property WorkflowActionType $action
  * @property string|null $comment
  * @property int|null $delegated_to
@@ -26,7 +26,7 @@ use RuntimeException;
  * @property Carbon|null $created_at
  * @property-read WorkflowInstance $instance
  * @property-read WorkflowTemplateStep $step
- * @property-read User $actor
+ * @property-read User|null $actor
  * @property-read User|null $delegate
  */
 class WorkflowAction extends Model

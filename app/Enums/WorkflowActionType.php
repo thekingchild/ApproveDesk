@@ -10,4 +10,7 @@ enum WorkflowActionType: string
     case Delegate = 'delegate';
     case Comment = 'comment';
     case Escalate = 'escalate';
+    case AutoApprove = 'auto_approve';
+    case ConditionMatched = 'condition_matched';
+    case ConditionNotMatched = 'condition_not_matched';
 }
