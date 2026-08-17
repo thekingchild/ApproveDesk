@@ -31,7 +31,7 @@
                     @endcan
                 </flux:sidebar.group>
 
-                @if (auth()->user()->can('viewAny', \App\Models\User::class) || auth()->user()->can('viewAny', \App\Models\Department::class) || auth()->user()->can('viewAny', \App\Models\WorkflowTemplate::class))
+                @if (auth()->user()->can('viewAny', \App\Models\User::class) || auth()->user()->can('viewAny', \App\Models\Department::class) || auth()->user()->can('viewAny', \App\Models\WorkflowTemplate::class) || auth()->user()->can('reports.view'))
                     <flux:sidebar.group :heading="__('Administration')" class="grid">
                         @can('viewAny', \App\Models\User::class)
                             <flux:sidebar.item icon="users" :href="route('admin.users.index')" :current="request()->routeIs('admin.users.*')" wire:navigate>
@@ -46,6 +46,11 @@
                         @can('viewAny', \App\Models\WorkflowTemplate::class)
                             <flux:sidebar.item icon="arrows-right-left" :href="route('admin.workflow-templates.index')" :current="request()->routeIs('admin.workflow-templates.*')" wire:navigate>
                                 {{ __('Workflow templates') }}
+                            </flux:sidebar.item>
+                        @endcan
+                        @can('reports.view')
+                            <flux:sidebar.item icon="chart-bar" :href="route('admin.analytics.index')" :current="request()->routeIs('admin.analytics.*')" wire:navigate>
+                                {{ __('Analytics') }}
                             </flux:sidebar.item>
                         @endcan
                     </flux:sidebar.group>

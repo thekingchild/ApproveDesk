@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AnalyticsExportController;
 use App\Http\Controllers\InstallController;
 use App\Http\Controllers\SubmissionFileDownloadController;
 use Illuminate\Support\Facades\Route;
@@ -35,6 +36,11 @@ Route::middleware(['auth', 'verified', 'can:viewAny,App\Models\Department'])->gr
 
 Route::middleware(['auth', 'verified', 'can:viewAny,App\Models\WorkflowTemplate'])->group(function (): void {
     Route::livewire('admin/workflow-templates', 'pages::admin.workflow-templates')->name('admin.workflow-templates.index');
+});
+
+Route::middleware(['auth', 'verified', 'can:reports.view'])->prefix('admin')->name('admin.')->group(function (): void {
+    Route::livewire('analytics', 'pages::admin.analytics')->name('analytics.index');
+    Route::get('analytics/export', AnalyticsExportController::class)->name('analytics.export');
 });
 
 Route::middleware(['auth', 'verified'])->group(function (): void {
