@@ -94,7 +94,7 @@ A task is complete only when it has:
 | Phase | Target | Theme | Status |
 |---|---|---|---|
 | 0–4 | v2.0.0 | Existing workflow platform | Complete |
-| 5 | v2.1.0 | Non-enterprise UX, accessibility, and approver productivity | Not started |
+| 5 | v2.1.0 | Non-enterprise UX, accessibility, and approver productivity | In progress — 5.1 complete |
 | 6 | v2.2.0 | Configurable request types and form builder | Not started |
 | 7 | v2.3.0 | Visual workflows, versioning, and dynamic assignment | Not started |
 | 8 | v2.4.0 | Collaboration, notifications, and integration hub | Not started |
@@ -112,7 +112,7 @@ A task is complete only when it has:
 
 **Goal:** make the existing product fast, understandable, responsive, and pleasant for ordinary requesters, approvers, and administrators without changing core workflow semantics.
 
-### 5.1 Design-system foundation
+### 5.1 Design-system foundation — Complete (2026-08-18)
 
 - **P5-DS-01:** Document color, spacing, typography, radius, elevation, status, and focus tokens in `resources/css/app.css` and a design-system reference page available only in local/testing environments.
 - **P5-DS-02:** Raise dark/light theme contrast to WCAG 2.2 AA targets for normal text, controls, focus indicators, badges, timestamps, and disabled states.

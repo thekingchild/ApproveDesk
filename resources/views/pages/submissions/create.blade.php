@@ -194,8 +194,10 @@ new #[Title('New submission')] class extends Component {
 } ?>
 
 <div wire:poll.30s="autosave">
-    <flux:heading size="lg">{{ $draftId ? __('Edit draft') : __('New submission') }}</flux:heading>
-    <flux:subheading>{{ __('Drafts auto-save every 30 seconds while you type.') }}</flux:subheading>
+    <x-ui.page-header
+        :title="$draftId ? __('Edit draft') : __('New submission')"
+        :description="__('Drafts auto-save every 30 seconds while you type.')"
+    />
 
     <div class="mt-3 flex items-center gap-2">
         @foreach ([1 => __('Details'), 2 => __('Attachments'), 3 => __('Review')] as $n => $label)
@@ -205,6 +207,8 @@ new #[Title('New submission')] class extends Component {
 
     <form wire:submit="submit" class="mt-6 space-y-6">
         @csrf
+
+        <x-ui.validation-summary />
 
         @if ($step === 1)
             <div class="grid gap-5 sm:grid-cols-2">

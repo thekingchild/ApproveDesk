@@ -61,6 +61,7 @@ Route::middleware(['auth', 'verified', 'can:reports.view'])->prefix('admin')->na
 });
 
 Route::middleware(['auth', 'verified'])->group(function (): void {
+    Route::view('help', 'pages.help')->name('help');
     Route::livewire('submissions', 'pages::submissions.index')->name('submissions.index');
     Route::livewire('submissions/create', 'pages::submissions.create')
         ->middleware('can:create,App\Models\Submission')
@@ -77,5 +78,11 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
 
     Route::livewire('dashboard', 'pages::dashboard')->name('dashboard');
 });
+
+if (app()->environment(['local', 'testing'])) {
+    Route::view('design-system', 'pages.design-system')
+        ->middleware(['auth', 'verified'])
+        ->name('design-system');
+}
 
 require __DIR__.'/settings.php';

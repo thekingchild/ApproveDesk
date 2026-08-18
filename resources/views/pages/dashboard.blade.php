@@ -16,20 +16,18 @@ new #[Title('Dashboard')] class extends Component {
 } ?>
 
 <div class="space-y-6">
-    <div class="flex flex-wrap items-start justify-between gap-3">
-        <div>
-            <flux:heading size="lg">{{ __('Dashboard') }}</flux:heading>
-            <flux:subheading>
-                {{ $this->report['organization'] ? __('Organization-wide approval activity.') : __('Your submissions and approval work at a glance.') }}
-            </flux:subheading>
-        </div>
-
+    <x-ui.page-header
+        :title="__('Dashboard')"
+        :description="$this->report['organization'] ? __('Organization-wide approval activity.') : __('Your submissions and approval work at a glance.')"
+    >
         @if ($this->report['can_submit'])
-            <flux:button :href="route('submissions.create')" variant="primary" icon="plus" wire:navigate>
-                {{ __('New submission') }}
-            </flux:button>
+            <x-slot:actions>
+                <flux:button :href="route('submissions.create')" variant="primary" icon="plus" wire:navigate>
+                    {{ __('New submission') }}
+                </flux:button>
+            </x-slot:actions>
         @endif
-    </div>
+    </x-ui.page-header>
 
     <section aria-labelledby="submission-summary">
         <div class="mb-3 flex items-center justify-between">
@@ -115,7 +113,16 @@ new #[Title('Dashboard')] class extends Component {
                             <td class="py-3 text-right text-zinc-500">{{ $submission->updated_at?->diffForHumans() }}</td>
                         </tr>
                     @empty
-                        <tr><td colspan="5" class="py-8 text-center text-zinc-500">{{ __('No submissions yet.') }}</td></tr>
+                        <tr>
+                            <td colspan="5">
+                                <x-ui.empty-state
+                                    :title="__('No submissions yet')"
+                                    :description="__('New and recently updated submissions will appear here.')"
+                                    icon="document-text"
+                                    class="py-8"
+                                />
+                            </td>
+                        </tr>
                     @endforelse
                 </tbody>
             </table>

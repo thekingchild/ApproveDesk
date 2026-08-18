@@ -3,8 +3,10 @@
     <head>
         @include('partials.head')
     </head>
-    <body class="min-h-screen bg-white dark:bg-zinc-800">
-        <flux:sidebar sticky collapsible="mobile" class="border-e border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
+    <body class="min-h-screen bg-zinc-50 dark:bg-zinc-950">
+        <a class="ad-skip-link" href="#main-content">{{ __('Skip to main content') }}</a>
+
+        <flux:sidebar sticky collapsible="mobile" class="border-e border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
             <flux:sidebar.header>
                 <x-app-logo :sidebar="true" href="{{ route('dashboard') }}" wire:navigate />
                 <flux:sidebar.collapse class="lg:hidden" />
@@ -65,12 +67,11 @@
             <flux:spacer />
 
             <flux:sidebar.nav>
-                <flux:sidebar.item icon="folder-git-2" href="https://github.com/laravel/livewire-starter-kit" target="_blank">
-                    {{ __('Repository') }}
+                <flux:sidebar.item icon="bell" :href="route('notifications.edit')" :current="request()->routeIs('notifications.edit')" wire:navigate>
+                    {{ __('Notifications') }}
                 </flux:sidebar.item>
-
-                <flux:sidebar.item icon="book-open-text" href="https://laravel.com/docs/starter-kits#livewire" target="_blank">
-                    {{ __('Documentation') }}
+                <flux:sidebar.item icon="lifebuoy" :href="route('help')" :current="request()->routeIs('help')" wire:navigate>
+                    {{ __('Help') }}
                 </flux:sidebar.item>
             </flux:sidebar.nav>
 
@@ -79,9 +80,13 @@
 
         <!-- Mobile User Menu -->
         <flux:header class="lg:hidden">
-            <flux:sidebar.toggle class="lg:hidden" icon="bars-2" inset="left" />
+            <flux:sidebar.toggle class="lg:hidden" icon="bars-2" inset="left" :label="__('Open navigation')" />
 
             <flux:spacer />
+
+            <flux:tooltip :content="__('Notifications')" position="bottom">
+                <flux:button :href="route('notifications.edit')" variant="ghost" icon="bell" square :aria-label="__('Notifications')" wire:navigate />
+            </flux:tooltip>
 
             <flux:dropdown position="top" align="end">
                 <flux:profile

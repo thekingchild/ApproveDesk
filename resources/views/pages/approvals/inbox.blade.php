@@ -69,8 +69,10 @@ new #[Title('Approvals')] class extends Component {
 } ?>
 
 <div class="space-y-6">
-    <flux:heading size="lg">{{ __('Approvals') }}</flux:heading>
-    <flux:subheading>{{ __('Submissions routed to you for review or decision.') }}</flux:subheading>
+    <x-ui.page-header
+        :title="__('Approvals')"
+        :description="__('Submissions routed to you for review or decision.')"
+    />
 
     <div class="grid gap-6 lg:grid-cols-3">
         @php
@@ -117,7 +119,14 @@ new #[Title('Approvals')] class extends Component {
                             <p class="mt-2 text-xs text-zinc-500">{{ $submission->submitter->name }} · {{ $submission->updated_at?->diffForHumans() }}</p>
                         </li>
                     @empty
-                        <li class="py-6 text-center text-sm text-zinc-500">{{ __('Nothing here.') }}</li>
+                        <li>
+                            <x-ui.empty-state
+                                :title="__('No approvals in this view')"
+                                :description="__('Items will appear here as workflows move forward.')"
+                                icon="inbox"
+                                class="py-6"
+                            />
+                        </li>
                     @endforelse
                 </ul>
             </flux:card>

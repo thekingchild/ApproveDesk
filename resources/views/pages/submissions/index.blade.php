@@ -124,18 +124,16 @@ new #[Title('My submissions')] class extends Component {
 } ?>
 
 <div class="space-y-6">
-    <div class="flex items-center justify-between">
-        <div>
-            <flux:heading size="lg">{{ $this->organizationView ? __('All submissions') : __('My submissions') }}</flux:heading>
-            <flux:subheading>
-                {{ $this->organizationView ? __('Documents, notes, and memos across the organization.') : __('Documents, notes, and memos you have submitted.') }}
-            </flux:subheading>
-        </div>
-
+    <x-ui.page-header
+        :title="$this->organizationView ? __('All submissions') : __('My submissions')"
+        :description="$this->organizationView ? __('Documents, notes, and memos across the organization.') : __('Documents, notes, and memos you have submitted.')"
+    >
         @can('create', \App\Models\Submission::class)
-            <flux:button :href="route('submissions.create')" variant="primary" wire:navigate>{{ __('New submission') }}</flux:button>
+            <x-slot:actions>
+                <flux:button :href="route('submissions.create')" variant="primary" icon="plus" wire:navigate>{{ __('New submission') }}</flux:button>
+            </x-slot:actions>
         @endcan
-    </div>
+    </x-ui.page-header>
 
     <flux:card class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <flux:input wire:model.live.debounce.300ms="search" icon="magnifying-glass" :label="__('Search')" :placeholder="__('Reference or title')" />
@@ -167,7 +165,7 @@ new #[Title('My submissions')] class extends Component {
         </div>
     </flux:card>
 
-    <flux:table :paginate="$this->submissions">
+    <flux:table :paginate="$this->submissions" container:class="ad-responsive-table">
         <flux:table.columns>
             <flux:table.column>{{ __('Reference') }}</flux:table.column>
             <flux:table.column>{{ __('Title') }}</flux:table.column>
@@ -181,17 +179,17 @@ new #[Title('My submissions')] class extends Component {
         <flux:table.rows>
             @forelse ($this->submissions as $submission)
                 <flux:table.row>
-                    <flux:table.cell class="font-mono text-xs">{{ $submission->reference_number }}</flux:table.cell>
-                    <flux:table.cell>
+                    <flux:table.cell :data-label="__('Reference')" class="font-mono text-xs">{{ $submission->reference_number }}</flux:table.cell>
+                    <flux:table.cell :data-label="__('Title')">
                         @can('update', $submission)
                             <flux:link :href="route('submissions.edit', $submission)" wire:navigate>{{ Str::limit($submission->title, 60) }}</flux:link>
                         @else
                             <flux:link :href="route('submissions.show', $submission)" wire:navigate>{{ Str::limit($submission->title, 60) }}</flux:link>
                         @endcan
                     </flux:table.cell>
-                    @if ($this->organizationView)<flux:table.cell>{{ $submission->submitter->name }}</flux:table.cell>@endif
-                    <flux:table.cell>{{ ucfirst($submission->type->value) }}</flux:table.cell>
-                    <flux:table.cell>
+                    @if ($this->organizationView)<flux:table.cell :data-label="__('Submitter')">{{ $submission->submitter->name }}</flux:table.cell>@endif
+                    <flux:table.cell :data-label="__('Type')">{{ ucfirst($submission->type->value) }}</flux:table.cell>
+                    <flux:table.cell :data-label="__('Status')">
                         <flux:badge :color="$this->badgeColors()[$submission->status->value] ?? 'zinc'">
                             {{ str_replace('_', ' ', $submission->status->value) }}
                         </flux:badge>
@@ -199,12 +197,24 @@ new #[Title('My submissions')] class extends Component {
                             <flux:badge color="red" class="ms-1">{{ __('Overdue') }}</flux:badge>
                         @endif
                     </flux:table.cell>
-                    <flux:table.cell>{{ ucfirst($submission->priority->value) }}</flux:table.cell>
-                    <flux:table.cell class="text-zinc-500">{{ $submission->updated_at?->diffForHumans() }}</flux:table.cell>
+                    <flux:table.cell :data-label="__('Priority')">{{ ucfirst($submission->priority->value) }}</flux:table.cell>
+                    <flux:table.cell :data-label="__('Updated')" class="text-zinc-600 dark:text-zinc-300">{{ $submission->updated_at?->diffForHumans() }}</flux:table.cell>
                 </flux:table.row>
             @empty
                 <flux:table.row>
-                    <flux:table.cell :colspan="$this->organizationView ? 7 : 6" class="text-center text-zinc-500">{{ __('No submissions yet.') }}</flux:table.cell>
+                    <flux:table.cell :colspan="$this->organizationView ? 7 : 6" data-empty-state>
+                        <x-ui.empty-state
+                            :title="__('No submissions found')"
+                            :description="__('Try clearing the filters or create a new submission.')"
+                            icon="document-magnifying-glass"
+                        >
+                            @can('create', \App\Models\Submission::class)
+                                <x-slot:actions>
+                                    <flux:button :href="route('submissions.create')" variant="primary" wire:navigate>{{ __('New submission') }}</flux:button>
+                                </x-slot:actions>
+                            @endcan
+                        </x-ui.empty-state>
+                    </flux:table.cell>
                 </flux:table.row>
             @endforelse
         </flux:table.rows>
