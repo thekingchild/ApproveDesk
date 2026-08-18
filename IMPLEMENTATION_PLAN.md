@@ -1,103 +1,555 @@
-# ApproveDesk — Implementation & Execution Plan
+# ApproveDesk — Product Implementation & Execution Plan
 
-Execution plan derived from the approved architecture document (`ApprovalWorkflow_Implementation.docx`), updated with the locked decisions: **Laravel 13** (current stable, PHP 8.3+), a **web-based installer wizard**, and a **brandable login page**. Conventions and invariants for contributors/agents live in [AGENTS.md](AGENTS.md).
+This is the canonical execution plan for evolving ApproveDesk from the completed v2.0.0 single-organization product into a competitive approval platform and, ultimately, a multi-tenant SaaS with Paystack and Flutterwave billing.
 
-Guiding principle: **build the workflow engine first, test-first, in isolation.** Everything else is standard Laravel plumbing; the engine is the product. Each phase ends with a demo-able, deployable increment — no phase depends on unfinished work.
+It is written so that a new engineer or AI agent can resume work without relying on prior conversation history. Repository-wide engineering rules and workflow invariants remain in [AGENTS.md](AGENTS.md). Deployment, authentication, and API contracts remain in `docs/`.
+
+## 1. Product direction
+
+ApproveDesk will become:
+
+> A deploy-anywhere, audit-ready approval platform that lets teams configure requests and approval workflows without code, make decisions quickly from any device, and retain defensible evidence of every action.
+
+The roadmap deliberately follows this order:
+
+1. Improve the non-enterprise product and everyday user experience.
+2. Add configurable forms, visual workflows, collaboration, integrations, and governance.
+3. Stabilize those capabilities before introducing tenancy and billing.
+4. Convert the stable product into a SaaS using Paystack and Flutterwave.
+5. Add enterprise capabilities and native mobile applications only after the web SaaS is stable.
+
+Native mobile and enterprise work must not be pulled forward merely because a customer asks for an isolated feature. Responsive mobile web is required earlier; a native mobile app is not.
+
+## 2. Completed baseline — v2.0.0
+
+Phases 0–4 from the original plan are complete. The current baseline includes:
+
+- Laravel 13, PHP 8.3+, Livewire 4, Alpine.js, Tailwind CSS 4, and Flux UI.
+- Installer-first deployment for cPanel/Plesk plus container deployment.
+- Roles, departments, policies, branded authentication, passkeys, 2FA, Google/Microsoft OAuth.
+- Draft submissions, private attachments, comments, signed previews/downloads, and rich text.
+- Sequential, parallel, quorum, conditional, and automatic workflow steps.
+- Delegation, return for revision, information requests, escalation, SLA actions, and digests.
+- Append-only workflow actions, transactional state transitions, and stale-action protection.
+- Email approval links, analytics/export, REST API, personal tokens, and outbound webhooks.
+
+The append-only audit log and `WorkflowEngine` invariants in [AGENTS.md](AGENTS.md) remain non-negotiable through every future phase.
+
+## 3. Execution rules for every future phase
+
+### 3.1 Phase independence
+
+Every phase must end with a deployable application. Partially built features remain behind disabled feature flags and must not break existing routes, migrations, queues, APIs, or workflows.
+
+At every phase exit:
+
+```bash
+composer install
+npm ci
+php artisan migrate --force
+php artisan test --parallel
+./vendor/bin/pint --dirty
+npm run build
+php artisan optimize:clear
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+```
+
+Additionally:
+
+- CI must pass on SQLite.
+- A MySQL/MariaDB parity run is required before the release tag.
+- Existing workflow instances created in earlier versions must still open and complete.
+- The installer must work from a clean database.
+- The upgrade path must work against a copy of the previous phase's database.
+- `/up`, login, submit, approve, reject, return, and attachment download smoke checks must pass.
+- Accessibility checks must cover the primary flow at desktop and narrow mobile-web widths.
+- `CHANGELOG.md`, API docs, deployment docs, and this plan's status table must be updated.
+
+### 3.2 Task definition of done
+
+A task is complete only when it has:
+
+1. An additive migration or explicit statement that no schema change is required.
+2. Domain code in Actions/Services rather than controllers or Livewire components.
+3. Policy authorization and tenant scoping where applicable.
+4. Unit/feature tests for success, denial, invalid input, and race/idempotency risks.
+5. UI states for loading, empty, success, validation error, authorization denial, and retry where applicable.
+6. Documentation for operators and future contributors.
+7. No unresolved TODO that is necessary for the task to function.
+
+### 3.3 Safe delivery pattern
+
+- Use short-lived branches named `feature/<phase>-<task>`.
+- One task ID or one tightly coupled task group per pull request.
+- Never edit a released migration; add a new migration and a tested backfill.
+- Put irreversible data transitions behind a preflight command and database backup instruction.
+- Introduce new engines through interfaces so old implementations can remain available during migration.
+- Feature flags must have an owner, removal phase, default value, and test coverage.
+- Record material architecture decisions in `docs/adr/NNNN-title.md`.
+
+## 4. Release map and status
+
+| Phase | Target | Theme | Status |
+|---|---|---|---|
+| 0–4 | v2.0.0 | Existing workflow platform | Complete |
+| 5 | v2.1.0 | Non-enterprise UX, accessibility, and approver productivity | Not started |
+| 6 | v2.2.0 | Configurable request types and form builder | Not started |
+| 7 | v2.3.0 | Visual workflows, versioning, and dynamic assignment | Not started |
+| 8 | v2.4.0 | Collaboration, notifications, and integration hub | Not started |
+| 9 | v2.5.0 | Governance, audit evidence, security, and reliability | Not started |
+| 10 | v3.0.0 | SaaS multi-tenancy foundation | Not started |
+| 11 | v3.1.0 | Paystack and Flutterwave subscriptions | Not started |
+| 12 | v3.2.0 | SaaS onboarding, entitlements, and commercial operations | Not started |
+| 13 | v3.3.0 | Intelligence and process optimization | Not started |
+| 14 | v4.0.0 | SaaS stabilization and general availability | Not started |
+| 15 | v5.0.0 | Enterprise capabilities and native mobile apps | Blocked until Phase 14 is stable |
 
 ---
 
-## Phase 0 — Toolchain, Scaffold, CI Foundation
+## Phase 5 — Non-enterprise UX, accessibility, and approver productivity
 
-**Goal:** a running, tested, CI-gated skeleton.
+**Goal:** make the existing product fast, understandable, responsive, and pleasant for ordinary requesters, approvers, and administrators without changing core workflow semantics.
 
-| # | Task |
-|---|------|
-| 0.1 | Install local toolchain: PHP 8.3 (cli, sqlite3, mbstring, xml, curl, zip, bcmath, gd), Composer 2, Node 22 (already present) |
-| 0.2 | `git init`; scaffold Laravel 13 with the Livewire starter kit; commit before any customization |
-| 0.3 | Add CI pipeline (lint + tests + asset build) — see [docs/CI-CD.md](docs/CI-CD.md); wire `.env.example` for SQLite dev |
-| 0.4 | Add spatie/laravel-permission, spatie/laravel-activitylog, pint config; baseline test suite green |
+### 5.1 Design-system foundation
 
-**Acceptance:** `php artisan test --parallel` passes in a fresh clone after `composer install && npm install`; CI green on `main`; README quick-start works verbatim.
+- **P5-DS-01:** Document color, spacing, typography, radius, elevation, status, and focus tokens in `resources/css/app.css` and a design-system reference page available only in local/testing environments.
+- **P5-DS-02:** Raise dark/light theme contrast to WCAG 2.2 AA targets for normal text, controls, focus indicators, badges, timestamps, and disabled states.
+- **P5-DS-03:** Standardize page headers, primary/secondary/destructive actions, cards, tables, modals, alerts, empty states, skeletons, toasts, and validation summaries.
+- **P5-DS-04:** Remove framework repository/documentation links from production navigation; add Help, notifications, profile, and context-appropriate navigation.
+- **P5-DS-05:** Add responsive sidebar/drawer, responsive tables-to-cards, 200% zoom support, and touch targets of at least 44px for core actions.
 
-## Phase 1 — MVP (target: 6–8 weeks per spec)
+### 5.2 Role-aware home and navigation
 
-**Goal:** an organization can run real sequential approvals end-to-end.
+- **P5-NAV-01:** Add global search across reference, title, requester, status, and indexed custom metadata; results must respect `SubmissionPolicy`.
+- **P5-NAV-02:** Provide requester, approver, administrator, and mixed-role home layouts with the most important next action first.
+- **P5-NAV-03:** Add notification centre with unread count, mark-read behavior, deep links, and preference-aware delivery labels.
+- **P5-NAV-04:** Add breadcrumbs and consistent back-navigation to submissions and administrative editors.
 
-### 1A. Schema & domain foundation
-- All migrations from spec §3: `departments`, `users`, `submissions`, `workflow_templates`, `workflow_template_steps`, `workflow_instances`, `workflow_actions`, `submission_files`, `settings`, `comments`, `tags` + spatie tables. String columns + PHP enums (no MySQL ENUMs).
-- Models with relationships, factories, and the six seeded roles: super-admin, admin, department-head, approver, submitter, viewer.
-- Race-safe reference number generation (`SUB-2026-00042` style).
+### 5.3 Approver workbench
 
-### 1B. Workflow engine (sequential only) — TDD
-- `WorkflowEngine::initialize() / processAction() / advance()` with transaction + `lockForUpdate`, stale-step rejection, duplicate-action rejection.
-- Actions: approve, reject, return-for-revision, comment. Derived state from the append-only `workflow_actions` log.
-- Events: `SubmissionCreated`, `WorkflowAdvanced`, `WorkflowCompleted`.
+- **P5-ACT-01:** Replace the three static inbox columns with one prioritized queue and saved views: Needs my decision, Due soon, Overdue, Waiting on others, and Completed.
+- **P5-ACT-02:** Add search and filters for status, deadline, priority, request type, department, requester, and delegation.
+- **P5-ACT-03:** Add compact decision cards with requester, key fields, SLA countdown, current step, attachment count, and last activity.
+- **P5-ACT-04:** Add an inline preview drawer and a sticky decision bar on the submission detail page.
+- **P5-ACT-05:** Add keyboard shortcuts for next/previous request and approve/reject modal opening; destructive decisions still require confirmation and required comments.
+- **P5-ACT-06:** Add guarded batch approval for homogeneous, eligible requests. Rejections, returns, escalations, and information requests remain individual actions.
 
-**Acceptance (tests, not opinions):** single-approver and multi-step sequential feature tests pass; concurrent double-approve test proves idempotency; reject terminates and notifies; return-for-revision resets to submitter while preserving history; `WorkflowEngine` at 100% coverage.
+### 5.4 Requester and administrator experience
 
-### 1C. Web installer & branded auth
-- `/install` wizard (Livewire): requirements check → database credentials + connection test → write `.env`, `key:generate`, `migrate --force`, seed → create first super-admin → finish. Lock file disables it afterward.
-- Stylish login page: split layout, default gradient background, clean card. Admin → Settings → Branding: background image upload (with dark overlay), logo, accent color, app name/tagline, custom CSS, registration toggle. Cached settings helper; live preview in admin.
+- **P5-REQ-01:** Add My requests saved views: Drafts, In progress, Needs my response, Completed, and Withdrawn.
+- **P5-REQ-02:** Make autosave state visible with Saving, Saved at, Offline/failed, and Retry indicators.
+- **P5-REQ-03:** Add meaningful empty states and primary actions instead of generic “Nothing here.”
+- **P5-ADM-01:** Upgrade dashboards with awaiting-me, overdue, median cycle time, returned rate, SLA compliance, bottleneck step, and workload-by-approver metrics.
+- **P5-ADM-02:** Add accessible chart summaries and tabular alternatives.
 
-**Acceptance:** fresh deploy reachable only through `/install` until configured; after completion `/install` returns 404; login page reflects branding changes with no code deploy; installer covered by feature tests.
+### 5.5 Tests and exit gate
 
-### 1D. Submissions & approvals UI
-- Multi-step wizard (details → attachments → review & submit) with 30s draft auto-save; MIME-validated uploads stored outside webroot, served via signed URLs.
-- Approver inbox (To Action / Pending Others / Completed) + vertical workflow timeline (grey/blue/green/red).
-- Submission status page: metadata, progress, timestamped action history, comment thread.
-- Email notifications (queued): action required, approved, rejected, returned.
+- Livewire feature tests for saved views, authorization, filtering, batch eligibility, and notification state.
+- Dusk coverage for requester draft/submit, approver decision, keyboard focus order, modal validation, and responsive navigation.
+- Automated accessibility scan of login, dashboard, inbox, create request, and submission detail; zero critical/serious violations.
+- Query-count assertions for dashboard, inbox, and list pages.
+- Desktop widths 1280/1440 and mobile-web widths 360/390/768 verified.
 
-### 1E. Dashboards, roles & hardening
-- Submitter/approver/admin dashboards; policies on every action; login rate limiting (5/min/IP); scheduler entries (`schedule:run` every minute; `queue:work --stop-when-empty` for shared hosting).
-
-**Phase 1 exit:** end-to-end demo — install on a clean target, create users, submit, approve through 3 levels, reject with comment, full audit trail visible; ≥80% coverage; deployed to staging via CI.
-
-## Phase 2 — Full Topologies & Collaboration (4–6 weeks)
-
-- Parallel (all-of) and quorum (N-of-M) step types + tests.
-- Delegation with time limits, `PurgeExpiredDelegations` daily job, delegation modal.
-- Conditional branching (JSON rule evaluation on submission data) and auto-approve steps.
-- TipTap rich text (server-side sanitized), in-browser PDF/image preview, advanced search (status, type, date, submitter, department).
-- Request-Information pause/resume; escalate action; digest email preferences.
-
-**Exit:** every topology in spec §2.3 has green feature tests and works in the UI; delegation expiry verified by time-travel test (`Carbon::setTestNow`).
-
-## Phase 3 — SLA, Analytics, API (4–6 weeks)
-
-- `timeout_hours` + `timeout_action` enforcement via `ProcessEscalation` (every 15 min); SLA config admin UI; overdue indicators.
-- Admin analytics (approval rates, turnaround, bottleneck detection) with charts; CSV/Excel/PDF exports.
-- Public REST API behind Sanctum tokens; outbound webhooks on state changes.
-
-## Phase 4 — v2 Access & Deployment (complete)
-
-- Google and Microsoft OpenID Connect login with OAuth state validation and PKCE.
-- Email approval links with an administrator-selectable 1–720 hour lifetime, signed confirmation/action URLs, assignment policies, throttling, and stale-step rejection.
-- Production Docker image and Compose stack for EasyPanel, Coolify, and compatible container platforms; cPanel and Plesk remain first-class deployment targets.
-
-**Exit:** provider and approval-link feature tests are green; the container configuration validates; full CI, static analysis, formatting, and production asset builds pass.
-
-Potential work after v2 is intentionally not part of this implementation. See [ROADMAP.md](ROADMAP.md).
+**Phase 5 demo:** a requester creates and finds a draft on mobile web; an approver opens a prioritized queue, previews the request, and approves it without losing context; an administrator sees overdue work and bottlenecks.
 
 ---
 
-## Milestone & Release Cadence
+## Phase 6 — Configurable request types and form builder
 
-| Milestone | Tag | Contents |
-|---|---|---|
-| M0 | `v0.1.0` | Scaffold + CI |
-| M1 | `v1.0.0` | Phase 1 MVP |
-| M2 | `v1.1.0` | Phase 2 topologies |
-| M3 | `v1.2.0` | Phase 3 SLA/analytics/API |
-| M4 | `v2.0.0` | Signed email approvals, Google/Microsoft login, container deployment |
+**Goal:** allow non-technical administrators to define reusable request forms instead of forcing every submission into the fixed type/title/body schema.
 
-Tags deploy to production automatically (see [docs/CI-CD.md](docs/CI-CD.md)). CHANGELOG.md updated with every release.
+### 6.1 Versioned request schema
 
-## Risk Register (top items & mitigations)
+- **P6-DATA-01:** Add `request_types`, `request_type_versions`, `request_field_definitions`, and `submission_field_values`.
+- **P6-DATA-02:** Store typed values using nullable string, long-text, decimal, date/time, boolean, user, department, and JSON columns so filtering works on SQLite and MySQL without vendor-specific JSON expressions.
+- **P6-DATA-03:** Make published request-type versions immutable. A submission references the exact version used at creation.
+- **P6-DATA-04:** Backfill existing submissions into a built-in General Request type without changing reference numbers or workflow history.
+
+### 6.2 Form builder
+
+- **P6-FORM-01:** Add fields for short text, long text/rich text, number, currency, date, date-time, select, multi-select, checkbox, radio, user, department, URL, email, file, and calculated read-only values.
+- **P6-FORM-02:** Support sections, instructions, required/optional state, placeholders, default values, validation limits, allowed file types, and help text.
+- **P6-FORM-03:** Add conditional visibility and requiredness using a constrained rule model; never execute arbitrary PHP/JavaScript expressions.
+- **P6-FORM-04:** Add drag-and-drop field ordering, preview, duplicate field, draft/publish/archive, and clone request type.
+- **P6-FORM-05:** Add server-side validation compiled from the published schema; client validation is only an enhancement.
+- **P6-FORM-06:** Add accessible rendering, review summary, print view, and CSV import/export of select options.
+
+### 6.3 Search and reporting
+
+- **P6-SRCH-01:** Mark fields as searchable, filterable, reportable, sensitive, or approver-summary fields.
+- **P6-SRCH-02:** Extend submission search and analytics without exposing sensitive fields to unauthorized roles.
+- **P6-SRCH-03:** Add request-type-specific list columns and saved views.
+
+### 6.4 Tests and exit gate
+
+- Schema compiler unit tests for every field and rule type.
+- Feature tests proving immutable version behavior and correct rendering of old submissions after a form changes.
+- Authorization tests for sensitive field visibility.
+- Migration test using a v2.1 database fixture.
+- Dusk tests for building, publishing, completing, saving, reopening, and submitting a custom form.
+
+**Phase 6 demo:** an administrator builds and publishes a Leave Request form; a requester completes it; search/report filters use its typed fields; editing the form creates a new version without altering the old request.
+
+---
+
+## Phase 7 — Visual workflows, versioning, and dynamic assignment
+
+**Goal:** expose the existing workflow power through a safe visual builder and add the routing capabilities expected from modern no-code approval products.
+
+### 7.1 Workflow version model
+
+- **P7-DATA-01:** Introduce immutable `workflow_template_versions`; instances reference a version, not a mutable template.
+- **P7-DATA-02:** Backfill existing templates and instances while preserving step/action IDs required by historical audit entries.
+- **P7-DATA-03:** Separate workflow lifecycle into Draft, Published, Retired, and Archived.
+- **P7-DATA-04:** Record author, publication time, change summary, and a canonical schema hash for every version.
+
+### 7.2 Visual builder
+
+- **P7-BLD-01:** Add a canvas/list dual view with start, approval, condition, automatic action, notification, and end nodes.
+- **P7-BLD-02:** Support connect, reorder, duplicate, delete, zoom, fit-to-screen, undo/redo during the current editing session, and keyboard-accessible list editing.
+- **P7-BLD-03:** Validate unreachable nodes, cycles, dead ends, impossible quorum, missing assignees, invalid branches, and unsafe timeout behavior before publish.
+- **P7-BLD-04:** Add preview and simulation using sample request data. Simulation must be read-only and produce an explainable route trace.
+- **P7-BLD-05:** Add clone, compare versions, restore-as-new-draft, and publish confirmation.
+
+### 7.3 Dynamic routing and assignment
+
+- **P7-RTE-01:** Add assignee resolvers for named user, role, department, requester's manager, department manager, user selected in a form field, and external resolver interface.
+- **P7-RTE-02:** Define group completion as first response, all, or quorum N-of-M.
+- **P7-RTE-03:** Add business-calendar-aware deadlines while retaining simple elapsed-hour deadlines.
+- **P7-RTE-04:** Add custom outcomes such as Approved with conditions while mapping each outcome to explicit engine behavior.
+- **P7-RTE-05:** Add workflow selection rules by request type and form values, with deterministic precedence and an explanation visible to administrators.
+
+### 7.4 Tests and exit gate
+
+- 100% `WorkflowEngine` coverage remains required.
+- Contract tests for every assignee resolver and completion rule.
+- Property-style tests for generated valid/invalid graphs and deterministic route selection.
+- Concurrency tests for batch/group decisions and publication races.
+- Upgrade tests proving running v2.x workflows complete against their original version.
+
+**Phase 7 demo:** an administrator visually builds, validates, simulates, and publishes a conditional expense workflow; a later edit produces a second version while requests on version one continue correctly.
+
+---
+
+## Phase 8 — Collaboration, notifications, and integration hub
+
+**Goal:** keep work moving without requiring every participant to remain inside ApproveDesk and provide useful integrations without custom code.
+
+### 8.1 Collaboration
+
+- **P8-COL-01:** Add watchers/followers with explicit view permission, notification preferences, and self-unfollow.
+- **P8-COL-02:** Add @mentions, mention notifications, thread replies, edit window, and append-only edit history.
+- **P8-COL-03:** Add manual reminders/nudges with rate limits, audit records, and quiet-hour handling.
+- **P8-COL-04:** Add out-of-office schedules, future delegation, fallback approvers, and conflict detection.
+- **P8-COL-05:** Add requester-visible expected next step and estimated due time.
+
+### 8.2 Notification delivery
+
+- **P8-NOT-01:** Use a channel interface for database, email, web push, Microsoft Teams, Slack, SMS, and WhatsApp.
+- **P8-NOT-02:** Implement Teams and Slack interactive notifications with signed action state and the same stale-step policy checks as email approvals.
+- **P8-NOT-03:** Add installable PWA shell, web-push notifications, mobile-web attachment capture, and safe offline draft editing. Approval decisions always require an online server check.
+- **P8-NOT-04:** Add delivery receipts, retry visibility, per-tenant templates, quiet hours, and escalation rules for undelivered critical notifications.
+
+### 8.3 Integration hub
+
+- **P8-INT-01:** Define connector contracts for triggers, actions, authentication, health checks, rate limits, and redacted logs.
+- **P8-INT-02:** Ship initial connectors for Microsoft Teams, Slack, Google Drive, SharePoint/OneDrive, Gmail/Outlook, and generic HTTP.
+- **P8-INT-03:** Add post-approval actions: upload file, send email, create/update external record, or invoke a signed webhook.
+- **P8-INT-04:** Add connector credential encryption, rotation, least-privilege instructions, test connection, retry/dead-letter queues, and replay.
+- **P8-INT-05:** Extend REST API with request-type schemas, cursor pagination, idempotency keys, organization-ready scopes, and OpenAPI documentation.
+
+### 8.4 Tests and exit gate
+
+- Connector contract test suite with faked providers; no live service dependency in CI.
+- Webhook/action idempotency and replay tests.
+- Signed-action tampering and stale-step tests for Teams/Slack/email.
+- Offline draft conflict tests and online-only decision enforcement.
+- Queue failure and retry tests using the database driver.
+
+**Phase 8 demo:** a request starts from a custom form, notifies an approver in Teams or Slack, receives a policy-checked decision, uploads the approved document to Drive/SharePoint, and records every delivery/action.
+
+---
+
+## Phase 9 — Governance, audit evidence, security, and reliability
+
+**Goal:** make the mature non-enterprise product defensible, recoverable, and operationally trustworthy before introducing multiple paying tenants.
+
+### 9.1 Audit and records
+
+- **P9-AUD-01:** Generate a per-request evidence pack containing request/version data, document hashes, workflow version, assignments, actions, comments, delegations, notifications, and timestamps.
+- **P9-AUD-02:** Sign evidence-pack manifests and add a verification command/page that detects altered files or records.
+- **P9-AUD-03:** Add auditor access with read-only, time-bounded scopes and export logs.
+- **P9-AUD-04:** Add configurable retention schedules, legal holds, disposition review, and storage lifecycle jobs.
+- **P9-AUD-05:** Add request and attachment version history with before/after summaries and immutable provenance.
+
+### 9.2 Security and privacy
+
+- **P9-SEC-01:** Perform formal threat models for authentication, files, integrations, workflow actions, exports, and upcoming SaaS tenancy.
+- **P9-SEC-02:** Add per-field sensitivity, export redaction, download watermarking option, and audit of sensitive-field access.
+- **P9-SEC-03:** Add secret rotation procedures, CSP, security headers, session/device management, and suspicious-login notifications.
+- **P9-SEC-04:** Add rate-limit profiles for login, API, approval links, exports, webhooks, and integrations.
+- **P9-SEC-05:** Add self-service user data export and administrator-assisted deletion/anonymization that preserves required audit evidence.
+
+### 9.3 Reliability and operations
+
+- **P9-OPS-01:** Add structured logs, correlation IDs, queue/job metrics, webhook/connector health, and scheduler heartbeat.
+- **P9-OPS-02:** Add backup/restore verification tooling and a documented restore drill.
+- **P9-OPS-03:** Add dead-letter management, safe replay, stuck-workflow diagnostics, and reconciliation commands.
+- **P9-OPS-04:** Establish performance budgets and load tests for 100k submissions, 1m actions, large attachments, and high approver fan-out.
+- **P9-OPS-05:** Add zero-downtime-compatible migrations and release rollback runbooks.
+
+**Phase 9 exit:** security review findings are resolved or explicitly accepted; restore drill succeeds; evidence pack verification succeeds; load targets meet documented budgets; the application is declared ready for tenant isolation work.
+
+---
+
+## Phase 10 — SaaS multi-tenancy foundation
+
+**Goal:** convert the stable single-organization system into a shared-database SaaS while preserving a supported self-hosted mode.
+
+### 10.1 Architecture decisions
+
+- **P10-ADR-01:** Record the shared-database tenancy decision, tenant-resolution rules, platform/tenant role separation, domain strategy, and self-hosted compatibility.
+- **P10-ADR-02:** Add `APP_MODE=self_hosted|saas`. Billing and platform administration remain disabled in self-hosted mode.
+- **P10-ADR-03:** Use explicit organization context and fail closed when context is absent. Queue jobs, notifications, commands, exports, and scheduled tasks must serialize organization identity.
+
+### 10.2 Tenant data model
+
+- **P10-DATA-01:** Add `organizations`, `organization_domains`, `organization_memberships`, and `organization_invitations`.
+- **P10-DATA-02:** Add `organization_id` to every tenant-owned table through nullable migrations, deterministic backfill, validation command, then non-null constraints.
+- **P10-DATA-03:** Enable organization-aware roles/permissions using Spatie's team capability or an ADR-approved equivalent.
+- **P10-DATA-04:** Separate platform roles from organization roles. A platform operator never silently inherits tenant data access.
+- **P10-DATA-05:** Convert the existing installation into one default organization without changing user credentials or workflow history.
+
+### 10.3 Tenant lifecycle
+
+- **P10-TEN-01:** Add organization creation, slug, logo/branding, timezone, locale, base currency, and owner transfer.
+- **P10-TEN-02:** Add invitation, acceptance, resend, expiry, membership suspension, leave organization, and organization switcher.
+- **P10-TEN-03:** Add tenant-aware URLs and API scopes. Legacy URLs redirect to the user's default organization during a deprecation window.
+- **P10-TEN-04:** Add organization export, closure request, grace period, and delayed purge workflow.
+- **P10-TEN-05:** Scope storage paths, cache keys, locks, reference numbers, notification channels, webhooks, API tokens, and search indexes by organization.
+
+### 10.4 Isolation tests and exit gate
+
+- Automated isolation tests for every tenant-owned model, route, policy, job, notification, export, file, cache key, API endpoint, and search query.
+- Tests deliberately reuse identical numeric IDs and references across tenants.
+- Static check prevents new tenant-owned models from being added without isolation tests.
+- Cross-tenant signed URLs, queued jobs, webhook replay, and impersonation attempts must fail.
+- Upgrade test migrates a production-like single-organization database into the default organization.
+
+**Phase 10 demo:** two organizations use the same deployment with overlapping reference numbers and users; neither can discover, access, export, receive, or process the other's data.
+
+---
+
+## Phase 11 — Paystack and Flutterwave subscriptions
+
+**Goal:** monetize the tenant-safe SaaS using a provider-neutral billing domain with Paystack and Flutterwave adapters.
+
+Payment-provider behavior must never directly determine authorization. Verified billing events update internal subscription state; an internal entitlement service controls product access.
+
+### 11.1 Billing domain
+
+- **P11-DATA-01:** Add `plans`, `plan_prices`, `plan_entitlements`, `billing_customers`, `subscriptions`, `subscription_items`, `payment_transactions`, `invoices`, and append-only `billing_events`.
+- **P11-DATA-02:** Store money as integer minor units plus ISO currency. Initial launch supports configured NGN prices; additional currencies require explicit price rows.
+- **P11-DATA-03:** Add internal subscription states: Trialing, Active, PastDue, GracePeriod, NonRenewing, Cancelled, Suspended, and Incomplete.
+- **P11-DATA-04:** Add immutable provider identifiers, unique idempotency keys, and raw-event hashes; redact sensitive payload fields.
+
+### 11.2 Provider abstraction
+
+- **P11-GW-01:** Define `BillingGateway` methods for customer creation, checkout initialization, verification, subscription management, cancellation, payment-method update, and reconciliation.
+- **P11-GW-02:** Implement `PaystackGateway` using hosted transaction initialization and Paystack plans/subscriptions.
+- **P11-GW-03:** Implement `FlutterwaveGateway` using hosted checkout and its supported recurring/tokenized flow; provider-specific limitations remain inside the adapter.
+- **P11-GW-04:** Use Laravel HTTP client with strict timeouts, retries only for safe/idempotent calls, provider request IDs, and circuit-breaker state.
+
+### 11.3 Secure payment lifecycle
+
+- **P11-PAY-01:** Add trial signup without card, plan selection, monthly/annual prices, hosted checkout redirect, and return page that does not grant access by itself.
+- **P11-PAY-02:** Verify Paystack webhook origin with `x-paystack-signature` HMAC-SHA512 over the raw payload.
+- **P11-PAY-03:** Verify Flutterwave's `flutterwave-signature` using HMAC-SHA256 and the configured secret hash.
+- **P11-PAY-04:** After signature verification, re-query the provider and validate status, amount, currency, reference, customer, and organization before activating service.
+- **P11-PAY-05:** Acknowledge webhooks quickly, persist them once, and process them asynchronously and idempotently.
+- **P11-PAY-06:** Add a scheduled reconciliation job for pending/missed events and an operator reconciliation screen.
+- **P11-PAY-07:** Add failed-payment notices, grace period, retry schedule, expiring-card handling where supported, cancellation at period end, reactivation, and hosted payment-method management.
+- **P11-PAY-08:** Do not store card PAN, CVV, or raw payment credentials.
+
+Paystack implementation must follow its official [subscription](https://paystack.com/docs/payments/subscriptions/), [webhook](https://paystack.com/docs/payments/webhooks/), and [verification](https://paystack.com/docs/payments/verify-payments/) contracts. Flutterwave implementation must follow its official [webhook](https://developer.flutterwave.com/docs/webhooks) and current recurring-payment documentation. Re-check these contracts at implementation time because provider APIs change.
+
+### 11.4 Billing UI and operations
+
+- **P11-UI-01:** Add Pricing, Start trial, Billing overview, invoices/receipts, payment status, change plan, cancel, reactivate, and update payment method.
+- **P11-UI-02:** Clearly show provider, currency, billing interval, renewal date, grace deadline, and feature consequences.
+- **P11-OPS-01:** Add platform configuration for provider availability, test/live mode, plan-code mapping, webhook health, and reconciliation.
+- **P11-OPS-02:** Add a dual-provider failover policy for new checkouts only. Never silently move an existing recurring authorization between providers.
+
+### 11.5 Tests and exit gate
+
+- Provider contract tests using recorded, redacted fixtures and `Http::fake()`.
+- Signature-valid/invalid, duplicate, reordered, delayed, and replayed webhook tests.
+- Amount/currency/reference mismatch tests that never grant entitlements.
+- Trial conversion, renewal, failed payment, grace, cancellation, reactivation, and reconciliation tests for both providers.
+- Browser tests use provider sandbox/test modes only; CI never uses live credentials.
+- Finance reconciliation report must balance internal successful transactions against verified provider transactions.
+
+**Phase 11 demo:** two trial organizations subscribe through different providers, renew through verified webhooks, receive invoices, experience a simulated failed payment/grace period, and recover without cross-tenant effects.
+
+---
+
+## Phase 12 — SaaS onboarding, entitlements, and commercial operations
+
+**Goal:** make the billed SaaS self-service, supportable, measurable, and safe to operate.
+
+### 12.1 Plans and entitlements
+
+- **P12-ENT-01:** Add one internal `EntitlementService` for features and limits. UI hiding is never the only enforcement.
+- **P12-ENT-02:** Enforce plan limits for active users, request volume, workflow/request types, storage, integrations, API rate, retention, and evidence exports.
+- **P12-ENT-03:** Add usage meters, threshold warnings, upgrade prompts, and soft/hard limit policy.
+- **P12-ENT-04:** Make plan changes effective according to documented upgrade/downgrade rules; defer proration until both provider adapters support an identical tested policy.
+
+### 12.2 Self-service onboarding
+
+- **P12-ONB-01:** Add account → organization → trial → workspace onboarding with resumable checkpoints.
+- **P12-ONB-02:** Provide starter packs for leave, expense, purchase, document, hiring, IT access, and generic approval.
+- **P12-ONB-03:** Add guided setup for departments, members, first request type, first workflow, and first test request.
+- **P12-ONB-04:** Add safe demo/sample data that can be removed without touching real records.
+
+### 12.3 Platform operations
+
+- **P12-OPS-01:** Add a separate platform console for organizations, subscriptions, payment events, email/queue health, storage, abuse flags, and feature flags.
+- **P12-OPS-02:** Add support access requiring reason, tenant consent or approved emergency policy, expiry, visible banner, and immutable audit.
+- **P12-OPS-03:** Add tenant-aware rate limits, storage quotas, background-job fairness, and noisy-neighbor monitoring.
+- **P12-OPS-04:** Add tenant backup/export, restore-to-new-tenant, and closure/purge runbooks.
+- **P12-OPS-05:** Add privacy policy, terms acceptance/version history, billing emails, tax/business identity fields, and customer support contacts.
+
+**Phase 12 exit:** a new customer can discover pricing, start a trial, create an organization, configure a template, invite users, subscribe, manage billing, and receive support without manual database changes.
+
+---
+
+## Phase 13 — Intelligence and process optimization
+
+**Goal:** add explainable assistance after the product has sufficient stable data and controls. AI is optional per tenant and never bypasses workflow policy.
+
+- **P13-DOC-01:** Add OCR/document extraction through a provider interface with confidence scores and human confirmation.
+- **P13-RSK-01:** Add deterministic duplicate detection and policy/anomaly flags before any probabilistic model.
+- **P13-AI-01:** Add request and discussion summaries with source links to the underlying fields/comments.
+- **P13-AI-02:** Add suggested routing/approvers as recommendations only; the published workflow remains authoritative.
+- **P13-AI-03:** Add natural-language analytics that compiles to tenant-scoped, read-only metric queries with visible definitions.
+- **P13-AI-04:** Add workflow-draft generation from plain language, followed by normal validation, simulation, human review, and publication.
+- **P13-GOV-01:** Add tenant opt-in, provider/model configuration, redaction, retention, cost limits, prompt-injection defenses, evaluation datasets, and decision logs.
+
+**Phase 13 exit:** AI-disabled tenants have no AI data transfer or functional loss; AI outputs are attributable, reviewable, rate-limited, and unable to mutate workflow state directly.
+
+---
+
+## Phase 14 — SaaS stabilization and general availability
+
+**Goal:** freeze major feature development and prove that the SaaS is secure, reliable, supportable, and commercially ready before enterprise/mobile work begins.
+
+- **P14-REL-01:** Run a 60–90 day controlled beta with defined cohorts and migration/support playbooks.
+- **P14-REL-02:** Resolve all severity-1/2 defects and documented top usability failures.
+- **P14-REL-03:** Complete penetration test, tenant-isolation review, payment review, privacy review, and accessibility audit.
+- **P14-REL-04:** Run load, failover, queue backlog, provider outage, webhook replay, backup restore, and disaster recovery exercises.
+- **P14-REL-05:** Define SLOs for availability, API latency, queue latency, notification delivery, webhook processing, and recovery objectives.
+- **P14-REL-06:** Add public status, incident communication, support escalation, and maintenance procedures.
+- **P14-REL-07:** Validate unit economics: provider fees, storage, email/SMS, queue volume, support load, and plan limits.
+- **P14-REL-08:** Publish stable API/OpenAPI versioning, deprecation policy, release notes, onboarding guides, and administrator documentation.
+
+**Phase 14 exit:** two consecutive release cycles meet SLOs with no critical isolation, payment, data-loss, or workflow-integrity incident. Only then may Phase 15 begin.
+
+---
+
+## Phase 15 — Enterprise capabilities and native mobile apps
+
+**Goal:** add enterprise identity/governance and native mobile clients only after the SaaS web platform is stable. Enterprise and mobile are parallel workstreams sharing the stable v4 API; neither may weaken tenant isolation or workflow controls.
+
+### 15A. Enterprise capabilities
+
+- **P15-ENT-01:** SAML 2.0 SSO with organization-specific identity providers, signed metadata, certificate rotation, domain verification, and break-glass access.
+- **P15-ENT-02:** SCIM 2.0 user/group provisioning with dry-run reconciliation, deprovisioning safeguards, and audit trail.
+- **P15-ENT-03:** LDAP/Active Directory synchronization for self-hosted enterprise deployments.
+- **P15-ENT-04:** Organization login policies, enforced MFA, session duration, IP allowlists, and managed-device policy hooks.
+- **P15-ENT-05:** Multi-entity hierarchy, business units, delegated administration, cross-entity reporting, and data residency policy metadata.
+- **P15-ENT-06:** Customer-managed encryption-key abstraction, advanced legal holds, configurable retention, and compliance evidence APIs.
+- **P15-ENT-07:** Sandbox environments and controlled workflow promotion from sandbox to production.
+- **P15-ENT-08:** Enterprise audit/API exports, SIEM integration, service accounts, scoped OAuth applications, and higher-rate bulk APIs.
+- **P15-ENT-09:** Contract/SLA entitlements, purchase-order invoicing, manual enterprise billing, and account-management notes separate from gateway subscriptions.
+
+### 15B. Native mobile applications
+
+- **P15-MOB-01:** Choose the client stack through an ADR after measuring team capability; consume the stable API rather than duplicating Laravel business rules.
+- **P15-MOB-02:** Ship iOS and Android authentication with OAuth/passkeys where supported, secure token storage, device/session revocation, and optional biometric re-entry.
+- **P15-MOB-03:** Add approval inbox, search/filter, request detail, attachment preview, comments, approve/reject/return/information request, and delegation.
+- **P15-MOB-04:** Add push notifications with deep links and stale-step confirmation.
+- **P15-MOB-05:** Add requester forms, camera/document upload, drafts, and explicitly scoped offline draft synchronization.
+- **P15-MOB-06:** Approval actions remain online-only and are processed by the server `WorkflowEngine`; the client never derives authoritative state.
+- **P15-MOB-07:** Add mobile accessibility, localization readiness, crash reporting, privacy manifests, app-store release automation, and device-matrix tests.
+
+### Phase 15 exit
+
+- Enterprise identity/provisioning passes interoperability and deprovisioning tests.
+- Native apps pass the same policy/action contract suite as the web/API clients.
+- Offline conflict resolution cannot overwrite submitted or newer server data.
+- Mobile approval attempts against stale steps fail safely.
+- App-store builds, privacy disclosures, support procedures, and phased rollout are complete.
+
+---
+
+## 5. Cross-phase test strategy
+
+| Layer | Required coverage |
+|---|---|
+| Unit | Rule compiler, graph validator, resolvers, entitlement calculations, payment signatures, provider mapping |
+| Domain/feature | Workflow transitions, tenant scoping, billing lifecycle, retention, permissions, idempotency |
+| Contract | Billing gateways, connectors, AI providers, mobile/API behavior |
+| Browser | Request builder, workflow builder, requester submission, approver decision, billing checkout return, accessibility |
+| Migration | Fresh install plus upgrade fixtures from every major release |
+| Concurrency | Approval races, publish races, webhook duplicates, subscription changes, quota enforcement |
+| Security | Tenant isolation, signed URLs/actions, field redaction, webhook signatures, support access |
+| Performance | Large lists, analytics, workflow fan-out, exports, queues, storage, tenant fairness |
+
+Every bug involving authorization, workflow state, money, tenancy, data loss, or audit integrity requires a regression test before the fix.
+
+## 6. Data migration sequence
+
+Major migrations must use expand → backfill → validate → constrain → contract:
+
+1. Add nullable/new structures without breaking old code.
+2. Deploy code that dual-reads or dual-writes where necessary.
+3. Backfill using resumable, idempotent commands with progress and dry-run modes.
+4. Validate counts, hashes, foreign keys, and sample records.
+5. Add non-null/unique constraints only after validation.
+6. Remove old paths in a later release, never in the same risky deployment.
+
+## 7. Risk register
 
 | Risk | Mitigation |
 |---|---|
-| Race conditions in approvals | Engine-wide transactions + row locks; dedicated concurrency tests (Phase 1B) |
-| Shared-hosting incompatibility | Database queue + file cache only; requirements check in installer; staging on target host before each release |
-| Spec drift / scope creep | Phase exit criteria are tests; new ideas go to Phase 2+ backlog |
-| Audit tampering | Append-only actions enforced in code; DB-user privileges restricted to INSERT/SELECT on `workflow_actions` at deploy |
-| Laravel 13 ecosystem gaps (young release) | Lock versions in `composer.lock`; fallback path to Laravel 12 documented (PHP 8.2 hosts) |
+| Workflow regressions during visual-builder/version migration | Immutable versions, compatibility fixtures, engine coverage, old-instance completion tests |
+| Cross-tenant data exposure | Explicit context, fail-closed services, isolation suite for every model/path/job |
+| Incorrect paid access from spoofed/replayed payment events | Raw-body signature checks, provider re-verification, idempotent events, internal entitlements |
+| Provider outage or API drift | Gateway adapters, reconciliation, circuit breakers, sandbox contract checks, current official docs |
+| Shared-hosting regression | Preserve database queue/file cache mode; no runtime Node/Redis requirement in self-hosted mode |
+| UI complexity overwhelms non-technical users | Preview, templates, progressive disclosure, validation, simulation, usability tests |
+| AI leaks data or makes unauthorized decisions | Tenant opt-in, redaction, evaluations, recommendations only, engine remains authoritative |
+| Enterprise/mobile work destabilizes SaaS | Phase 15 blocked until Phase 14 stability gate passes |
+
+## 8. Handoff protocol for engineers and AI agents
+
+Before starting work:
+
+1. Read `AGENTS.md`, this plan, `CHANGELOG.md`, and the relevant document in `docs/`.
+2. Run `git status -sb`, identify the current branch, and do not overwrite unrelated changes.
+3. Find the first incomplete task in the active phase and confirm its prerequisites are merged.
+4. Inspect existing Actions, Services, Policies, tests, and UI patterns before introducing a new abstraction.
+5. Write or update an ADR before implementing a decision marked `ADR` in this plan.
+6. Add the failing tests first for workflow, tenancy, payment, or security behavior.
+
+When completing work:
+
+1. Update the task's status in a PR description or future checked task tracker; do not mark an entire phase complete prematurely.
+2. Record migrations, configuration keys, queue/scheduler changes, feature flags, and rollback steps.
+3. Update documentation and `CHANGELOG.md` in the same release.
+4. Report exact commands and test counts used for verification.
+5. State the next unblocked task ID so another contributor can continue immediately.
+
+The plan is intentionally specific, but implementation details may change through an ADR when evidence shows a safer or simpler approach. The ordering and phase exit gates may only change through an explicit plan update reviewed alongside the affected architecture and migration strategy.
