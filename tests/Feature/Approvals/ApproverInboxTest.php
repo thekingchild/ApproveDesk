@@ -2,7 +2,9 @@
 
 namespace Tests\Feature\Approvals;
 
+use App\Enums\SubmissionPriority;
 use App\Enums\SubmissionStatus;
+use App\Enums\SubmissionType;
 use App\Enums\WorkflowActionType;
 use App\Enums\WorkflowStatus;
 use App\Models\Submission;
@@ -26,6 +28,8 @@ class ApproverInboxTest extends TestCase
 
     private Submission $submission;
 
+    private WorkflowTemplate $template;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -36,7 +40,7 @@ class ApproverInboxTest extends TestCase
         $this->firstApprover = User::factory()->create()->assignRole('approver');
         $this->secondApprover = User::factory()->create()->assignRole('approver');
 
-        WorkflowTemplate::factory()
+        $this->template = WorkflowTemplate::factory()
             ->default()
             ->sequential([$this->firstApprover, $this->secondApprover])
             ->create();
@@ -53,7 +57,84 @@ class ApproverInboxTest extends TestCase
         Livewire::actingAs($this->firstApprover)
             ->test('pages::approvals.inbox')
             ->assertSee($this->submission->title)
-            ->assertSee('To Action');
+            ->assertSee('Needs my decision')
+            ->assertSee('Waiting on others')
+            ->assertSee('Current step')
+            ->assertSee('Last activity');
+    }
+
+    public function test_saved_views_search_and_filters_narrow_the_prioritized_queue(): void
+    {
+        $this->template->steps()->first()->update(['timeout_hours' => 24]);
+        $this->submission->update([
+            'priority' => SubmissionPriority::Urgent,
+            'type' => SubmissionType::Memo,
+        ]);
+        $this->submission->workflowInstance()->update(['step_started_at' => now()->subHours(25)]);
+
+        $other = Submission::factory()->for($this->submitter, 'submitter')->create([
+            'title' => 'Routine equipment request',
+            'priority' => SubmissionPriority::Normal,
+            'type' => SubmissionType::Request,
+        ]);
+        app(WorkflowEngine::class)->initialize($other);
+
+        Livewire::actingAs($this->firstApprover)
+            ->test('pages::approvals.inbox')
+            ->call('setView', 'overdue')
+            ->assertSee($this->submission->title)
+            ->assertDontSee($other->title)
+            ->call('setView', 'needs_decision')
+            ->set('search', 'equipment')
+            ->assertSee($other->title)
+            ->assertDontSee($this->submission->title)
+            ->set('search', '')
+            ->set('priority', 'urgent')
+            ->set('type', 'memo')
+            ->assertSee($this->submission->title)
+            ->assertDontSee($other->title);
+    }
+
+    public function test_inline_preview_approves_without_leaving_the_queue(): void
+    {
+        $instance = $this->submission->workflowInstance()->first();
+
+        Livewire::actingAs($this->firstApprover)
+            ->test('pages::approvals.inbox')
+            ->call('openPreview', $instance->id)
+            ->assertSee('Open full request')
+            ->assertSee($this->submission->title)
+            ->call('approvePreview')
+            ->assertHasNoErrors();
+
+        $this->assertSame(2, $instance->fresh()->currentStep->step_order);
+    }
+
+    public function test_guarded_batch_approval_accepts_only_homogeneous_eligible_requests(): void
+    {
+        $other = Submission::factory()->for($this->submitter, 'submitter')->create(['title' => 'Second eligible request']);
+        app(WorkflowEngine::class)->initialize($other);
+
+        $ids = [
+            (string) $this->submission->workflowInstance()->value('id'),
+            (string) $other->workflowInstance()->value('id'),
+        ];
+
+        Livewire::actingAs($this->firstApprover)
+            ->test('pages::approvals.inbox')
+            ->set('selected', $ids)
+            ->assertSet('batchEligible', true)
+            ->call('batchApprove')
+            ->assertHasNoErrors();
+
+        $this->assertSame(2, $this->submission->workflowInstance()->first()->currentStep->step_order);
+        $this->assertSame(2, $other->workflowInstance()->first()->currentStep->step_order);
+
+        Livewire::actingAs($this->firstApprover)
+            ->test('pages::approvals.inbox')
+            ->set('selected', $ids)
+            ->call('batchApprove')
+            ->assertHasErrors(['selected']);
     }
 
     public function test_approve_through_the_page_advances_the_chain(): void
@@ -61,6 +142,7 @@ class ApproverInboxTest extends TestCase
         Livewire::actingAs($this->firstApprover)
             ->test('pages::submissions.show', ['submission' => $this->submission])
             ->assertSee('Your decision')
+            ->assertSee('Shortcuts: [ previous, ] next, A approve, R reject')
             ->call('act', 'approve')
             ->assertHasNoErrors();
 

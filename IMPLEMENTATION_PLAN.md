@@ -94,7 +94,7 @@ A task is complete only when it has:
 | Phase | Target | Theme | Status |
 |---|---|---|---|
 | 0–4 | v2.0.0 | Existing workflow platform | Complete |
-| 5 | v2.1.0 | Non-enterprise UX, accessibility, and approver productivity | In progress — 5.1–5.2 complete |
+| 5 | v2.1.0 | Non-enterprise UX, accessibility, and approver productivity | In progress — 5.1–5.3 complete |
 | 6 | v2.2.0 | Configurable request types and form builder | Not started |
 | 7 | v2.3.0 | Visual workflows, versioning, and dynamic assignment | Not started |
 | 8 | v2.4.0 | Collaboration, notifications, and integration hub | Not started |
@@ -127,14 +127,14 @@ A task is complete only when it has:
 - **P5-NAV-03 — Complete:** The notification centre includes live unread counts, individual/all read controls, policy-safe deep links, and recorded preference-aware delivery labels.
 - **P5-NAV-04 — Complete:** Reusable breadcrumbs and consistent back-navigation cover submissions, approvals, notifications, and all administration editors.
 
-### 5.3 Approver workbench
+### 5.3 Approver workbench — Complete (2026-08-18)
 
-- **P5-ACT-01:** Replace the three static inbox columns with one prioritized queue and saved views: Needs my decision, Due soon, Overdue, Waiting on others, and Completed.
-- **P5-ACT-02:** Add search and filters for status, deadline, priority, request type, department, requester, and delegation.
-- **P5-ACT-03:** Add compact decision cards with requester, key fields, SLA countdown, current step, attachment count, and last activity.
-- **P5-ACT-04:** Add an inline preview drawer and a sticky decision bar on the submission detail page.
-- **P5-ACT-05:** Add keyboard shortcuts for next/previous request and approve/reject modal opening; destructive decisions still require confirmation and required comments.
-- **P5-ACT-06:** Add guarded batch approval for homogeneous, eligible requests. Rejections, returns, escalations, and information requests remain individual actions.
+- **P5-ACT-01 — Complete:** Replaced the three static inbox columns with one prioritized queue and saved views: Needs my decision, Due soon, Overdue, Waiting on others, and Completed.
+- **P5-ACT-02 — Complete:** Added search and filters for status, deadline, priority, request type, department, requester, and delegation.
+- **P5-ACT-03 — Complete:** Added compact decision cards with requester, key fields, SLA countdown, current step, attachment count, and last activity.
+- **P5-ACT-04 — Complete:** Added an inline preview drawer and a sticky decision bar on the submission detail page.
+- **P5-ACT-05 — Complete:** Added keyboard shortcuts for next/previous request and approve/reject modal opening; destructive decisions still require confirmation and required comments.
+- **P5-ACT-06 — Complete:** Added guarded batch approval for homogeneous, eligible requests. Rejections, returns, escalations, and information requests remain individual actions.
 
 ### 5.4 Requester and administrator experience
 

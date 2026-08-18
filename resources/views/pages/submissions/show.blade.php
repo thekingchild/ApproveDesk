@@ -6,6 +6,7 @@ use App\Models\Comment;
 use App\Models\Delegation;
 use App\Models\Submission;
 use App\Models\User;
+use App\Services\ApproverWorkbench;
 use App\Services\WorkflowEngine;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
@@ -128,6 +129,25 @@ new #[Title('Submission')] class extends Component {
             ->where('actor_id', $user->id)
             ->whereIn('action', ['approve', 'reject', 'escalate'])
             ->isNotEmpty();
+    }
+
+    /** @return array{previous: string|null, next: string|null} */
+    #[Computed]
+    public function approvalNavigation(): array
+    {
+        $items = collect(app(ApproverWorkbench::class)->itemsFor(Auth::user()))
+            ->filter(fn (array $item): bool => $item['needs_me'])
+            ->values();
+        $index = $items->search(fn (array $item): bool => $item['instance']->submission_id === $this->submission->id);
+
+        if ($index === false) {
+            return ['previous' => null, 'next' => null];
+        }
+
+        return [
+            'previous' => $index > 0 ? route('submissions.show', $items[$index - 1]['instance']->submission) : null,
+            'next' => $index < $items->count() - 1 ? route('submissions.show', $items[$index + 1]['instance']->submission) : null,
+        ];
     }
 
     #[Computed]
@@ -307,7 +327,17 @@ new #[Title('Submission')] class extends Component {
     }
 } ?>
 
-<div class="space-y-6">
+<div
+    class="space-y-6"
+    x-data="{ previous: @js($this->approvalNavigation['previous']), next: @js($this->approvalNavigation['next']) }"
+    x-on:keydown.window="
+        if (['INPUT', 'TEXTAREA', 'SELECT'].includes($event.target.tagName) || $event.metaKey || $event.ctrlKey || $event.altKey) return;
+        if ($event.key === '[' && previous) window.location.assign(previous);
+        if ($event.key === ']' && next) window.location.assign(next);
+        if ($event.key.toLowerCase() === 'a') document.querySelector('[data-test=approve-modal-trigger]')?.click();
+        if ($event.key.toLowerCase() === 'r') document.querySelector('[data-test=reject-modal-trigger]')?.click();
+    "
+>
     <x-ui.breadcrumbs :items="[['label' => __('Submissions'), 'url' => route('submissions.index')], ['label' => $submission->reference_number]]" :back="route('submissions.index')" back-label="Back to submissions" />
 
     <div class="flex flex-wrap items-start justify-between gap-3">
@@ -430,15 +460,30 @@ new #[Title('Submission')] class extends Component {
     @endif
 
     @if ($this->canAct)
-        <flux:card class="border-blue-200 dark:border-blue-900">
-            <flux:heading size="sm">{{ __('Your decision') }}</flux:heading>
+        <flux:card class="sticky bottom-3 z-20 border-blue-200 bg-white/95 shadow-xl backdrop-blur dark:border-blue-900 dark:bg-zinc-900/95">
+            <div class="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                    <flux:heading size="sm">{{ __('Your decision') }}</flux:heading>
+                    <flux:subheading>{{ __('Shortcuts: [ previous, ] next, A approve, R reject') }}</flux:subheading>
+                </div>
+                <div class="flex gap-2">
+                    @if ($this->approvalNavigation['previous'])
+                        <flux:button :href="$this->approvalNavigation['previous']" variant="ghost" wire:navigate aria-label="{{ __('Previous request') }}">{{ __('Previous') }}</flux:button>
+                    @endif
+                    @if ($this->approvalNavigation['next'])
+                        <flux:button :href="$this->approvalNavigation['next']" variant="ghost" wire:navigate aria-label="{{ __('Next request') }}">{{ __('Next') }}</flux:button>
+                    @endif
+                </div>
+            </div>
             <flux:textarea wire:model="actionComment" :label="__('Comment (required for reject, return, information request, or escalation)')" rows="3" class="mt-3" />
             <flux:error name="actionComment" />
 
             <div class="mt-4 flex flex-wrap gap-3">
-                <flux:button variant="primary" wire:click="act('approve')" data-test="approve">{{ __('Approve') }}</flux:button>
+                <flux:modal.trigger name="approve-modal">
+                    <flux:button variant="primary" data-test="approve-modal-trigger">{{ __('Approve') }}</flux:button>
+                </flux:modal.trigger>
                 <flux:modal.trigger name="reject-modal">
-                    <flux:button variant="danger" data-test="reject">{{ __('Reject') }}</flux:button>
+                    <flux:button variant="danger" data-test="reject-modal-trigger">{{ __('Reject') }}</flux:button>
                 </flux:modal.trigger>
                 <flux:modal.trigger name="return-modal">
                     <flux:button variant="subtle" data-test="return">{{ __('Return for revision') }}</flux:button>
@@ -455,6 +500,15 @@ new #[Title('Submission')] class extends Component {
                     </flux:modal.trigger>
                 @endif
             </div>
+
+            <flux:modal name="approve-modal">
+                <flux:heading size="md">{{ __('Approve this submission?') }}</flux:heading>
+                <flux:subheading class="mt-1">{{ __('Your decision is recorded in the immutable audit trail and may advance the workflow.') }}</flux:subheading>
+                <div class="mt-4 flex gap-2">
+                    <flux:modal.close><flux:button variant="ghost">{{ __('Cancel') }}</flux:button></flux:modal.close>
+                    <flux:button variant="primary" wire:click="act('approve')" data-test="approve">{{ __('Confirm approval') }}</flux:button>
+                </div>
+            </flux:modal>
 
             <flux:modal name="reject-modal" variant="danger">
                 <flux:heading size="md">{{ __('Reject this submission?') }}</flux:heading>

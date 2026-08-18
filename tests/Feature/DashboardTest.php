@@ -111,7 +111,9 @@ class DashboardTest extends TestCase
         $assignedTemplate = WorkflowTemplate::factory()->default()->sequential([$approver])->create();
         $otherTemplate = WorkflowTemplate::factory()->sequential([$otherApprover])->create();
 
-        $assigned = Submission::factory()->for($submitter, 'submitter')->create();
+        $assigned = Submission::factory()->for($submitter, 'submitter')->create([
+            'title' => 'Assigned approval request',
+        ]);
         $other = Submission::factory()->for($submitter, 'submitter')->create();
 
         app(WorkflowEngine::class)->initialize($assigned);
