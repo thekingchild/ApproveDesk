@@ -5,12 +5,17 @@ use App\Models\Department;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
 
 new #[Title('My submissions')] class extends Component {
     use WithPagination;
+
+    #[Url]
+    public string $view = 'all';
 
     public string $statusFilter = '';
 
@@ -25,6 +30,42 @@ new #[Title('My submissions')] class extends Component {
     public string $dateFrom = '';
 
     public string $dateTo = '';
+
+    /** @return array<string, array{label: string, statuses: list<string>}> */
+    protected function savedViews(): array
+    {
+        return [
+            'all' => ['label' => 'All requests', 'statuses' => []],
+            'drafts' => ['label' => 'Drafts', 'statuses' => ['draft']],
+            'in_progress' => ['label' => 'In progress', 'statuses' => ['pending', 'in_review']],
+            'needs_response' => ['label' => 'Needs my response', 'statuses' => ['returned', 'awaiting_information']],
+            'completed' => ['label' => 'Completed', 'statuses' => ['approved', 'rejected']],
+            'withdrawn' => ['label' => 'Withdrawn', 'statuses' => ['withdrawn']],
+        ];
+    }
+
+    /** @return array<string, int> */
+    #[Computed]
+    public function savedViewCounts(): array
+    {
+        if ($this->organizationView) {
+            return [];
+        }
+
+        $counts = Submission::query()
+            ->where('submitter_id', Auth::id())
+            ->selectRaw('status, COUNT(*) as aggregate')
+            ->groupBy('status')
+            ->pluck('aggregate', 'status');
+
+        return collect($this->savedViews())->mapWithKeys(function (array $savedView, string $key) use ($counts): array {
+            $count = $savedView['statuses'] === []
+                ? (int) $counts->sum()
+                : collect($savedView['statuses'])->sum(fn (string $status): int => (int) ($counts[$status] ?? 0));
+
+            return [$key => $count];
+        })->all();
+    }
 
     #[\Livewire\Attributes\Computed]
     public function organizationView(): bool
@@ -48,10 +89,19 @@ new #[Title('My submissions')] class extends Component {
     {
         if (in_array($property, [
             'search', 'statusFilter', 'typeFilter', 'submitterFilter',
-            'departmentFilter', 'dateFrom', 'dateTo',
+            'departmentFilter', 'dateFrom', 'dateTo', 'view',
         ], true)) {
             $this->resetPage();
         }
+    }
+
+    public function setView(string $view): void
+    {
+        abort_unless(array_key_exists($view, $this->savedViews()), 404);
+
+        $this->view = $view;
+        $this->statusFilter = '';
+        $this->resetPage();
     }
 
     public function clearFilters(): void
@@ -98,6 +148,10 @@ new #[Title('My submissions')] class extends Component {
     {
         return Submission::query()
             ->when(! $this->organizationView, fn ($query) => $query->where('submitter_id', Auth::id()))
+            ->when(! $this->organizationView && $this->view !== 'all', function (Builder $query): void {
+                $statuses = $this->savedViews()[$this->view]['statuses'] ?? [];
+                $query->whereIn('status', $statuses);
+            })
             ->when($this->search !== '', function (Builder $query): void {
                 $query->where(function (Builder $search): void {
                     $search->where('reference_number', 'like', '%'.$this->search.'%')
@@ -136,6 +190,17 @@ new #[Title('My submissions')] class extends Component {
             </x-slot:actions>
         @endcan
     </x-ui.page-header>
+
+    @if (! $this->organizationView)
+        <nav aria-label="{{ __('Saved request views') }}" class="flex gap-2 overflow-x-auto pb-1">
+            @foreach ($this->savedViews() as $key => $savedView)
+                <flux:button wire:click="setView('{{ $key }}')" :variant="$view === $key ? 'primary' : 'ghost'" class="shrink-0">
+                    {{ __($savedView['label']) }}
+                    <flux:badge size="sm" color="zinc">{{ $this->savedViewCounts[$key] }}</flux:badge>
+                </flux:button>
+            @endforeach
+        </nav>
+    @endif
 
     <flux:card class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <flux:input wire:model.live.debounce.300ms="search" icon="magnifying-glass" :label="__('Search')" :placeholder="__('Reference or title')" />
@@ -205,14 +270,30 @@ new #[Title('My submissions')] class extends Component {
             @empty
                 <flux:table.row>
                     <flux:table.cell :colspan="$this->organizationView ? 7 : 6" data-empty-state>
+                        @php
+                            $emptyStates = [
+                                'drafts' => [__('No drafts to continue'), __('Start a request now and it will remain here until you submit it.')],
+                                'in_progress' => [__('Nothing is awaiting approval'), __('Submitted requests will appear here while their approval workflow is running.')],
+                                'needs_response' => [__('No responses are needed'), __('Returned requests and information requests that need your attention will appear here.')],
+                                'completed' => [__('No completed requests yet'), __('Approved and rejected requests will remain here for easy reference.')],
+                                'withdrawn' => [__('No withdrawn requests'), __('Requests you withdraw before completion will appear here.')],
+                                'all' => [__('No requests yet'), __('Create your first request to start an approval workflow.')],
+                            ];
+                            [$emptyTitle, $emptyDescription] = $this->organizationView
+                                ? [__('No submissions found'), __('Try clearing the filters or wait for a requester to submit new work.')]
+                                : ($emptyStates[$view] ?? $emptyStates['all']);
+                        @endphp
                         <x-ui.empty-state
-                            :title="__('No submissions found')"
-                            :description="__('Try clearing the filters or create a new submission.')"
+                            :title="$emptyTitle"
+                            :description="$emptyDescription"
                             icon="document-magnifying-glass"
                         >
                             @can('create', \App\Models\Submission::class)
                                 <x-slot:actions>
-                                    <flux:button :href="route('submissions.create')" variant="primary" wire:navigate>{{ __('New submission') }}</flux:button>
+                                    <flux:button :href="route('submissions.create')" variant="primary" wire:navigate>{{ __('New request') }}</flux:button>
+                                    @if ($view !== 'all')
+                                        <flux:button wire:click="setView('all')" variant="ghost">{{ __('View all requests') }}</flux:button>
+                                    @endif
                                 </x-slot:actions>
                             @endcan
                         </x-ui.empty-state>

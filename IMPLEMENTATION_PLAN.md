@@ -94,7 +94,7 @@ A task is complete only when it has:
 | Phase | Target | Theme | Status |
 |---|---|---|---|
 | 0–4 | v2.0.0 | Existing workflow platform | Complete |
-| 5 | v2.1.0 | Non-enterprise UX, accessibility, and approver productivity | In progress — 5.1–5.3 complete |
+| 5 | v2.1.0 | Non-enterprise UX, accessibility, and approver productivity | In progress — 5.1–5.4 complete |
 | 6 | v2.2.0 | Configurable request types and form builder | Not started |
 | 7 | v2.3.0 | Visual workflows, versioning, and dynamic assignment | Not started |
 | 8 | v2.4.0 | Collaboration, notifications, and integration hub | Not started |
@@ -136,13 +136,13 @@ A task is complete only when it has:
 - **P5-ACT-05 — Complete:** Added keyboard shortcuts for next/previous request and approve/reject modal opening; destructive decisions still require confirmation and required comments.
 - **P5-ACT-06 — Complete:** Added guarded batch approval for homogeneous, eligible requests. Rejections, returns, escalations, and information requests remain individual actions.
 
-### 5.4 Requester and administrator experience
+### 5.4 Requester and administrator experience — Complete (2026-08-18)
 
-- **P5-REQ-01:** Add My requests saved views: Drafts, In progress, Needs my response, Completed, and Withdrawn.
-- **P5-REQ-02:** Make autosave state visible with Saving, Saved at, Offline/failed, and Retry indicators.
-- **P5-REQ-03:** Add meaningful empty states and primary actions instead of generic “Nothing here.”
-- **P5-ADM-01:** Upgrade dashboards with awaiting-me, overdue, median cycle time, returned rate, SLA compliance, bottleneck step, and workload-by-approver metrics.
-- **P5-ADM-02:** Add accessible chart summaries and tabular alternatives.
+- **P5-REQ-01 — Complete:** Added My requests saved views for Drafts, In progress, Needs my response, Completed, and Withdrawn, with requester-scoped counts and authorization-safe queries.
+- **P5-REQ-02 — Complete:** Made autosave state visible with Saving, Saved at, Offline/failed, and Retry indicators.
+- **P5-REQ-03 — Complete:** Added view-specific empty states with clear explanations and primary next actions.
+- **P5-ADM-01 — Complete:** Upgraded dashboards with awaiting-me, overdue, median cycle time, returned rate, SLA compliance, bottleneck step, and delegation-aware workload-by-approver metrics.
+- **P5-ADM-02 — Complete:** Added accessible chart summaries and tabular alternatives for daily activity, bottlenecks, and approver workload.
 
 ### 5.5 Tests and exit gate
 

@@ -93,7 +93,12 @@ class DashboardTest extends TestCase
             ->get(route('dashboard'))
             ->assertOk()
             ->assertSee('Monitor organization activity and manage approval operations.')
-            ->assertSee('data-test="administrator-home"', escape: false);
+            ->assertSee('data-test="administrator-home"', escape: false)
+            ->assertSee('data-test="operations-health"', escape: false)
+            ->assertSee('Median cycle time')
+            ->assertSee('Returned rate')
+            ->assertSee('SLA compliance')
+            ->assertSee('Workload by approver');
 
         $this->actingAs($admin)
             ->get(route('submissions.index'))

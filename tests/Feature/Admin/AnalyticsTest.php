@@ -43,6 +43,7 @@ class AnalyticsTest extends TestCase
         $this->step = WorkflowTemplateStep::factory()->forTemplate($this->template, 1)->create([
             'name' => 'Finance review',
             'timeout_hours' => 24,
+            'assignee_ids' => [$this->actor->id],
         ]);
     }
 
@@ -55,7 +56,14 @@ class AnalyticsTest extends TestCase
 
     public function test_admin_analytics_reconciles_outcomes_turnaround_and_bottlenecks(): void
     {
-        $this->resolvedWorkflow(WorkflowStatus::Completed, WorkflowActionType::Approve, '2026-08-10 08:00:00', '2026-08-10 12:00:00');
+        $completed = $this->resolvedWorkflow(WorkflowStatus::Completed, WorkflowActionType::Approve, '2026-08-10 08:00:00', '2026-08-10 12:00:00');
+        WorkflowAction::factory()->create([
+            'instance_id' => $completed->id,
+            'step_id' => $this->step->id,
+            'actor_id' => $this->actor->id,
+            'action' => WorkflowActionType::Return,
+            'created_at' => '2026-08-10 10:00:00',
+        ]);
         $this->resolvedWorkflow(WorkflowStatus::Rejected, WorkflowActionType::Reject, '2026-08-12 08:00:00', '2026-08-12 16:00:00');
         $active = $this->submission(SubmissionStatus::InReview, 'Waiting purchase');
         WorkflowInstance::factory()->create([
@@ -78,6 +86,9 @@ class AnalyticsTest extends TestCase
         $this->assertSame(360, $report['summary']['average_turnaround_minutes']);
         $this->assertSame(360, $report['summary']['median_turnaround_minutes']);
         $this->assertSame(1, $report['summary']['overdue']);
+        $this->assertSame(1, $report['summary']['returned']);
+        $this->assertSame(33.3, $report['summary']['returned_rate']);
+        $this->assertSame(0.0, $report['summary']['sla_compliance']);
         $this->assertCount(30, $report['daily']);
         $this->assertSame(3, collect($report['daily'])->sum('started'));
         $this->assertSame(2, collect($report['daily'])->sum('resolved'));
@@ -89,6 +100,9 @@ class AnalyticsTest extends TestCase
         $this->assertSame(1, $bottleneck['open']);
         $this->assertSame(1, $bottleneck['overdue']);
         $this->assertSame('Waiting purchase', $report['slowest_active'][0]['title']);
+        $this->assertSame($this->actor->name, $report['workload_by_approver'][0]['approver']);
+        $this->assertSame(1, $report['workload_by_approver'][0]['active']);
+        $this->assertSame(1, $report['workload_by_approver'][0]['overdue']);
     }
 
     public function test_analytics_page_is_report_permission_protected_and_period_is_reactive(): void
@@ -104,7 +118,9 @@ class AnalyticsTest extends TestCase
             ->assertOk()
             ->assertSee('Approval analytics')
             ->assertSee('Daily workflow activity')
+            ->assertSee('View daily activity data table')
             ->assertSee('Step bottlenecks')
+            ->assertSee('Workload by approver')
             ->assertSee('Excel workbook')
             ->assertSee('PDF report');
 

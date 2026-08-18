@@ -38,6 +38,10 @@ new #[Title('New submission')] class extends Component {
 
     public ?string $due_date = null;
 
+    public string $autosaveState = 'idle';
+
+    public ?string $lastSavedAt = null;
+
     /** @var array<int, \Livewire\TemporaryUploadedFile> */
     public array $attachments = [];
 
@@ -82,6 +86,13 @@ new #[Title('New submission')] class extends Component {
         $this->validateOnly('attachments.*');
     }
 
+    public function updated(string $property): void
+    {
+        if (in_array($property, ['type', 'title', 'body', 'priority', 'due_date'], true)) {
+            $this->autosaveState = 'idle';
+        }
+    }
+
     public function next(): void
     {
         $this->validateOnly($this->step === 1 ? 'title' : 'attachments.*');
@@ -100,9 +111,28 @@ new #[Title('New submission')] class extends Component {
             return;
         }
 
-        $this->validateOnly('title');
-        $this->validateOnly('type');
-        $this->persistFields();
+        $this->autosaveState = 'saving';
+        $this->resetErrorBag('autosave');
+
+        try {
+            $this->validateOnly('title');
+            $this->validateOnly('type');
+            $this->persistFields();
+        } catch (\Illuminate\Validation\ValidationException) {
+            $this->autosaveState = 'failed';
+            $this->addError('autosave', 'Autosave failed. Fix the highlighted fields and retry.');
+
+            return;
+        } catch (\Throwable $exception) {
+            report($exception);
+            $this->autosaveState = 'failed';
+            $this->addError('autosave', 'Autosave failed. Check your connection and retry.');
+
+            return;
+        }
+
+        $this->lastSavedAt = now()->format('H:i:s');
+        $this->autosaveState = 'saved';
     }
 
     public function saveDraft(): void
@@ -200,6 +230,32 @@ new #[Title('New submission')] class extends Component {
         :title="$draftId ? __('Edit draft') : __('New submission')"
         :description="__('Drafts auto-save every 30 seconds while you type.')"
     />
+
+    <div class="mt-3 flex min-h-11 flex-wrap items-center gap-2 text-sm" aria-live="polite" aria-atomic="true" data-test="autosave-status">
+        <span wire:offline class="inline-flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2 font-medium text-red-700 dark:bg-red-950/30 dark:text-red-300">
+            <span aria-hidden="true">●</span> {{ __('Offline — changes are not being saved') }}
+        </span>
+        <div wire:offline.remove>
+            <span wire:loading wire:target="autosave" class="inline-flex items-center gap-2 text-blue-700 dark:text-blue-300">
+                <span class="size-2 animate-pulse rounded-full bg-blue-600" aria-hidden="true"></span> {{ __('Saving…') }}
+            </span>
+            <span wire:loading.remove wire:target="autosave">
+                @if ($autosaveState === 'saved' && $lastSavedAt)
+                    <span class="inline-flex items-center gap-2 text-green-700 dark:text-green-300">
+                        <span aria-hidden="true">✓</span> {{ __('Saved at :time', ['time' => $lastSavedAt]) }}
+                    </span>
+                @elseif ($autosaveState === 'failed')
+                    <span class="inline-flex flex-wrap items-center gap-2 text-red-700 dark:text-red-300">
+                        <span>{{ __('Autosave failed.') }}</span>
+                        <flux:button size="xs" variant="ghost" wire:click="autosave">{{ __('Retry') }}</flux:button>
+                    </span>
+                @else
+                    <span class="text-zinc-600 dark:text-zinc-300">{{ __('Changes autosave every 30 seconds.') }}</span>
+                @endif
+            </span>
+        </div>
+        <flux:error name="autosave" />
+    </div>
 
     <div class="mt-3 flex items-center gap-2">
         @foreach ([1 => __('Details'), 2 => __('Attachments'), 3 => __('Review')] as $n => $label)

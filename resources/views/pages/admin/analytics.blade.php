@@ -85,13 +85,15 @@ new #[Title('Approval analytics')] class extends Component {
             <p class="text-xs text-zinc-500">{{ __('Cohort: :count workflows', ['count' => $this->report['summary']['started']]) }}</p>
         </div>
 
-        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             @foreach ([
                 ['label' => __('Started'), 'value' => $this->report['summary']['started'], 'detail' => __('workflows')],
                 ['label' => __('Active'), 'value' => $this->report['summary']['active'], 'detail' => __('including on hold')],
                 ['label' => __('Approval rate'), 'value' => $this->report['summary']['approval_rate'] === null ? '—' : number_format($this->report['summary']['approval_rate'], 1).'%', 'detail' => __(':approved approved · :rejected rejected', ['approved' => $this->report['summary']['approved'], 'rejected' => $this->report['summary']['rejected']])],
                 ['label' => __('Median turnaround'), 'value' => $this->duration($this->report['summary']['median_turnaround_minutes']), 'detail' => __('Average :duration', ['duration' => $this->duration($this->report['summary']['average_turnaround_minutes'])])],
                 ['label' => __('Overdue now'), 'value' => $this->report['summary']['overdue'], 'detail' => __('active SLA breaches')],
+                ['label' => __('Returned rate'), 'value' => $this->report['summary']['returned_rate'] === null ? '—' : number_format($this->report['summary']['returned_rate'], 1).'%', 'detail' => __(':count workflows returned', ['count' => $this->report['summary']['returned']])],
+                ['label' => __('SLA compliance'), 'value' => $this->report['summary']['sla_compliance'] === null ? '—' : number_format($this->report['summary']['sla_compliance'], 1).'%', 'detail' => __('active work within SLA')],
             ] as $metric)
                 <flux:card>
                     <p class="text-sm text-zinc-500">{{ $metric['label'] }}</p>
@@ -111,6 +113,9 @@ new #[Title('Approval analytics')] class extends Component {
             <div>
                 <flux:heading size="sm">{{ __('Daily workflow activity') }}</flux:heading>
                 <p class="mt-1 text-xs text-zinc-500">{{ __('Starts versus resolutions by calendar day · :days-day cohort', ['days' => $days]) }}</p>
+                <p class="mt-1 text-xs text-zinc-600 dark:text-zinc-300" role="note">
+                    {{ __('Chart summary: :started workflows started and :resolved resolved. Peak daily activity was :peak.', ['started' => collect($this->report['daily'])->sum('started'), 'resolved' => collect($this->report['daily'])->sum('resolved'), 'peak' => $dailyMaximum]) }}
+                </p>
             </div>
             <div class="flex gap-4 text-xs text-zinc-500" aria-label="{{ __('Chart legend') }}">
                 <span class="flex items-center gap-1.5"><span class="size-2.5 rounded-sm bg-blue-600"></span>{{ __('Started') }}</span>
@@ -131,6 +136,21 @@ new #[Title('Approval analytics')] class extends Component {
                 @endforeach
             </div>
         </div>
+
+        <details class="mt-6 rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
+            <summary class="cursor-pointer text-sm font-medium">{{ __('View daily activity data table') }}</summary>
+            <div class="mt-3 max-h-80 overflow-auto">
+                <table class="w-full text-left text-sm">
+                    <caption class="sr-only">{{ __('Tabular alternative for daily workflow activity chart') }}</caption>
+                    <thead class="sticky top-0 border-b border-zinc-200 bg-white text-xs text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900"><tr><th class="pb-2">{{ __('Date') }}</th><th class="pb-2 text-right">{{ __('Started') }}</th><th class="pb-2 text-right">{{ __('Resolved') }}</th></tr></thead>
+                    <tbody class="divide-y divide-zinc-100 dark:divide-zinc-800">
+                        @foreach ($this->report['daily'] as $day)
+                            <tr><td class="py-2">{{ $day['date'] }}</td><td class="py-2 text-right tabular-nums">{{ $day['started'] }}</td><td class="py-2 text-right tabular-nums">{{ $day['resolved'] }}</td></tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </details>
     </flux:card>
 
     <flux:card>
@@ -185,6 +205,40 @@ new #[Title('Approval analytics')] class extends Component {
                 </table>
             </div>
         @endif
+    </flux:card>
+
+    <flux:card>
+        @php($workloadMaximum = max(1, collect($this->report['workload_by_approver'])->max('active') ?? 1))
+        <div>
+            <flux:heading size="sm">{{ __('Workload by approver') }}</flux:heading>
+            <p class="mt-1 text-xs text-zinc-500" role="note">{{ __('Active assignments are counted after current delegations are applied. The adjacent table contains the same values as the chart.') }}</p>
+        </div>
+        <div class="mt-5 grid gap-6 lg:grid-cols-2">
+            <div class="space-y-3" role="img" aria-label="{{ __('Active and overdue workflow workload by approver') }}">
+                @forelse ($this->report['workload_by_approver'] as $workload)
+                    <div class="grid grid-cols-[minmax(8rem,12rem)_1fr_3rem] items-center gap-2">
+                        <span class="truncate text-sm">{{ $workload['approver'] }}</span>
+                        <div class="h-3 overflow-hidden rounded-sm bg-zinc-100 dark:bg-zinc-700"><div class="h-full rounded-sm bg-blue-600" style="width: {{ max(2, ($workload['active'] / $workloadMaximum) * 100) }}%"></div></div>
+                        <span class="text-right text-sm font-medium tabular-nums">{{ $workload['active'] }}</span>
+                    </div>
+                @empty
+                    <x-ui.empty-state :title="__('No active approver workload')" :description="__('Active assignments in this reporting period will appear here.')" icon="inbox" class="py-6" />
+                @endforelse
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm">
+                    <caption class="sr-only">{{ __('Tabular alternative for approver workload chart') }}</caption>
+                    <thead class="border-b border-zinc-200 text-xs text-zinc-500 dark:border-zinc-700"><tr><th class="pb-2">{{ __('Approver') }}</th><th class="pb-2 text-right">{{ __('Active') }}</th><th class="pb-2 text-right">{{ __('Overdue') }}</th></tr></thead>
+                    <tbody class="divide-y divide-zinc-100 dark:divide-zinc-800">
+                        @forelse ($this->report['workload_by_approver'] as $workload)
+                            <tr><td class="py-2">{{ $workload['approver'] }}</td><td class="py-2 text-right tabular-nums">{{ $workload['active'] }}</td><td class="py-2 text-right tabular-nums">{{ $workload['overdue'] }}</td></tr>
+                        @empty
+                            <tr><td colspan="3" class="py-4 text-center text-zinc-500">{{ __('No active assignments') }}</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </flux:card>
 
     <flux:card>

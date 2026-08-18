@@ -27,10 +27,11 @@ final class AnalyticsService
      *   days: int,
      *   from: CarbonInterface,
      *   to: CarbonInterface,
-     *   summary: array{started: int, active: int, resolved: int, approved: int, rejected: int, approval_rate: float|null, average_turnaround_minutes: int|null, median_turnaround_minutes: int|null, overdue: int},
+     *   summary: array{started: int, active: int, resolved: int, approved: int, rejected: int, returned: int, approval_rate: float|null, returned_rate: float|null, sla_compliance: float|null, average_turnaround_minutes: int|null, median_turnaround_minutes: int|null, overdue: int},
      *   daily: list<array{date: string, label: string, started: int, resolved: int}>,
      *   bottlenecks: list<array{step_id: int, step: string, workflow: string, completed_samples: int, average_minutes: int|null, open: int, overdue: int, oldest_open_minutes: int|null, score_minutes: int}>,
-     *   slowest_active: list<array{reference: string, title: string, step: string, started_at: CarbonInterface, elapsed_minutes: int, overdue: bool, submission_id: int}>
+     *   slowest_active: list<array{reference: string, title: string, step: string, started_at: CarbonInterface, elapsed_minutes: int, overdue: bool, submission_id: int}>,
+     *   workload_by_approver: list<array{approver_id: int, approver: string, active: int, overdue: int}>
      * }
      */
     public function dashboard(int $days): array
@@ -47,6 +48,9 @@ final class AnalyticsService
         ));
         $approved = $resolved->where('status', WorkflowStatus::Completed)->count();
         $rejected = $resolved->where('status', WorkflowStatus::Rejected)->count();
+        $active = $instances->whereIn('status', [WorkflowStatus::Active, WorkflowStatus::OnHold]);
+        $overdue = $active->filter(fn (WorkflowInstance $instance): bool => $instance->isOverdue())->count();
+        $returned = $instances->filter(fn (WorkflowInstance $instance): bool => $instance->actions->contains('action', WorkflowActionType::Return))->count();
         $turnarounds = $resolved
             ->filter(fn (WorkflowInstance $instance): bool => $instance->completed_at !== null)
             ->map(fn (WorkflowInstance $instance): int => (int) $instance->started_at->diffInMinutes($instance->completed_at, true))
@@ -59,18 +63,22 @@ final class AnalyticsService
             'to' => $to,
             'summary' => [
                 'started' => $instances->count(),
-                'active' => $instances->whereIn('status', [WorkflowStatus::Active, WorkflowStatus::OnHold])->count(),
+                'active' => $active->count(),
                 'resolved' => $resolved->count(),
                 'approved' => $approved,
                 'rejected' => $rejected,
+                'returned' => $returned,
                 'approval_rate' => $resolved->isEmpty() ? null : round(($approved / $resolved->count()) * 100, 1),
+                'returned_rate' => $instances->isEmpty() ? null : round(($returned / $instances->count()) * 100, 1),
+                'sla_compliance' => $active->isEmpty() ? null : round((($active->count() - $overdue) / $active->count()) * 100, 1),
                 'average_turnaround_minutes' => $turnarounds->isEmpty() ? null : (int) round($turnarounds->average()),
                 'median_turnaround_minutes' => $this->median($turnarounds),
-                'overdue' => $instances->filter(fn (WorkflowInstance $instance): bool => $instance->isOverdue())->count(),
+                'overdue' => $overdue,
             ],
             'daily' => $this->dailySeries($instances, $from, $days),
             'bottlenecks' => $this->bottlenecks($instances),
             'slowest_active' => $this->slowestActive($instances),
+            'workload_by_approver' => $this->workloadByApprover($active),
         ];
     }
 
@@ -81,10 +89,12 @@ final class AnalyticsService
             ->whereBetween('started_at', [$from, $to])
             ->with([
                 'submission:id,reference_number,title',
-                'currentStep:id,name,timeout_hours',
+                'currentStep:id,name,timeout_hours,assignee_type,assignee_ids',
                 'template:id,name',
                 'template.steps:id,template_id,step_order,name',
                 'actions:id,instance_id,step_id,action,created_at',
+                'delegations:id,instance_id,step_id,delegator_id,delegate_id,starts_at,expires_at',
+                'delegations.delegate:id,name',
             ])
             ->orderBy('started_at');
     }
@@ -208,6 +218,51 @@ final class AnalyticsService
             ->sortByDesc('elapsed_minutes')
             ->take(10)
             ->values()
+            ->all());
+    }
+
+    /**
+     * @param  Collection<int, WorkflowInstance>  $instances
+     * @return list<array{approver_id: int, approver: string, active: int, overdue: int}>
+     */
+    private function workloadByApprover(Collection $instances): array
+    {
+        /** @var array<int, array{approver_id: int, approver: string, active: int, overdue: int}> $workload */
+        $workload = [];
+
+        foreach ($instances as $instance) {
+            if ($instance->currentStep === null) {
+                continue;
+            }
+
+            $approvers = $instance->currentStep->assignedUsers()->keyBy('id');
+            $delegations = $instance->delegations->filter(fn ($delegation): bool => $delegation->step_id === $instance->current_step_id
+                && $delegation->starts_at <= now()
+                && $delegation->expires_at > now());
+
+            foreach ($delegations as $delegation) {
+                $approvers->forget($delegation->delegator_id);
+                $approvers->put($delegation->delegate_id, $delegation->delegate);
+            }
+
+            foreach ($approvers as $approver) {
+                $workload[$approver->id] ??= [
+                    'approver_id' => $approver->id,
+                    'approver' => $approver->name,
+                    'active' => 0,
+                    'overdue' => 0,
+                ];
+                $workload[$approver->id]['active']++;
+                $workload[$approver->id]['overdue'] += $instance->isOverdue() ? 1 : 0;
+            }
+        }
+
+        return array_values(collect($workload)
+            ->sortBy([
+                ['active', 'desc'],
+                ['approver', 'asc'],
+            ])
+            ->take(10)
             ->all());
     }
 

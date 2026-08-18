@@ -75,7 +75,10 @@ class CreateSubmissionTest extends TestCase
             ->test('pages::submissions.create')
             ->set('title', 'Half-finished thought')
             ->call('autosave')
-            ->assertHasNoErrors();
+            ->assertHasNoErrors()
+            ->assertSet('autosaveState', 'saved')
+            ->assertNotSet('lastSavedAt', null)
+            ->assertSee('Saved at');
 
         $draft = Submission::first();
 
@@ -84,6 +87,19 @@ class CreateSubmissionTest extends TestCase
         $this->assertNull($draft->workflowInstance);
 
         Notification::assertNothingSent();
+    }
+
+    public function test_failed_autosave_is_visible_and_can_be_retried(): void
+    {
+        Livewire::actingAs($this->submitter)
+            ->test('pages::submissions.create')
+            ->set('title', str_repeat('x', 501))
+            ->call('autosave')
+            ->assertSet('autosaveState', 'failed')
+            ->assertSee('Autosave failed.')
+            ->assertSee('Retry');
+
+        $this->assertSame(0, Submission::query()->count());
     }
 
     public function test_owner_can_reopen_edit_and_submit_a_saved_draft(): void

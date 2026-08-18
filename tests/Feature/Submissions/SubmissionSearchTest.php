@@ -65,4 +65,49 @@ class SubmissionSearchTest extends TestCase
             ->assertSee($owned->reference_number)
             ->assertDontSee($hidden->reference_number);
     }
+
+    public function test_requester_saved_views_are_status_scoped_and_never_include_another_users_requests(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+        $owner = User::factory()->create()->assignRole('submitter');
+        $other = User::factory()->create()->assignRole('submitter');
+        $draft = Submission::factory()->for($owner, 'submitter')->create(['title' => 'Draft request', 'status' => SubmissionStatus::Draft]);
+        $progress = Submission::factory()->for($owner, 'submitter')->create(['title' => 'Running request', 'status' => SubmissionStatus::InReview]);
+        $response = Submission::factory()->for($owner, 'submitter')->create(['title' => 'Response needed', 'status' => SubmissionStatus::Returned]);
+        $completed = Submission::factory()->for($owner, 'submitter')->create(['title' => 'Finished request', 'status' => SubmissionStatus::Approved]);
+        $withdrawn = Submission::factory()->for($owner, 'submitter')->create(['title' => 'Withdrawn request', 'status' => SubmissionStatus::Withdrawn]);
+        $hidden = Submission::factory()->for($other, 'submitter')->create(['title' => 'Another user draft', 'status' => SubmissionStatus::Draft]);
+
+        Livewire::actingAs($owner)
+            ->test('pages::submissions.index')
+            ->assertSee('Drafts')
+            ->assertSee('In progress')
+            ->assertSee('Needs my response')
+            ->call('setView', 'drafts')
+            ->assertSee($draft->title)
+            ->assertDontSee($progress->title)
+            ->assertDontSee($hidden->title)
+            ->call('setView', 'in_progress')
+            ->assertSee($progress->title)
+            ->assertDontSee($draft->title)
+            ->call('setView', 'needs_response')
+            ->assertSee($response->title)
+            ->call('setView', 'completed')
+            ->assertSee($completed->title)
+            ->call('setView', 'withdrawn')
+            ->assertSee($withdrawn->title);
+    }
+
+    public function test_saved_view_empty_state_explains_the_next_action(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+        $owner = User::factory()->create()->assignRole('submitter');
+
+        Livewire::actingAs($owner)
+            ->test('pages::submissions.index')
+            ->call('setView', 'needs_response')
+            ->assertSee('No responses are needed')
+            ->assertSee('View all requests')
+            ->assertSee('New request');
+    }
 }

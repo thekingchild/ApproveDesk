@@ -31,6 +31,7 @@ final class ReportService
      *     action_required_items: Collection<int, WorkflowInstance>,
      *     pending_others: int,
      *     completed_approvals: int,
+     *     admin_metrics: array<string, mixed>|null,
      *     recent: Collection<int, Submission>
      * }
      */
@@ -79,9 +80,11 @@ final class ReportService
         $needsResponseCount = (clone $ownSubmissions)
             ->whereIn('status', [SubmissionStatus::Returned, SubmissionStatus::AwaitingInformation])
             ->count();
+        $homeMode = $this->homeMode($user, $canSubmit, $canApprove, $organization);
+        $administrator = $homeMode === 'administrator';
 
         return [
-            'home_mode' => $this->homeMode($user, $canSubmit, $canApprove, $organization),
+            'home_mode' => $homeMode,
             'organization' => $organization,
             'can_submit' => $canSubmit,
             'can_approve' => $canApprove,
@@ -98,6 +101,7 @@ final class ReportService
             'action_required_items' => $actionRequiredItems,
             'pending_others' => $involvedActive,
             'completed_approvals' => $completedApprovals,
+            'admin_metrics' => $administrator ? app(AnalyticsService::class)->dashboard(30) : null,
             'recent' => (clone $submissions)
                 ->with(['submitter', 'workflowInstance.currentStep'])
                 ->latest('updated_at')
