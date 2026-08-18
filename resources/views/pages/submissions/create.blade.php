@@ -10,6 +10,7 @@ use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -24,6 +25,7 @@ new #[Title('New submission')] class extends Component {
 
     public int $step = 1;
 
+    #[Locked]
     public ?int $draftId = null;
 
     public string $type = 'memo';
@@ -38,6 +40,22 @@ new #[Title('New submission')] class extends Component {
 
     /** @var array<int, \Livewire\TemporaryUploadedFile> */
     public array $attachments = [];
+
+    public function mount(?Submission $submission = null): void
+    {
+        if ($submission === null) {
+            return;
+        }
+
+        $this->authorize('update', $submission);
+
+        $this->draftId = $submission->id;
+        $this->type = $submission->type->value;
+        $this->title = $submission->title;
+        $this->body = $submission->body ?? '';
+        $this->priority = $submission->priority->value;
+        $this->due_date = $submission->due_date?->format('Y-m-d');
+    }
 
     protected function rules(): array
     {
@@ -128,6 +146,7 @@ new #[Title('New submission')] class extends Component {
             ->first();
 
         if ($file) {
+            $this->authorize('update', $file->submission);
             \Illuminate\Support\Facades\Storage::disk($file->disk)->delete($file->stored_path);
             $file->delete();
         }
@@ -175,7 +194,7 @@ new #[Title('New submission')] class extends Component {
 } ?>
 
 <div wire:poll.30s="autosave">
-    <flux:heading size="lg">{{ __('New submission') }}</flux:heading>
+    <flux:heading size="lg">{{ $draftId ? __('Edit draft') : __('New submission') }}</flux:heading>
     <flux:subheading>{{ __('Drafts auto-save every 30 seconds while you type.') }}</flux:subheading>
 
     <div class="mt-3 flex items-center gap-2">

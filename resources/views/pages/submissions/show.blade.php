@@ -315,6 +315,9 @@ new #[Title('Submission')] class extends Component {
         </div>
 
         <div class="flex items-center gap-2">
+            @can('update', $submission)
+                <flux:button :href="route('submissions.edit', $submission)" variant="primary" wire:navigate>{{ __('Edit draft') }}</flux:button>
+            @endcan
             <flux:badge color="{{ ['draft' => 'zinc', 'in_review' => 'blue', 'approved' => 'lime', 'rejected' => 'red', 'returned' => 'amber', 'awaiting_information' => 'amber', 'withdrawn' => 'zinc', 'pending' => 'blue'][$submission->status->value] ?? 'zinc' }}">
                 {{ str_replace('_', ' ', $submission->status->value) }}
             </flux:badge>
