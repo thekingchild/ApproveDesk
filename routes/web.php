@@ -65,6 +65,9 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::livewire('submissions/create', 'pages::submissions.create')
         ->middleware('can:create,App\Models\Submission')
         ->name('submissions.create');
+    Route::livewire('submissions/{submission}/edit', 'pages::submissions.create')
+        ->middleware('can:update,submission')
+        ->name('submissions.edit');
     Route::livewire('submissions/{submission}', 'pages::submissions.show')->name('submissions.show');
     Route::livewire('approvals/inbox', 'pages::approvals.inbox')->name('approvals.inbox');
 

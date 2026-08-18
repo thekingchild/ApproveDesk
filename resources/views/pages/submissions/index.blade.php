@@ -183,7 +183,11 @@ new #[Title('My submissions')] class extends Component {
                 <flux:table.row>
                     <flux:table.cell class="font-mono text-xs">{{ $submission->reference_number }}</flux:table.cell>
                     <flux:table.cell>
-                        <flux:link :href="route('submissions.show', $submission)" wire:navigate>{{ Str::limit($submission->title, 60) }}</flux:link>
+                        @can('update', $submission)
+                            <flux:link :href="route('submissions.edit', $submission)" wire:navigate>{{ Str::limit($submission->title, 60) }}</flux:link>
+                        @else
+                            <flux:link :href="route('submissions.show', $submission)" wire:navigate>{{ Str::limit($submission->title, 60) }}</flux:link>
+                        @endcan
                     </flux:table.cell>
                     @if ($this->organizationView)<flux:table.cell>{{ $submission->submitter->name }}</flux:table.cell>@endif
                     <flux:table.cell>{{ ucfirst($submission->type->value) }}</flux:table.cell>

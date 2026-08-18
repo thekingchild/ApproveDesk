@@ -86,6 +86,50 @@ class CreateSubmissionTest extends TestCase
         Notification::assertNothingSent();
     }
 
+    public function test_owner_can_reopen_edit_and_submit_a_saved_draft(): void
+    {
+        $draft = Submission::factory()->for($this->submitter, 'submitter')->draft()->create([
+            'type' => 'note',
+            'title' => 'Original draft title',
+            'body' => 'Original body',
+            'priority' => 'normal',
+        ]);
+
+        $this->actingAs($this->submitter)
+            ->get(route('submissions.edit', $draft))
+            ->assertOk()
+            ->assertSee('Edit draft');
+
+        Livewire::actingAs($this->submitter)
+            ->test('pages::submissions.create', ['submission' => $draft])
+            ->assertSet('draftId', $draft->id)
+            ->assertSet('title', 'Original draft title')
+            ->set('title', 'Ready for approval')
+            ->set('body', 'Completed body')
+            ->call('next')
+            ->call('next')
+            ->call('submit')
+            ->assertHasNoErrors()
+            ->assertRedirect(route('submissions.show', $draft));
+
+        $draft->refresh();
+
+        $this->assertSame('Ready for approval', $draft->title);
+        $this->assertSame('Completed body', $draft->body);
+        $this->assertSame(SubmissionStatus::InReview, $draft->status);
+        $this->assertNotNull($draft->workflowInstance);
+    }
+
+    public function test_non_owner_cannot_open_the_draft_editor(): void
+    {
+        $draft = Submission::factory()->for($this->submitter, 'submitter')->draft()->create();
+        $otherSubmitter = User::factory()->create()->assignRole('submitter');
+
+        $this->actingAs($otherSubmitter)
+            ->get(route('submissions.edit', $draft))
+            ->assertForbidden();
+    }
+
     public function test_attachments_are_stored_on_the_private_disk(): void
     {
         Storage::fake('local');
