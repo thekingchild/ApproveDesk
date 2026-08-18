@@ -254,7 +254,12 @@
     }
 
     [data-flux-sidebar-group] > div:first-child > div {
-        color: var(--ad-text-muted);
+        color: var(--ad-text-muted) !important;
+    }
+
+    [data-flux-sidebar-search],
+    [data-flux-sidebar-search] * {
+        color: var(--ad-text-muted) !important;
     }
 
     [data-flux-modal] > dialog {
@@ -285,6 +290,15 @@
     [data-flux-toast-dialog] {
         border: 1px solid var(--ad-border);
         box-shadow: var(--ad-shadow-md);
+    }
+
+    [data-test='reject-modal-trigger'] {
+        background: #b91c1c !important;
+        color: #ffffff !important;
+    }
+
+    [data-test='reject-modal-trigger']:hover {
+        background: #991b1b !important;
     }
 
     [aria-disabled='true'],

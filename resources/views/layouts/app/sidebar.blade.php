@@ -82,7 +82,7 @@
 
         <!-- Mobile User Menu -->
         <flux:header class="lg:hidden">
-            <flux:sidebar.toggle class="lg:hidden" icon="bars-2" inset="left" :label="__('Open navigation')" />
+            <flux:sidebar.toggle class="lg:hidden" icon="bars-2" inset="left" :label="__('Open navigation')" dusk="mobile-navigation" />
 
             <flux:spacer />
 

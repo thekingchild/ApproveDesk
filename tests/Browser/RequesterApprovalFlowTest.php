@@ -1,0 +1,101 @@
+<?php
+
+namespace Tests\Browser;
+
+use App\Enums\SubmissionStatus;
+use App\Models\Submission;
+use App\Models\User;
+use App\Models\WorkflowTemplate;
+use App\Services\WorkflowEngine;
+use Database\Seeders\RolesAndPermissionsSeeder;
+use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Laravel\Dusk\Browser;
+use Tests\DuskTestCase;
+
+class RequesterApprovalFlowTest extends DuskTestCase
+{
+    use DatabaseMigrations;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seed(RolesAndPermissionsSeeder::class);
+    }
+
+    public function test_requester_can_save_reopen_and_submit_a_draft(): void
+    {
+        $submitter = User::factory()->create()->assignRole('submitter');
+        $approver = User::factory()->create()->assignRole('approver');
+        WorkflowTemplate::factory()->default()->sequential([$approver])->create();
+
+        $this->browse(function (Browser $browser) use ($submitter): void {
+            $browser->loginAs($submitter)
+                ->visitRoute('submissions.create')
+                ->waitFor('@request-title')
+                ->type('@request-title', 'Browser-tested purchase request')
+                ->press('@save-draft')
+                ->waitForRoute('submissions.index')
+                ->assertSee('Browser-tested purchase request');
+
+            $draft = Submission::query()->where('title', 'Browser-tested purchase request')->firstOrFail();
+            $this->assertSame(SubmissionStatus::Draft, $draft->status);
+
+            $browser->visitRoute('submissions.edit', $draft)
+                ->waitFor('@request-title')
+                ->scrollIntoView('@continue')
+                ->click('@continue')
+                ->waitForText('Attachments')
+                ->pause(300)
+                ->click('@continue')
+                ->waitFor('@submit-request')
+                ->pause(300)
+                ->click('@submit-request')
+                ->waitForRoute('submissions.show', $draft)
+                ->assertSee('in review');
+
+            $this->assertSame(SubmissionStatus::InReview, $draft->fresh()->status);
+        });
+    }
+
+    public function test_approver_modal_requires_a_comment_and_keyboard_order_is_logical(): void
+    {
+        $submitter = User::factory()->create()->assignRole('submitter');
+        $approver = User::factory()->create()->assignRole('approver');
+        WorkflowTemplate::factory()->default()->sequential([$approver])->create();
+        $submission = Submission::factory()->for($submitter, 'submitter')->create(['title' => 'Decision modal request']);
+        app(WorkflowEngine::class)->initialize($submission);
+
+        $this->browse(function (Browser $browser) use ($approver, $submission, $submitter): void {
+            $browser->loginAs($approver)
+                ->visitRoute('submissions.show', $submission)
+                ->waitFor('[data-test="reject-modal-trigger"]')
+                ->click('[data-test="reject-modal-trigger"]')
+                ->waitForText('Reject this submission?')
+                ->press('Confirm rejection')
+                ->waitForText('A comment is required for this action.')
+                ->type('@reject-comment', 'Required browser-test reason.')
+                ->press('Confirm rejection')
+                ->waitForText('rejected');
+
+            $this->assertSame(SubmissionStatus::Rejected, $submission->fresh()->status);
+
+            $browser->loginAs($submitter)->visitRoute('submissions.create')->waitFor('@request-title');
+            $focusOrder = $browser->script(<<<'JS'
+                return [...document.querySelectorAll('a[href], button, input, select, textarea, [tabindex]')]
+                    .filter(element => !element.disabled && element.tabIndex >= 0 && element.getClientRects().length)
+                    .map(element => element.getAttribute('dusk') || element.getAttribute('href') || element.textContent.trim())
+            JS)[0];
+
+            $this->assertIsArray($focusOrder);
+            $this->assertSame('#main-content', $focusOrder[0]);
+            $titleIndex = array_search('request-title', $focusOrder, true);
+            $saveIndex = array_search('save-draft', $focusOrder, true);
+            $continueIndex = array_search('continue', $focusOrder, true);
+            $this->assertIsInt($titleIndex);
+            $this->assertIsInt($saveIndex);
+            $this->assertIsInt($continueIndex);
+            $this->assertLessThan($saveIndex, $titleIndex);
+            $this->assertLessThan($continueIndex, $titleIndex);
+        });
+    }
+}

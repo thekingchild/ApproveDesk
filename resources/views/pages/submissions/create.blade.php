@@ -285,7 +285,7 @@ new #[Title('New submission')] class extends Component {
                 </flux:select>
 
                 <div class="sm:col-span-2">
-                    <flux:input wire:model="title" :label="__('Title')" placeholder="{{ __('What is this about?') }}" required maxlength="500" />
+                    <flux:input wire:model="title" :label="__('Title')" placeholder="{{ __('What is this about?') }}" required maxlength="500" dusk="request-title" />
                     <flux:error name="title" />
                 </div>
 
@@ -360,11 +360,11 @@ new #[Title('New submission')] class extends Component {
 
             <div class="flex items-center gap-3">
                 @if ($step < 3)
-                    <flux:button type="button" variant="ghost" wire:click="saveDraft">{{ __('Save draft') }}</flux:button>
-                    <flux:button type="button" variant="primary" wire:click="next">{{ __('Continue') }}</flux:button>
+                    <flux:button type="button" variant="ghost" wire:click="saveDraft" dusk="save-draft">{{ __('Save draft') }}</flux:button>
+                    <flux:button type="button" variant="primary" wire:click="next" dusk="continue">{{ __('Continue') }}</flux:button>
                 @else
                     <flux:button type="button" variant="ghost" wire:click="saveDraft">{{ __('Save draft') }}</flux:button>
-                    <flux:button type="submit" variant="primary" data-test="submit-submission">{{ __('Submit for approval') }}</flux:button>
+                    <flux:button type="submit" variant="primary" data-test="submit-submission" dusk="submit-request">{{ __('Submit for approval') }}</flux:button>
                 @endif
             </div>
         </div>

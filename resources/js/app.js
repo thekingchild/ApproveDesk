@@ -13,6 +13,7 @@ window.richTextEditor = (initialContent = '') => ({
             editorProps: {
                 attributes: {
                     class: 'prose prose-sm dark:prose-invert min-h-48 max-w-none px-3 py-2 focus:outline-none',
+                    'aria-label': 'Body',
                 },
             },
             onUpdate: ({ editor }) => {

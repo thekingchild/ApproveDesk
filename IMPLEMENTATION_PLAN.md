@@ -94,7 +94,7 @@ A task is complete only when it has:
 | Phase | Target | Theme | Status |
 |---|---|---|---|
 | 0–4 | v2.0.0 | Existing workflow platform | Complete |
-| 5 | v2.1.0 | Non-enterprise UX, accessibility, and approver productivity | In progress — 5.1–5.4 complete |
+| 5 | v2.1.0 | Non-enterprise UX, accessibility, and approver productivity | Complete |
 | 6 | v2.2.0 | Configurable request types and form builder | Not started |
 | 7 | v2.3.0 | Visual workflows, versioning, and dynamic assignment | Not started |
 | 8 | v2.4.0 | Collaboration, notifications, and integration hub | Not started |
@@ -144,13 +144,13 @@ A task is complete only when it has:
 - **P5-ADM-01 — Complete:** Upgraded dashboards with awaiting-me, overdue, median cycle time, returned rate, SLA compliance, bottleneck step, and delegation-aware workload-by-approver metrics.
 - **P5-ADM-02 — Complete:** Added accessible chart summaries and tabular alternatives for daily activity, bottlenecks, and approver workload.
 
-### 5.5 Tests and exit gate
+### 5.5 Tests and exit gate — Complete (2026-08-19)
 
-- Livewire feature tests for saved views, authorization, filtering, batch eligibility, and notification state.
-- Dusk coverage for requester draft/submit, approver decision, keyboard focus order, modal validation, and responsive navigation.
-- Automated accessibility scan of login, dashboard, inbox, create request, and submission detail; zero critical/serious violations.
-- Query-count assertions for dashboard, inbox, and list pages.
-- Desktop widths 1280/1440 and mobile-web widths 360/390/768 verified.
+- **P5-TEST-01 — Complete:** Livewire feature tests cover saved views, authorization, filtering, batch eligibility, and notification state.
+- **P5-TEST-02 — Complete:** Dusk covers requester draft/submit, approver decision, keyboard focus order, modal validation, and responsive navigation.
+- **P5-TEST-03 — Complete:** Automated axe scans cover login, dashboard, inbox, create request, and submission detail with zero critical/serious violations.
+- **P5-TEST-04 — Complete:** Query-count assertions guard dashboard, inbox, and submission-list budgets.
+- **P5-TEST-05 — Complete:** Desktop widths 1280/1440 and mobile-web widths 360/390/768 are verified without horizontal overflow and with correct navigation behavior.
 
 **Phase 5 demo:** a requester creates and finds a draft on mobile web; an approver opens a prioritized queue, previews the request, and approves it without losing context; an administrator sees overdue work and bottlenecks.
 

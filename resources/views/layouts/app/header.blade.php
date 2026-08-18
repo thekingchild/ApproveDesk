@@ -7,7 +7,7 @@
         <a class="ad-skip-link" href="#main-content">{{ __('Skip to main content') }}</a>
 
         <flux:header container class="border-b border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-            <flux:sidebar.toggle class="lg:hidden mr-2" icon="bars-2" inset="left" :label="__('Open navigation')" />
+            <flux:sidebar.toggle class="lg:hidden mr-2" icon="bars-2" inset="left" :label="__('Open navigation')" dusk="mobile-navigation" />
 
             <x-app-logo href="{{ route('dashboard') }}" wire:navigate />
 

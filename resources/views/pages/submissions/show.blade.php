@@ -513,7 +513,7 @@ new #[Title('Submission')] class extends Component {
             <flux:modal name="reject-modal" variant="danger">
                 <flux:heading size="md">{{ __('Reject this submission?') }}</flux:heading>
                 <flux:subheading class="mt-1">{{ __('The workflow terminates and the submitter is notified with your comment.') }}</flux:subheading>
-                <flux:textarea wire:model="actionComment" :label="__('Reason (required)')" rows="3" class="mt-4" />
+                <flux:textarea wire:model="actionComment" :label="__('Reason (required)')" rows="3" class="mt-4" dusk="reject-comment" />
                 <div class="mt-4 flex gap-2">
                     <flux:modal.close><flux:button variant="ghost">{{ __('Cancel') }}</flux:button></flux:modal.close>
                     <flux:button variant="danger" wire:click="act('reject')">{{ __('Confirm rejection') }}</flux:button>

@@ -10,6 +10,8 @@
 .env
 .env.backup
 .env.production
+.env.dusk.local
+.playwright-cli/
 .phpactor.json
 .phpunit.result.cache
 Homestead.json

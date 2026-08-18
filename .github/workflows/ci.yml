@@ -99,3 +99,70 @@ jobs:
           name: frontend-dist
           path: public/build
           retention-days: 7
+
+  browser:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+        with:
+          php-version: "8.4"
+          extensions: bcmath, ctype, curl, dom, fileinfo, mbstring, openssl, pdo, tokenizer, xml, zip, gd, pdo_sqlite
+          tools: composer:v2
+          coverage: none
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: |
+          composer install --prefer-dist --no-interaction --no-progress
+          npm ci
+          npm run build
+
+      - name: Prepare browser environment
+        run: |
+          cp .env.dusk.example .env.dusk.local
+          touch /tmp/approvedesk-dusk.sqlite
+          php artisan dusk:chrome-driver --detect
+
+      - name: Start application server
+        run: APP_ENV=local APP_KEY="base64:Wm5nY3RxTStlNzhuN3ppMW9NUkFmZ2VrQkRQQnkrNUo=" APP_URL=http://127.0.0.1:8001 CACHE_STORE=array DB_CONNECTION=sqlite DB_DATABASE=/tmp/approvedesk-dusk.sqlite SESSION_DRIVER=file php artisan serve --host=127.0.0.1 --port=8001 > /tmp/approvedesk-dusk-server.log 2>&1 &
+
+      - name: Wait for application server
+        run: |
+          for attempt in {1..20}; do
+            if curl --fail --silent http://127.0.0.1:8001/up > /dev/null; then
+              exit 0
+            fi
+
+            sleep 1
+          done
+
+          cat /tmp/approvedesk-dusk-server.log
+          exit 1
+
+      - name: Run browser and accessibility tests
+        run: php artisan dusk
+
+      - name: Upload browser diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-diagnostics
+          path: |
+            /tmp/approvedesk-dusk-server.log
+            tests/Browser/console
+            tests/Browser/screenshots
+            tests/Browser/source
+          retention-days: 7
