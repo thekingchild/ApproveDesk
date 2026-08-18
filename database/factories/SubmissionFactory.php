@@ -6,6 +6,7 @@ use App\Enums\SubmissionPriority;
 use App\Enums\SubmissionStatus;
 use App\Enums\SubmissionType;
 use App\Models\Department;
+use App\Models\RequestTypeVersion;
 use App\Models\Submission;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -19,6 +20,7 @@ class SubmissionFactory extends Factory
     {
         return [
             'type' => fake()->randomElement(SubmissionType::cases()),
+            'request_type_version_id' => fn () => RequestTypeVersion::general()->id,
             'title' => fake()->sentence(6),
             'body' => fake()->paragraphs(2, true),
             'submitter_id' => User::factory(),

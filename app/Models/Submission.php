@@ -24,6 +24,7 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property string|null $reference_number
  * @property SubmissionType $type
+ * @property int $request_type_version_id
  * @property string $title
  * @property string|null $body
  * @property int $submitter_id
@@ -36,6 +37,8 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $updated_at
  * @property-read User $submitter
  * @property-read Department|null $department
+ * @property-read RequestTypeVersion $requestTypeVersion
+ * @property-read Collection<int, SubmissionFieldValue> $fieldValues
  * @property-read Collection<int, SubmissionFile> $files
  * @property-read WorkflowInstance|null $workflowInstance
  * @property-read Collection<int, Comment> $comments
@@ -47,7 +50,7 @@ class Submission extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'reference_number', 'type', 'title', 'body', 'submitter_id',
+        'reference_number', 'type', 'request_type_version_id', 'title', 'body', 'submitter_id',
         'department_id', 'priority', 'due_date', 'status', 'metadata',
     ];
 
@@ -95,6 +98,18 @@ class Submission extends Model
     public function department(): BelongsTo
     {
         return $this->belongsTo(Department::class);
+    }
+
+    /** @return BelongsTo<RequestTypeVersion, $this> */
+    public function requestTypeVersion(): BelongsTo
+    {
+        return $this->belongsTo(RequestTypeVersion::class);
+    }
+
+    /** @return HasMany<SubmissionFieldValue, $this> */
+    public function fieldValues(): HasMany
+    {
+        return $this->hasMany(SubmissionFieldValue::class);
     }
 
     /**

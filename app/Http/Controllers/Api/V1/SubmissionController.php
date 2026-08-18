@@ -24,7 +24,7 @@ class SubmissionController extends Controller
         $validated = $request->validated();
         $roleIds = Role::query()->whereIn('name', $user->getRoleNames())->pluck('id')->all();
         $query = Submission::query()
-            ->with(['submitter:id,name', 'department:id,name', 'workflowInstance.currentStep'])
+            ->with(['submitter:id,name', 'department:id,name', 'requestTypeVersion.requestType:id,name,slug', 'workflowInstance.currentStep'])
             ->when(! $user->can('submissions.view.all'), function ($builder) use ($roleIds, $user): void {
                 $builder->where(function ($builder) use ($roleIds, $user): void {
                     $builder->where('submitter_id', $user->id)
@@ -103,6 +103,7 @@ class SubmissionController extends Controller
         return [
             'submitter:id,name',
             'department:id,name',
+            'requestTypeVersion.requestType:id,name,slug',
             'workflowInstance.currentStep',
             ...($withActions ? ['workflowInstance.actions.actor:id,name', 'workflowInstance.actions.step:id,name'] : []),
         ];

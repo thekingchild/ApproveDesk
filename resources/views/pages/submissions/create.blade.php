@@ -3,6 +3,7 @@
 use App\Actions\Submissions\AttachSubmissionFilesAction;
 use App\Actions\Submissions\CreateSubmissionAction;
 use App\Actions\Submissions\SubmitSubmissionAction;
+use App\Actions\Submissions\SyncLegacySubmissionFieldValuesAction;
 use App\DTOs\SubmissionData;
 use App\Models\Submission;
 use App\Models\SubmissionFile;
@@ -198,6 +199,7 @@ new #[Title('New submission')] class extends Component {
             $submission = Submission::query()->whereKey($this->draftId)->firstOrFail();
             $this->authorize('update', $submission);
             $submission->update($data->toAttributes());
+            app(SyncLegacySubmissionFieldValuesAction::class)->execute($submission);
 
             return $submission;
         }

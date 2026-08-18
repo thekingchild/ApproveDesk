@@ -16,6 +16,7 @@ class SubmissionResource extends JsonResource
             'id' => $this->id,
             'reference_number' => $this->reference_number,
             'type' => $this->type->value,
+            'request_type_version_id' => $this->request_type_version_id,
             'title' => $this->title,
             'body' => $this->body,
             'priority' => $this->priority->value,
@@ -30,6 +31,12 @@ class SubmissionResource extends JsonResource
             'department' => $this->whenLoaded('department', fn (): ?array => $this->department === null ? null : [
                 'id' => $this->department->id,
                 'name' => $this->department->name,
+            ]),
+            'request_type' => $this->whenLoaded('requestTypeVersion', fn (): array => [
+                'id' => $this->requestTypeVersion->requestType->id,
+                'name' => $this->requestTypeVersion->requestType->name,
+                'slug' => $this->requestTypeVersion->requestType->slug,
+                'version' => $this->requestTypeVersion->version,
             ]),
             'workflow' => new WorkflowInstanceResource($this->whenLoaded('workflowInstance')),
         ];

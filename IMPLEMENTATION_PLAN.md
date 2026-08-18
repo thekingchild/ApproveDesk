@@ -95,7 +95,7 @@ A task is complete only when it has:
 |---|---|---|---|
 | 0–4 | v2.0.0 | Existing workflow platform | Complete |
 | 5 | v2.1.0 | Non-enterprise UX, accessibility, and approver productivity | Complete |
-| 6 | v2.2.0 | Configurable request types and form builder | Not started |
+| 6 | v2.2.0 | Configurable request types and form builder | In progress — 6.1 complete |
 | 7 | v2.3.0 | Visual workflows, versioning, and dynamic assignment | Not started |
 | 8 | v2.4.0 | Collaboration, notifications, and integration hub | Not started |
 | 9 | v2.5.0 | Governance, audit evidence, security, and reliability | Not started |
@@ -160,12 +160,12 @@ A task is complete only when it has:
 
 **Goal:** allow non-technical administrators to define reusable request forms instead of forcing every submission into the fixed type/title/body schema.
 
-### 6.1 Versioned request schema
+### 6.1 Versioned request schema — Complete (2026-08-19)
 
-- **P6-DATA-01:** Add `request_types`, `request_type_versions`, `request_field_definitions`, and `submission_field_values`.
-- **P6-DATA-02:** Store typed values using nullable string, long-text, decimal, date/time, boolean, user, department, and JSON columns so filtering works on SQLite and MySQL without vendor-specific JSON expressions.
-- **P6-DATA-03:** Make published request-type versions immutable. A submission references the exact version used at creation.
-- **P6-DATA-04:** Backfill existing submissions into a built-in General Request type without changing reference numbers or workflow history.
+- **P6-DATA-01 — Complete:** Added `request_types`, `request_type_versions`, `request_field_definitions`, and `submission_field_values`, with model relationships and factories for schema authoring.
+- **P6-DATA-02 — Complete:** Typed values use dedicated nullable string, long-text, decimal, date/time, boolean, user, department, and JSON columns with portable scalar indexes and version-consistency validation.
+- **P6-DATA-03 — Complete:** Published versions and their field definitions reject mutation or deletion; publication records a canonical schema hash, and every submission references one exact non-null version.
+- **P6-DATA-04 — Complete:** The migration creates the built-in General Request v1, backfills legacy values, and preserves submission references and append-only workflow history; new and edited fixed-form requests keep typed values synchronized.
 
 ### 6.2 Form builder
 

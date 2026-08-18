@@ -44,12 +44,17 @@ class SubmissionApiTest extends TestCase
         $response->assertCreated()
             ->assertJsonPath('data.title', 'API-created budget memo')
             ->assertJsonPath('data.status', 'draft')
-            ->assertJsonPath('data.priority', 'high');
+            ->assertJsonPath('data.priority', 'high')
+            ->assertJsonPath('data.request_type.slug', 'general-request')
+            ->assertJsonPath('data.request_type.version', 1);
 
         $this->assertDatabaseHas('submissions', [
             'title' => 'API-created budget memo',
             'submitter_id' => $this->submitter->id,
             'status' => SubmissionStatus::Draft->value,
+        ]);
+        $this->assertDatabaseHas('submission_field_values', [
+            'text_value' => '<p>Budget details</p>',
         ]);
     }
 
