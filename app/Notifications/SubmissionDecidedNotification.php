@@ -87,6 +87,7 @@ class SubmissionDecidedNotification extends Notification implements ShouldQueue
             'title' => $this->submission->title,
             'kind' => 'decided',
             'decision' => $this->decision->value,
+            'delivery_frequency' => $notifiable->notification_frequency->value,
         ];
     }
 

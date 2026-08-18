@@ -62,6 +62,7 @@ Route::middleware(['auth', 'verified', 'can:reports.view'])->prefix('admin')->na
 
 Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::view('help', 'pages.help')->name('help');
+    Route::livewire('notifications', 'pages::notifications.index')->name('notifications.index');
     Route::livewire('submissions', 'pages::submissions.index')->name('submissions.index');
     Route::livewire('submissions/create', 'pages::submissions.create')
         ->middleware('can:create,App\Models\Submission')

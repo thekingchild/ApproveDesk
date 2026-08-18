@@ -56,6 +56,7 @@ class ActionRequiredNotification extends Notification implements ShouldQueue
             'reference_number' => $this->submission->reference_number,
             'title' => $this->submission->title,
             'kind' => 'action_required',
+            'delivery_frequency' => $notifiable->notification_frequency->value,
         ];
     }
 }

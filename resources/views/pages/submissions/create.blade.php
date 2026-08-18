@@ -194,6 +194,8 @@ new #[Title('New submission')] class extends Component {
 } ?>
 
 <div wire:poll.30s="autosave">
+    <x-ui.breadcrumbs :items="[['label' => __('Submissions'), 'url' => route('submissions.index')], ['label' => $draftId ? __('Edit draft') : __('New submission')]]" :back="$draftId ? route('submissions.show', $draftId) : route('submissions.index')" back-label="Back to submissions" class="mb-6" />
+
     <x-ui.page-header
         :title="$draftId ? __('Edit draft') : __('New submission')"
         :description="__('Drafts auto-save every 30 seconds while you type.')"

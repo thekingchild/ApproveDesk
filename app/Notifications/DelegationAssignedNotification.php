@@ -35,14 +35,19 @@ class DelegationAssignedNotification extends Notification implements ShouldQueue
             ->action('Review submission', route('submissions.show', $submission));
     }
 
-    /** @return array{kind: string, submission_id: int, delegator_id: int, expires_at: string} */
+    /** @return array{kind: string, submission_id: int, reference_number: string|null, title: string, delegator_id: int, expires_at: string, delivery_frequency: string} */
     public function toArray(User $notifiable): array
     {
+        $submission = $this->delegation->instance->submission;
+
         return [
             'kind' => 'delegated',
-            'submission_id' => $this->delegation->instance->submission_id,
+            'submission_id' => $submission->id,
+            'reference_number' => $submission->reference_number,
+            'title' => $submission->title,
             'delegator_id' => $this->delegation->delegator_id,
             'expires_at' => $this->delegation->expires_at->toIso8601String(),
+            'delivery_frequency' => $notifiable->notification_frequency->value,
         ];
     }
 }

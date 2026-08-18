@@ -136,6 +136,8 @@ new #[Title('Department management')] class extends Component {
 } ?>
 
 <div class="space-y-6">
+    <x-ui.breadcrumbs :items="[['label' => __('Dashboard'), 'url' => route('dashboard')], ['label' => __('Administration')], ['label' => __('Departments')]]" :back="route('dashboard')" back-label="Back to dashboard" />
+
     <div class="flex flex-wrap items-start justify-between gap-3">
         <div>
             <flux:heading size="lg">{{ __('Departments') }}</flux:heading>

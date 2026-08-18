@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Submission;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -54,10 +55,24 @@ class DesignSystemTest extends TestCase
         $this->actingAs($user)
             ->get(route('dashboard'))
             ->assertOk()
-            ->assertSee('<h1 class="ad-page-title">Dashboard</h1>', escape: false)
+            ->assertSee('class="ad-page-title"', escape: false)
+            ->assertSee('Welcome back')
             ->assertSee('Help')
             ->assertSee('Notifications')
             ->assertDontSee('Repository')
             ->assertDontSee('Documentation');
+    }
+
+    public function test_submission_pages_have_breadcrumbs_and_consistent_back_navigation(): void
+    {
+        $user = User::factory()->create();
+        $submission = Submission::factory()->for($user, 'submitter')->create();
+
+        $this->actingAs($user)
+            ->get(route('submissions.show', $submission))
+            ->assertOk()
+            ->assertSee('aria-label="Breadcrumb"', escape: false)
+            ->assertSee('Back to submissions')
+            ->assertSee($submission->reference_number);
     }
 }

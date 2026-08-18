@@ -20,15 +20,9 @@
             <flux:spacer />
 
             <flux:navbar class="me-1.5 space-x-0.5 rtl:space-x-reverse py-0!">
-                <flux:tooltip :content="__('Notifications')" position="bottom">
-                    <flux:navbar.item
-                        class="h-10 max-lg:hidden [&>div>svg]:size-5"
-                        icon="bell"
-                        :href="route('notifications.edit')"
-                        :label="__('Notifications')"
-                        wire:navigate
-                    />
-                </flux:tooltip>
+                <flux:modal.trigger name="global-search">
+                    <flux:navbar.item class="h-10 [&>div>svg]:size-5" icon="magnifying-glass" :label="__('Search')" />
+                </flux:modal.trigger>
                 <flux:tooltip :content="__('Help')" position="bottom">
                     <flux:navbar.item
                         class="h-10 max-lg:hidden [&>div>svg]:size-5"
@@ -61,9 +55,7 @@
             <flux:spacer />
 
             <flux:sidebar.nav>
-                <flux:sidebar.item icon="bell" :href="route('notifications.edit')" wire:navigate>
-                    {{ __('Notifications') }}
-                </flux:sidebar.item>
+                <livewire:notification-indicator />
                 <flux:sidebar.item icon="lifebuoy" :href="route('help')" wire:navigate>
                     {{ __('Help') }}
                 </flux:sidebar.item>
@@ -73,6 +65,8 @@
         <main id="main-content" tabindex="-1" class="ad-main">
             {{ $slot }}
         </main>
+
+        <livewire:global-search />
 
         @persist('toast')
             <flux:toast.group>

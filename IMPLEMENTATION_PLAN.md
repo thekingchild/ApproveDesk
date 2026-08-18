@@ -94,7 +94,7 @@ A task is complete only when it has:
 | Phase | Target | Theme | Status |
 |---|---|---|---|
 | 0–4 | v2.0.0 | Existing workflow platform | Complete |
-| 5 | v2.1.0 | Non-enterprise UX, accessibility, and approver productivity | In progress — 5.1 complete |
+| 5 | v2.1.0 | Non-enterprise UX, accessibility, and approver productivity | In progress — 5.1–5.2 complete |
 | 6 | v2.2.0 | Configurable request types and form builder | Not started |
 | 7 | v2.3.0 | Visual workflows, versioning, and dynamic assignment | Not started |
 | 8 | v2.4.0 | Collaboration, notifications, and integration hub | Not started |
@@ -120,12 +120,12 @@ A task is complete only when it has:
 - **P5-DS-04:** Remove framework repository/documentation links from production navigation; add Help, notifications, profile, and context-appropriate navigation.
 - **P5-DS-05:** Add responsive sidebar/drawer, responsive tables-to-cards, 200% zoom support, and touch targets of at least 44px for core actions.
 
-### 5.2 Role-aware home and navigation
+### 5.2 Role-aware home and navigation — Complete (2026-08-18)
 
-- **P5-NAV-01:** Add global search across reference, title, requester, status, and indexed custom metadata; results must respect `SubmissionPolicy`.
-- **P5-NAV-02:** Provide requester, approver, administrator, and mixed-role home layouts with the most important next action first.
-- **P5-NAV-03:** Add notification centre with unread count, mark-read behavior, deep links, and preference-aware delivery labels.
-- **P5-NAV-04:** Add breadcrumbs and consistent back-navigation to submissions and administrative editors.
+- **P5-NAV-01 — Complete:** Global search covers reference, title, requester, status, and the current metadata index; every result is authorized through `SubmissionPolicy` before display.
+- **P5-NAV-02 — Complete:** Requester, approver, administrator, mixed-role, and viewer home modes put decisions, drafts/responses, or organization controls first as appropriate.
+- **P5-NAV-03 — Complete:** The notification centre includes live unread counts, individual/all read controls, policy-safe deep links, and recorded preference-aware delivery labels.
+- **P5-NAV-04 — Complete:** Reusable breadcrumbs and consistent back-navigation cover submissions, approvals, notifications, and all administration editors.
 
 ### 5.3 Approver workbench
 

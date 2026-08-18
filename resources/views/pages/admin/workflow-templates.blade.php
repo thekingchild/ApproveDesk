@@ -420,6 +420,8 @@ new #[Title('Workflow templates')] class extends Component {
 } ?>
 
 <div class="space-y-6">
+    <x-ui.breadcrumbs :items="[['label' => __('Dashboard'), 'url' => route('dashboard')], ['label' => __('Administration')], ['label' => __('Workflow templates')]]" :back="route('dashboard')" back-label="Back to dashboard" />
+
     <div class="flex flex-wrap items-start justify-between gap-3">
         <div>
             <flux:heading size="lg">{{ __('Workflow templates') }}</flux:heading>

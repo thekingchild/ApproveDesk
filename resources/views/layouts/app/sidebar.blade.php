@@ -12,6 +12,10 @@
                 <flux:sidebar.collapse class="lg:hidden" />
             </flux:sidebar.header>
 
+            <flux:modal.trigger name="global-search">
+                <flux:sidebar.search :placeholder="__('Search')" kbd="⌘K" data-test="global-search-trigger" />
+            </flux:modal.trigger>
+
             <flux:sidebar.nav>
                 <flux:sidebar.group :heading="__('Approvals')" class="grid">
                     <flux:sidebar.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>
@@ -67,9 +71,7 @@
             <flux:spacer />
 
             <flux:sidebar.nav>
-                <flux:sidebar.item icon="bell" :href="route('notifications.edit')" :current="request()->routeIs('notifications.edit')" wire:navigate>
-                    {{ __('Notifications') }}
-                </flux:sidebar.item>
+                <livewire:notification-indicator />
                 <flux:sidebar.item icon="lifebuoy" :href="route('help')" :current="request()->routeIs('help')" wire:navigate>
                     {{ __('Help') }}
                 </flux:sidebar.item>
@@ -84,9 +86,11 @@
 
             <flux:spacer />
 
-            <flux:tooltip :content="__('Notifications')" position="bottom">
-                <flux:button :href="route('notifications.edit')" variant="ghost" icon="bell" square :aria-label="__('Notifications')" wire:navigate />
-            </flux:tooltip>
+            <flux:modal.trigger name="global-search">
+                <flux:button variant="ghost" icon="magnifying-glass" square :aria-label="__('Search')" />
+            </flux:modal.trigger>
+
+            <livewire:notification-indicator mobile />
 
             <flux:dropdown position="top" align="end">
                 <flux:profile
@@ -138,6 +142,8 @@
         </flux:header>
 
         {{ $slot }}
+
+        <livewire:global-search />
 
         @persist('toast')
             <flux:toast.group>

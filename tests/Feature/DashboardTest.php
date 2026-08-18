@@ -92,7 +92,8 @@ class DashboardTest extends TestCase
         $this->actingAs($admin)
             ->get(route('dashboard'))
             ->assertOk()
-            ->assertSee('Organization-wide approval activity.');
+            ->assertSee('Monitor organization activity and manage approval operations.')
+            ->assertSee('data-test="administrator-home"', escape: false);
 
         $this->actingAs($admin)
             ->get(route('submissions.index'))
@@ -126,6 +127,45 @@ class DashboardTest extends TestCase
         $this->assertTrue($report['can_approve']);
         $this->assertSame(1, $report['action_required']);
         $this->assertSame(0, $report['pending_others']);
+        $this->assertSame('approver', $report['home_mode']);
+
+        $this->actingAs($approver)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('data-home-mode="approver"', escape: false)
+            ->assertSee('data-test="priority-approvals"', escape: false)
+            ->assertSee($assigned->title);
+    }
+
+    public function test_requester_home_prioritizes_drafts_and_returned_requests(): void
+    {
+        $requester = User::factory()->create(['name' => 'Sam Requester'])->assignRole('submitter');
+        Submission::factory()->for($requester, 'submitter')->create(['status' => SubmissionStatus::Draft]);
+        Submission::factory()->for($requester, 'submitter')->create(['status' => SubmissionStatus::Returned]);
+
+        $report = app(ReportService::class)->dashboard($requester);
+
+        $this->assertSame('requester', $report['home_mode']);
+        $this->assertSame(2, $report['requester_attention']);
+
+        $this->actingAs($requester)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('Welcome back, Sam')
+            ->assertSee('data-test="priority-requests"', escape: false);
+    }
+
+    public function test_user_with_requester_and_approver_capabilities_gets_mixed_home(): void
+    {
+        $user = User::factory()->create()->assignRole('department-head');
+
+        $this->assertSame('mixed', app(ReportService::class)->dashboard($user)['home_mode']);
+
+        $this->actingAs($user)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('data-home-mode="mixed"', escape: false)
+            ->assertSee('Act on assigned approvals, then continue your own requests.');
     }
 
     public function test_parallel_approver_moves_to_pending_others_after_acting(): void

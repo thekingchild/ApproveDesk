@@ -308,6 +308,8 @@ new #[Title('Submission')] class extends Component {
 } ?>
 
 <div class="space-y-6">
+    <x-ui.breadcrumbs :items="[['label' => __('Submissions'), 'url' => route('submissions.index')], ['label' => $submission->reference_number]]" :back="route('submissions.index')" back-label="Back to submissions" />
+
     <div class="flex flex-wrap items-start justify-between gap-3">
         <div>
             <flux:heading size="lg">{{ $submission->title }}</flux:heading>

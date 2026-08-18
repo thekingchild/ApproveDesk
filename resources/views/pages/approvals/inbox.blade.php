@@ -69,6 +69,8 @@ new #[Title('Approvals')] class extends Component {
 } ?>
 
 <div class="space-y-6">
+    <x-ui.breadcrumbs :items="[['label' => __('Dashboard'), 'url' => route('dashboard')], ['label' => __('Approvals')]]" :back="route('dashboard')" back-label="Back to dashboard" />
+
     <x-ui.page-header
         :title="__('Approvals')"
         :description="__('Submissions routed to you for review or decision.')"

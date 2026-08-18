@@ -124,6 +124,8 @@ new #[Title('My submissions')] class extends Component {
 } ?>
 
 <div class="space-y-6">
+    <x-ui.breadcrumbs :items="[['label' => __('Dashboard'), 'url' => route('dashboard')], ['label' => $this->organizationView ? __('All submissions') : __('My submissions')]]" :back="route('dashboard')" back-label="Back to dashboard" />
+
     <x-ui.page-header
         :title="$this->organizationView ? __('All submissions') : __('My submissions')"
         :description="$this->organizationView ? __('Documents, notes, and memos across the organization.') : __('Documents, notes, and memos you have submitted.')"

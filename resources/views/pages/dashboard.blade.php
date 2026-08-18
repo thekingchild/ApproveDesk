@@ -15,10 +15,20 @@ new #[Title('Dashboard')] class extends Component {
     }
 } ?>
 
-<div class="space-y-6">
+@php
+    $homeDescriptions = [
+        'administrator' => __('Monitor organization activity and manage approval operations.'),
+        'approver' => __('Decide what needs your attention and keep assigned approvals moving.'),
+        'requester' => __('Continue drafts and track the requests you have submitted.'),
+        'mixed' => __('Act on assigned approvals, then continue your own requests.'),
+        'viewer' => __('Track the requests you are allowed to view.'),
+    ];
+@endphp
+
+<div class="space-y-6" data-home-mode="{{ $this->report['home_mode'] }}">
     <x-ui.page-header
-        :title="__('Dashboard')"
-        :description="$this->report['organization'] ? __('Organization-wide approval activity.') : __('Your submissions and approval work at a glance.')"
+        :title="__('Welcome back, :name', ['name' => str(auth()->user()->name)->before(' ')])"
+        :description="$homeDescriptions[$this->report['home_mode']]"
     >
         @if ($this->report['can_submit'])
             <x-slot:actions>
@@ -28,6 +38,63 @@ new #[Title('Dashboard')] class extends Component {
             </x-slot:actions>
         @endif
     </x-ui.page-header>
+
+    @if ($this->report['action_required'] > 0)
+        <section aria-labelledby="priority-approvals" data-test="priority-approvals">
+            <flux:card class="border-blue-200 bg-blue-50/60 dark:border-blue-800 dark:bg-blue-950/20">
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                        <flux:heading id="priority-approvals" size="sm">{{ trans_choice('{1} :count approval needs your decision|[2,*] :count approvals need your decision', $this->report['action_required'], ['count' => $this->report['action_required']]) }}</flux:heading>
+                        <flux:text class="mt-1">{{ __('Review the nearest deadlines first.') }}</flux:text>
+                    </div>
+                    <flux:button :href="route('approvals.inbox')" variant="primary" icon="inbox" wire:navigate>{{ __('Open approval inbox') }}</flux:button>
+                </div>
+
+                <ul class="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                    @foreach ($this->report['action_required_items'] as $instance)
+                        <li>
+                            <a href="{{ route('submissions.show', $instance->submission) }}" class="block rounded-lg border border-blue-200 bg-white p-3 hover:border-blue-400 dark:border-blue-800 dark:bg-zinc-900 dark:hover:border-blue-600" wire:navigate>
+                                <span class="block font-semibold text-zinc-950 dark:text-white">{{ Str::limit($instance->submission->title, 48) }}</span>
+                                <span class="mt-1 block text-xs text-zinc-600 dark:text-zinc-300">{{ $instance->submission->reference_number }} · {{ $instance->submission->submitter->name }}</span>
+                                @if ($instance->deadlineAt())
+                                    <span @class(['mt-2 block text-xs font-medium', 'text-red-700 dark:text-red-300' => $instance->isOverdue(), 'text-zinc-600 dark:text-zinc-300' => ! $instance->isOverdue()])>
+                                        {{ $instance->isOverdue() ? __('Overdue') : __('Due :time', ['time' => $instance->deadlineAt()->diffForHumans()]) }}
+                                    </span>
+                                @endif
+                            </a>
+                        </li>
+                    @endforeach
+                </ul>
+            </flux:card>
+        </section>
+    @elseif ($this->report['can_submit'] && $this->report['requester_attention'] > 0)
+        <section aria-labelledby="priority-requests" data-test="priority-requests">
+            <flux:card class="border-amber-200 bg-amber-50/60 dark:border-amber-800 dark:bg-amber-950/20">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <flux:heading id="priority-requests" size="sm">{{ __('Continue your requests') }}</flux:heading>
+                        <flux:text class="mt-1">{{ trans_choice('{1} :count draft or returned request needs attention|[2,*] :count drafts or returned requests need attention', $this->report['requester_attention'], ['count' => $this->report['requester_attention']]) }}</flux:text>
+                    </div>
+                    <flux:button :href="route('submissions.index')" variant="primary" wire:navigate>{{ __('View my requests') }}</flux:button>
+                </div>
+            </flux:card>
+        </section>
+    @endif
+
+    @if ($this->report['home_mode'] === 'administrator')
+        <section aria-labelledby="admin-shortcuts" data-test="administrator-home">
+            <div class="mb-3 flex items-center justify-between">
+                <flux:heading id="admin-shortcuts" size="sm">{{ __('Administration') }}</flux:heading>
+                <span class="text-sm text-zinc-600 dark:text-zinc-300">{{ __('Organization controls') }}</span>
+            </div>
+            <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <a href="{{ route('admin.users.index') }}" class="rounded-xl border border-zinc-200 bg-white p-4 font-semibold hover:border-blue-400 dark:border-zinc-700 dark:bg-zinc-900" wire:navigate>{{ __('Manage users') }}</a>
+                <a href="{{ route('admin.workflow-templates.index') }}" class="rounded-xl border border-zinc-200 bg-white p-4 font-semibold hover:border-blue-400 dark:border-zinc-700 dark:bg-zinc-900" wire:navigate>{{ __('Workflow templates') }}</a>
+                <a href="{{ route('admin.analytics.index') }}" class="rounded-xl border border-zinc-200 bg-white p-4 font-semibold hover:border-blue-400 dark:border-zinc-700 dark:bg-zinc-900" wire:navigate>{{ __('Approval analytics') }}</a>
+                <a href="{{ route('settings.approvals') }}" class="rounded-xl border border-zinc-200 bg-white p-4 font-semibold hover:border-blue-400 dark:border-zinc-700 dark:bg-zinc-900" wire:navigate>{{ __('Approval settings') }}</a>
+            </div>
+        </section>
+    @endif
 
     <section aria-labelledby="submission-summary">
         <div class="mb-3 flex items-center justify-between">
