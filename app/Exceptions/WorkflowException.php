@@ -62,4 +62,14 @@ class WorkflowException extends RuntimeException
     {
         return new self("A comment is required for the [{$action}] action.");
     }
+
+    public static function unresolvedAssignees(string $step): self
+    {
+        return new self("Step [{$step}] has no resolvable assignees for this request.");
+    }
+
+    public static function unknownOutcome(string $outcome): self
+    {
+        return new self("Workflow outcome [{$outcome}] is not defined for this version.");
+    }
 }

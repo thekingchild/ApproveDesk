@@ -4,6 +4,7 @@ namespace App\Actions\WorkflowTemplates;
 
 use App\DTOs\WorkflowTemplateData;
 use App\DTOs\WorkflowTemplateStepData;
+use App\Enums\GroupCompletion;
 use App\Enums\WorkflowTemplateVersionStatus;
 use App\Models\User;
 use App\Models\WorkflowTemplate;
@@ -41,6 +42,7 @@ final class UpdateWorkflowTemplateAction
 
             if ($baseline === null || $this->structureChanged($baseline, $data)) {
                 $draft = $this->editableDraft($template, $editor, $data->changeSummary);
+                $draft->forceFill(['outcomes' => $data->outcomes !== [] ? $data->outcomes : null])->save();
                 $draft->steps()->delete();
                 $this->writeSteps($template, $draft, $data->steps);
 
@@ -85,10 +87,13 @@ final class UpdateWorkflowTemplateAction
                 'quorum_count' => $step->quorumCount,
                 'assignee_type' => $step->assigneeType,
                 'assignee_ids' => $step->assigneeIds,
+                'assignee_config' => $step->assigneeConfig,
                 'allow_delegation' => $step->allowDelegation,
                 'conditions' => $step->conditions,
                 'timeout_hours' => $step->timeoutHours,
                 'timeout_action' => $step->timeoutAction,
+                'timeout_calendar' => $step->timeoutCalendar,
+                'completion_rule' => $step->completionRule ?? GroupCompletion::fromStepType($step->stepType),
             ]);
         }
     }
@@ -101,10 +106,13 @@ final class UpdateWorkflowTemplateAction
             'quorum_count' => $step->quorum_count,
             'assignee_type' => $step->assignee_type->value,
             'assignee_ids' => $this->sortedIds($step->assignee_ids),
+            'assignee_config' => $step->assignee_config,
             'allow_delegation' => $step->allow_delegation,
             'conditions' => $step->conditions,
             'timeout_hours' => $step->timeout_hours,
             'timeout_action' => $step->timeout_action?->value,
+            'timeout_calendar' => $step->timeout_calendar?->value,
+            'completion_rule' => $step->groupCompletion()?->value,
         ])->values()->all();
 
         $incoming = collect($data->steps)->map(fn ($step) => [
@@ -113,13 +121,16 @@ final class UpdateWorkflowTemplateAction
             'quorum_count' => $step->quorumCount,
             'assignee_type' => $step->assigneeType->value,
             'assignee_ids' => $this->sortedIds($step->assigneeIds),
+            'assignee_config' => $step->assigneeConfig,
             'allow_delegation' => $step->allowDelegation,
             'conditions' => $step->conditions,
             'timeout_hours' => $step->timeoutHours,
             'timeout_action' => $step->timeoutAction?->value,
+            'timeout_calendar' => $step->timeoutCalendar?->value,
+            'completion_rule' => ($step->completionRule ?? GroupCompletion::fromStepType($step->stepType))?->value,
         ])->values()->all();
 
-        return $current !== $incoming;
+        return $current !== $incoming || ($version->outcomes ?? []) !== $data->outcomes;
     }
 
     /**

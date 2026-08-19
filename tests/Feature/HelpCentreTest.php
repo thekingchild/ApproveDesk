@@ -115,7 +115,9 @@ class HelpCentreTest extends TestCase
             ->assertSee('A named approval chain')
             ->assertSee('The link from a request type')
             ->assertSee('The canvas and list editor')
-            ->assertSee('One frozen copy of a workflow template');
+            ->assertSee('One frozen copy of a workflow template')
+            ->assertSee('An ordered rule on a request type')
+            ->assertSee('Working days and holidays');
     }
 
     public function test_workflow_templates_article_explains_builder_and_versions(): void

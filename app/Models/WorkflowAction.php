@@ -19,6 +19,7 @@ use RuntimeException;
  * @property int $step_id
  * @property int|null $actor_id
  * @property WorkflowActionType $action
+ * @property string|null $outcome_key
  * @property string|null $comment
  * @property int|null $delegated_to
  * @property string|null $ip_address
@@ -37,7 +38,7 @@ class WorkflowAction extends Model
     public const UPDATED_AT = null;
 
     protected $fillable = [
-        'instance_id', 'step_id', 'actor_id', 'action', 'comment',
+        'instance_id', 'step_id', 'actor_id', 'action', 'outcome_key', 'comment',
         'delegated_to', 'ip_address', 'user_agent',
     ];
 

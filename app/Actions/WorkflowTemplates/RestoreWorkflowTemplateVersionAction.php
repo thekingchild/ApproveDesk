@@ -33,8 +33,12 @@ final class RestoreWorkflowTemplateVersionAction
                 conditions: $step->conditions,
                 timeoutHours: $step->timeout_hours,
                 timeoutAction: $step->timeout_action,
+                completionRule: $step->completion_rule,
+                timeoutCalendar: $step->timeout_calendar,
+                assigneeConfig: $step->assignee_config,
             ))->all(),
             changeSummary: 'Restored from version '.$version->version.'.',
+            outcomes: $version->outcomes ?? [],
         );
 
         app(UpdateWorkflowTemplateAction::class)->execute($template, $data, $editor);

@@ -87,7 +87,7 @@ final class HelpCatalogue
             new HelpArticle(
                 slug: 'workflow-templates',
                 title: 'Workflow templates',
-                summary: 'Build sequential, parallel, quorum, conditional, and automatic approval chains.',
+                summary: 'Build approval chains, choose assignees, and publish frozen versions.',
                 icon: 'arrows-right-left',
                 group: 'Administration',
                 audience: 'admin',
@@ -96,7 +96,7 @@ final class HelpCatalogue
             new HelpArticle(
                 slug: 'request-types',
                 title: 'Request types',
-                summary: 'Design versioned forms, publish them, and keep old submissions on their original schema.',
+                summary: 'Design versioned forms, assign a workflow, and add selection rules for form values.',
                 icon: 'document-text',
                 group: 'Administration',
                 audience: 'admin',

@@ -21,6 +21,7 @@ final class UpdateUserAction
                 'name' => $data->name,
                 'email' => $data->email,
                 'department_id' => $data->departmentId,
+                'manager_id' => $data->managerId,
                 'is_active' => $data->isActive,
             ];
 

@@ -24,6 +24,7 @@ final class CloneWorkflowTemplateAction
             isActive: true,
             steps: $graph->steps->map(fn (WorkflowTemplateStep $step): WorkflowTemplateStepData => $this->stepData($step))->all(),
             changeSummary: 'Cloned from '.$source->name.'.',
+            outcomes: $graph->outcomes ?? [],
         );
 
         return app(CreateWorkflowTemplateAction::class)->execute($data, $actor);
@@ -41,6 +42,9 @@ final class CloneWorkflowTemplateAction
             conditions: $step->conditions,
             timeoutHours: $step->timeout_hours,
             timeoutAction: $step->timeout_action,
+            completionRule: $step->completion_rule,
+            timeoutCalendar: $step->timeout_calendar,
+            assigneeConfig: $step->assignee_config,
         );
     }
 

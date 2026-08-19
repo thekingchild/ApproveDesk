@@ -2,13 +2,13 @@
 
 namespace App\Services;
 
-use App\Enums\AssigneeType;
 use App\Enums\SubmissionStatus;
 use App\Enums\WorkflowActionType;
 use App\Enums\WorkflowStatus;
 use App\Models\Submission;
 use App\Models\User;
 use App\Models\WorkflowInstance;
+use App\Services\Workflow\AssignedStepConstraint;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 
@@ -134,9 +134,6 @@ final class ReportService
     /** @return Builder<WorkflowInstance> */
     private function actionRequiredQuery(User $user): Builder
     {
-        $user->loadMissing('roles');
-        $roleIds = $user->roles->pluck('id')->all();
-
         return WorkflowInstance::query()
             ->where('status', WorkflowStatus::Active)
             ->whereDoesntHave('actions', function (Builder $query) use ($user): void {
@@ -144,42 +141,19 @@ final class ReportService
                     ->whereColumn('workflow_actions.step_id', 'workflow_instances.current_step_id')
                     ->whereIn('action', [
                         WorkflowActionType::Approve,
+                        WorkflowActionType::ApproveWithConditions,
                         WorkflowActionType::Reject,
                         WorkflowActionType::Escalate,
                     ]);
             })
-            ->where(function (Builder $eligible) use ($user, $roleIds): void {
-                $eligible->whereHas('currentStep', function (Builder $query) use ($user, $roleIds): void {
-                    $query->where(function (Builder $assigned) use ($user, $roleIds): void {
-                        $assigned->where(function (Builder $users) use ($user): void {
-                            $users->where('assignee_type', AssigneeType::User)
-                                ->whereJsonContains('assignee_ids', $user->id);
-                        });
-
-                        if ($roleIds !== []) {
-                            $assigned->orWhere(function (Builder $roles) use ($roleIds): void {
-                                $roles->where('assignee_type', AssigneeType::Role)
-                                    ->where(function (Builder $ids) use ($roleIds): void {
-                                        foreach ($roleIds as $roleId) {
-                                            $ids->orWhereJsonContains('assignee_ids', $roleId);
-                                        }
-                                    });
-                            });
-                        }
-
-                        if ($user->department_id !== null) {
-                            $assigned->orWhere(function (Builder $departments) use ($user): void {
-                                $departments->where('assignee_type', AssigneeType::Department)
-                                    ->whereJsonContains('assignee_ids', $user->department_id);
-                            });
-                        }
+            ->where(function (Builder $eligible) use ($user): void {
+                app(AssignedStepConstraint::class)->constrainInstances($eligible, $user)
+                    ->orWhereHas('delegations', function (Builder $query) use ($user): void {
+                        $query->where('starts_at', '<=', now())
+                            ->where('expires_at', '>', now())
+                            ->where('delegate_id', $user->id)
+                            ->whereColumn('delegations.step_id', 'workflow_instances.current_step_id');
                     });
-                })->orWhereHas('delegations', function (Builder $query) use ($user): void {
-                    $query->where('starts_at', '<=', now())
-                        ->where('expires_at', '>', now())
-                        ->where('delegate_id', $user->id)
-                        ->whereColumn('delegations.step_id', 'workflow_instances.current_step_id');
-                });
             })
             ->whereDoesntHave('delegations', function (Builder $query) use ($user): void {
                 $query->where('starts_at', '<=', now())

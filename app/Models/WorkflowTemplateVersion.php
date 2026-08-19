@@ -19,6 +19,7 @@ use Illuminate\Support\Carbon;
  * @property WorkflowTemplateVersionStatus $status
  * @property string|null $schema_hash
  * @property string|null $change_summary
+ * @property array<int, array<string, mixed>>|null $outcomes
  * @property int|null $created_by
  * @property Carbon|null $published_at
  * @property Carbon|null $created_at
@@ -32,7 +33,7 @@ class WorkflowTemplateVersion extends Model
     use HasFactory;
 
     protected $fillable = [
-        'workflow_template_id', 'version', 'status', 'schema_hash', 'change_summary', 'created_by', 'published_at',
+        'workflow_template_id', 'version', 'status', 'schema_hash', 'change_summary', 'outcomes', 'created_by', 'published_at',
     ];
 
     protected function casts(): array
@@ -40,6 +41,7 @@ class WorkflowTemplateVersion extends Model
         return [
             'version' => 'integer',
             'status' => WorkflowTemplateVersionStatus::class,
+            'outcomes' => 'array',
             'published_at' => 'datetime',
         ];
     }

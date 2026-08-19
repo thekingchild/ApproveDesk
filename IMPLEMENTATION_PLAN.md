@@ -105,7 +105,7 @@ After each completed phase:
 4. Confirm Help as an administrator and as a requester.
 5. Commit the Markdown, catalogue, Help UI, and this plan together.
 
-**Administrator knowledge base through Phase 7.2 — Complete (2026-08-19):** feature definitions (including workflow version and builder), getting around, requests, approvals, statuses, account settings, users and roles, departments, workflow templates, request types (including workflow assignment), analytics, webhooks, organization settings, and the audit trail.
+**Administrator knowledge base through Phase 7.3 — Complete (2026-08-19):** feature definitions (including workflow version, builder, selection rule, assignee resolver, group completion, business calendar, and custom outcome), getting around, requests, approvals, statuses, account settings, users and roles, departments, workflow templates, request types (including workflow assignment and selection rules), analytics, webhooks, organization settings, and the audit trail.
 
 ### 3.5 Request types own workflows
 
@@ -128,7 +128,7 @@ Phase 6A implements this assignment. Phase 7 keeps its original scope: versioned
 | 5 | v2.1.0 | Non-enterprise UX, accessibility, and approver productivity | Complete |
 | 6 | v2.2.0 | Configurable request types and form builder | In progress — 6.1–6.2 complete |
 | 6A | v2.2.1 | Request-type workflow assignment | Complete |
-| 7 | v2.3.0 | Visual workflows, versioning, and dynamic assignment | In progress — 7.1–7.2 complete |
+| 7 | v2.3.0 | Visual workflows, versioning, and dynamic assignment | In progress — 7.1–7.3 complete |
 | 8 | v2.4.0 | Collaboration, notifications, and integration hub | Not started |
 | 9 | v2.5.0 | Governance, audit evidence, security, and reliability | Not started |
 | 10 | v3.0.0 | SaaS multi-tenancy foundation | Not started |
@@ -288,13 +288,13 @@ Phase 6A is a prerequisite for routing but is not part of this phase. Do not ren
 - **P7-BLD-04 — Complete:** Add preview and simulation using sample request data. Simulation must be read-only and produce an explainable route trace.
 - **P7-BLD-05 — Complete:** Add clone, compare versions, restore-as-new-draft, and publish confirmation.
 
-### 7.3 Dynamic routing and assignment
+### 7.3 Dynamic routing and assignment — Complete (2026-08-19)
 
-- **P7-RTE-01:** Add assignee resolvers for named user, role, department, requester's manager, department manager, user selected in a form field, and external resolver interface.
-- **P7-RTE-02:** Define group completion as first response, all, or quorum N-of-M.
-- **P7-RTE-03:** Add business-calendar-aware deadlines while retaining simple elapsed-hour deadlines.
-- **P7-RTE-04:** Add custom outcomes such as Approved with conditions while mapping each outcome to explicit engine behavior.
-- **P7-RTE-05:** Add workflow selection rules by request type and form values, with deterministic precedence and an explanation visible to administrators.
+- **P7-RTE-01 — Complete:** Add assignee resolvers for named user, role, department, requester's manager, department manager, user selected in a form field, and external resolver interface.
+- **P7-RTE-02 — Complete:** Define group completion as first response, all, or quorum N-of-M.
+- **P7-RTE-03 — Complete:** Add business-calendar-aware deadlines while retaining simple elapsed-hour deadlines.
+- **P7-RTE-04 — Complete:** Add custom outcomes such as Approved with conditions while mapping each outcome to explicit engine behavior.
+- **P7-RTE-05 — Complete:** Add workflow selection rules by request type and form values, with deterministic precedence and an explanation visible to administrators.
 
 ### 7.4 Tests and exit gate
 

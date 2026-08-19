@@ -74,11 +74,16 @@ final class SubmissionConditionEvaluator
     private function fieldIsAllowed(string $field): bool
     {
         return in_array($field, self::FIELDS, true)
-            || preg_match('/^metadata(?:\.[A-Za-z0-9_-]+)+$/', $field) === 1;
+            || preg_match('/^metadata(?:\.[A-Za-z0-9_-]+)+$/', $field) === 1
+            || preg_match('/^fields\.[A-Za-z0-9_-]+$/', $field) === 1;
     }
 
     private function value(Submission $submission, string $field): mixed
     {
+        if (str_starts_with($field, 'fields.')) {
+            return $this->fieldValue($submission, substr($field, 7));
+        }
+
         $context = [
             'type' => $submission->type,
             'title' => $submission->title,
@@ -90,6 +95,20 @@ final class SubmissionConditionEvaluator
         ];
 
         return data_get($context, $field);
+    }
+
+    private function fieldValue(Submission $submission, string $key): mixed
+    {
+        $fromSample = data_get($submission->metadata, 'fields.'.$key);
+        if ($fromSample !== null) {
+            return $fromSample;
+        }
+
+        $submission->loadMissing('fieldValues.field');
+
+        return $submission->fieldValues
+            ->first(fn ($value): bool => $value->field?->key === $key)
+            ?->resolvedValue();
     }
 
     private function comparable(mixed $value): int|float|string|bool|null

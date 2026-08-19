@@ -143,6 +143,8 @@ new #[Title('Workflow templates')] class extends Component {
             'quorumCount' => $step->quorum_count,
             'assigneeType' => $step->assignee_type->value,
             'assigneeIds' => $step->assignee_ids,
+            'assigneeField' => data_get($step->assignee_config, 'field_key', ''),
+            'assigneeResolver' => data_get($step->assignee_config, 'resolver', ''),
             'allowDelegation' => $step->allow_delegation,
             'conditionField' => data_get($step->conditions, 'rules.0.field', 'priority'),
             'conditionOperator' => data_get($step->conditions, 'rules.0.operator', 'equals'),
@@ -153,6 +155,7 @@ new #[Title('Workflow templates')] class extends Component {
             'falseStep' => data_get($step->conditions, 'false_step'),
             'timeoutHours' => $step->timeout_hours,
             'timeoutAction' => $step->timeout_action?->value ?? '',
+            'timeoutCalendar' => $step->timeoutCalendar()->value,
         ])->values()->all();
 
         $this->modal('template-form')->show();
@@ -248,7 +251,13 @@ new #[Title('Workflow templates')] class extends Component {
             $automatic = $stepType->isAutomatic();
             $assigneeCount = 0;
 
-            if (! $automatic) {
+            $assigneeConfig = match ($type) {
+                AssigneeType::FormField => ['field_key' => trim((string) ($step['assigneeField'] ?? ''))],
+                AssigneeType::External => ['resolver' => trim((string) ($step['assigneeResolver'] ?? ''))],
+                default => null,
+            };
+
+            if (! $automatic && $type->requiresExplicitAssignees()) {
                 $this->guardAssigneesExist($type, $ids, $index);
                 $assigneeCount = $this->resolvedAssigneeCount($type, $ids);
 
@@ -259,12 +268,22 @@ new #[Title('Workflow templates')] class extends Component {
                 }
             }
 
+            if (! $automatic && $type === AssigneeType::FormField && ($assigneeConfig['field_key'] ?? '') === '') {
+                throw ValidationException::withMessages([
+                    "steps.{$index}.assigneeField" => __('Enter the user field key from the form.'),
+                ]);
+            }
+
             $quorumCount = isset($step['quorumCount']) && $step['quorumCount'] !== ''
                 ? (int) $step['quorumCount']
                 : null;
 
-            if ($stepType === StepType::Quorum) {
+            if ($stepType === StepType::Quorum && $type->requiresExplicitAssignees()) {
                 $this->guardQuorumIsPossible($quorumCount, $assigneeCount, $index);
+            } elseif ($stepType === StepType::Quorum && ($quorumCount === null || $quorumCount < 1)) {
+                throw ValidationException::withMessages([
+                    "steps.{$index}.quorumCount" => __('Quorum must be at least 1.'),
+                ]);
             }
 
             $conditions = $stepType === StepType::Conditional
@@ -294,11 +313,16 @@ new #[Title('Workflow templates')] class extends Component {
                 stepType: $stepType,
                 quorumCount: $stepType === StepType::Quorum ? $quorumCount : null,
                 assigneeType: $type,
-                assigneeIds: $automatic ? [] : $ids,
+                assigneeIds: $automatic || ! $type->requiresExplicitAssignees() ? [] : $ids,
                 allowDelegation: ! $automatic && (bool) ($step['allowDelegation'] ?? true),
                 conditions: $conditions,
                 timeoutHours: $timeoutHours,
                 timeoutAction: $timeoutAction,
+                completionRule: \App\Enums\GroupCompletion::fromStepType($stepType),
+                timeoutCalendar: filled($step['timeoutCalendar'] ?? null)
+                    ? \App\Enums\TimeoutCalendar::from((string) $step['timeoutCalendar'])
+                    : \App\Enums\TimeoutCalendar::Elapsed,
+                assigneeConfig: $assigneeConfig,
             );
         })->all();
 
@@ -335,6 +359,8 @@ new #[Title('Workflow templates')] class extends Component {
             'quorumCount' => null,
             'assigneeType' => AssigneeType::User->value,
             'assigneeIds' => [],
+            'assigneeField' => '',
+            'assigneeResolver' => '',
             'allowDelegation' => true,
             'conditionField' => 'priority',
             'conditionOperator' => 'equals',
@@ -343,6 +369,7 @@ new #[Title('Workflow templates')] class extends Component {
             'falseStep' => null,
             'timeoutHours' => null,
             'timeoutAction' => '',
+            'timeoutCalendar' => 'elapsed',
         ];
     }
 
@@ -397,6 +424,7 @@ new #[Title('Workflow templates')] class extends Component {
             AssigneeType::User => User::query()->where('is_active', true)->whereKey($ids)->count(),
             AssigneeType::Role => Role::query()->whereKey($ids)->count(),
             AssigneeType::Department => Department::query()->whereKey($ids)->count(),
+            default => 0,
         };
 
         if ($count !== count($ids)) {
@@ -428,6 +456,7 @@ new #[Title('Workflow templates')] class extends Component {
                 ->where('is_active', true)
                 ->whereIn('department_id', $ids)
                 ->count(),
+            default => 0,
         };
     }
 
@@ -599,7 +628,7 @@ new #[Title('Workflow templates')] class extends Component {
                                 @if (! in_array($step['stepType'], ['conditional', 'auto', 'notification'], true))
                                     <flux:select wire:model="steps.{{ $index }}.assigneeType" wire:change="resetAssignees({{ $index }})" :label="__('Assign by')">
                                         @foreach (AssigneeType::cases() as $type)
-                                            <flux:select.option :value="$type->value">{{ str($type->value)->title() }}</flux:select.option>
+                                            <flux:select.option :value="$type->value">{{ $type->label() }}</flux:select.option>
                                         @endforeach
                                     </flux:select>
                                 @else
@@ -645,6 +674,10 @@ new #[Title('Workflow templates')] class extends Component {
                                 @if (! in_array($step['stepType'], ['conditional', 'auto', 'notification'], true))
                                     <div class="grid gap-4 sm:col-span-3 sm:grid-cols-2">
                                         <flux:input wire:model="steps.{{ $index }}.timeoutHours" type="number" min="1" max="8760" :label="__('SLA duration (hours)')" :placeholder="__('No deadline')" />
+                                        <flux:select wire:model="steps.{{ $index }}.timeoutCalendar" :label="__('Calendar')">
+                                            <flux:select.option value="elapsed">{{ __('Elapsed hours') }}</flux:select.option>
+                                            <flux:select.option value="business">{{ __('Business hours') }}</flux:select.option>
+                                        </flux:select>
                                         <flux:select wire:model="steps.{{ $index }}.timeoutAction" :label="__('When overdue')">
                                             <flux:select.option value="">{{ __('No automatic action') }}</flux:select.option>
                                             <flux:select.option value="escalate">{{ __('Escalate to next step') }}</flux:select.option>
@@ -660,12 +693,20 @@ new #[Title('Workflow templates')] class extends Component {
                                     </div>
 
                                     <div class="sm:col-span-3">
-                                        <flux:checkbox.group wire:model="steps.{{ $index }}.assigneeIds" :label="__('Assignees')" class="grid max-h-40 gap-2 overflow-y-auto sm:grid-cols-2">
-                                            @foreach ($step['assigneeType'] === 'role' ? $this->roles : ($step['assigneeType'] === 'department' ? $this->departments : $this->users) as $assignee)
-                                                <flux:checkbox :value="$assignee->id" :label="$assignee->name" />
-                                            @endforeach
-                                        </flux:checkbox.group>
-                                        <flux:error name="steps.{{ $index }}.assigneeIds" />
+                                        @if (in_array($step['assigneeType'], ['user', 'role', 'department'], true))
+                                            <flux:checkbox.group wire:model="steps.{{ $index }}.assigneeIds" :label="__('Assignees')" class="grid max-h-40 gap-2 overflow-y-auto sm:grid-cols-2">
+                                                @foreach ($step['assigneeType'] === 'role' ? $this->roles : ($step['assigneeType'] === 'department' ? $this->departments : $this->users) as $assignee)
+                                                    <flux:checkbox :value="$assignee->id" :label="$assignee->name" />
+                                                @endforeach
+                                            </flux:checkbox.group>
+                                            <flux:error name="steps.{{ $index }}.assigneeIds" />
+                                        @elseif ($step['assigneeType'] === 'form_field')
+                                            <flux:input wire:model="steps.{{ $index }}.assigneeField" :label="__('User field key')" />
+                                        @elseif ($step['assigneeType'] === 'external')
+                                            <flux:input wire:model="steps.{{ $index }}.assigneeResolver" :label="__('External resolver key')" />
+                                        @else
+                                            <p class="text-sm text-zinc-500">{{ __('Resolved when a request starts, from the requester or department manager.') }}</p>
+                                        @endif
                                     </div>
                                 @endif
                             </div>

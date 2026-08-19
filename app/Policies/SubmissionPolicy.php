@@ -24,7 +24,7 @@ class SubmissionPolicy
             return false;
         }
 
-        if ($instance->currentStep?->assignedUsers()->contains($user)) {
+        if ($instance->currentStep?->assignedUsers($instance->submission)->contains($user)) {
             return true;
         }
 
@@ -97,7 +97,7 @@ class SubmissionPolicy
             return false;
         }
 
-        return $step->assignedUsers()->contains($user)
+        return $step->assignedUsers($instance->submission)->contains($user)
             || Delegation::query()->active()
                 ->where('instance_id', $instance->id)
                 ->where('step_id', $step->id)

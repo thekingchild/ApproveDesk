@@ -14,5 +14,6 @@ final readonly class UserData
         public array $roles,
         public bool $isActive,
         public ?string $password = null,
+        public ?int $managerId = null,
     ) {}
 }

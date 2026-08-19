@@ -5,16 +5,15 @@ namespace App\Http\Controllers\Api\V1;
 use App\Actions\Submissions\CreateSubmissionAction;
 use App\Actions\Submissions\SubmitSubmissionAction;
 use App\DTOs\SubmissionData;
-use App\Enums\AssigneeType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\IndexSubmissionRequest;
 use App\Http\Requests\Api\V1\StoreSubmissionRequest;
 use App\Http\Resources\Api\V1\SubmissionResource;
 use App\Models\Submission;
+use App\Services\Workflow\AssignedStepConstraint;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Gate;
-use Spatie\Permission\Models\Role;
 
 class SubmissionController extends Controller
 {
@@ -22,37 +21,13 @@ class SubmissionController extends Controller
     {
         $user = $request->user();
         $validated = $request->validated();
-        $roleIds = Role::query()->whereIn('name', $user->getRoleNames())->pluck('id')->all();
         $query = Submission::query()
             ->with(['submitter:id,name', 'department:id,name', 'requestTypeVersion.requestType:id,name,slug', 'workflowInstance.currentStep'])
-            ->when(! $user->can('submissions.view.all'), function ($builder) use ($roleIds, $user): void {
-                $builder->where(function ($builder) use ($roleIds, $user): void {
+            ->when(! $user->can('submissions.view.all'), function ($builder) use ($user): void {
+                $builder->where(function ($builder) use ($user): void {
                     $builder->where('submitter_id', $user->id)
-                        ->orWhereHas('workflowInstance.currentStep', function ($builder) use ($user, $roleIds): void {
-                            $builder->where(function ($builder) use ($user, $roleIds): void {
-                                $builder->where(function ($builder) use ($user): void {
-                                    $builder->where('assignee_type', AssigneeType::User)
-                                        ->whereJsonContains('assignee_ids', $user->id);
-                                });
-
-                                if ($user->department_id !== null) {
-                                    $builder->orWhere(function ($builder) use ($user): void {
-                                        $builder->where('assignee_type', AssigneeType::Department)
-                                            ->whereJsonContains('assignee_ids', $user->department_id);
-                                    });
-                                }
-
-                                if ($roleIds !== []) {
-                                    $builder->orWhere(function ($builder) use ($roleIds): void {
-                                        $builder->where('assignee_type', AssigneeType::Role)
-                                            ->where(function ($builder) use ($roleIds): void {
-                                                foreach ($roleIds as $roleId) {
-                                                    $builder->orWhereJsonContains('assignee_ids', $roleId);
-                                                }
-                                            });
-                                    });
-                                }
-                            });
+                        ->orWhereHas('workflowInstance', function ($instances) use ($user): void {
+                            app(AssignedStepConstraint::class)->constrainInstances($instances, $user);
                         })
                         ->orWhereHas('workflowInstance.delegations', fn ($builder) => $builder
                             ->where('starts_at', '<=', now())

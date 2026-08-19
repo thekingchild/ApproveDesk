@@ -62,6 +62,12 @@ class RequestType extends Model
         return $this->belongsTo(WorkflowTemplate::class);
     }
 
+    /** @return HasMany<WorkflowSelectionRule, $this> */
+    public function selectionRules(): HasMany
+    {
+        return $this->hasMany(WorkflowSelectionRule::class)->orderBy('priority')->orderBy('id');
+    }
+
     public function resolvedWorkflowTemplate(): ?WorkflowTemplate
     {
         $assigned = $this->workflowTemplate;

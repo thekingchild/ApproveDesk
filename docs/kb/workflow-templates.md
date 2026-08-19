@@ -46,7 +46,13 @@ You do not have to pick a submission type. The old Document / Note / Memo / Requ
 - Automatic: the system records an approval when the rule matches.
 - Notification: the system records that a notice would be sent and continues. Actual delivery channels stay in a later phase.
 
-Assignees can be a user, a role, or a department.
+Assignees can be named users, a role, department members, the requester's line manager, the department manager, a user selected on the form, or an external resolver key. Manager and form-field assignees are resolved when the request starts.
+
+Group completion is first response, all assignees, or quorum N-of-M. Sequential, parallel, and quorum step types still set that default.
+
+Deadlines can use elapsed hours or business hours. Business hours skip non-working days and holidays from **Settings → Approval settings**.
+
+Custom outcomes on a published version add extra decision buttons. Approve with conditions is always available and requires a comment. Every custom outcome maps to approve, reject, return, request information, or escalate.
 
 ## Timeouts
 

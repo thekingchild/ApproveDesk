@@ -24,11 +24,19 @@ The built-in General Request form is not edited here. You can still assign its w
 
 ## Workflow assignment
 
-The **Workflow template** control on a request type is the routing rule for new work.
+The **Workflow template** control on a request type is the fallback routing rule for new work. **Selection rules** sit above it.
 
-- Assigned and active: new submissions start that template.
-- Blank, or assigned to an inactive template: new submissions start the default template.
+Precedence, first match wins:
+
+1. Active selection rules on this request type, lowest priority number first.
+2. The assigned template, if it is active.
+3. The default template.
+
+Use **Explain routing** with sample metadata to see which rule would match. The chosen reason is stored on the workflow instance.
+
+- Blank assignment, or an inactive assigned template: new submissions start the default template unless a rule matches.
 - In-flight requests keep the template already stored on their workflow instance.
+- Document, Note, Memo, and Request are not routing keys.
 
 Requesters never see this control. They only choose a form.
 

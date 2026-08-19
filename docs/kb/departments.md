@@ -11,4 +11,4 @@ Departments appear on:
 
 Deleting or renaming a department does not rewrite past requests. Those keep the department they stored at the time.
 
-Use a manager when you want a named person for that team. Workflow templates still assign work through the step settings you publish, not through the department list alone.
+Use a manager when you want a named person for that team. A workflow step set to **Department manager** uses this person (or the requester's department manager if the request has no department). Line managers on user records are a different assignee type.

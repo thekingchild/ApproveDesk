@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\GroupCompletion;
 use App\Enums\StepType;
 use App\Enums\SubmissionStatus;
 use App\Enums\TimeoutAction;
@@ -19,8 +20,11 @@ use App\Models\Submission;
 use App\Models\User;
 use App\Models\WorkflowAction;
 use App\Models\WorkflowInstance;
+use App\Models\WorkflowSelectionRule;
 use App\Models\WorkflowTemplate;
 use App\Models\WorkflowTemplateStep;
+use App\Services\Workflow\StepOutcomes;
+use App\Services\Workflow\WorkflowTemplateSelector;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
@@ -33,25 +37,31 @@ use InvalidArgumentException;
  */
 class WorkflowEngine
 {
-    public function __construct(private readonly SubmissionConditionEvaluator $conditionEvaluator) {}
+    public function __construct(
+        private readonly SubmissionConditionEvaluator $conditionEvaluator,
+        private readonly WorkflowTemplateSelector $selector,
+        private readonly StepOutcomes $outcomes,
+    ) {}
 
     /**
      * Bind a submission to its template and activate the first step.
      */
     public function initialize(Submission $submission): WorkflowInstance
     {
-        $template = $this->resolveTemplate($submission);
+        $selection = $this->resolveTemplate($submission);
+        $template = $selection['template'];
         $version = $template->publishedVersion;
 
         if ($version === null || $version->steps->isEmpty()) {
             throw WorkflowException::templateWithoutSteps($template->name);
         }
 
-        $instance = DB::transaction(function () use ($submission, $template, $version): WorkflowInstance {
+        $instance = DB::transaction(function () use ($submission, $template, $version, $selection): WorkflowInstance {
             $instance = WorkflowInstance::create([
                 'submission_id' => $submission->id,
                 'template_id' => $template->id,
                 'template_version_id' => $version->id,
+                'selection_explanation' => $selection['explanation'],
                 'current_step_id' => $version->steps->first()->id,
                 'status' => WorkflowStatus::Active,
                 'started_at' => now(),
@@ -78,17 +88,31 @@ class WorkflowEngine
         User $actor,
         WorkflowActionType $action,
         ?string $comment = null,
+        ?string $outcomeKey = null,
     ): WorkflowInstance {
-        $applied = DB::transaction(function () use ($instance, $actor, $action, $comment): WorkflowInstance {
+        $applied = DB::transaction(function () use ($instance, $actor, $action, $comment, $outcomeKey): WorkflowInstance {
             /** @var WorkflowInstance $instance */
             $instance = WorkflowInstance::query()
+                ->with(['currentStep', 'submission', 'templateVersion'])
                 ->whereKey($instance->getKey())
                 ->lockForUpdate()
                 ->firstOrFail();
 
+            if ($outcomeKey !== null) {
+                $outcome = $this->outcomes->find($instance->templateVersion, $outcomeKey);
+                if ($outcome === null) {
+                    throw WorkflowException::unknownOutcome($outcomeKey);
+                }
+                $action = $this->outcomes->actionType($outcome);
+                if ($outcome['requires_comment'] && trim((string) $comment) === '') {
+                    throw WorkflowException::commentRequired($outcomeKey);
+                }
+            }
+
             $this->authorize($instance, $actor, $action);
 
             if (in_array($action, [
+                WorkflowActionType::ApproveWithConditions,
                 WorkflowActionType::Reject,
                 WorkflowActionType::Return,
                 WorkflowActionType::RequestInformation,
@@ -102,13 +126,14 @@ class WorkflowEngine
                 'step_id' => $instance->current_step_id,
                 'actor_id' => $actor->id,
                 'action' => $action,
+                'outcome_key' => $outcomeKey ?? $action->value,
                 'comment' => $comment,
                 'ip_address' => request()->ip(),
                 'user_agent' => request()->userAgent(),
             ]);
 
             return match ($action) {
-                WorkflowActionType::Approve => $this->applyApproval($instance),
+                WorkflowActionType::Approve, WorkflowActionType::ApproveWithConditions => $this->applyApproval($instance),
                 WorkflowActionType::Reject => $this->applyRejection($instance),
                 WorkflowActionType::Return => $this->applyReturn($instance),
                 WorkflowActionType::RequestInformation => $this->applyInformationRequest($instance),
@@ -219,7 +244,7 @@ class WorkflowEngine
             throw WorkflowException::actorNotAssigned($actor->email, 'none');
         }
 
-        $directlyAssigned = $step->assignedUsers()->contains($actor);
+        $directlyAssigned = $step->assignedUsers($instance->submission)->contains($actor);
         $delegated = $this->hasActiveIncomingDelegation($instance, $step, $actor);
 
         if (! $directlyAssigned && ! $delegated) {
@@ -254,7 +279,7 @@ class WorkflowEngine
             throw WorkflowException::delegationNotAllowed('the current step disables it');
         }
 
-        if (! $step->assignedUsers()->contains($delegator)) {
+        if (! $step->assignedUsers($instance->submission)->contains($delegator)) {
             throw WorkflowException::actorNotAssigned($delegator->email, $step->name);
         }
 
@@ -270,7 +295,7 @@ class WorkflowEngine
             throw WorkflowException::delegationNotAllowed('the expiry must be in the future');
         }
 
-        if ($step->assignedUsers()->contains($delegate)
+        if ($step->assignedUsers($instance->submission)->contains($delegate)
             || $this->hasActiveIncomingDelegation($instance, $step, $delegate)) {
             throw WorkflowException::delegationNotAllowed('the delegate already holds a seat on this step');
         }
@@ -408,21 +433,27 @@ class WorkflowEngine
         $approvals = WorkflowAction::query()
             ->where('instance_id', $instance->id)
             ->where('step_id', $step->id)
-            ->where('action', WorkflowActionType::Approve)
+            ->whereIn('action', [
+                WorkflowActionType::Approve,
+                WorkflowActionType::ApproveWithConditions,
+            ])
             ->distinct()
             ->count('actor_id');
 
-        return match ($step->step_type) {
-            StepType::Sequential => $approvals >= 1,
-            StepType::Parallel => $approvals >= $step->assignedUsers()->unique('id')->count(),
-            StepType::Quorum => $this->isQuorumSatisfied($step, $approvals),
-            StepType::Conditional, StepType::Auto, StepType::Notification => throw WorkflowException::unsupportedStepType($step->step_type->value),
+        $completion = $step->groupCompletion();
+        $assigneeCount = $step->assignedUsers($instance->submission)->unique('id')->count();
+
+        return match ($completion) {
+            GroupCompletion::FirstResponse => $approvals >= 1,
+            GroupCompletion::All => $approvals >= $assigneeCount && $assigneeCount >= 1,
+            GroupCompletion::Quorum => $this->isQuorumSatisfied($step, $approvals, $instance->submission),
+            null => throw WorkflowException::unsupportedStepType($step->step_type->value),
         };
     }
 
-    private function isQuorumSatisfied(WorkflowTemplateStep $step, int $approvals): bool
+    private function isQuorumSatisfied(WorkflowTemplateStep $step, int $approvals, ?Submission $submission = null): bool
     {
-        $assigneeCount = $step->assignedUsers()->unique('id')->count();
+        $assigneeCount = $step->assignedUsers($submission)->unique('id')->count();
         $required = $step->quorum_count;
 
         if ($required === null || $required < 1 || $required > $assigneeCount) {
@@ -482,6 +513,10 @@ class WorkflowEngine
                 $instance = $this->routeConditionalStep($instance, $step);
 
                 continue;
+            }
+
+            if ($step->assignedUsers($instance->submission)->isEmpty()) {
+                throw WorkflowException::unresolvedAssignees($step->name);
             }
 
             return $instance;
@@ -575,17 +610,16 @@ class WorkflowEngine
         return $instance;
     }
 
-    private function resolveTemplate(Submission $submission): WorkflowTemplate
+    /**
+     * @return array{template: WorkflowTemplate, explanation: string, rule: WorkflowSelectionRule|null}
+     */
+    private function resolveTemplate(Submission $submission): array
     {
-        $submission->loadMissing('requestTypeVersion.requestType.workflowTemplate.publishedVersion.steps');
-
-        $assigned = $submission->requestTypeVersion->requestType->resolvedWorkflowTemplate();
-
-        if ($assigned !== null) {
-            return $assigned->loadMissing('publishedVersion.steps');
+        try {
+            return $this->selector->select($submission);
+        } catch (InvalidArgumentException $exception) {
+            throw WorkflowException::noTemplateFor($submission->type->value);
         }
-
-        throw WorkflowException::noTemplateFor($submission->type->value);
     }
 
     private function hasActedOn(WorkflowInstance $instance, WorkflowTemplateStep $step, User $actor): bool
@@ -596,6 +630,7 @@ class WorkflowEngine
             ->where('actor_id', $actor->id)
             ->whereIn('action', [
                 WorkflowActionType::Approve,
+                WorkflowActionType::ApproveWithConditions,
                 WorkflowActionType::Reject,
                 WorkflowActionType::Escalate,
             ])

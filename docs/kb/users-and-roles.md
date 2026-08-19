@@ -24,3 +24,7 @@ Turn **Active** off to block sign-in and keep the person’s history. Do not reu
 ## Departments on users
 
 Assigning a department is how department routing and filters find the person. It does not by itself grant department-head powers.
+
+## Line manager
+
+Set a line manager on the user record when workflow steps should assign the requester's manager. The department manager on the department record is a separate assignee type.

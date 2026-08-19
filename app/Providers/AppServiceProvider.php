@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Contracts\ExternalAssigneeResolver;
 use App\Events\SubmissionCreated;
 use App\Events\WorkflowAdvanced;
 use App\Events\WorkflowCompleted;
@@ -13,6 +14,7 @@ use App\Listeners\DispatchWebhookDeliveries;
 use App\Listeners\NotifyCurrentApprovers;
 use App\Listeners\NotifyDelegate;
 use App\Listeners\NotifySubmitterOfDecision;
+use App\Services\Workflow\AssigneeResolver;
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -32,7 +34,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(AssigneeResolver::class, function ($app): AssigneeResolver {
+            return new AssigneeResolver($app->tagged(ExternalAssigneeResolver::class));
+        });
     }
 
     /**

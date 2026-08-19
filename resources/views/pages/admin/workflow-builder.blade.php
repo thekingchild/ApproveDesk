@@ -6,8 +6,11 @@ use App\Actions\WorkflowTemplates\UpdateWorkflowTemplateAction;
 use App\DTOs\WorkflowTemplateData;
 use App\DTOs\WorkflowTemplateStepData;
 use App\Enums\AssigneeType;
+use App\Enums\GroupCompletion;
+use App\Enums\OutcomeBehavior;
 use App\Enums\StepType;
 use App\Enums\TimeoutAction;
+use App\Enums\TimeoutCalendar;
 use App\Models\Department;
 use App\Models\User;
 use App\Models\WorkflowTemplate;
@@ -66,6 +69,9 @@ new #[Title('Workflow builder')] class extends Component {
     public ?int $compareTo = null;
 
     public bool $confirmingPublish = false;
+
+    /** @var list<array{key: string, label: string, behavior: string, requires_comment: bool}> */
+    public array $outcomes = [];
 
     public function mount(WorkflowTemplate|int $template): void
     {
@@ -291,6 +297,7 @@ new #[Title('Workflow builder')] class extends Component {
             isActive: $this->isActive,
             steps: $this->stepData(),
             changeSummary: $this->changeSummary !== '' ? $this->changeSummary : null,
+            outcomes: $this->normalizedOutcomes(),
         );
         app(UpdateWorkflowTemplateAction::class)->execute($model, $data, Auth::user());
 
@@ -313,9 +320,21 @@ new #[Title('Workflow builder')] class extends Component {
             $ids = array_values(array_unique(array_map('intval', $step['assigneeIds'] ?? [])));
             $automatic = $stepType->isAutomatic();
 
-            if (! $automatic && $ids === []) {
+            if (! $automatic && $type->requiresExplicitAssignees() && $ids === []) {
                 throw ValidationException::withMessages([
                     "steps.{$index}.assigneeIds" => __('Select an assignment with at least one active user.'),
+                ]);
+            }
+
+            $assigneeConfig = match ($type) {
+                AssigneeType::FormField => ['field_key' => trim((string) ($step['assigneeField'] ?? ''))],
+                AssigneeType::External => ['resolver' => trim((string) ($step['assigneeResolver'] ?? ''))],
+                default => null,
+            };
+
+            if ($type === AssigneeType::FormField && ($assigneeConfig['field_key'] ?? '') === '') {
+                throw ValidationException::withMessages([
+                    "steps.{$index}.assigneeField" => __('Enter the user field key from the form.'),
                 ]);
             }
 
@@ -330,16 +349,27 @@ new #[Title('Workflow builder')] class extends Component {
                 'false_step' => filled($step['falseStep'] ?? null) ? (int) $step['falseStep'] : null,
             ] : null;
 
+            $completion = filled($step['completionRule'] ?? null)
+                ? GroupCompletion::tryFrom((string) $step['completionRule'])
+                : GroupCompletion::fromStepType($stepType);
+
             return new WorkflowTemplateStepData(
                 name: $step['name'],
                 stepType: $stepType,
-                quorumCount: $stepType === StepType::Quorum ? (int) ($step['quorumCount'] ?: 1) : null,
+                quorumCount: ($completion === GroupCompletion::Quorum || $stepType === StepType::Quorum)
+                    ? (int) ($step['quorumCount'] ?: 1)
+                    : null,
                 assigneeType: $type,
-                assigneeIds: $automatic ? [] : $ids,
+                assigneeIds: $automatic || ! $type->requiresExplicitAssignees() ? [] : $ids,
                 allowDelegation: ! $automatic && (bool) ($step['allowDelegation'] ?? true),
                 conditions: $conditions,
                 timeoutHours: filled($step['timeoutHours'] ?? null) ? (int) $step['timeoutHours'] : null,
                 timeoutAction: filled($step['timeoutAction'] ?? null) ? TimeoutAction::from($step['timeoutAction']) : null,
+                completionRule: $automatic ? null : $completion,
+                timeoutCalendar: filled($step['timeoutCalendar'] ?? null)
+                    ? TimeoutCalendar::from((string) $step['timeoutCalendar'])
+                    : TimeoutCalendar::Elapsed,
+                assigneeConfig: $assigneeConfig,
             );
         })->all();
     }
@@ -352,12 +382,21 @@ new #[Title('Workflow builder')] class extends Component {
         $this->isDefault = $model->is_default;
         $this->isActive = $model->is_active;
         $this->changeSummary = $graph?->change_summary ?? '';
+        $this->outcomes = collect($graph?->outcomes ?? [])->map(fn (array $row): array => [
+            'key' => (string) ($row['key'] ?? ''),
+            'label' => (string) ($row['label'] ?? ''),
+            'behavior' => (string) ($row['behavior'] ?? OutcomeBehavior::Approve->value),
+            'requires_comment' => (bool) ($row['requires_comment'] ?? true),
+        ])->values()->all();
         $this->steps = ($graph?->steps ?? collect())->map(fn ($step) => [
             'name' => $step->name,
             'stepType' => $step->step_type->value,
             'quorumCount' => $step->quorum_count,
+            'completionRule' => $step->groupCompletion()?->value,
             'assigneeType' => $step->assignee_type->value,
             'assigneeIds' => $step->assignee_ids,
+            'assigneeField' => data_get($step->assignee_config, 'field_key', ''),
+            'assigneeResolver' => data_get($step->assignee_config, 'resolver', ''),
             'allowDelegation' => $step->allow_delegation,
             'conditionField' => data_get($step->conditions, 'rules.0.field', 'priority'),
             'conditionOperator' => data_get($step->conditions, 'rules.0.operator', 'equals'),
@@ -368,6 +407,7 @@ new #[Title('Workflow builder')] class extends Component {
             'falseStep' => data_get($step->conditions, 'false_step'),
             'timeoutHours' => $step->timeout_hours,
             'timeoutAction' => $step->timeout_action?->value ?? '',
+            'timeoutCalendar' => $step->timeoutCalendar()->value,
         ])->values()->all();
         if ($this->steps === []) {
             $this->steps = [$this->blankStep(1)];
@@ -384,7 +424,10 @@ new #[Title('Workflow builder')] class extends Component {
             'quorumCount' => null,
             'assigneeType' => AssigneeType::User->value,
             'assigneeIds' => [],
+            'assigneeField' => '',
+            'assigneeResolver' => '',
             'allowDelegation' => true,
+            'completionRule' => GroupCompletion::FirstResponse->value,
             'conditionField' => 'priority',
             'conditionOperator' => 'equals',
             'conditionValue' => '',
@@ -392,7 +435,39 @@ new #[Title('Workflow builder')] class extends Component {
             'falseStep' => null,
             'timeoutHours' => null,
             'timeoutAction' => '',
+            'timeoutCalendar' => TimeoutCalendar::Elapsed->value,
         ];
+    }
+
+    public function addOutcome(): void
+    {
+        $this->outcomes[] = [
+            'key' => 'custom_'.(count($this->outcomes) + 1),
+            'label' => 'Approve with conditions',
+            'behavior' => OutcomeBehavior::Approve->value,
+            'requires_comment' => true,
+        ];
+    }
+
+    public function removeOutcome(int $index): void
+    {
+        unset($this->outcomes[$index]);
+        $this->outcomes = array_values($this->outcomes);
+    }
+
+    /** @return list<array{key: string, label: string, behavior: string, requires_comment: bool}> */
+    private function normalizedOutcomes(): array
+    {
+        return collect($this->outcomes)
+            ->filter(fn (array $row): bool => filled($row['key'] ?? null) && filled($row['label'] ?? null))
+            ->map(fn (array $row): array => [
+                'key' => (string) $row['key'],
+                'label' => (string) $row['label'],
+                'behavior' => (string) ($row['behavior'] ?? OutcomeBehavior::Approve->value),
+                'requires_comment' => (bool) ($row['requires_comment'] ?? true),
+            ])
+            ->values()
+            ->all();
     }
 
     private function pushHistory(): void
@@ -507,16 +582,36 @@ new #[Title('Workflow builder')] class extends Component {
                             <flux:select.option value="notification">{{ __('Notification') }}</flux:select.option>
                         </flux:select>
                         @if (! in_array($selected['stepType'], ['conditional', 'auto', 'notification'], true))
-                            <flux:select wire:model="steps.{{ $selectedIndex }}.assigneeType" :label="__('Assign by')">
+                            <flux:select wire:model="steps.{{ $selectedIndex }}.completionRule" :label="__('Group completion')">
+                                <flux:select.option value="first_response">{{ __('First response') }}</flux:select.option>
+                                <flux:select.option value="all">{{ __('All assignees') }}</flux:select.option>
+                                <flux:select.option value="quorum">{{ __('Quorum N-of-M') }}</flux:select.option>
+                            </flux:select>
+                            @if (($selected['completionRule'] ?? '') === 'quorum' || $selected['stepType'] === 'quorum')
+                                <flux:input wire:model="steps.{{ $selectedIndex }}.quorumCount" type="number" min="1" :label="__('Approvals required')" />
+                            @endif
+                            <flux:select wire:model.live="steps.{{ $selectedIndex }}.assigneeType" :label="__('Assign by')">
                                 @foreach (AssigneeType::cases() as $type)
-                                    <flux:select.option :value="$type->value">{{ str($type->value)->title() }}</flux:select.option>
+                                    <flux:select.option :value="$type->value">{{ $type->label() }}</flux:select.option>
                                 @endforeach
                             </flux:select>
-                            <div class="max-h-40 space-y-1 overflow-auto">
-                                @foreach ($selected['assigneeType'] === 'role' ? $this->roles : ($selected['assigneeType'] === 'department' ? $this->departments : $this->users) as $assignee)
-                                    <flux:checkbox wire:model="steps.{{ $selectedIndex }}.assigneeIds" :value="$assignee->id" :label="$assignee->name" />
-                                @endforeach
-                            </div>
+                            @if (in_array($selected['assigneeType'], ['user', 'role', 'department'], true))
+                                <div class="max-h-40 space-y-1 overflow-auto">
+                                    @foreach ($selected['assigneeType'] === 'role' ? $this->roles : ($selected['assigneeType'] === 'department' ? $this->departments : $this->users) as $assignee)
+                                        <flux:checkbox wire:model="steps.{{ $selectedIndex }}.assigneeIds" :value="$assignee->id" :label="$assignee->name" />
+                                    @endforeach
+                                </div>
+                            @elseif ($selected['assigneeType'] === 'form_field')
+                                <flux:input wire:model="steps.{{ $selectedIndex }}.assigneeField" :label="__('User field key')" :description="__('The form field that picks the approver.')" />
+                            @elseif ($selected['assigneeType'] === 'external')
+                                <flux:input wire:model="steps.{{ $selectedIndex }}.assigneeResolver" :label="__('External resolver key')" />
+                            @else
+                                <p class="text-xs text-zinc-500">{{ $selected['assigneeType'] === 'requester_manager' ? __("Resolved from the requester's line manager at submit time.") : __('Resolved from the request or requester department manager at submit time.') }}</p>
+                            @endif
+                            <flux:select wire:model="steps.{{ $selectedIndex }}.timeoutCalendar" :label="__('Deadline calendar')">
+                                <flux:select.option value="elapsed">{{ __('Elapsed hours') }}</flux:select.option>
+                                <flux:select.option value="business">{{ __('Business hours') }}</flux:select.option>
+                            </flux:select>
                         @endif
                         @if ($selected['stepType'] === 'conditional')
                             <flux:input wire:model="steps.{{ $selectedIndex }}.conditionField" :label="__('Field')" />
@@ -532,6 +627,28 @@ new #[Title('Workflow builder')] class extends Component {
                     </div>
                 </flux:card>
             @endif
+
+            <flux:card>
+                <div class="flex items-center justify-between">
+                    <flux:heading size="sm">{{ __('Custom outcomes') }}</flux:heading>
+                    <flux:button size="xs" wire:click="addOutcome" data-test="add-outcome">{{ __('Add') }}</flux:button>
+                </div>
+                <p class="mt-2 text-xs text-zinc-500">{{ __('Approve, reject, return, request information, escalate, and approve with conditions are always available. Extra outcomes map to those same engine behaviors.') }}</p>
+                <div class="mt-3 space-y-3">
+                    @foreach ($outcomes as $index => $outcome)
+                        <div class="grid gap-2" wire:key="outcome-{{ $index }}">
+                            <flux:input wire:model="outcomes.{{ $index }}.label" :label="__('Label')" />
+                            <flux:select wire:model="outcomes.{{ $index }}.behavior" :label="__('Engine behavior')">
+                                @foreach (OutcomeBehavior::cases() as $behavior)
+                                    <flux:select.option :value="$behavior->value">{{ str($behavior->value)->replace('_', ' ')->title() }}</flux:select.option>
+                                @endforeach
+                            </flux:select>
+                            <flux:checkbox wire:model="outcomes.{{ $index }}.requires_comment" :label="__('Comment required')" />
+                            <flux:button size="xs" variant="danger" wire:click="removeOutcome({{ $index }})">{{ __('Remove') }}</flux:button>
+                        </div>
+                    @endforeach
+                </div>
+            </flux:card>
 
             <flux:card>
                 <flux:heading size="sm">{{ __('Simulation') }}</flux:heading>

@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Enums\TimeoutCalendar;
 use App\Enums\WorkflowStatus;
+use App\Services\Workflow\BusinessCalendar;
 use Carbon\CarbonInterface;
 use Database\Factories\WorkflowInstanceFactory;
 use Illuminate\Database\Eloquent\Collection;
@@ -17,6 +19,7 @@ use Illuminate\Support\Carbon;
  * @property int $submission_id
  * @property int $template_id
  * @property int|null $template_version_id
+ * @property string|null $selection_explanation
  * @property int|null $current_step_id
  * @property WorkflowStatus $status
  * @property Carbon $started_at
@@ -45,7 +48,7 @@ class WorkflowInstance extends Model
     public ?WorkflowTemplateStep $advancedToStep = null;
 
     protected $fillable = [
-        'submission_id', 'template_id', 'template_version_id', 'current_step_id', 'status', 'started_at', 'step_started_at', 'completed_at',
+        'submission_id', 'template_id', 'template_version_id', 'selection_explanation', 'current_step_id', 'status', 'started_at', 'step_started_at', 'completed_at',
     ];
 
     protected function casts(): array
@@ -62,9 +65,15 @@ class WorkflowInstance extends Model
     {
         $hours = $this->currentStep?->timeout_hours;
 
-        return $hours !== null && $this->step_started_at !== null
-            ? $this->step_started_at->addHours($hours)
-            : null;
+        if ($hours === null || $this->step_started_at === null) {
+            return null;
+        }
+
+        if ($this->currentStep->timeoutCalendar() === TimeoutCalendar::Business) {
+            return app(BusinessCalendar::class)->addBusinessHours($this->step_started_at, $hours);
+        }
+
+        return $this->step_started_at->addHours($hours);
     }
 
     public function isOverdue(): bool

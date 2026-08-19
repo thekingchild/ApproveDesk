@@ -2,6 +2,8 @@
 
 namespace App\Services\WorkflowTemplates;
 
+use App\Enums\AssigneeType;
+use App\Enums\GroupCompletion;
 use App\Enums\StepType;
 use App\Enums\TimeoutAction;
 use App\Models\WorkflowTemplateStep;
@@ -64,13 +66,23 @@ final class WorkflowGraphValidator
         $prefix = "steps.{$index}";
         $errors = [];
 
-        if ($step->step_type->isAutomatic() === false && $step->assignedUsers()->count() < 1) {
+        if ($step->step_type->isAutomatic() === false && $step->assignee_type->requiresExplicitAssignees() && $step->assignedUsers()->count() < 1) {
             $errors["{$prefix}.assigneeIds"] = __('This approval step has no active assignees.');
         }
 
-        if ($step->step_type === StepType::Quorum) {
+        if ($step->assignee_type === AssigneeType::FormField && trim((string) data_get($step->assignee_config, 'field_key', '')) === '') {
+            $errors["{$prefix}.assigneeConfig"] = __('Choose the user field that selects the assignee.');
+        }
+
+        if ($step->assignee_type === AssigneeType::External && trim((string) data_get($step->assignee_config, 'resolver', '')) === '') {
+            $errors["{$prefix}.assigneeConfig"] = __('Set the external resolver key.');
+        }
+
+        if ($step->groupCompletion() === GroupCompletion::Quorum) {
             $assignees = $step->assignedUsers()->unique('id')->count();
-            if ($step->quorum_count === null || $step->quorum_count < 1 || $step->quorum_count > $assignees) {
+            if ($step->quorum_count === null || $step->quorum_count < 1) {
+                $errors["{$prefix}.quorumCount"] = __('Quorum must be at least 1.');
+            } elseif ($step->assignee_type->requiresExplicitAssignees() && $step->quorum_count > $assignees) {
                 $errors["{$prefix}.quorumCount"] = __('Quorum must be between 1 and the number of active assignees.');
             }
         }

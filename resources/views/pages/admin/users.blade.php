@@ -30,6 +30,8 @@ new #[Title('User management')] class extends Component {
 
     public string $departmentId = '';
 
+    public string $managerId = '';
+
     /** @var array<int, string> */
     public array $roles = [];
 
@@ -65,6 +67,13 @@ new #[Title('User management')] class extends Component {
         return Department::query()->orderBy('name')->get();
     }
 
+    /** @return \Illuminate\Database\Eloquent\Collection<int, User> */
+    #[Computed]
+    public function managers(): \Illuminate\Database\Eloquent\Collection
+    {
+        return User::query()->where('is_active', true)->orderBy('name')->get(['id', 'name']);
+    }
+
     #[Computed]
     public function availableRoles(): \Illuminate\Database\Eloquent\Collection
     {
@@ -96,6 +105,7 @@ new #[Title('User management')] class extends Component {
         $this->name = $user->name;
         $this->email = $user->email;
         $this->departmentId = $user->department_id ? (string) $user->department_id : '';
+        $this->managerId = $user->manager_id ? (string) $user->manager_id : '';
         $this->roles = $user->roles->pluck('name')->all();
         $this->isActive = $user->is_active;
         $this->password = '';
@@ -120,6 +130,7 @@ new #[Title('User management')] class extends Component {
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', Rule::unique(User::class)->ignore($target)],
             'departmentId' => ['nullable', 'integer', Rule::exists(Department::class, 'id')],
+            'managerId' => ['nullable', 'integer', Rule::exists(User::class, 'id'), Rule::notIn([$target?->id])],
             'roles' => ['required', 'array', 'min:1'],
             'roles.*' => ['required', 'string', Rule::exists(Role::class, 'name')],
             'isActive' => ['required', 'boolean'],
@@ -133,6 +144,7 @@ new #[Title('User management')] class extends Component {
             roles: $validated['roles'],
             isActive: $validated['isActive'],
             password: $validated['password'] !== '' ? $validated['password'] : null,
+            managerId: ($validated['managerId'] ?? '') === '' ? null : (int) $validated['managerId'],
         );
 
         if ($target) {
@@ -153,7 +165,7 @@ new #[Title('User management')] class extends Component {
     {
         $this->resetValidation();
         $this->reset([
-            'editingUserId', 'name', 'email', 'departmentId', 'roles',
+            'editingUserId', 'name', 'email', 'departmentId', 'managerId', 'roles',
             'password', 'password_confirmation',
         ]);
         $this->isActive = true;
@@ -242,6 +254,17 @@ new #[Title('User management')] class extends Component {
                             <flux:select.option :value="$department->id">{{ $department->name }}</flux:select.option>
                         @endforeach
                     </flux:select>
+                </div>
+                <div class="sm:col-span-2">
+                    <flux:select wire:model="managerId" :label="__('Line manager')">
+                        <flux:select.option value="">{{ __('No manager') }}</flux:select.option>
+                        @foreach ($this->managers as $manager)
+                            @if ($manager->id !== $editingUserId)
+                                <flux:select.option :value="$manager->id">{{ $manager->name }}</flux:select.option>
+                            @endif
+                        @endforeach
+                    </flux:select>
+                    <p class="mt-1 text-sm text-zinc-500">{{ __("Used when a workflow step assigns the requester's manager.") }}</p>
                 </div>
 
                 <div class="sm:col-span-2">

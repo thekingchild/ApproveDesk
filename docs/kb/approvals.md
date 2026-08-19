@@ -14,9 +14,9 @@ Filter by status, deadline, priority, request type, department, requester, and d
 
 ## Preview and decide
 
-Open a card for the full request, or use the preview drawer to read the summary without leaving the queue. The sticky decision bar on the request holds Approve, Reject, and related actions.
+Open a card for the full request, or use the preview drawer to read the summary without leaving the queue. The sticky decision bar on the request holds Approve, Approve with conditions, Reject, and related actions. A template may add extra outcomes; each one still maps to approve, reject, return, request information, or escalate.
 
-Reject and return need a comment. Approval can be confirmed from the workbench for eligible items.
+Reject, return, escalate, request information, and approve with conditions need a comment. Approval can be confirmed from the workbench for eligible items.
 
 Keyboard shortcuts move to the next or previous request and open the approve or reject dialog. Destructive actions still need confirmation.
 

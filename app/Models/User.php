@@ -32,6 +32,7 @@ use Spatie\Permission\Traits\HasRoles;
  * @property Carbon|null $two_factor_confirmed_at
  * @property string|null $remember_token
  * @property int|null $department_id
+ * @property int|null $manager_id
  * @property bool $is_active
  * @property NotificationFrequency $notification_frequency
  * @property Carbon|null $last_notification_digest_at
@@ -39,11 +40,12 @@ use Spatie\Permission\Traits\HasRoles;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read Department|null $department
+ * @property-read User|null $manager
  * @property-read Collection<int, Submission> $submissions
  * @property-read Collection<int, OAuthIdentity> $oauthIdentities
  * @property-read Collection<int, SubmissionSavedView> $submissionSavedViews
  */
-#[Fillable(['name', 'email', 'password', 'department_id', 'is_active', 'email_verified_at', 'notification_frequency', 'last_notification_digest_at', 'avatar'])]
+#[Fillable(['name', 'email', 'password', 'department_id', 'manager_id', 'is_active', 'email_verified_at', 'notification_frequency', 'last_notification_digest_at', 'avatar'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable implements PasskeyUser
 {
@@ -66,6 +68,7 @@ class User extends Authenticatable implements PasskeyUser
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'department_id' => 'integer',
+            'manager_id' => 'integer',
             'is_active' => 'boolean',
             'notification_frequency' => NotificationFrequency::class,
             'last_notification_digest_at' => 'datetime',
@@ -78,6 +81,12 @@ class User extends Authenticatable implements PasskeyUser
     public function department(): BelongsTo
     {
         return $this->belongsTo(Department::class);
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function manager(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'manager_id');
     }
 
     /**

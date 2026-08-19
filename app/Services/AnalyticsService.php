@@ -279,7 +279,7 @@ final class AnalyticsService
                 continue;
             }
 
-            $approvers = $instance->currentStep->assignedUsers()->keyBy('id');
+            $approvers = $instance->currentStep->assignedUsers($instance->submission)->keyBy('id');
             $delegations = $instance->delegations->filter(fn ($delegation): bool => $delegation->step_id === $instance->current_step_id
                 && $delegation->starts_at <= now()
                 && $delegation->expires_at > now());

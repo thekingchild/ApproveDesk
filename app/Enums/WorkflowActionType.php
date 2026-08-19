@@ -5,6 +5,7 @@ namespace App\Enums;
 enum WorkflowActionType: string
 {
     case Approve = 'approve';
+    case ApproveWithConditions = 'approve_with_conditions';
     case Reject = 'reject';
     case Return = 'return';
     case RequestInformation = 'request_information';

@@ -14,6 +14,10 @@ Set how long a signed approval link stays valid, from 1 to 720 hours. The defaul
 
 Changing the lifetime applies to newly sent links. Links already in someone’s inbox keep the expiry they were issued with.
 
+## Business calendar
+
+Set working days and holiday dates (YYYY-MM-DD). Workflow steps that use **Business hours** skip weekends and holidays. Steps that use **Elapsed hours** still count every hour on the clock.
+
 ## What stays out of these screens
 
 Queues, mail server, database, and installer options are hosting concerns. They are not in this knowledge base.

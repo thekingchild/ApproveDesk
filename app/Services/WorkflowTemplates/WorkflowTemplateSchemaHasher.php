@@ -27,12 +27,15 @@ final class WorkflowTemplateSchemaHasher
                     'name' => $step->name,
                     'step_type' => $step->step_type->value,
                     'quorum_count' => $step->quorum_count,
+                    'completion_rule' => $step->groupCompletion()?->value,
                     'assignee_type' => $step->assignee_type->value,
                     'assignee_ids' => $assigneeIds,
+                    'assignee_config' => $step->assignee_config,
                     'allow_delegation' => $step->allow_delegation,
                     'conditions' => $step->conditions,
                     'timeout_hours' => $step->timeout_hours,
                     'timeout_action' => $step->timeout_action?->value,
+                    'timeout_calendar' => $step->timeoutCalendar()->value,
                 ];
             })
             ->all();

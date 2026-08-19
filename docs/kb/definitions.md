@@ -34,7 +34,27 @@ The one fallback chain. It runs for General Request and for any request type tha
 
 ## Workflow assignment
 
-The link from a request type to a workflow template. New submissions of that form start that chain. Requests already in flight keep the chain they started with.
+The link from a request type to a workflow template. New submissions of that form start that chain unless a selection rule matches first. Requests already in flight keep the chain they started with.
+
+## Selection rule
+
+An ordered rule on a request type that chooses a workflow from form values. Priority 1 is evaluated first. The first match wins, then the assigned template, then the default.
+
+## Assignee resolver
+
+How a step decides who acts: named users, a role, department members, the requester's manager, the department manager, a user picked on the form, or an external resolver.
+
+## Group completion
+
+How a step with more than one assignee finishes: first response, all assignees, or quorum N-of-M.
+
+## Business calendar
+
+Working days and holidays used when a step deadline is measured in business hours instead of elapsed hours.
+
+## Custom outcome
+
+An extra decision button, such as Approve with conditions. Each outcome maps to approve, reject, return, request information, or escalate.
 
 ## Submission type
 

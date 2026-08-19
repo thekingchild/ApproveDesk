@@ -4,6 +4,7 @@ namespace App\Actions\WorkflowTemplates;
 
 use App\DTOs\WorkflowTemplateData;
 use App\DTOs\WorkflowTemplateStepData;
+use App\Enums\GroupCompletion;
 use App\Enums\WorkflowTemplateVersionStatus;
 use App\Models\User;
 use App\Models\WorkflowTemplate;
@@ -32,6 +33,7 @@ final class CreateWorkflowTemplateAction
                 'version' => 1,
                 'status' => WorkflowTemplateVersionStatus::Draft,
                 'change_summary' => $data->changeSummary ?: 'Initial version.',
+                'outcomes' => $data->outcomes !== [] ? $data->outcomes : null,
                 'created_by' => $creator->id,
             ]);
 
@@ -57,10 +59,13 @@ final class CreateWorkflowTemplateAction
                 'quorum_count' => $step->quorumCount,
                 'assignee_type' => $step->assigneeType,
                 'assignee_ids' => $step->assigneeIds,
+                'assignee_config' => $step->assigneeConfig,
                 'allow_delegation' => $step->allowDelegation,
                 'conditions' => $step->conditions,
                 'timeout_hours' => $step->timeoutHours,
                 'timeout_action' => $step->timeoutAction,
+                'timeout_calendar' => $step->timeoutCalendar,
+                'completion_rule' => $step->completionRule ?? GroupCompletion::fromStepType($step->stepType),
             ]);
         }
     }

@@ -85,7 +85,7 @@ class ApproverWorkbench
             && $delegation->expires_at > now());
         $delegatedToUser = $activeDelegations->contains('delegate_id', $user->id);
         $delegatedByUser = $activeDelegations->contains('delegator_id', $user->id);
-        $direct = $instance->currentStep?->assignedUsers()->contains($user) ?? false;
+        $direct = $instance->currentStep?->assignedUsers($instance->submission)->contains($user) ?? false;
 
         return [
             'eligible' => $delegatedToUser || ($direct && ! $delegatedByUser),
@@ -101,6 +101,7 @@ class ApproverWorkbench
             ->where('actor_id', $user->id)
             ->whereIn('action', [
                 WorkflowActionType::Approve,
+                WorkflowActionType::ApproveWithConditions,
                 WorkflowActionType::Reject,
                 WorkflowActionType::Escalate,
             ])

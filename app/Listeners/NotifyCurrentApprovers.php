@@ -30,7 +30,7 @@ class NotifyCurrentApprovers
             return;
         }
 
-        $step->assignedUsers()
+        $step->assignedUsers($instance->submission)
             ->filter(fn ($user) => $user->is_active)
             ->each(fn ($user) => $user->notify(
                 new ActionRequiredNotification($instance->submission()->first()),

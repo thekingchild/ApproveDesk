@@ -2,6 +2,8 @@
 
 use App\Actions\RequestTypes\ArchiveRequestTypeAction;
 use App\Actions\RequestTypes\AssignRequestTypeWorkflowAction;
+use App\Actions\WorkflowTemplates\SaveWorkflowSelectionRulesAction;
+use App\Services\Workflow\WorkflowTemplateSelector;
 use App\Actions\RequestTypes\CloneRequestTypeAction;
 use App\Actions\RequestTypes\PublishRequestTypeVersionAction;
 use App\Actions\RequestTypes\SaveRequestTypeDraftAction;
@@ -27,6 +29,14 @@ new #[Title('Request types')] class extends Component {
     public string $workflowTemplateId = '';
 
     /** @var array<int, array<string, mixed>> */
+    public array $selectionRules = [];
+
+    public string $sampleMetadata = '{"amount": 15000}';
+
+    /** @var list<array<string, mixed>> */
+    public array $routingTrace = [];
+
+    /** @var array<int, array<string, mixed>> */
     public array $fields = [];
 
     public function mount(): void
@@ -41,6 +51,7 @@ new #[Title('Request types')] class extends Component {
             ->with([
                 'versions' => fn ($query) => $query->withCount('fields'),
                 'workflowTemplate',
+                'selectionRules.template',
             ])
             ->where('is_system', false)
             ->orderBy('name')
@@ -79,13 +90,25 @@ new #[Title('Request types')] class extends Component {
 
     public function editType(int $id): void
     {
-        $type = RequestType::query()->with(['versions.fields'])->findOrFail($id);
+        $type = RequestType::query()->with(['versions.fields', 'selectionRules'])->findOrFail($id);
         $this->authorize('update', $type);
         $version = $type->versions->first();
         $this->editingTypeId = $type->id;
         $this->name = $type->name;
         $this->description = $type->description ?? '';
         $this->workflowTemplateId = $type->workflow_template_id ? (string) $type->workflow_template_id : '';
+        $this->selectionRules = $type->selectionRules->map(fn ($rule): array => [
+            'name' => $rule->name,
+            'priority' => $rule->priority,
+            'workflow_template_id' => (string) $rule->workflow_template_id,
+            'is_active' => $rule->is_active,
+            'field' => data_get($rule->conditions, 'rules.0.field', 'priority'),
+            'operator' => data_get($rule->conditions, 'rules.0.operator', 'equals'),
+            'value' => is_array(data_get($rule->conditions, 'rules.0.value'))
+                ? implode(', ', data_get($rule->conditions, 'rules.0.value'))
+                : (string) data_get($rule->conditions, 'rules.0.value', ''),
+        ])->values()->all();
+        $this->routingTrace = [];
         $this->fields = $version?->fields->map(fn ($field): array => $this->fieldForEditor($field))->values()->all() ?? [];
         $this->modal('request-type-builder')->show();
     }
@@ -229,6 +252,12 @@ new #[Title('Request types')] class extends Component {
         app(AssignRequestTypeWorkflowAction::class)->execute(
             $version->requestType,
             $this->workflowTemplateId !== '' ? (int) $this->workflowTemplateId : null,
+            auth()->user(),
+        );
+
+        app(SaveWorkflowSelectionRulesAction::class)->execute(
+            $version->requestType,
+            $this->selectionRules,
             auth()->user(),
         );
 
@@ -393,7 +422,40 @@ new #[Title('Request types')] class extends Component {
     private function resetBuilder(): void
     {
         $this->resetValidation();
-        $this->reset(['editingTypeId', 'name', 'description', 'workflowTemplateId', 'fields']);
+        $this->reset(['editingTypeId', 'name', 'description', 'workflowTemplateId', 'fields', 'selectionRules', 'routingTrace']);
+        $this->sampleMetadata = '{"amount": 15000}';
+    }
+
+    public function addSelectionRule(): void
+    {
+        $this->selectionRules[] = [
+            'name' => 'Rule '.(count($this->selectionRules) + 1),
+            'priority' => count($this->selectionRules) + 1,
+            'workflow_template_id' => '',
+            'is_active' => true,
+            'field' => 'metadata.amount',
+            'operator' => 'gte',
+            'value' => '10000',
+        ];
+    }
+
+    public function removeSelectionRule(int $index): void
+    {
+        unset($this->selectionRules[$index]);
+        $this->selectionRules = array_values($this->selectionRules);
+    }
+
+    public function explainRouting(): void
+    {
+        if ($this->editingTypeId === null) {
+            return;
+        }
+
+        $type = RequestType::query()->with(['workflowTemplate', 'selectionRules.template', 'publishedVersion'])->findOrFail($this->editingTypeId);
+        $metadata = json_decode($this->sampleMetadata, true);
+        $this->routingTrace = app(WorkflowTemplateSelector::class)->explain($type, [
+            'metadata' => is_array($metadata) ? $metadata : [],
+        ]);
     }
 };
 ?>
@@ -463,9 +525,51 @@ new #[Title('Request types')] class extends Component {
                             <flux:select.option :value="$template->id">{{ $template->name }}{{ $template->is_default ? ' ('.__('default').')' : '' }}</flux:select.option>
                         @endforeach
                     </flux:select>
-                    <p class="mt-1 text-sm text-zinc-500">{{ __('New submissions of this form start this approval chain. In-flight requests keep the chain they already have.') }}</p>
+                    <p class="mt-1 text-sm text-zinc-500">{{ __('New submissions of this form start this approval chain unless a selection rule below matches first. In-flight requests keep the chain they already have.') }}</p>
                     <flux:error name="workflowTemplateId" />
                 </div>
+            </div>
+            <div class="space-y-3" data-test="selection-rules">
+                <div class="flex items-center justify-between">
+                    <flux:heading size="md">{{ __('Selection rules') }}</flux:heading>
+                    <flux:button size="sm" wire:click="addSelectionRule" data-test="add-selection-rule">{{ __('Add rule') }}</flux:button>
+                </div>
+                <p class="text-sm text-zinc-500">{{ __('Rules run in priority order (1 first). The first match wins, then the assigned template, then the default. Document / Note / Memo / Request are not routing keys.') }}</p>
+                @foreach ($selectionRules as $index => $rule)
+                    <div class="grid gap-3 rounded-xl border border-zinc-200 p-3 dark:border-zinc-700 md:grid-cols-6" wire:key="rule-{{ $index }}">
+                        <flux:input wire:model="selectionRules.{{ $index }}.priority" type="number" min="1" :label="__('Priority')" />
+                        <flux:input wire:model="selectionRules.{{ $index }}.name" :label="__('Name')" />
+                        <flux:select wire:model="selectionRules.{{ $index }}.workflow_template_id" :label="__('Template')">
+                            <flux:select.option value="">{{ __('Choose') }}</flux:select.option>
+                            @foreach ($this->workflowTemplates as $template)
+                                <flux:select.option :value="$template->id">{{ $template->name }}</flux:select.option>
+                            @endforeach
+                        </flux:select>
+                        <flux:input wire:model="selectionRules.{{ $index }}.field" :label="__('Field')" placeholder="metadata.amount or fields.amount" />
+                        <flux:select wire:model="selectionRules.{{ $index }}.operator" :label="__('Operator')">
+                            @foreach (['equals', 'gte', 'lte', 'gt', 'lt', 'contains', 'present'] as $operator)
+                                <flux:select.option :value="$operator">{{ $operator }}</flux:select.option>
+                            @endforeach
+                        </flux:select>
+                        <div class="flex items-end gap-2">
+                            <flux:input wire:model="selectionRules.{{ $index }}.value" :label="__('Value')" />
+                            <flux:button size="xs" variant="danger" wire:click="removeSelectionRule({{ $index }})">{{ __('Remove') }}</flux:button>
+                        </div>
+                    </div>
+                @endforeach
+                @if ($editingTypeId)
+                    <div class="grid gap-3 md:grid-cols-[1fr_auto]">
+                        <flux:input wire:model="sampleMetadata" :label="__('Sample metadata JSON')" />
+                        <flux:button wire:click="explainRouting" data-test="explain-routing">{{ __('Explain routing') }}</flux:button>
+                    </div>
+                    @if ($routingTrace !== [])
+                        <ol class="space-y-1 text-sm" data-test="routing-trace">
+                            @foreach ($routingTrace as $entry)
+                                <li>{{ $entry['name'] }} → {{ $entry['template'] }} ({{ $entry['matched'] ? __('match') : __('no match') }})</li>
+                            @endforeach
+                        </ol>
+                    @endif
+                @endif
             </div>
             <div class="flex items-center justify-between"><flux:heading size="md">{{ __('Fields') }}</flux:heading><flux:button wire:click="addField" icon="plus" dusk="add-field">{{ __('Add field') }}</flux:button></div>
             <div class="space-y-4" wire:sort="sortField">

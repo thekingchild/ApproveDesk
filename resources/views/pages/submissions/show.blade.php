@@ -41,8 +41,12 @@ new #[Title('Submission')] class extends Component {
             'requestTypeVersion.requestType', 'requestTypeVersion.fields',
             'fieldValues.field', 'fieldValues.userValue', 'fieldValues.departmentValue',
             'workflowInstance.template.steps',
+            'workflowInstance.templateVersion',
             'workflowInstance.currentStep',
             'workflowInstance.actions.actor',
+            'submitter.manager',
+            'submitter.department.manager',
+            'department.manager',
         ]);
     }
 
@@ -67,13 +71,13 @@ new #[Title('Submission')] class extends Component {
 
         return $instance->template->steps->map(function ($step) use ($instance, $actions) {
             $stepActions = $actions->get($step->id, collect());
-            $assignedUsers = $step->assignedUsers();
+            $assignedUsers = $step->assignedUsers($instance->submission);
             $automatic = $step->step_type->isAutomatic();
-            $approvalCount = $stepActions->where('action', WorkflowActionType::Approve)->unique('actor_id')->count();
-            $requiredApprovals = match ($step->step_type) {
-                \App\Enums\StepType::Sequential => 1,
-                \App\Enums\StepType::Parallel => $assignedUsers->count(),
-                \App\Enums\StepType::Quorum => $step->quorum_count,
+            $approvalCount = $stepActions->whereIn('action', [WorkflowActionType::Approve, WorkflowActionType::ApproveWithConditions])->unique('actor_id')->count();
+            $requiredApprovals = match ($step->groupCompletion()) {
+                \App\Enums\GroupCompletion::FirstResponse => 1,
+                \App\Enums\GroupCompletion::All => $assignedUsers->count(),
+                \App\Enums\GroupCompletion::Quorum => $step->quorum_count,
                 default => null,
             };
 
@@ -225,18 +229,24 @@ new #[Title('Submission')] class extends Component {
     {
         $this->resetValidation();
 
-        if (in_array($action, ['reject', 'return', 'request_information', 'escalate'], true) && trim($this->actionComment) === '') {
+        $outcomes = app(\App\Services\Workflow\StepOutcomes::class)->forVersion($this->submission->workflowInstance?->templateVersion);
+        $outcome = collect($outcomes)->firstWhere('key', $action);
+        $requiresComment = $outcome['requires_comment'] ?? in_array($action, ['reject', 'return', 'request_information', 'escalate', 'approve_with_conditions'], true);
+
+        if ($requiresComment && trim($this->actionComment) === '') {
             $this->addError('actionComment', 'A comment is required for this action.');
 
             return;
         }
 
         try {
+            $actionType = WorkflowActionType::tryFrom($action) ?? WorkflowActionType::Approve;
             app(WorkflowEngine::class)->processAction(
                 $this->submission->workflowInstance,
                 Auth::user(),
-                WorkflowActionType::from($action),
+                $actionType,
                 trim($this->actionComment) !== '' ? trim($this->actionComment) : null,
+                $outcome !== null ? $action : null,
             );
         } catch (WorkflowException $exception) {
             Flux::toast($exception->getMessage(), variant: 'danger');
@@ -428,6 +438,9 @@ new #[Title('Submission')] class extends Component {
     <div class="grid gap-6 lg:grid-cols-2">
         <flux:card>
             <flux:heading size="sm">{{ __('Workflow progress') }}</flux:heading>
+            @if ($submission->workflowInstance?->selection_explanation)
+                <p class="mt-1 text-sm text-zinc-500" data-test="selection-explanation">{{ $submission->workflowInstance->selection_explanation }}</p>
+            @endif
 
             @if (count($this->timeline))
                 <ol class="mt-4 space-y-0">
@@ -532,6 +545,12 @@ new #[Title('Submission')] class extends Component {
                 <flux:modal.trigger name="approve-modal">
                     <flux:button variant="primary" data-test="approve-modal-trigger">{{ __('Approve') }}</flux:button>
                 </flux:modal.trigger>
+                <flux:button variant="primary" wire:click="act('approve_with_conditions')" data-test="approve-with-conditions">{{ __('Approve with conditions') }}</flux:button>
+                @foreach (app(\App\Services\Workflow\StepOutcomes::class)->forVersion($submission->workflowInstance?->templateVersion) as $outcome)
+                    @if ($outcome['custom'])
+                        <flux:button variant="subtle" wire:click="act('{{ $outcome['key'] }}')" data-test="outcome-{{ $outcome['key'] }}">{{ $outcome['label'] }}</flux:button>
+                    @endif
+                @endforeach
                 <flux:modal.trigger name="reject-modal">
                     <flux:button variant="danger" data-test="reject-modal-trigger">{{ __('Reject') }}</flux:button>
                 </flux:modal.trigger>

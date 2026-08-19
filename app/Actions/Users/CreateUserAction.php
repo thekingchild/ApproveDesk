@@ -19,6 +19,7 @@ final class CreateUserAction
                 'email' => $data->email,
                 'password' => $data->password,
                 'department_id' => $data->departmentId,
+                'manager_id' => $data->managerId,
                 'is_active' => $data->isActive,
                 'email_verified_at' => now(),
             ]);
