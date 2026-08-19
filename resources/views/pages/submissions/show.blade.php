@@ -38,6 +38,8 @@ new #[Title('Submission')] class extends Component {
         $this->authorize('view', $submission);
         $this->submission = $submission->load([
             'submitter', 'department', 'files.uploader',
+            'requestTypeVersion.requestType', 'requestTypeVersion.fields',
+            'fieldValues.field', 'fieldValues.userValue', 'fieldValues.departmentValue',
             'workflowInstance.template.steps',
             'workflowInstance.currentStep',
             'workflowInstance.actions.actor',
@@ -348,7 +350,7 @@ new #[Title('Submission')] class extends Component {
 
         <div class="flex items-center gap-2">
             @can('update', $submission)
-                <flux:button :href="route('submissions.edit', $submission)" variant="primary" wire:navigate>{{ __('Edit draft') }}</flux:button>
+                <flux:button :href="$submission->requestTypeVersion->requestType->is_system ? route('submissions.edit', $submission) : route('submissions.custom.edit', $submission)" variant="primary" wire:navigate>{{ __('Edit draft') }}</flux:button>
             @endcan
             <flux:badge color="{{ ['draft' => 'zinc', 'in_review' => 'blue', 'approved' => 'lime', 'rejected' => 'red', 'returned' => 'amber', 'awaiting_information' => 'amber', 'withdrawn' => 'zinc', 'pending' => 'blue'][$submission->status->value] ?? 'zinc' }}">
                 {{ str_replace('_', ' ', $submission->status->value) }}
@@ -374,6 +376,31 @@ new #[Title('Submission')] class extends Component {
             <div><dt class="text-xs text-zinc-500">{{ __('Due date') }}</dt><dd class="font-medium">{{ $submission->due_date?->format('d M Y') ?? '—' }}</dd></div>
         </dl>
     </flux:card>
+
+    @if (! $submission->requestTypeVersion->requestType->is_system)
+        <flux:card class="print:shadow-none">
+            <div class="flex items-center justify-between gap-3">
+                <flux:heading size="sm">{{ $submission->requestTypeVersion->requestType->name }} · {{ __('Version') }} {{ $submission->requestTypeVersion->version }}</flux:heading>
+                <flux:button size="sm" icon="printer" x-on:click="window.print()" class="print:hidden">{{ __('Print') }}</flux:button>
+            </div>
+            <dl class="mt-4 divide-y divide-zinc-200 dark:divide-zinc-700">
+                @foreach ($submission->requestTypeVersion->fields as $field)
+                    @php $stored = $submission->fieldValues->firstWhere('request_field_definition_id', $field->id); @endphp
+                    <div class="grid gap-1 py-3 text-sm sm:grid-cols-3">
+                        <dt class="font-medium">{{ $field->label }}</dt>
+                        <dd class="sm:col-span-2">
+                            @if (! $stored) —
+                            @elseif ($field->type === \App\Enums\RequestFieldType::User) {{ $stored->userValue?->name ?? '—' }}
+                            @elseif ($field->type === \App\Enums\RequestFieldType::Department) {{ $stored->departmentValue?->name ?? '—' }}
+                            @elseif (is_array($stored->resolvedValue())) {{ implode(', ', $stored->resolvedValue()) }}
+                            @else {{ $stored->resolvedValue() }}
+                            @endif
+                        </dd>
+                    </div>
+                @endforeach
+            </dl>
+        </flux:card>
+    @endif
 
     <div class="grid gap-6 lg:grid-cols-2">
         <flux:card>

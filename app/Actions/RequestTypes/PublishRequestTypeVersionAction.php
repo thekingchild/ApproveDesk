@@ -4,11 +4,14 @@ namespace App\Actions\RequestTypes;
 
 use App\Enums\RequestTypeVersionStatus;
 use App\Models\RequestTypeVersion;
+use App\Services\RequestTypes\RequestSchemaCompiler;
 use DomainException;
 use Illuminate\Support\Facades\DB;
 
 final class PublishRequestTypeVersionAction
 {
+    public function __construct(private readonly RequestSchemaCompiler $compiler) {}
+
     public function execute(RequestTypeVersion $version): RequestTypeVersion
     {
         return DB::transaction(function () use ($version): RequestTypeVersion {
@@ -24,6 +27,8 @@ final class PublishRequestTypeVersionAction
             if ($lockedVersion->fields->isEmpty()) {
                 throw new DomainException('A request type version must define at least one field before publication.');
             }
+
+            $this->compiler->assertSchemaValid($lockedVersion->fields);
 
             $schema = [];
 

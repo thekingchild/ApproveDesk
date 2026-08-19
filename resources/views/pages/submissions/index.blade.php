@@ -164,7 +164,7 @@ new #[Title('My submissions')] class extends Component {
             ->when($this->organizationView && ctype_digit($this->departmentFilter), fn ($query) => $query->where('department_id', (int) $this->departmentFilter))
             ->when($this->validDate($this->dateFrom), fn ($query) => $query->whereDate('created_at', '>=', $this->dateFrom))
             ->when($this->validDate($this->dateTo), fn ($query) => $query->whereDate('created_at', '<=', $this->dateTo))
-            ->with(['submitter', 'workflowInstance.currentStep'])
+            ->with(['submitter', 'requestTypeVersion.requestType', 'workflowInstance.currentStep'])
             ->latest()
             ->paginate(15);
     }
@@ -186,7 +186,7 @@ new #[Title('My submissions')] class extends Component {
     >
         @can('create', \App\Models\Submission::class)
             <x-slot:actions>
-                <flux:button :href="route('submissions.create')" variant="primary" icon="plus" wire:navigate>{{ __('New submission') }}</flux:button>
+                <flux:button :href="route('submissions.choose-type')" variant="primary" icon="plus" wire:navigate>{{ __('New submission') }}</flux:button>
             </x-slot:actions>
         @endcan
     </x-ui.page-header>
@@ -249,7 +249,7 @@ new #[Title('My submissions')] class extends Component {
                     <flux:table.cell :data-label="__('Reference')" class="font-mono text-xs">{{ $submission->reference_number }}</flux:table.cell>
                     <flux:table.cell :data-label="__('Title')">
                         @can('update', $submission)
-                            <flux:link :href="route('submissions.edit', $submission)" wire:navigate>{{ Str::limit($submission->title, 60) }}</flux:link>
+                            <flux:link :href="$submission->requestTypeVersion->requestType->is_system ? route('submissions.edit', $submission) : route('submissions.custom.edit', $submission)" wire:navigate>{{ Str::limit($submission->title, 60) }}</flux:link>
                         @else
                             <flux:link :href="route('submissions.show', $submission)" wire:navigate>{{ Str::limit($submission->title, 60) }}</flux:link>
                         @endcan
@@ -290,7 +290,7 @@ new #[Title('My submissions')] class extends Component {
                         >
                             @can('create', \App\Models\Submission::class)
                                 <x-slot:actions>
-                                    <flux:button :href="route('submissions.create')" variant="primary" wire:navigate>{{ __('New request') }}</flux:button>
+                                    <flux:button :href="route('submissions.choose-type')" variant="primary" wire:navigate>{{ __('New request') }}</flux:button>
                                     @if ($view !== 'all')
                                         <flux:button wire:click="setView('all')" variant="ghost">{{ __('View all requests') }}</flux:button>
                                     @endif

@@ -31,13 +31,13 @@
                         {{ auth()->user()->can('submissions.view.all') ? __('All submissions') : __('My submissions') }}
                     </flux:sidebar.item>
                     @can('create', \App\Models\Submission::class)
-                        <flux:sidebar.item icon="plus-circle" :href="route('submissions.create')" :current="request()->routeIs('submissions.create')" wire:navigate>
+                        <flux:sidebar.item icon="plus-circle" :href="route('submissions.choose-type')" :current="request()->routeIs('submissions.create') || request()->routeIs('submissions.custom.*') || request()->routeIs('submissions.choose-type')" wire:navigate>
                             {{ __('New submission') }}
                         </flux:sidebar.item>
                     @endcan
                 </flux:sidebar.group>
 
-                @if (auth()->user()->can('viewAny', \App\Models\User::class) || auth()->user()->can('viewAny', \App\Models\Department::class) || auth()->user()->can('viewAny', \App\Models\WorkflowTemplate::class) || auth()->user()->can('reports.view') || auth()->user()->can('viewAny', \App\Models\WebhookEndpoint::class))
+                @if (auth()->user()->can('viewAny', \App\Models\User::class) || auth()->user()->can('viewAny', \App\Models\Department::class) || auth()->user()->can('viewAny', \App\Models\WorkflowTemplate::class) || auth()->user()->can('viewAny', \App\Models\RequestType::class) || auth()->user()->can('reports.view') || auth()->user()->can('viewAny', \App\Models\WebhookEndpoint::class))
                     <flux:sidebar.group :heading="__('Administration')" class="grid">
                         @can('viewAny', \App\Models\User::class)
                             <flux:sidebar.item icon="users" :href="route('admin.users.index')" :current="request()->routeIs('admin.users.*')" wire:navigate>
@@ -52,6 +52,11 @@
                         @can('viewAny', \App\Models\WorkflowTemplate::class)
                             <flux:sidebar.item icon="arrows-right-left" :href="route('admin.workflow-templates.index')" :current="request()->routeIs('admin.workflow-templates.*')" wire:navigate>
                                 {{ __('Workflow templates') }}
+                            </flux:sidebar.item>
+                        @endcan
+                        @can('viewAny', \App\Models\RequestType::class)
+                            <flux:sidebar.item icon="document-text" :href="route('admin.request-types.index')" :current="request()->routeIs('admin.request-types.*')" wire:navigate>
+                                {{ __('Request types') }}
                             </flux:sidebar.item>
                         @endcan
                         @can('reports.view')

@@ -51,6 +51,10 @@ Route::middleware(['auth', 'verified', 'can:viewAny,App\Models\WorkflowTemplate'
     Route::livewire('admin/workflow-templates', 'pages::admin.workflow-templates')->name('admin.workflow-templates.index');
 });
 
+Route::middleware(['auth', 'verified', 'can:viewAny,App\Models\RequestType'])->group(function (): void {
+    Route::livewire('admin/request-types', 'pages::admin.request-types')->name('admin.request-types.index');
+});
+
 Route::middleware(['auth', 'verified', 'can:viewAny,App\Models\WebhookEndpoint'])->group(function (): void {
     Route::livewire('admin/webhooks', 'pages::admin.webhooks')->name('admin.webhooks.index');
 });
@@ -64,9 +68,18 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::view('help', 'pages.help')->name('help');
     Route::livewire('notifications', 'pages::notifications.index')->name('notifications.index');
     Route::livewire('submissions', 'pages::submissions.index')->name('submissions.index');
+    Route::livewire('submissions/new', 'pages::submissions.choose-type')
+        ->middleware('can:create,App\Models\Submission')
+        ->name('submissions.choose-type');
     Route::livewire('submissions/create', 'pages::submissions.create')
         ->middleware('can:create,App\Models\Submission')
         ->name('submissions.create');
+    Route::livewire('submissions/custom/{requestType}', 'pages::submissions.create-custom')
+        ->middleware('can:use,requestType')
+        ->name('submissions.custom.create');
+    Route::livewire('submissions/{submission}/custom-edit', 'pages::submissions.create-custom')
+        ->middleware('can:update,submission')
+        ->name('submissions.custom.edit');
     Route::livewire('submissions/{submission}/edit', 'pages::submissions.create')
         ->middleware('can:update,submission')
         ->name('submissions.edit');

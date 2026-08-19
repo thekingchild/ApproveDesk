@@ -95,7 +95,7 @@ A task is complete only when it has:
 |---|---|---|---|
 | 0–4 | v2.0.0 | Existing workflow platform | Complete |
 | 5 | v2.1.0 | Non-enterprise UX, accessibility, and approver productivity | Complete |
-| 6 | v2.2.0 | Configurable request types and form builder | In progress — 6.1 complete |
+| 6 | v2.2.0 | Configurable request types and form builder | In progress — 6.1–6.2 complete |
 | 7 | v2.3.0 | Visual workflows, versioning, and dynamic assignment | Not started |
 | 8 | v2.4.0 | Collaboration, notifications, and integration hub | Not started |
 | 9 | v2.5.0 | Governance, audit evidence, security, and reliability | Not started |
@@ -167,14 +167,14 @@ A task is complete only when it has:
 - **P6-DATA-03 — Complete:** Published versions and their field definitions reject mutation or deletion; publication records a canonical schema hash, and every submission references one exact non-null version.
 - **P6-DATA-04 — Complete:** The migration creates the built-in General Request v1, backfills legacy values, and preserves submission references and append-only workflow history; new and edited fixed-form requests keep typed values synchronized.
 
-### 6.2 Form builder
+### 6.2 Form builder — Complete (2026-08-19)
 
-- **P6-FORM-01:** Add fields for short text, long text/rich text, number, currency, date, date-time, select, multi-select, checkbox, radio, user, department, URL, email, file, and calculated read-only values.
-- **P6-FORM-02:** Support sections, instructions, required/optional state, placeholders, default values, validation limits, allowed file types, and help text.
-- **P6-FORM-03:** Add conditional visibility and requiredness using a constrained rule model; never execute arbitrary PHP/JavaScript expressions.
-- **P6-FORM-04:** Add drag-and-drop field ordering, preview, duplicate field, draft/publish/archive, and clone request type.
-- **P6-FORM-05:** Add server-side validation compiled from the published schema; client validation is only an enhancement.
-- **P6-FORM-06:** Add accessible rendering, review summary, print view, and CSV import/export of select options.
+- **P6-FORM-01 — Complete:** Administrators can build forms with short, long, rich-text, number, currency, date, date-time, choice, checkbox, user, department, URL, email, file, and calculated read-only fields.
+- **P6-FORM-02 — Complete:** Field configuration supports sections, instructions, required state, placeholders, defaults, numeric/text limits, allowed file types, and help text.
+- **P6-FORM-03 — Complete:** Visibility and conditional-required rules use earlier-field references and allow-listed operators only; calculated fields are restricted to sums of earlier numeric fields.
+- **P6-FORM-04 — Complete:** The builder supports drag ordering and move controls, live preview, duplication, draft/publish/archive lifecycle, and request-type cloning while preserving published-version immutability.
+- **P6-FORM-05 — Complete:** A schema compiler produces authoritative server-side Laravel validation and typed value persistence from the exact published version, while incomplete drafts remain saveable.
+- **P6-FORM-06 — Complete:** Published schemas render as accessible responsive requester forms with review and print views, plus CSV import/export for choice options.
 
 ### 6.3 Search and reporting
 

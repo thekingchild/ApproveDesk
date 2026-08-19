@@ -5,7 +5,12 @@ namespace App\Models;
 use DomainException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property Carbon|null $date_value
+ * @property Carbon|null $datetime_value
+ */
 class SubmissionFieldValue extends Model
 {
     public const VALUE_COLUMNS = [
@@ -65,6 +70,15 @@ class SubmissionFieldValue extends Model
     public function departmentValue(): BelongsTo
     {
         return $this->belongsTo(Department::class, 'department_value_id');
+    }
+
+    public function resolvedValue(): mixed
+    {
+        return match ($this->field->type->valueColumn()) {
+            'date_value' => $this->date_value?->toDateString(),
+            'datetime_value' => $this->datetime_value?->format('Y-m-d\TH:i'),
+            default => $this->getAttribute($this->field->type->valueColumn()),
+        };
     }
 
     private function ensureDefinitionMatchesSubmissionVersion(): void

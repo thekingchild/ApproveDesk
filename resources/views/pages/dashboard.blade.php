@@ -45,7 +45,7 @@ new #[Title('Dashboard')] class extends Component {
     >
         @if ($this->report['can_submit'])
             <x-slot:actions>
-                <flux:button :href="route('submissions.create')" variant="primary" icon="plus" wire:navigate>
+                <flux:button :href="route('submissions.choose-type')" variant="primary" icon="plus" wire:navigate>
                     {{ __('New submission') }}
                 </flux:button>
             </x-slot:actions>
@@ -100,8 +100,9 @@ new #[Title('Dashboard')] class extends Component {
                 <flux:heading id="admin-shortcuts" size="sm">{{ __('Administration') }}</flux:heading>
                 <span class="text-sm text-zinc-600 dark:text-zinc-300">{{ __('Organization controls') }}</span>
             </div>
-            <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
                 <a href="{{ route('admin.users.index') }}" class="rounded-xl border border-zinc-200 bg-white p-4 font-semibold hover:border-blue-400 dark:border-zinc-700 dark:bg-zinc-900" wire:navigate>{{ __('Manage users') }}</a>
+                <a href="{{ route('admin.request-types.index') }}" class="rounded-xl border border-zinc-200 bg-white p-4 font-semibold hover:border-blue-400 dark:border-zinc-700 dark:bg-zinc-900" wire:navigate>{{ __('Request types') }}</a>
                 <a href="{{ route('admin.workflow-templates.index') }}" class="rounded-xl border border-zinc-200 bg-white p-4 font-semibold hover:border-blue-400 dark:border-zinc-700 dark:bg-zinc-900" wire:navigate>{{ __('Workflow templates') }}</a>
                 <a href="{{ route('admin.analytics.index') }}" class="rounded-xl border border-zinc-200 bg-white p-4 font-semibold hover:border-blue-400 dark:border-zinc-700 dark:bg-zinc-900" wire:navigate>{{ __('Approval analytics') }}</a>
                 <a href="{{ route('settings.approvals') }}" class="rounded-xl border border-zinc-200 bg-white p-4 font-semibold hover:border-blue-400 dark:border-zinc-700 dark:bg-zinc-900" wire:navigate>{{ __('Approval settings') }}</a>
