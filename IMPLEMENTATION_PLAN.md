@@ -105,7 +105,7 @@ After each completed phase:
 4. Confirm Help as an administrator and as a requester.
 5. Commit the Markdown, catalogue, Help UI, and this plan together.
 
-**Administrator knowledge base through Phase 7.1 — Complete (2026-08-19):** feature definitions (including workflow version), getting around, requests, approvals, statuses, account settings, users and roles, departments, workflow templates, request types (including workflow assignment), analytics, webhooks, organization settings, and the audit trail.
+**Administrator knowledge base through Phase 7.2 — Complete (2026-08-19):** feature definitions (including workflow version and builder), getting around, requests, approvals, statuses, account settings, users and roles, departments, workflow templates, request types (including workflow assignment), analytics, webhooks, organization settings, and the audit trail.
 
 ### 3.5 Request types own workflows
 
@@ -128,7 +128,7 @@ Phase 6A implements this assignment. Phase 7 keeps its original scope: versioned
 | 5 | v2.1.0 | Non-enterprise UX, accessibility, and approver productivity | Complete |
 | 6 | v2.2.0 | Configurable request types and form builder | In progress — 6.1–6.2 complete |
 | 6A | v2.2.1 | Request-type workflow assignment | Complete |
-| 7 | v2.3.0 | Visual workflows, versioning, and dynamic assignment | In progress — 7.1 complete |
+| 7 | v2.3.0 | Visual workflows, versioning, and dynamic assignment | In progress — 7.1–7.2 complete |
 | 8 | v2.4.0 | Collaboration, notifications, and integration hub | Not started |
 | 9 | v2.5.0 | Governance, audit evidence, security, and reliability | Not started |
 | 10 | v3.0.0 | SaaS multi-tenancy foundation | Not started |
@@ -280,13 +280,13 @@ Phase 6A is a prerequisite for routing but is not part of this phase. Do not ren
 - **P7-DATA-03 — Complete:** Separate workflow lifecycle into Draft, Published, Retired, and Archived.
 - **P7-DATA-04 — Complete:** Record author, publication time, change summary, and a canonical schema hash for every version.
 
-### 7.2 Visual builder
+### 7.2 Visual builder — Complete (2026-08-19)
 
-- **P7-BLD-01:** Add a canvas/list dual view with start, approval, condition, automatic action, notification, and end nodes.
-- **P7-BLD-02:** Support connect, reorder, duplicate, delete, zoom, fit-to-screen, undo/redo during the current editing session, and keyboard-accessible list editing.
-- **P7-BLD-03:** Validate unreachable nodes, cycles, dead ends, impossible quorum, missing assignees, invalid branches, and unsafe timeout behavior before publish.
-- **P7-BLD-04:** Add preview and simulation using sample request data. Simulation must be read-only and produce an explainable route trace.
-- **P7-BLD-05:** Add clone, compare versions, restore-as-new-draft, and publish confirmation.
+- **P7-BLD-01 — Complete:** Add a canvas/list dual view with start, approval, condition, automatic action, notification, and end nodes.
+- **P7-BLD-02 — Complete:** Support connect, reorder, duplicate, delete, zoom, fit-to-screen, undo/redo during the current editing session, and keyboard-accessible list editing.
+- **P7-BLD-03 — Complete:** Validate unreachable nodes, cycles, dead ends, impossible quorum, missing assignees, invalid branches, and unsafe timeout behavior before publish.
+- **P7-BLD-04 — Complete:** Add preview and simulation using sample request data. Simulation must be read-only and produce an explainable route trace.
+- **P7-BLD-05 — Complete:** Add clone, compare versions, restore-as-new-draft, and publish confirmation.
 
 ### 7.3 Dynamic routing and assignment
 

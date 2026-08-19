@@ -25,7 +25,7 @@ After each completed phase in `IMPLEMENTATION_PLAN.md`:
 4. Check the Help centre as an administrator and as a requester.
 5. Commit the Markdown, catalogue, Help UI, and plan update together.
 
-## Article index (through Phase 7.1)
+## Article index (through Phase 7.2)
 
 Using ApproveDesk:
 

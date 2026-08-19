@@ -136,7 +136,7 @@ class QuorumWorkflowTest extends TestCase
     public function test_impossible_quorum_is_rejected_without_audit_mutation(): void
     {
         foreach ([null, 0, 4] as $invalidQuorum) {
-            $this->quorumStep->update(['quorum_count' => $invalidQuorum]);
+            $this->quorumStep->updateQuietly(['quorum_count' => $invalidQuorum]);
 
             try {
                 $this->engine->processAction(

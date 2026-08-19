@@ -68,7 +68,7 @@ new #[Title('Submission')] class extends Component {
         return $instance->template->steps->map(function ($step) use ($instance, $actions) {
             $stepActions = $actions->get($step->id, collect());
             $assignedUsers = $step->assignedUsers();
-            $automatic = in_array($step->step_type, [\App\Enums\StepType::Conditional, \App\Enums\StepType::Auto], true);
+            $automatic = $step->step_type->isAutomatic();
             $approvalCount = $stepActions->where('action', WorkflowActionType::Approve)->unique('actor_id')->count();
             $requiredApprovals = match ($step->step_type) {
                 \App\Enums\StepType::Sequential => 1,

@@ -50,6 +50,7 @@ Route::middleware(['auth', 'verified', 'can:viewAny,App\Models\Department'])->gr
 
 Route::middleware(['auth', 'verified', 'can:viewAny,App\Models\WorkflowTemplate'])->group(function (): void {
     Route::livewire('admin/workflow-templates', 'pages::admin.workflow-templates')->name('admin.workflow-templates.index');
+    Route::livewire('admin/workflow-templates/{template}/builder', 'pages::admin.workflow-builder')->name('admin.workflow-templates.builder');
 });
 
 Route::middleware(['auth', 'verified', 'can:viewAny,App\Models\RequestType'])->group(function (): void {

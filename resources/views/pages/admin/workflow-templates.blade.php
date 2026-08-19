@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\WorkflowTemplates\CloneWorkflowTemplateAction;
 use App\Actions\WorkflowTemplates\CreateWorkflowTemplateAction;
 use App\Actions\WorkflowTemplates\PublishWorkflowTemplateVersionAction;
 use App\Actions\WorkflowTemplates\UpdateWorkflowTemplateAction;
@@ -95,6 +96,17 @@ new #[Title('Workflow templates')] class extends Component {
     public function updatedSearch(): void
     {
         $this->resetPage();
+    }
+
+    public function cloneTemplate(int $templateId): void
+    {
+        $source = WorkflowTemplate::query()
+            ->with(['publishedVersion.steps', 'draftVersion.steps'])
+            ->findOrFail($templateId);
+        $this->authorize('create', WorkflowTemplate::class);
+        app(CloneWorkflowTemplateAction::class)->execute($source, Auth::user());
+        unset($this->templates);
+        Flux::toast('Workflow template cloned.', variant: 'success');
     }
 
     public function createTemplate(): void
@@ -200,6 +212,7 @@ new #[Title('Workflow templates')] class extends Component {
                 StepType::Quorum->value,
                 StepType::Conditional->value,
                 StepType::Auto->value,
+                StepType::Notification->value,
             ])],
             'steps.*.quorumCount' => ['nullable', 'integer', 'min:1'],
             'steps.*.assigneeType' => ['required', Rule::enum(AssigneeType::class)],
@@ -232,7 +245,7 @@ new #[Title('Workflow templates')] class extends Component {
             $type = AssigneeType::from($step['assigneeType']);
             $ids = array_values(array_unique(array_map('intval', $step['assigneeIds'])));
             $stepType = StepType::from($step['stepType']);
-            $automatic = in_array($stepType, [StepType::Conditional, StepType::Auto], true);
+            $automatic = $stepType->isAutomatic();
             $assigneeCount = 0;
 
             if (! $automatic) {
@@ -513,7 +526,13 @@ new #[Title('Workflow templates')] class extends Component {
                             @endif
                         </div>
                     </flux:table.cell>
-                    <flux:table.cell class="text-right"><flux:button size="xs" variant="ghost" wire:click="editTemplate({{ $template->id }})">{{ __('Edit') }}</flux:button></flux:table.cell>
+                    <flux:table.cell class="text-right">
+                        <div class="flex flex-wrap justify-end gap-1">
+                            <flux:button size="xs" variant="ghost" :href="route('admin.workflow-templates.builder', $template)" wire:navigate data-test="open-builder">{{ __('Builder') }}</flux:button>
+                            <flux:button size="xs" variant="ghost" wire:click="cloneTemplate({{ $template->id }})" data-test="clone-template">{{ __('Clone') }}</flux:button>
+                            <flux:button size="xs" variant="ghost" wire:click="editTemplate({{ $template->id }})">{{ __('Edit') }}</flux:button>
+                        </div>
+                    </flux:table.cell>
                 </flux:table.row>
             @empty
                 <flux:table.row><flux:table.cell colspan="6" class="text-center text-zinc-500">{{ __('No workflow templates found.') }}</flux:table.cell></flux:table.row>
@@ -575,8 +594,9 @@ new #[Title('Workflow templates')] class extends Component {
                                     <flux:select.option value="quorum">{{ __('Quorum — N must approve') }}</flux:select.option>
                                     <flux:select.option value="conditional">{{ __('Conditional — route by submission data') }}</flux:select.option>
                                     <flux:select.option value="auto">{{ __('Automatic approval') }}</flux:select.option>
+                                    <flux:select.option value="notification">{{ __('Notification') }}</flux:select.option>
                                 </flux:select>
-                                @if (! in_array($step['stepType'], ['conditional', 'auto'], true))
+                                @if (! in_array($step['stepType'], ['conditional', 'auto', 'notification'], true))
                                     <flux:select wire:model="steps.{{ $index }}.assigneeType" wire:change="resetAssignees({{ $index }})" :label="__('Assign by')">
                                         @foreach (AssigneeType::cases() as $type)
                                             <flux:select.option :value="$type->value">{{ str($type->value)->title() }}</flux:select.option>
@@ -584,7 +604,7 @@ new #[Title('Workflow templates')] class extends Component {
                                     </flux:select>
                                 @else
                                     <div class="rounded-lg bg-zinc-50 p-3 text-sm text-zinc-500 dark:bg-zinc-800/60">
-                                        {{ $step['stepType'] === 'auto' ? __('No approver is required.') : __('The system evaluates this step automatically.') }}
+                                        {{ $step['stepType'] === 'notification' ? __('Sends a recorded notification and continues.') : ($step['stepType'] === 'auto' ? __('No approver is required.') : __('The system evaluates this step automatically.')) }}
                                     </div>
                                 @endif
 
@@ -622,7 +642,7 @@ new #[Title('Workflow templates')] class extends Component {
                                     <flux:error name="steps.{{ $index }}.falseStep" />
                                 @endif
 
-                                @if (! in_array($step['stepType'], ['conditional', 'auto'], true))
+                                @if (! in_array($step['stepType'], ['conditional', 'auto', 'notification'], true))
                                     <div class="grid gap-4 sm:col-span-3 sm:grid-cols-2">
                                         <flux:input wire:model="steps.{{ $index }}.timeoutHours" type="number" min="1" max="8760" :label="__('SLA duration (hours)')" :placeholder="__('No deadline')" />
                                         <flux:select wire:model="steps.{{ $index }}.timeoutAction" :label="__('When overdue')">

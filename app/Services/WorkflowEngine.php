@@ -416,7 +416,7 @@ class WorkflowEngine
             StepType::Sequential => $approvals >= 1,
             StepType::Parallel => $approvals >= $step->assignedUsers()->unique('id')->count(),
             StepType::Quorum => $this->isQuorumSatisfied($step, $approvals),
-            StepType::Conditional, StepType::Auto => throw WorkflowException::unsupportedStepType($step->step_type->value),
+            StepType::Conditional, StepType::Auto, StepType::Notification => throw WorkflowException::unsupportedStepType($step->step_type->value),
         };
     }
 
@@ -468,8 +468,11 @@ class WorkflowEngine
                 return $instance;
             }
 
-            if ($step->step_type === StepType::Auto) {
-                $this->recordSystemAction($instance, $step, WorkflowActionType::AutoApprove, 'Automatically approved by workflow policy.');
+            if ($step->step_type === StepType::Auto || $step->step_type === StepType::Notification) {
+                $message = $step->step_type === StepType::Notification
+                    ? 'Notification step completed automatically.'
+                    : 'Automatically approved by workflow policy.';
+                $this->recordSystemAction($instance, $step, WorkflowActionType::AutoApprove, $message);
                 $instance = $this->advance($instance);
 
                 continue;

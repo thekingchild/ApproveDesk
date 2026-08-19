@@ -28,7 +28,11 @@ Open **Administration → Workflow templates** and add a template.
 - Mark **Default template** only for the one fallback chain. Choosing a new default turns the previous default off.
 - Leave the template **Active** if new work should be able to use it. An inactive template is ignored at submit time.
 - Add steps from top to bottom.
-- Save records a draft if the chain changed. **Publish version** freezes that graph for new requests and retires the previous published version.
+- Open **Builder** for the canvas and list views of the same chain. Start and End are implied nodes.
+- Add Approval, Condition, Automatic, or Notification nodes. Duplicate, delete, reorder, undo, and redo stay in this editing session.
+- Run a read-only simulation with sample request data to see the route. It does not record decisions.
+- Compare versions by hash and step names. Restore an older version as a new draft, then publish if it should apply to new work.
+- Save records a draft if the chain changed. **Publish version** asks for confirmation, then freezes that graph for new requests and retires the previous published version.
 - Write a short change summary so later administrators can see why the chain changed.
 
 You do not have to pick a submission type. The old Document / Note / Memo / Request checkboxes are optional labels only. They do not block a second template, and they do not choose the chain for new work.
@@ -40,6 +44,7 @@ You do not have to pick a submission type. The old Document / Note / Memo / Requ
 - Quorum: N of M assignees must act.
 - Conditional: route using request data and allow-listed comparisons.
 - Automatic: the system records an approval when the rule matches.
+- Notification: the system records that a notice would be sent and continues. Actual delivery channels stay in a later phase.
 
 Assignees can be a user, a role, or a department.
 

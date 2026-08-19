@@ -65,7 +65,7 @@ class ApproverInboxTest extends TestCase
 
     public function test_saved_views_search_and_filters_narrow_the_prioritized_queue(): void
     {
-        $this->template->steps()->first()->update(['timeout_hours' => 24]);
+        $this->template->steps()->first()->updateQuietly(['timeout_hours' => 24]);
         $this->submission->update([
             'priority' => SubmissionPriority::Urgent,
             'type' => SubmissionType::Memo,

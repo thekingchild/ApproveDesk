@@ -113,7 +113,22 @@ class HelpCentreTest extends TestCase
             ->assertSee('A single case waiting for a decision')
             ->assertSee('A named form')
             ->assertSee('A named approval chain')
-            ->assertSee('The link from a request type');
+            ->assertSee('The link from a request type')
+            ->assertSee('The canvas and list editor')
+            ->assertSee('One frozen copy of a workflow template');
+    }
+
+    public function test_workflow_templates_article_explains_builder_and_versions(): void
+    {
+        $admin = User::factory()->create()->assignRole('admin');
+
+        $this->actingAs($admin)
+            ->get(route('help.show', 'workflow-templates'))
+            ->assertOk()
+            ->assertSee('canvas and list views of the same chain')
+            ->assertSee('read-only simulation')
+            ->assertSee('Notification')
+            ->assertSee('cannot change their steps');
     }
 
     public function test_catalogue_matches_markdown_files(): void

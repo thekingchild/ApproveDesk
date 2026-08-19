@@ -20,6 +20,10 @@ A named approval chain: the ordered steps, who acts, and what happens on timeout
 
 See [Workflow templates](workflow-templates.md).
 
+## Workflow builder
+
+The canvas and list editor for a workflow template. Start and End are shown for orientation. The stored chain is still the ordered steps.
+
 ## Workflow version
 
 One frozen copy of a workflow template’s steps. New requests use the published version. Requests already in flight keep the version they started.

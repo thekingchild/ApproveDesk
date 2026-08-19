@@ -4,6 +4,7 @@ namespace App\Actions\WorkflowTemplates;
 
 use App\Enums\WorkflowTemplateVersionStatus;
 use App\Models\WorkflowTemplateVersion;
+use App\Services\WorkflowTemplates\WorkflowGraphValidator;
 use App\Services\WorkflowTemplates\WorkflowTemplateSchemaHasher;
 use DomainException;
 use Illuminate\Support\Facades\DB;
@@ -25,9 +26,7 @@ final class PublishWorkflowTemplateVersionAction
                 throw new DomainException('Only draft workflow template versions can be published.');
             }
 
-            if ($locked->steps->isEmpty()) {
-                throw new DomainException('A workflow template version must define at least one step before publication.');
-            }
+            app(WorkflowGraphValidator::class)->validate($locked->steps);
 
             WorkflowTemplateVersion::query()
                 ->where('workflow_template_id', $locked->workflow_template_id)
