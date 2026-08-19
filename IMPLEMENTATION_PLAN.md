@@ -104,6 +104,19 @@ After each completed phase:
 
 **Administrator knowledge base through Phase 6 — Complete (2026-08-19):** getting around, requests, approvals, statuses, account settings, users and roles, departments, workflow templates, request types, analytics, webhooks, organization settings, and the audit trail.
 
+### 3.5 Request types own workflows
+
+Locked product decision for work after Phase 6. It does not reopen Phases 0–6.
+
+- A request type (the published form) selects the workflow template used for new submissions of that type.
+- Any number of named templates may be active at once. Exclusive ownership of Document, Note, Memo, or Request by an active template is not the routing model going forward.
+- Exactly one default template remains, as fallback for General Request and for any type with no assignment.
+- Document, Note, Memo, and Request stay as General Request fields where they already exist. They are not the routing key.
+- In-flight workflow instances keep the template they started with. Changing an assignment or the default affects only new submissions.
+- Requesters pick a form. They do not pick a workflow.
+
+Phase 6A implements this assignment. Phase 7 keeps its original scope: versioned templates, visual builder, and later selection rules on form values. Phase 7 must not revert exclusive submission-type locking.
+
 ## 4. Release map and status
 
 | Phase | Target | Theme | Status |
@@ -111,6 +124,7 @@ After each completed phase:
 | 0–4 | v2.0.0 | Existing workflow platform | Complete |
 | 5 | v2.1.0 | Non-enterprise UX, accessibility, and approver productivity | Complete |
 | 6 | v2.2.0 | Configurable request types and form builder | In progress — 6.1–6.2 complete |
+| 6A | v2.2.1 | Request-type workflow assignment | Not started |
 | 7 | v2.3.0 | Visual workflows, versioning, and dynamic assignment | Not started |
 | 8 | v2.4.0 | Collaboration, notifications, and integration hub | Not started |
 | 9 | v2.5.0 | Governance, audit evidence, security, and reliability | Not started |
@@ -211,9 +225,49 @@ The administrator knowledge base in `docs/kb/` and `/help` covers every shipped 
 
 ---
 
+## Phase 6A — Request-type workflow assignment
+
+**Goal:** let administrators create as many workflow templates as they need, and attach each request type to the template that should run for new submissions. This is the industry-standard binding (the form owns the process). It does not start the Phase 7 visual builder, workflow versioning, or form-value selection rules.
+
+This phase is additive. Phases 0–6 stay complete as written. Phase 7 task IDs and scope stay unchanged.
+
+### 6A.1 Assignment model
+
+- **P6A-DATA-01:** Add a nullable `workflow_template_id` on `request_types`, with a foreign key to `workflow_templates`. No existing columns are removed.
+- **P6A-DATA-02:** Backfill each existing request type to the template `WorkflowEngine` would resolve today (type-specific match, else the default template). Historical `workflow_instances.template_id` values must not change.
+- **P6A-DATA-03:** Keep Document, Note, Memo, and Request on General Request for compatibility. Stop using those four values as the exclusive routing key.
+
+### 6A.2 Routing and uniqueness
+
+- **P6A-RULE-01:** Remove the active-template guard that rejects a second template sharing a submission type. Many active templates are valid.
+- **P6A-RULE-02:** Keep uniqueness of the default template: at most one `is_default = true` active template.
+- **P6A-RULE-03:** `WorkflowEngine::resolveTemplate()` uses, in order: the submission's request type assignment if that template is active; else the active default template; else the existing no-template error. Do not re-introduce submission-type JSON matching as the primary resolver.
+- **P6A-RULE-04:** Changing a request type’s template or the default template must not rewrite running or completed instances.
+
+### 6A.3 Administration UI
+
+- **P6A-UI-01:** On the request type screen, administrators select the workflow template for that type and see which template will apply to the next new submission.
+- **P6A-UI-02:** The workflow template screen allows multiple active templates without requiring unused submission types. Default remains a single fallback. Submission-type checkboxes, if still shown, are informational only and must not enforce exclusivity.
+- **P6A-UI-03:** Requesters continue to choose a request type only. They are not asked to choose a workflow.
+
+### 6A.4 Tests, docs, and exit gate
+
+- **P6A-TEST-01:** Two active templates may exist without conflict. Two request types may share one template. A type with no assignment uses the default.
+- **P6A-TEST-02:** Submitting Leave Request (or any custom type) starts the assigned template; a later assignment change does not alter an in-flight instance.
+- **P6A-TEST-03:** Upgrade test: a copy of the Phase 6 database still opens, submits, and completes, and backfilled assignments match pre-6A resolution.
+- **P6A-DOC-01:** Update `docs/kb/workflow-templates.md` and `docs/kb/request-types.md`, then the in-app Help catalogue, per section 3.4.
+
+**Phase 6A demo:** an administrator publishes two templates and assigns Leave Request to one and Purchase Request to the other; both remain active; General Request still uses the default; an in-progress Leave Request keeps its original chain after the assignment is changed.
+
+**Out of scope (remain in Phase 7):** immutable workflow versions, visual canvas, simulation, assignee resolvers, business calendars, custom outcomes, and selection rules driven by form field values (`P7-RTE-05`).
+
+---
+
 ## Phase 7 — Visual workflows, versioning, and dynamic assignment
 
 **Goal:** expose the existing workflow power through a safe visual builder and add the routing capabilities expected from modern no-code approval products.
+
+Phase 6A is a prerequisite for routing but is not part of this phase. Do not renumber or rewrite the tasks below. `P7-RTE-05` adds value-based selection on top of request-type assignment; it does not replace Phase 6A and must not restore exclusive Document/Note/Memo/Request template locking.
 
 ### 7.1 Workflow version model
 
