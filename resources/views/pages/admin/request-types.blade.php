@@ -192,6 +192,8 @@ new #[Title('Request types')] class extends Component {
     {
         return [
             'label' => '', 'key' => '', 'type' => RequestFieldType::ShortText->value, 'is_required' => false,
+            'is_searchable' => false, 'is_filterable' => false, 'is_reportable' => false,
+            'is_sensitive' => false, 'is_approver_summary' => false,
             'section' => '', 'instructions' => '', 'placeholder' => '', 'help' => '', 'default' => '',
             'maxLength' => '', 'min' => '', 'max' => '', 'options' => '', 'optionsCsv' => '', 'allowedTypes' => '',
             'visibilityField' => '', 'visibilityOperator' => 'equals', 'visibilityValue' => '',
@@ -205,6 +207,9 @@ new #[Title('Request types')] class extends Component {
 
         return [...$this->blankField(),
             'label' => $field->label, 'key' => $field->key, 'type' => $field->type->value, 'is_required' => $field->is_required,
+            'is_searchable' => $field->is_searchable, 'is_filterable' => $field->is_filterable,
+            'is_reportable' => $field->is_reportable, 'is_sensitive' => $field->is_sensitive,
+            'is_approver_summary' => $field->is_approver_summary,
             'section' => $config['section'] ?? '', 'instructions' => $config['instructions'] ?? '',
             'placeholder' => $config['placeholder'] ?? '', 'help' => $config['help'] ?? '', 'default' => $config['default'] ?? '',
             'maxLength' => $config['max_length'] ?? '', 'min' => $config['min'] ?? '', 'max' => $config['max'] ?? '',
@@ -232,7 +237,13 @@ new #[Title('Request types')] class extends Component {
             'calculation' => $field['type'] === RequestFieldType::Calculated->value ? ['operation' => 'sum', 'fields' => $this->options($field['calculationFields'])] : null,
         ], fn ($value): bool => $value !== null && $value !== []);
 
-        return ['key' => $field['key'], 'label' => $field['label'], 'type' => $field['type'], 'is_required' => $field['is_required'], 'configuration' => $config ?: null];
+        return [
+            'key' => $field['key'], 'label' => $field['label'], 'type' => $field['type'],
+            'is_required' => $field['is_required'], 'is_searchable' => $field['is_searchable'] ?? false,
+            'is_filterable' => $field['is_filterable'] ?? false, 'is_reportable' => $field['is_reportable'] ?? false,
+            'is_sensitive' => $field['is_sensitive'] ?? false, 'is_approver_summary' => $field['is_approver_summary'] ?? false,
+            'configuration' => $config ?: null,
+        ];
     }
 
     /** @return list<string> */
@@ -287,6 +298,14 @@ new #[Title('Request types')] class extends Component {
                             <flux:input wire:model="fields.{{ $index }}.instructions" label="Instructions" /><flux:input wire:model="fields.{{ $index }}.default" label="Default value" /><flux:checkbox wire:model="fields.{{ $index }}.is_required" label="Always required" />
                             <flux:input wire:model="fields.{{ $index }}.maxLength" type="number" label="Maximum length" /><flux:input wire:model="fields.{{ $index }}.min" type="number" label="Minimum" /><flux:input wire:model="fields.{{ $index }}.max" type="number" label="Maximum" />
                         </div>
+                        <fieldset class="mt-3 grid gap-2 rounded-lg bg-zinc-50 p-3 sm:grid-cols-2 lg:grid-cols-5 dark:bg-zinc-800/50">
+                            <legend class="px-1 text-sm font-medium">{{ __('Discovery and privacy') }}</legend>
+                            <flux:checkbox wire:model="fields.{{ $index }}.is_searchable" label="Searchable" />
+                            <flux:checkbox wire:model="fields.{{ $index }}.is_filterable" label="Filterable" />
+                            <flux:checkbox wire:model="fields.{{ $index }}.is_reportable" label="Reportable" />
+                            <flux:checkbox wire:model="fields.{{ $index }}.is_sensitive" label="Sensitive" />
+                            <flux:checkbox wire:model="fields.{{ $index }}.is_approver_summary" label="Approver summary" />
+                        </fieldset>
                         @if (in_array($field['type'], ['select', 'multi_select', 'radio']))
                             <div class="mt-3 grid gap-3 md:grid-cols-2"><flux:textarea wire:model="fields.{{ $index }}.options" label="Options (one per line)" /><div><flux:textarea wire:model="fields.{{ $index }}.optionsCsv" label="CSV options" /><div class="mt-2 flex gap-2"><flux:button size="sm" wire:click="importOptions({{ $index }})">{{ __('Import CSV') }}</flux:button><flux:button size="sm" wire:click="exportOptions({{ $index }})">{{ __('Export CSV') }}</flux:button></div></div></div>
                         @endif

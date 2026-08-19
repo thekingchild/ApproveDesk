@@ -41,6 +41,7 @@ use Spatie\Permission\Traits\HasRoles;
  * @property-read Department|null $department
  * @property-read Collection<int, Submission> $submissions
  * @property-read Collection<int, OAuthIdentity> $oauthIdentities
+ * @property-read Collection<int, SubmissionSavedView> $submissionSavedViews
  */
 #[Fillable(['name', 'email', 'password', 'department_id', 'is_active', 'email_verified_at', 'notification_frequency', 'last_notification_digest_at', 'avatar'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
@@ -91,6 +92,12 @@ class User extends Authenticatable implements PasskeyUser
     public function oauthIdentities(): HasMany
     {
         return $this->hasMany(OAuthIdentity::class);
+    }
+
+    /** @return HasMany<SubmissionSavedView, $this> */
+    public function submissionSavedViews(): HasMany
+    {
+        return $this->hasMany(SubmissionSavedView::class);
     }
 
     /**

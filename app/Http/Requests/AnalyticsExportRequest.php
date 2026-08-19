@@ -20,6 +20,7 @@ class AnalyticsExportRequest extends FormRequest
         return [
             'days' => ['required', 'integer', Rule::in(AnalyticsService::PERIODS)],
             'format' => ['required', Rule::enum(AnalyticsExportFormat::class)],
+            'request_type' => ['nullable', 'integer', 'exists:request_types,id'],
         ];
     }
 }

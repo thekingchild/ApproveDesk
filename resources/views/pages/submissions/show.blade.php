@@ -46,6 +46,13 @@ new #[Title('Submission')] class extends Component {
         ]);
     }
 
+    #[Computed]
+    public function visibleCustomFields(): \Illuminate\Support\Collection
+    {
+        return $this->submission->requestTypeVersion->fields
+            ->filter(fn ($field) => app(\App\Services\RequestFieldAccess::class)->canView(Auth::user(), $field, $this->submission));
+    }
+
     /** Per-step timeline state: pending, active, done, rejected. */
     #[Computed]
     public function timeline(): array
@@ -378,13 +385,29 @@ new #[Title('Submission')] class extends Component {
     </flux:card>
 
     @if (! $submission->requestTypeVersion->requestType->is_system)
+        @php
+            $summaryFields = $this->visibleCustomFields->where('is_approver_summary', true);
+        @endphp
+        @if ($this->canAct && $summaryFields->isNotEmpty())
+            <flux:card class="border-blue-200 bg-blue-50/50 dark:border-blue-900 dark:bg-blue-950/20">
+                <flux:heading size="sm">{{ __('Approval summary') }}</flux:heading>
+                <dl class="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    @foreach ($summaryFields as $field)
+                        @php
+                            $stored = $submission->fieldValues->firstWhere('request_field_definition_id', $field->id);
+                        @endphp
+                        <div><dt class="text-xs text-zinc-500">{{ $field->label }}</dt><dd class="font-medium">{{ app(\App\Services\RequestFieldAccess::class)->displayValue($stored) }}</dd></div>
+                    @endforeach
+                </dl>
+            </flux:card>
+        @endif
         <flux:card class="print:shadow-none">
             <div class="flex items-center justify-between gap-3">
                 <flux:heading size="sm">{{ $submission->requestTypeVersion->requestType->name }} · {{ __('Version') }} {{ $submission->requestTypeVersion->version }}</flux:heading>
                 <flux:button size="sm" icon="printer" x-on:click="window.print()" class="print:hidden">{{ __('Print') }}</flux:button>
             </div>
             <dl class="mt-4 divide-y divide-zinc-200 dark:divide-zinc-700">
-                @foreach ($submission->requestTypeVersion->fields as $field)
+                @foreach ($this->visibleCustomFields as $field)
                     @php $stored = $submission->fieldValues->firstWhere('request_field_definition_id', $field->id); @endphp
                     <div class="grid gap-1 py-3 text-sm sm:grid-cols-3">
                         <dt class="font-medium">{{ $field->label }}</dt>

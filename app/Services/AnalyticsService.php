@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\WorkflowActionType;
 use App\Enums\WorkflowStatus;
+use App\Models\User;
 use App\Models\WorkflowAction;
 use App\Models\WorkflowInstance;
 use Carbon\CarbonInterface;
@@ -34,13 +35,13 @@ final class AnalyticsService
      *   workload_by_approver: list<array{approver_id: int, approver: string, active: int, overdue: int}>
      * }
      */
-    public function dashboard(int $days): array
+    public function dashboard(int $days, ?User $user = null, ?int $requestTypeId = null): array
     {
         $days = $this->normalizeDays($days);
         $to = now()->endOfDay();
         $from = now()->subDays($days - 1)->startOfDay();
 
-        $instances = $this->cohort($from, $to)->get();
+        $instances = $this->cohort($from, $to, $requestTypeId)->get();
         $resolved = $instances->filter(fn (WorkflowInstance $instance): bool => in_array(
             $instance->status,
             [WorkflowStatus::Completed, WorkflowStatus::Rejected],
@@ -79,16 +80,22 @@ final class AnalyticsService
             'bottlenecks' => $this->bottlenecks($instances),
             'slowest_active' => $this->slowestActive($instances),
             'workload_by_approver' => $this->workloadByApprover($active),
+            'request_type_id' => $requestTypeId,
+            'custom_fields' => $this->customFieldBreakdown($instances, $user),
         ];
     }
 
     /** @return Builder<WorkflowInstance> */
-    private function cohort(CarbonInterface $from, CarbonInterface $to): Builder
+    private function cohort(CarbonInterface $from, CarbonInterface $to, ?int $requestTypeId = null): Builder
     {
         return WorkflowInstance::query()
             ->whereBetween('started_at', [$from, $to])
+            ->when($requestTypeId !== null, fn (Builder $query) => $query->whereHas('submission.requestTypeVersion', fn (Builder $version) => $version->where('request_type_id', $requestTypeId)))
             ->with([
-                'submission:id,reference_number,title',
+                'submission:id,reference_number,title,request_type_version_id,submitter_id',
+                'submission.fieldValues.field',
+                'submission.fieldValues.userValue:id,name',
+                'submission.fieldValues.departmentValue:id,name',
                 'currentStep:id,name,timeout_hours,assignee_type,assignee_ids',
                 'template:id,name',
                 'template.steps:id,template_id,step_order,name',
@@ -97,6 +104,40 @@ final class AnalyticsService
                 'delegations.delegate:id,name',
             ])
             ->orderBy('started_at');
+    }
+
+    /**
+     * @param  Collection<int, WorkflowInstance>  $instances
+     * @return list<array{key: string, label: string, values: list<array{value: string, count: int}>}>
+     */
+    private function customFieldBreakdown(Collection $instances, ?User $user): array
+    {
+        $groups = [];
+        $access = app(RequestFieldAccess::class);
+
+        foreach ($instances as $instance) {
+            foreach ($instance->submission->fieldValues as $value) {
+                $field = $value->field;
+
+                if (! $field->is_reportable || ($field->is_sensitive && ($user === null || ! $access->canDiscoverSensitive($user)))) {
+                    continue;
+                }
+
+                $display = $access->displayValue($value);
+                $groups[$field->key] ??= ['key' => $field->key, 'label' => $field->label, 'counts' => []];
+                $groups[$field->key]['counts'][$display] = ($groups[$field->key]['counts'][$display] ?? 0) + 1;
+            }
+        }
+
+        return collect($groups)->map(function (array $group): array {
+            arsort($group['counts']);
+
+            return [
+                'key' => $group['key'],
+                'label' => $group['label'],
+                'values' => collect($group['counts'])->map(fn (int $count, string $value): array => ['value' => $value, 'count' => $count])->values()->all(),
+            ];
+        })->values()->all();
     }
 
     /**

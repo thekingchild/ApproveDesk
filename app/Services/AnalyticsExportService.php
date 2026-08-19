@@ -74,6 +74,18 @@ final class AnalyticsExportService
             ]);
         }
 
+        if (($report['custom_fields'] ?? []) !== []) {
+            fputcsv($stream, []);
+            fputcsv($stream, ['Request field breakdown']);
+            fputcsv($stream, ['Field', 'Value', 'Count']);
+
+            foreach ($report['custom_fields'] as $field) {
+                foreach ($field['values'] as $value) {
+                    fputcsv($stream, [$field['label'], $value['value'], $value['count']]);
+                }
+            }
+        }
+
         rewind($stream);
         $contents = stream_get_contents($stream);
         fclose($stream);

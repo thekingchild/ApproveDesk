@@ -45,6 +45,11 @@ final class SaveRequestTypeDraftAction
                     'type' => RequestFieldType::from($field['type']),
                     'position' => $position,
                     'is_required' => (bool) ($field['is_required'] ?? false),
+                    'is_searchable' => (bool) ($field['is_searchable'] ?? false),
+                    'is_filterable' => (bool) ($field['is_filterable'] ?? false),
+                    'is_reportable' => (bool) ($field['is_reportable'] ?? false),
+                    'is_sensitive' => (bool) ($field['is_sensitive'] ?? false),
+                    'is_approver_summary' => (bool) ($field['is_approver_summary'] ?? false),
                     'configuration' => $field['configuration'] ?? null,
                 ]);
             }

@@ -3,6 +3,9 @@
 use App\Models\Submission;
 use App\Models\Department;
 use App\Models\User;
+use App\Models\RequestType;
+use App\Models\SubmissionSavedView;
+use App\Services\RequestFieldAccess;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
@@ -22,6 +25,16 @@ new #[Title('My submissions')] class extends Component {
     public string $search = '';
 
     public string $typeFilter = '';
+
+    public string $requestTypeFilter = '';
+
+    /** @var array<string, string> */
+    public array $fieldFilters = [];
+
+    /** @var list<string> */
+    public array $selectedColumns = [];
+
+    public string $savedViewName = '';
 
     public string $submitterFilter = '';
 
@@ -85,13 +98,58 @@ new #[Title('My submissions')] class extends Component {
         return Department::query()->orderBy('name')->get();
     }
 
+    #[Computed]
+    public function requestTypes(): \Illuminate\Database\Eloquent\Collection
+    {
+        return RequestType::query()->whereHas('publishedVersion')->orderBy('name')->get();
+    }
+
+    #[Computed]
+    public function availableFields(): \Illuminate\Database\Eloquent\Collection
+    {
+        if (! ctype_digit($this->requestTypeFilter)) {
+            return new \Illuminate\Database\Eloquent\Collection;
+        }
+
+        $canSeeSensitive = ! $this->organizationView
+            || app(RequestFieldAccess::class)->canDiscoverSensitive(Auth::user());
+
+        return \App\Models\RequestFieldDefinition::query()
+            ->whereHas('requestTypeVersion', fn (Builder $version) => $version
+                ->where('request_type_id', (int) $this->requestTypeFilter)
+                ->where('status', 'published'))
+            ->where(fn (Builder $field) => $field
+                ->where('is_filterable', true)
+                ->orWhere('is_reportable', true))
+            ->when(! $canSeeSensitive, fn (Builder $field) => $field->where('is_sensitive', false))
+            ->latest('request_type_version_id')
+            ->get()
+            ->unique('key')
+            ->values();
+    }
+
+    #[Computed]
+    public function customSavedViews(): \Illuminate\Database\Eloquent\Collection
+    {
+        return Auth::user()->submissionSavedViews()
+            ->join('request_types', 'request_types.id', '=', 'submission_saved_views.request_type_id')
+            ->select('submission_saved_views.*', 'request_types.name as request_type_name')
+            ->latest('submission_saved_views.created_at')
+            ->get();
+    }
+
     public function updated(string $property): void
     {
         if (in_array($property, [
             'search', 'statusFilter', 'typeFilter', 'submitterFilter',
-            'departmentFilter', 'dateFrom', 'dateTo', 'view',
+            'departmentFilter', 'dateFrom', 'dateTo', 'requestTypeFilter', 'fieldFilters', 'view',
         ], true)) {
             $this->resetPage();
+        }
+
+        if ($property === 'requestTypeFilter') {
+            $this->fieldFilters = [];
+            $this->selectedColumns = $this->availableFields->where('is_reportable', true)->pluck('key')->values()->all();
         }
     }
 
@@ -108,9 +166,53 @@ new #[Title('My submissions')] class extends Component {
     {
         $this->reset([
             'search', 'statusFilter', 'typeFilter', 'submitterFilter',
-            'departmentFilter', 'dateFrom', 'dateTo',
+            'departmentFilter', 'dateFrom', 'dateTo', 'requestTypeFilter', 'fieldFilters', 'selectedColumns',
         ]);
         $this->resetPage();
+    }
+
+    public function saveCustomView(): void
+    {
+        $this->validate([
+            'savedViewName' => ['required', 'string', 'max:100'],
+            'requestTypeFilter' => ['required', 'integer', 'exists:request_types,id'],
+            'selectedColumns' => ['array', 'max:20'],
+        ]);
+
+        $allowedKeys = $this->availableFields->pluck('key');
+        $filters = collect($this->fieldFilters)->only($allowedKeys)->filter(fn ($value) => trim((string) $value) !== '')->all();
+        $columns = collect($this->selectedColumns)->intersect($allowedKeys)->values()->all();
+
+        Auth::user()->submissionSavedViews()->updateOrCreate([
+            'request_type_id' => (int) $this->requestTypeFilter,
+            'name' => trim($this->savedViewName),
+        ], [
+            'filters' => [
+                'status' => $this->statusFilter, 'search' => $this->search,
+                'fields' => $filters,
+            ],
+            'columns' => $columns,
+        ]);
+
+        $this->reset('savedViewName');
+        unset($this->customSavedViews);
+    }
+
+    public function loadCustomView(int $id): void
+    {
+        $savedView = Auth::user()->submissionSavedViews()->findOrFail($id);
+        $this->requestTypeFilter = (string) $savedView->request_type_id;
+        $this->statusFilter = (string) data_get($savedView->filters, 'status', '');
+        $this->search = (string) data_get($savedView->filters, 'search', '');
+        $this->fieldFilters = (array) data_get($savedView->filters, 'fields', []);
+        $this->selectedColumns = $savedView->columns ?? [];
+        $this->resetPage();
+    }
+
+    public function deleteCustomView(int $id): void
+    {
+        Auth::user()->submissionSavedViews()->findOrFail($id)->delete();
+        unset($this->customSavedViews);
     }
 
     /** @var array<string, string> */
@@ -156,15 +258,39 @@ new #[Title('My submissions')] class extends Component {
                 $query->where(function (Builder $search): void {
                     $search->where('reference_number', 'like', '%'.$this->search.'%')
                         ->orWhere('title', 'like', '%'.$this->search.'%');
+
+                    if (ctype_digit($this->requestTypeFilter)) {
+                        $search->orWhereHas('fieldValues', function (Builder $values): void {
+                            $like = '%'.addcslashes($this->search, '\\%_').'%';
+                            $values->whereHas('field', fn (Builder $field) => $field
+                                ->where('is_searchable', true)
+                                ->when($this->organizationView && ! app(RequestFieldAccess::class)->canDiscoverSensitive(Auth::user()), fn (Builder $field) => $field->where('is_sensitive', false)))
+                                ->where(fn (Builder $value) => $value->where('string_value', 'like', $like)->orWhere('text_value', 'like', $like)->orWhere('json_value', 'like', $like));
+                        });
+                    }
                 });
             })
             ->when($this->statusFilter !== '', fn ($query) => $query->where('status', $this->statusFilter))
             ->when($this->typeFilter !== '', fn ($query) => $query->where('type', $this->typeFilter))
+            ->when(ctype_digit($this->requestTypeFilter), fn (Builder $query) => $query->whereHas('requestTypeVersion', fn (Builder $version) => $version->where('request_type_id', (int) $this->requestTypeFilter)))
+            ->when(ctype_digit($this->requestTypeFilter), function (Builder $query): void {
+                $allowed = $this->availableFields->where('is_filterable', true)->keyBy('key');
+                foreach (collect($this->fieldFilters)->filter(fn ($value) => trim((string) $value) !== '') as $key => $value) {
+                    if (! $allowed->has($key)) {
+                        continue;
+                    }
+                    $like = '%'.addcslashes(trim((string) $value), '\\%_').'%';
+                    $query->whereHas('fieldValues', fn (Builder $values) => $values
+                        ->whereHas('field', fn (Builder $field) => $field->where('key', $key)->where('is_filterable', true))
+                        ->where(fn (Builder $typed) => $typed->where('string_value', 'like', $like)->orWhere('text_value', 'like', $like)->orWhere('decimal_value', 'like', $like)->orWhere('date_value', 'like', $like)->orWhere('datetime_value', 'like', $like)->orWhere('json_value', 'like', $like)));
+                }
+            })
             ->when($this->organizationView && ctype_digit($this->submitterFilter), fn ($query) => $query->where('submitter_id', (int) $this->submitterFilter))
             ->when($this->organizationView && ctype_digit($this->departmentFilter), fn ($query) => $query->where('department_id', (int) $this->departmentFilter))
             ->when($this->validDate($this->dateFrom), fn ($query) => $query->whereDate('created_at', '>=', $this->dateFrom))
             ->when($this->validDate($this->dateTo), fn ($query) => $query->whereDate('created_at', '<=', $this->dateTo))
             ->with(['submitter', 'requestTypeVersion.requestType', 'workflowInstance.currentStep'])
+            ->when(ctype_digit($this->requestTypeFilter), fn (Builder $query) => $query->with(['fieldValues.field', 'fieldValues.userValue', 'fieldValues.departmentValue']))
             ->latest()
             ->paginate(15);
     }
@@ -202,6 +328,18 @@ new #[Title('My submissions')] class extends Component {
         </nav>
     @endif
 
+    @if ($this->customSavedViews->isNotEmpty())
+        <nav aria-label="{{ __('Custom saved views') }}" class="flex flex-wrap items-center gap-2">
+            <span class="text-sm font-medium text-zinc-600 dark:text-zinc-300">{{ __('Saved views:') }}</span>
+            @foreach ($this->customSavedViews as $savedView)
+                <div class="flex items-center rounded-lg border border-zinc-200 dark:border-zinc-700">
+                    <button type="button" class="px-3 py-1.5 text-sm" wire:click="loadCustomView({{ $savedView->id }})">{{ $savedView->name }} · {{ $savedView->request_type_name }}</button>
+                    <button type="button" class="px-2 text-zinc-500" wire:click="deleteCustomView({{ $savedView->id }})" aria-label="{{ __('Delete saved view :name', ['name' => $savedView->name]) }}">×</button>
+                </div>
+            @endforeach
+        </nav>
+    @endif
+
     <flux:card class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <flux:input wire:model.live.debounce.300ms="search" icon="magnifying-glass" :label="__('Search')" :placeholder="__('Reference or title')" />
         <flux:select wire:model.live="statusFilter" :label="__('Status')">
@@ -213,6 +351,12 @@ new #[Title('My submissions')] class extends Component {
             <flux:select.option value="">{{ __('All types') }}</flux:select.option>
             @foreach (\App\Enums\SubmissionType::cases() as $type)
                 <flux:select.option :value="$type->value">{{ str($type->value)->title() }}</flux:select.option>
+            @endforeach
+        </flux:select>
+        <flux:select wire:model.live="requestTypeFilter" :label="__('Request form')">
+            <flux:select.option value="">{{ __('All request forms') }}</flux:select.option>
+            @foreach ($this->requestTypes as $requestType)
+                <flux:select.option :value="$requestType->id">{{ $requestType->name }}</flux:select.option>
             @endforeach
         </flux:select>
         @if ($this->organizationView)
@@ -232,6 +376,33 @@ new #[Title('My submissions')] class extends Component {
         </div>
     </flux:card>
 
+    @if (ctype_digit($requestTypeFilter) && $this->availableFields->isNotEmpty())
+        <flux:card class="space-y-4">
+            <div>
+                <flux:heading size="sm">{{ __('Request-form fields') }}</flux:heading>
+                <p class="mt-1 text-xs text-zinc-500">{{ __('Filter by configured fields and choose reportable list columns. Sensitive fields appear only when you are authorized.') }}</p>
+            </div>
+            <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                @foreach ($this->availableFields->where('is_filterable', true) as $field)
+                    <flux:input wire:model.live.debounce.300ms="fieldFilters.{{ $field->key }}" :label="$field->label" />
+                @endforeach
+            </div>
+            <div class="flex flex-wrap gap-4">
+                @foreach ($this->availableFields->where('is_reportable', true) as $field)
+                    <flux:checkbox wire:model.live="selectedColumns" :value="$field->key" :label="$field->label" />
+                @endforeach
+            </div>
+            <div class="flex flex-wrap items-end gap-2">
+                <flux:input wire:model="savedViewName" :label="__('Saved view name')" class="w-64" />
+                <flux:button wire:click="saveCustomView" icon="bookmark">{{ __('Save current view') }}</flux:button>
+            </div>
+        </flux:card>
+    @endif
+
+    @php
+        $customColumns = $this->availableFields->whereIn('key', $selectedColumns)->where('is_reportable', true);
+        $tableColumnCount = ($this->organizationView ? 7 : 6) + $customColumns->count();
+    @endphp
     <flux:table :paginate="$this->submissions" container:class="ad-responsive-table">
         <flux:table.columns>
             <flux:table.column>{{ __('Reference') }}</flux:table.column>
@@ -240,6 +411,9 @@ new #[Title('My submissions')] class extends Component {
             <flux:table.column>{{ __('Type') }}</flux:table.column>
             <flux:table.column>{{ __('Status') }}</flux:table.column>
             <flux:table.column>{{ __('Priority') }}</flux:table.column>
+            @foreach ($customColumns as $field)
+                <flux:table.column>{{ $field->label }}</flux:table.column>
+            @endforeach
             <flux:table.column>{{ __('Updated') }}</flux:table.column>
         </flux:table.columns>
 
@@ -265,11 +439,17 @@ new #[Title('My submissions')] class extends Component {
                         @endif
                     </flux:table.cell>
                     <flux:table.cell :data-label="__('Priority')">{{ ucfirst($submission->priority->value) }}</flux:table.cell>
+                    @foreach ($customColumns as $field)
+                        @php
+                            $customValue = $submission->fieldValues->first(fn ($value) => $value->field->key === $field->key);
+                        @endphp
+                        <flux:table.cell :data-label="$field->label">{{ app(\App\Services\RequestFieldAccess::class)->displayValue($customValue) }}</flux:table.cell>
+                    @endforeach
                     <flux:table.cell :data-label="__('Updated')" class="text-zinc-600 dark:text-zinc-300">{{ $submission->updated_at?->diffForHumans() }}</flux:table.cell>
                 </flux:table.row>
             @empty
                 <flux:table.row>
-                    <flux:table.cell :colspan="$this->organizationView ? 7 : 6" data-empty-state>
+                    <flux:table.cell :colspan="$tableColumnCount" data-empty-state>
                         @php
                             $emptyStates = [
                                 'drafts' => [__('No drafts to continue'), __('Start a request now and it will remain here until you submit it.')],

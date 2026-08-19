@@ -39,6 +39,11 @@ final class PublishRequestTypeVersionAction
                     'type' => $field->type->value,
                     'position' => $field->position,
                     'is_required' => $field->is_required,
+                    'is_searchable' => $field->is_searchable,
+                    'is_filterable' => $field->is_filterable,
+                    'is_reportable' => $field->is_reportable,
+                    'is_sensitive' => $field->is_sensitive,
+                    'is_approver_summary' => $field->is_approver_summary,
                     'configuration' => $field->configuration,
                 ];
             }

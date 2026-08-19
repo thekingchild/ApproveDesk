@@ -33,12 +33,22 @@ final class SubmissionSearchService
 
         $candidates = Submission::query()
             ->with(['submitter', 'department', 'workflowInstance.currentStep'])
-            ->where(function (Builder $search) use ($like, $statusLike): void {
+            ->where(function (Builder $search) use ($user, $like, $statusLike): void {
                 $search->where('reference_number', 'like', $like)
                     ->orWhere('title', 'like', $like)
                     ->orWhere('status', 'like', $statusLike)
                     ->orWhere('metadata', 'like', $like)
-                    ->orWhereHas('submitter', fn (Builder $submitter) => $submitter->where('name', 'like', $like));
+                    ->orWhereHas('submitter', fn (Builder $submitter) => $submitter->where('name', 'like', $like))
+                    ->orWhereHas('fieldValues', fn (Builder $values) => $this->matchingFieldValue($values, $like, false));
+
+                if (app(RequestFieldAccess::class)->canDiscoverSensitive($user)) {
+                    $search->orWhereHas('fieldValues', fn (Builder $values) => $this->matchingFieldValue($values, $like, true));
+                } else {
+                    $search->orWhere(function (Builder $owned) use ($user, $like): void {
+                        $owned->where('submitter_id', $user->id)
+                            ->whereHas('fieldValues', fn (Builder $values) => $this->matchingFieldValue($values, $like, true));
+                    });
+                }
             })
             ->latest('updated_at')
             ->latest('id')
@@ -55,6 +65,23 @@ final class SubmissionSearchService
         }
 
         return $results;
+    }
+
+    private function matchingFieldValue(Builder $query, string $like, bool $sensitive): void
+    {
+        $query->whereHas('field', fn (Builder $field) => $field
+            ->where('is_searchable', true)
+            ->where('is_sensitive', $sensitive))
+            ->where(function (Builder $value) use ($like): void {
+                $value->where('string_value', 'like', $like)
+                    ->orWhere('text_value', 'like', $like)
+                    ->orWhere('decimal_value', 'like', $like)
+                    ->orWhere('date_value', 'like', $like)
+                    ->orWhere('datetime_value', 'like', $like)
+                    ->orWhere('json_value', 'like', $like)
+                    ->orWhereHas('userValue', fn (Builder $user) => $user->where('name', 'like', $like))
+                    ->orWhereHas('departmentValue', fn (Builder $department) => $department->where('name', 'like', $like));
+            });
     }
 
     private function escapeLike(string $value): string

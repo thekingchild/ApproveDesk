@@ -16,7 +16,7 @@ class AnalyticsExportController extends Controller
         AnalyticsExportService $exporter,
     ): Response {
         $format = AnalyticsExportFormat::from($request->string('format')->toString());
-        $report = $analytics->dashboard($request->integer('days'));
+        $report = $analytics->dashboard($request->integer('days'), $request->user(), $request->integer('request_type') ?: null);
         $filename = 'approval-analytics-'.$report['from']->toDateString().'-to-'.$report['to']->toDateString().'.'.$format->value;
 
         return response($exporter->export($report, $format), 200, [

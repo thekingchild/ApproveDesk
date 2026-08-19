@@ -21,6 +21,11 @@ class RequestFieldDefinitionFactory extends Factory
             'type' => RequestFieldType::ShortText,
             'position' => 0,
             'is_required' => false,
+            'is_searchable' => false,
+            'is_filterable' => false,
+            'is_reportable' => false,
+            'is_sensitive' => false,
+            'is_approver_summary' => false,
             'configuration' => null,
         ];
     }

@@ -176,11 +176,11 @@ A task is complete only when it has:
 - **P6-FORM-05 — Complete:** A schema compiler produces authoritative server-side Laravel validation and typed value persistence from the exact published version, while incomplete drafts remain saveable.
 - **P6-FORM-06 — Complete:** Published schemas render as accessible responsive requester forms with review and print views, plus CSV import/export for choice options.
 
-### 6.3 Search and reporting
+### 6.3 Search and reporting — Complete (2026-08-19)
 
-- **P6-SRCH-01:** Mark fields as searchable, filterable, reportable, sensitive, or approver-summary fields.
-- **P6-SRCH-02:** Extend submission search and analytics without exposing sensitive fields to unauthorized roles.
-- **P6-SRCH-03:** Add request-type-specific list columns and saved views.
+- **P6-SRCH-01 — Complete:** Request fields can be marked searchable, filterable, reportable, sensitive, and/or approver-summary; the flags are versioned in published schema hashes and remain immutable with the published version.
+- **P6-SRCH-02 — Complete:** Global and submission-list search include configured typed fields, analytics can filter by request type and summarize reportable values, and sensitive values are excluded from unauthorized search, reports, list configuration, and submission details.
+- **P6-SRCH-03 — Complete:** Submission lists support request-type-specific field filters and reportable columns, with named per-user saved views that preserve filters and column selections.
 
 ### 6.4 Tests and exit gate
 

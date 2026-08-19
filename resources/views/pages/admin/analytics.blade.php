@@ -1,6 +1,7 @@
 <?php
 
 use App\Services\AnalyticsService;
+use App\Models\RequestType;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
@@ -9,6 +10,9 @@ use Livewire\Component;
 new #[Title('Approval analytics')] class extends Component {
     #[Url]
     public int $days = 30;
+
+    #[Url]
+    public string $requestType = '';
 
     public function updatedDays(): void
     {
@@ -19,11 +23,26 @@ new #[Title('Approval analytics')] class extends Component {
         unset($this->report);
     }
 
+    public function updatedRequestType(): void
+    {
+        if ($this->requestType !== '' && (! ctype_digit($this->requestType) || ! RequestType::query()->whereKey((int) $this->requestType)->exists())) {
+            $this->requestType = '';
+        }
+
+        unset($this->report);
+    }
+
+    #[Computed]
+    public function requestTypes(): \Illuminate\Database\Eloquent\Collection
+    {
+        return RequestType::query()->whereHas('publishedVersion')->orderBy('name')->get();
+    }
+
     /** @return array<string, mixed> */
     #[Computed]
     public function report(): array
     {
-        return app(AnalyticsService::class)->dashboard($this->days);
+        return app(AnalyticsService::class)->dashboard($this->days, auth()->user(), ctype_digit($this->requestType) ? (int) $this->requestType : null);
     }
 
     public function duration(?int $minutes): string
@@ -65,12 +84,16 @@ new #[Title('Approval analytics')] class extends Component {
                 <flux:select.option value="30">{{ __('Last 30 days') }}</flux:select.option>
                 <flux:select.option value="90">{{ __('Last 90 days') }}</flux:select.option>
             </flux:select>
+            <flux:select wire:model.live="requestType" :label="__('Request form')" class="w-52">
+                <flux:select.option value="">{{ __('All request forms') }}</flux:select.option>
+                @foreach ($this->requestTypes as $type)<flux:select.option :value="$type->id">{{ $type->name }}</flux:select.option>@endforeach
+            </flux:select>
             <flux:dropdown>
                 <flux:button icon="arrow-down-tray" icon-trailing="chevron-down">{{ __('Export') }}</flux:button>
                 <flux:menu>
-                    <flux:menu.item :href="route('admin.analytics.export', ['days' => $days, 'format' => 'csv'])" icon="document-text">{{ __('CSV data') }}</flux:menu.item>
-                    <flux:menu.item :href="route('admin.analytics.export', ['days' => $days, 'format' => 'xlsx'])" icon="table-cells">{{ __('Excel workbook') }}</flux:menu.item>
-                    <flux:menu.item :href="route('admin.analytics.export', ['days' => $days, 'format' => 'pdf'])" icon="document-arrow-down">{{ __('PDF report') }}</flux:menu.item>
+                    <flux:menu.item :href="route('admin.analytics.export', ['days' => $days, 'request_type' => $requestType, 'format' => 'csv'])" icon="document-text">{{ __('CSV data') }}</flux:menu.item>
+                    <flux:menu.item :href="route('admin.analytics.export', ['days' => $days, 'request_type' => $requestType, 'format' => 'xlsx'])" icon="table-cells">{{ __('Excel workbook') }}</flux:menu.item>
+                    <flux:menu.item :href="route('admin.analytics.export', ['days' => $days, 'request_type' => $requestType, 'format' => 'pdf'])" icon="document-arrow-down">{{ __('PDF report') }}</flux:menu.item>
                 </flux:menu>
             </flux:dropdown>
         </div>
@@ -103,6 +126,23 @@ new #[Title('Approval analytics')] class extends Component {
             @endforeach
         </div>
     </section>
+
+    @if ($this->report['custom_fields'] !== [])
+        <flux:card>
+            <flux:heading size="sm">{{ __('Request field breakdown') }}</flux:heading>
+            <p class="mt-1 text-xs text-zinc-500">{{ __('Counts use reportable fields only. Sensitive fields require explicit sensitive-field access.') }}</p>
+            <div class="mt-4 grid gap-6 lg:grid-cols-2">
+                @foreach ($this->report['custom_fields'] as $field)
+                    <div>
+                        <h3 class="text-sm font-medium">{{ $field['label'] }}</h3>
+                        <table class="mt-2 w-full text-sm"><tbody class="divide-y divide-zinc-100 dark:divide-zinc-800">
+                            @foreach ($field['values'] as $value)<tr><td class="py-2">{{ $value['value'] }}</td><td class="py-2 text-right tabular-nums">{{ $value['count'] }}</td></tr>@endforeach
+                        </tbody></table>
+                    </div>
+                @endforeach
+            </div>
+        </flux:card>
+    @endif
 
     <flux:card>
         @php

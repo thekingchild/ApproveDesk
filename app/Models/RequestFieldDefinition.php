@@ -20,6 +20,11 @@ use Illuminate\Support\Carbon;
  * @property RequestFieldType $type
  * @property int $position
  * @property bool $is_required
+ * @property bool $is_searchable
+ * @property bool $is_filterable
+ * @property bool $is_reportable
+ * @property bool $is_sensitive
+ * @property bool $is_approver_summary
  * @property array<string, mixed>|null $configuration
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -30,7 +35,8 @@ class RequestFieldDefinition extends Model
     use HasFactory;
 
     protected $fillable = [
-        'request_type_version_id', 'key', 'label', 'type', 'position', 'is_required', 'configuration',
+        'request_type_version_id', 'key', 'label', 'type', 'position', 'is_required',
+        'is_searchable', 'is_filterable', 'is_reportable', 'is_sensitive', 'is_approver_summary', 'configuration',
     ];
 
     protected function casts(): array
@@ -39,6 +45,11 @@ class RequestFieldDefinition extends Model
             'type' => RequestFieldType::class,
             'position' => 'integer',
             'is_required' => 'boolean',
+            'is_searchable' => 'boolean',
+            'is_filterable' => 'boolean',
+            'is_reportable' => 'boolean',
+            'is_sensitive' => 'boolean',
+            'is_approver_summary' => 'boolean',
             'configuration' => 'array',
         ];
     }
