@@ -3,6 +3,7 @@
 namespace Tests\Browser;
 
 use App\Enums\SubmissionStatus;
+use App\Models\RequestType;
 use App\Models\Submission;
 use App\Models\User;
 use App\Models\WorkflowTemplate;
@@ -50,6 +51,57 @@ class RequesterApprovalFlowTest extends DuskTestCase
                 ->waitFor('@submit-request')
                 ->pause(300)
                 ->click('@submit-request')
+                ->waitForRoute('submissions.show', $draft)
+                ->assertSee('in review');
+
+            $this->assertSame(SubmissionStatus::InReview, $draft->fresh()->status);
+        });
+    }
+
+    public function test_admin_builds_and_publishes_a_custom_form_then_requester_saves_reopens_and_submits_it(): void
+    {
+        $admin = User::factory()->create()->assignRole('admin');
+        $submitter = User::factory()->create()->assignRole('submitter');
+        $approver = User::factory()->create()->assignRole('approver');
+        WorkflowTemplate::factory()->default()->sequential([$approver])->create();
+
+        $this->browse(function (Browser $browser) use ($admin, $submitter): void {
+            $browser->loginAs($admin)
+                ->visitRoute('admin.request-types.index')
+                ->waitFor('@create-request-type')
+                ->click('@create-request-type')
+                ->waitFor('@request-type-name')
+                ->type('@request-type-name', 'Browser Leave Request')
+                ->type('@field-label-0', 'Leave reason')
+                ->type('@field-key-0', 'leave_reason')
+                ->check('@field-required-0')
+                ->click('@publish-request-type')
+                ->waitForText('Request type published.');
+
+            $requestType = RequestType::query()->where('slug', 'browser-leave-request')->firstOrFail();
+            $this->assertNotNull($requestType->publishedVersion);
+
+            $browser->loginAs($submitter)
+                ->visitRoute('submissions.custom.create', $requestType)
+                ->waitFor('@custom-field-leave_reason')
+                ->type('@custom-field-leave_reason', 'Family holiday')
+                ->click('@save-custom-draft')
+                ->waitForText('Family holiday')
+                ->assertSee('Family holiday');
+
+            $draft = Submission::query()
+                ->where('submitter_id', $submitter->id)
+                ->where('request_type_version_id', $requestType->publishedVersion->id)
+                ->sole();
+            $this->assertSame(SubmissionStatus::Draft, $draft->status);
+
+            $browser->visitRoute('submissions.custom.edit', $draft)
+                ->waitFor('@custom-field-leave_reason')
+                ->assertInputValue('@custom-field-leave_reason', 'Family holiday')
+                ->click('@review-custom-request')
+                ->waitForText('Review summary')
+                ->assertSee('Family holiday')
+                ->click('@submit-custom-request')
                 ->waitForRoute('submissions.show', $draft)
                 ->assertSee('in review');
 

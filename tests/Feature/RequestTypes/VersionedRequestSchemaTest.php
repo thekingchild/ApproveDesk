@@ -3,6 +3,7 @@
 namespace Tests\Feature\RequestTypes;
 
 use App\Actions\RequestTypes\PublishRequestTypeVersionAction;
+use App\Actions\RequestTypes\StoreSubmissionFieldValuesAction;
 use App\Actions\Submissions\CreateSubmissionAction;
 use App\Actions\Submissions\SyncLegacySubmissionFieldValuesAction;
 use App\DTOs\SubmissionData;
@@ -189,6 +190,47 @@ class VersionedRequestSchemaTest extends TestCase
 
         $this->assertSame(1, $submission->requestTypeVersion->version);
         $this->assertSame('Original reason', $submission->requestTypeVersion->fields->first()->label);
+    }
+
+    public function test_an_old_submission_renders_its_original_published_schema_after_a_new_version_is_published(): void
+    {
+        $owner = User::factory()->create();
+        $type = RequestType::factory()->create(['name' => 'Leave Request']);
+        $versionOne = RequestTypeVersion::factory()->for($type)->create(['version' => 1]);
+        RequestFieldDefinition::factory()->for($versionOne)->create([
+            'key' => 'reason',
+            'label' => 'Original leave reason',
+            'type' => RequestFieldType::LongText,
+            'is_required' => true,
+        ]);
+        $publishedVersionOne = app(PublishRequestTypeVersionAction::class)->execute($versionOne);
+        $submission = Submission::factory()->for($owner, 'submitter')->create([
+            'request_type_version_id' => $publishedVersionOne->id,
+            'title' => 'Historical leave request',
+        ]);
+        app(StoreSubmissionFieldValuesAction::class)->execute($submission, ['reason' => 'Original stored answer']);
+
+        $versionTwo = RequestTypeVersion::factory()->for($type)->create(['version' => 2]);
+        RequestFieldDefinition::factory()->for($versionTwo)->create([
+            'key' => 'reason',
+            'label' => 'Replacement reason label',
+            'type' => RequestFieldType::LongText,
+        ]);
+        RequestFieldDefinition::factory()->for($versionTwo)->create([
+            'key' => 'manager_note',
+            'label' => 'New manager note',
+            'position' => 1,
+        ]);
+        app(PublishRequestTypeVersionAction::class)->execute($versionTwo);
+
+        $this->actingAs($owner)
+            ->get(route('submissions.show', $submission))
+            ->assertOk()
+            ->assertSee('Version 1')
+            ->assertSee('Original leave reason')
+            ->assertSee('Original stored answer')
+            ->assertDontSee('Replacement reason label')
+            ->assertDontSee('New manager note');
     }
 
     private function assertDomainException(callable $callback, string $operation = 'operation'): void

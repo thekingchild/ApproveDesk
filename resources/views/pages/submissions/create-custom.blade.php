@@ -166,27 +166,27 @@ new #[Title('Custom request')] class extends Component {
                 @endif
                 <div class="space-y-1" wire:key="custom-field-{{ $field->id }}">
                     @if ($field->type === RequestFieldType::LongText || $field->type === RequestFieldType::RichText)
-                        <flux:textarea wire:model.live="values.{{ $field->key }}" :label="$field->label" :placeholder="$config['placeholder'] ?? ''" :required="app(RequestSchemaCompiler::class)->isRequired($field, $values)" />
+                        <flux:textarea wire:model.live="values.{{ $field->key }}" :label="$field->label" :placeholder="$config['placeholder'] ?? ''" :required="app(RequestSchemaCompiler::class)->isRequired($field, $values)" dusk="custom-field-{{ $field->key }}" />
                     @elseif (in_array($field->type, [RequestFieldType::Select, RequestFieldType::User, RequestFieldType::Department], true))
-                        <flux:select wire:model.live="values.{{ $field->key }}" :label="$field->label" :required="app(RequestSchemaCompiler::class)->isRequired($field, $values)"><flux:select.option value="">{{ __('Choose…') }}</flux:select.option>@foreach ($field->type === RequestFieldType::User ? $this->users : ($field->type === RequestFieldType::Department ? $this->departments : collect($config['options'] ?? [])) as $option)<flux:select.option :value="is_object($option) ? $option->id : $option">{{ is_object($option) ? $option->name : $option }}</flux:select.option>@endforeach</flux:select>
+                        <flux:select wire:model.live="values.{{ $field->key }}" :label="$field->label" :required="app(RequestSchemaCompiler::class)->isRequired($field, $values)" dusk="custom-field-{{ $field->key }}"><flux:select.option value="">{{ __('Choose…') }}</flux:select.option>@foreach ($field->type === RequestFieldType::User ? $this->users : ($field->type === RequestFieldType::Department ? $this->departments : collect($config['options'] ?? [])) as $option)<flux:select.option :value="is_object($option) ? $option->id : $option">{{ is_object($option) ? $option->name : $option }}</flux:select.option>@endforeach</flux:select>
                     @elseif ($field->type === RequestFieldType::MultiSelect)
                         <label class="block text-sm font-medium">{{ $field->label }}</label><select wire:model.live="values.{{ $field->key }}" multiple class="min-h-28 w-full rounded-lg border bg-white p-2 dark:bg-zinc-900">@foreach ($config['options'] ?? [] as $option)<option value="{{ $option }}">{{ $option }}</option>@endforeach</select>
                     @elseif ($field->type === RequestFieldType::Radio)
                         <fieldset><legend class="text-sm font-medium">{{ $field->label }}</legend><div class="mt-2 flex flex-wrap gap-4">@foreach ($config['options'] ?? [] as $option)<label><input type="radio" wire:model.live="values.{{ $field->key }}" value="{{ $option }}"> {{ $option }}</label>@endforeach</div></fieldset>
                     @elseif ($field->type === RequestFieldType::Checkbox)
-                        <flux:checkbox wire:model.live="values.{{ $field->key }}" :label="$field->label" />
+                        <flux:checkbox wire:model.live="values.{{ $field->key }}" :label="$field->label" dusk="custom-field-{{ $field->key }}" />
                     @elseif ($field->type === RequestFieldType::File)
                         <flux:input type="file" wire:model="uploads.{{ $field->key }}" multiple :label="$field->label" :accept="collect($config['allowed_types'] ?? [])->map(fn($type) => '.'.$type)->implode(',')" />
                     @elseif ($field->type === RequestFieldType::Calculated)
                         <flux:input :value="$values[$field->key] ?? 0" :label="$field->label" readonly />
                     @else
-                        <flux:input wire:model.live="values.{{ $field->key }}" :type="match($field->type) { RequestFieldType::Number, RequestFieldType::Currency => 'number', RequestFieldType::Date => 'date', RequestFieldType::DateTime => 'datetime-local', RequestFieldType::Url => 'url', RequestFieldType::Email => 'email', default => 'text' }" :label="$field->label" :placeholder="$config['placeholder'] ?? ''" :required="app(RequestSchemaCompiler::class)->isRequired($field, $values)" />
+                        <flux:input wire:model.live="values.{{ $field->key }}" :type="match($field->type) { RequestFieldType::Number, RequestFieldType::Currency => 'number', RequestFieldType::Date => 'date', RequestFieldType::DateTime => 'datetime-local', RequestFieldType::Url => 'url', RequestFieldType::Email => 'email', default => 'text' }" :label="$field->label" :placeholder="$config['placeholder'] ?? ''" :required="app(RequestSchemaCompiler::class)->isRequired($field, $values)" dusk="custom-field-{{ $field->key }}" />
                     @endif
                     @if ($config['help'] ?? null)<p class="text-sm text-zinc-600 dark:text-zinc-300">{{ $config['help'] }}</p>@endif
                     <flux:error name="values.{{ $field->key }}" />
                 </div>
             @endforeach
-            <div class="flex justify-end gap-2"><flux:button type="button" wire:click="saveDraft">{{ __('Save draft') }}</flux:button><flux:button type="submit" variant="primary" dusk="review-custom-request">{{ __('Review request') }}</flux:button></div>
+            <div class="flex justify-end gap-2"><flux:button type="button" wire:click="saveDraft" dusk="save-custom-draft">{{ __('Save draft') }}</flux:button><flux:button type="submit" variant="primary" dusk="review-custom-request">{{ __('Review request') }}</flux:button></div>
         </form>
     @else
         <flux:card><flux:heading size="md">{{ __('Review summary') }}</flux:heading><dl class="mt-4 divide-y divide-zinc-200 dark:divide-zinc-700">@foreach ($this->version->fields as $field) @continue(!app(RequestSchemaCompiler::class)->isVisible($field, $values)) <div class="grid gap-1 py-3 sm:grid-cols-3"><dt class="font-medium">{{ $field->label }}</dt><dd class="sm:col-span-2">{{ is_array($values[$field->key] ?? null) ? implode(', ', $values[$field->key]) : (($values[$field->key] ?? '') !== '' ? $values[$field->key] : '—') }}</dd></div>@endforeach</dl></flux:card>

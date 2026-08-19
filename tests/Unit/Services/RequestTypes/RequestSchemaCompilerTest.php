@@ -119,4 +119,116 @@ class RequestSchemaCompilerTest extends TestCase
         $this->expectException(ValidationException::class);
         app(RequestSchemaCompiler::class)->assertSchemaValid($version->fields);
     }
+
+    public function test_defaults_limits_and_nested_choice_rules_are_compiled(): void
+    {
+        $version = RequestTypeVersion::factory()->create();
+        RequestFieldDefinition::factory()->for($version)->create([
+            'key' => 'summary',
+            'label' => 'Summary',
+            'type' => RequestFieldType::ShortText,
+            'configuration' => ['default' => 'Draft summary', 'max_length' => 5],
+        ]);
+        RequestFieldDefinition::factory()->for($version)->create([
+            'key' => 'amount',
+            'type' => RequestFieldType::Number,
+            'position' => 1,
+            'configuration' => ['min' => 10, 'max' => 20],
+        ]);
+        RequestFieldDefinition::factory()->for($version)->create([
+            'key' => 'choices',
+            'type' => RequestFieldType::MultiSelect,
+            'position' => 2,
+            'configuration' => ['options' => ['One', 'Two']],
+        ]);
+
+        $compiler = app(RequestSchemaCompiler::class);
+
+        $this->assertSame('Draft summary', $compiler->defaults($version)['summary']);
+
+        foreach ([
+            ['summary' => 'too long'],
+            ['summary' => 'valid', 'amount' => 9],
+            ['summary' => 'valid', 'amount' => 21],
+            ['summary' => 'valid', 'amount' => 15, 'choices' => ['Three']],
+        ] as $values) {
+            try {
+                $compiler->validate($version, $values);
+                $this->fail('Expected configured validation rules to reject the value.');
+            } catch (ValidationException) {
+                $this->addToAssertionCount(1);
+            }
+        }
+    }
+
+    public function test_every_condition_operator_controls_visibility_and_required_state(): void
+    {
+        $version = RequestTypeVersion::factory()->create();
+        RequestFieldDefinition::factory()->for($version)->create([
+            'key' => 'trigger',
+            'type' => RequestFieldType::ShortText,
+        ]);
+        $conditions = [
+            'equals' => ['value' => 'yes', 'matching' => 'yes', 'not_matching' => 'no'],
+            'not_equals' => ['value' => 'yes', 'matching' => 'no', 'not_matching' => 'yes'],
+            'in' => ['value' => ['yes', 'maybe'], 'matching' => 'maybe', 'not_matching' => 'no'],
+            'not_empty' => ['value' => null, 'matching' => 'present', 'not_matching' => ''],
+        ];
+
+        foreach ($conditions as $position => $condition) {
+            RequestFieldDefinition::factory()->for($version)->create([
+                'key' => 'conditional_'.$position,
+                'type' => RequestFieldType::ShortText,
+                'position' => array_search($position, array_keys($conditions), true) + 1,
+                'configuration' => [
+                    'visibility' => ['field' => 'trigger', 'operator' => $position, 'value' => $condition['value']],
+                    'required_when' => ['field' => 'trigger', 'operator' => $position, 'value' => $condition['value']],
+                ],
+            ]);
+        }
+
+        $compiler = app(RequestSchemaCompiler::class);
+        $compiler->assertSchemaValid($version->fields);
+
+        foreach ($conditions as $operator => $condition) {
+            $field = $version->fields->firstWhere('key', 'conditional_'.$operator);
+            $this->assertTrue($compiler->isVisible($field, ['trigger' => $condition['matching']]));
+            $this->assertTrue($compiler->isRequired($field, ['trigger' => $condition['matching']]));
+            $this->assertFalse($compiler->isVisible($field, ['trigger' => $condition['not_matching']]));
+        }
+    }
+
+    public function test_schema_rejects_empty_choices_future_references_and_unknown_operators(): void
+    {
+        foreach (['empty_choice', 'future_reference', 'unknown_operator'] as $scenario) {
+            $version = RequestTypeVersion::factory()->create();
+
+            if ($scenario === 'empty_choice') {
+                RequestFieldDefinition::factory()->for($version)->create([
+                    'type' => RequestFieldType::Select,
+                    'configuration' => ['options' => []],
+                ]);
+            } else {
+                RequestFieldDefinition::factory()->for($version)->create([
+                    'key' => 'conditional',
+                    'configuration' => ['visibility' => [
+                        'field' => $scenario === 'future_reference' ? 'later' : 'conditional',
+                        'operator' => $scenario === 'unknown_operator' ? 'contains' : 'equals',
+                        'value' => 'yes',
+                    ]],
+                ]);
+                RequestFieldDefinition::factory()->for($version)->create([
+                    'key' => 'later',
+                    'position' => 1,
+                ]);
+            }
+
+            try {
+                app(RequestSchemaCompiler::class)->assertSchemaValid($version->fields);
+                $this->fail("Expected invalid schema scenario [{$scenario}] to fail.");
+            } catch (ValidationException) {
+                $this->addToAssertionCount(1);
+            }
+        }
+    }
 }

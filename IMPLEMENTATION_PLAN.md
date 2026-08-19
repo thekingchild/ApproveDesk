@@ -182,13 +182,13 @@ A task is complete only when it has:
 - **P6-SRCH-02 — Complete:** Global and submission-list search include configured typed fields, analytics can filter by request type and summarize reportable values, and sensitive values are excluded from unauthorized search, reports, list configuration, and submission details.
 - **P6-SRCH-03 — Complete:** Submission lists support request-type-specific field filters and reportable columns, with named per-user saved views that preserve filters and column selections.
 
-### 6.4 Tests and exit gate
+### 6.4 Tests and exit gate — Complete (2026-08-19)
 
-- Schema compiler unit tests for every field and rule type.
-- Feature tests proving immutable version behavior and correct rendering of old submissions after a form changes.
-- Authorization tests for sensitive field visibility.
-- Migration test using a v2.1 database fixture.
-- Dusk tests for building, publishing, completing, saving, reopening, and submitting a custom form.
+- **P6-TEST-01 — Complete:** Schema compiler unit tests cover every field type, typed persistence column, defaults, limits, choice constraints, conditional operators, required rules, calculations, invalid references, and draft validation.
+- **P6-TEST-02 — Complete:** Feature tests prove published schema immutability and render an old submission from its original version after a replacement version is published.
+- **P6-TEST-03 — Complete:** Authorization tests prove sensitive values are visible to authorized owners and administrators but excluded from approver search, submission details, list configuration, and unauthorized analytics.
+- **P6-TEST-04 — Complete:** The migration test loads a checked-in ApproveDesk v2.1 SQL database fixture and verifies references, typed values, and append-only workflow history survive the upgrade through the Phase 6 migrations.
+- **P6-TEST-05 — Complete:** Dusk covers an administrator building and publishing a custom form and a requester completing, saving, reopening, reviewing, and submitting it.
 
 **Phase 6 demo:** an administrator builds and publishes a Leave Request form; a requester completes it; search/report filters use its typed fields; editing the form creates a new version without altering the old request.
 
