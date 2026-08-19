@@ -9,6 +9,7 @@ use App\Enums\RequestFieldType;
 use App\Models\RequestType;
 use App\Models\RequestTypeVersion;
 use App\Models\WorkflowTemplate;
+use App\Support\RequestFieldKey;
 use Flux\Flux;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -101,9 +102,16 @@ new #[Title('Request types')] class extends Component {
         }
 
         $copy = $this->fields[$index];
-        $copy['label'] .= ' copy';
-        $copy['key'] .= '_copy';
+        $copy['label'] = trim((string) $copy['label'].' copy');
+        $copy['key'] = '';
+        $copy['keyAuto'] = true;
         array_splice($this->fields, $index + 1, 0, [$copy]);
+        $newIndex = $index + 1;
+        $this->fields[$newIndex]['key'] = RequestFieldKey::uniqueFromLabel(
+            (string) $this->fields[$newIndex]['label'],
+            $this->fields,
+            $newIndex,
+        );
     }
 
     public function removeField(int $index): void
@@ -136,12 +144,22 @@ new #[Title('Request types')] class extends Component {
 
     public function updatedFields(mixed $value, ?string $path = null): void
     {
-        if ($path !== null && str_ends_with($path, '.label')) {
-            $index = (int) str($path)->before('.')->toString();
+        if ($path === null || ! str_ends_with($path, '.label')) {
+            return;
+        }
 
-            if (($this->fields[$index]['key'] ?? '') === '') {
-                $this->fields[$index]['key'] = Str::snake((string) $value);
-            }
+        $index = (int) str($path)->before('.')->toString();
+
+        if (! ($this->fields[$index]['keyAuto'] ?? (($this->fields[$index]['key'] ?? '') === ''))) {
+            return;
+        }
+
+        $oldKey = (string) ($this->fields[$index]['key'] ?? '');
+        $newKey = RequestFieldKey::uniqueFromLabel((string) $value, $this->fields, $index);
+        $this->fields[$index]['key'] = $newKey;
+
+        if ($oldKey !== '' && $oldKey !== $newKey) {
+            $this->retargetFieldKeys($oldKey, $newKey);
         }
     }
 
@@ -168,9 +186,25 @@ new #[Title('Request types')] class extends Component {
         }, 'request-field-options.csv', ['Content-Type' => 'text/csv']);
     }
 
+    public function toggleCalculationField(int $index, int $sourceIndex): void
+    {
+        $sourceKey = (string) ($this->fields[$sourceIndex]['key'] ?? '');
+
+        if ($sourceKey === '' || ! isset($this->fields[$index])) {
+            return;
+        }
+
+        $selected = $this->options((string) ($this->fields[$index]['calculationFields'] ?? ''));
+
+        $this->fields[$index]['calculationFields'] = implode(',', in_array($sourceKey, $selected, true)
+            ? array_values(array_diff($selected, [$sourceKey]))
+            : array_values(array_merge($selected, [$sourceKey])));
+    }
+
     public function save(bool $publish = false): void
     {
         $this->authorize($this->editingTypeId ? 'update' : 'create', $this->editingTypeId ? RequestType::findOrFail($this->editingTypeId) : RequestType::class);
+        $this->ensureFieldKeys();
         $this->validate([
             'name' => ['required', 'string', 'max:150'],
             'description' => ['nullable', 'string', 'max:2000'],
@@ -230,7 +264,7 @@ new #[Title('Request types')] class extends Component {
     private function blankField(): array
     {
         return [
-            'label' => '', 'key' => '', 'type' => RequestFieldType::ShortText->value, 'is_required' => false,
+            'label' => '', 'key' => '', 'keyAuto' => true, 'type' => RequestFieldType::ShortText->value, 'is_required' => false,
             'is_searchable' => false, 'is_filterable' => false, 'is_reportable' => false,
             'is_sensitive' => false, 'is_approver_summary' => false,
             'section' => '', 'instructions' => '', 'placeholder' => '', 'help' => '', 'default' => '',
@@ -245,7 +279,7 @@ new #[Title('Request types')] class extends Component {
         $config = $field->configuration ?? [];
 
         return [...$this->blankField(),
-            'label' => $field->label, 'key' => $field->key, 'type' => $field->type->value, 'is_required' => $field->is_required,
+            'label' => $field->label, 'key' => $field->key, 'keyAuto' => false, 'type' => $field->type->value, 'is_required' => $field->is_required,
             'is_searchable' => $field->is_searchable, 'is_filterable' => $field->is_filterable,
             'is_reportable' => $field->is_reportable, 'is_sensitive' => $field->is_sensitive,
             'is_approver_summary' => $field->is_approver_summary,
@@ -316,6 +350,44 @@ new #[Title('Request types')] class extends Component {
         }
 
         return $resolved->name.' ('.__('default fallback').')';
+    }
+
+    private function ensureFieldKeys(): void
+    {
+        foreach ($this->fields as $index => $field) {
+            $oldKey = trim((string) ($field['key'] ?? ''));
+            $auto = (bool) ($field['keyAuto'] ?? $oldKey === '');
+
+            if (! $auto && $oldKey !== '') {
+                continue;
+            }
+
+            $newKey = RequestFieldKey::uniqueFromLabel((string) ($field['label'] ?? ''), $this->fields, $index);
+            $this->fields[$index]['key'] = $newKey;
+
+            if ($oldKey !== '' && $oldKey !== $newKey) {
+                $this->retargetFieldKeys($oldKey, $newKey);
+            }
+        }
+    }
+
+    private function retargetFieldKeys(string $oldKey, string $newKey): void
+    {
+        foreach ($this->fields as $index => $field) {
+            if (($field['visibilityField'] ?? '') === $oldKey) {
+                $this->fields[$index]['visibilityField'] = $newKey;
+            }
+
+            if (($field['requiredField'] ?? '') === $oldKey) {
+                $this->fields[$index]['requiredField'] = $newKey;
+            }
+
+            $selected = $this->options((string) ($field['calculationFields'] ?? ''));
+            $this->fields[$index]['calculationFields'] = implode(',', array_map(
+                fn (string $key): string => $key === $oldKey ? $newKey : $key,
+                $selected,
+            ));
+        }
     }
 
     private function resetBuilder(): void
@@ -401,7 +473,7 @@ new #[Title('Request types')] class extends Component {
                     <section wire:key="field-{{ $index }}" wire:sort:item="{{ $index }}" class="rounded-xl border border-zinc-200 p-4 dark:border-zinc-700" dusk="builder-field-{{ $index }}">
                         <div class="mb-3 flex items-center justify-between"><div class="font-semibold" wire:sort:handle>⋮⋮ {{ __('Field') }} {{ $index + 1 }}</div><div class="flex gap-1"><flux:button size="sm" wire:click="moveField({{ $index }}, -1)" aria-label="Move field up">↑</flux:button><flux:button size="sm" wire:click="moveField({{ $index }}, 1)" aria-label="Move field down">↓</flux:button><flux:button size="sm" wire:click="duplicateField({{ $index }})">{{ __('Duplicate') }}</flux:button><flux:button size="sm" variant="danger" wire:click="removeField({{ $index }})">{{ __('Delete') }}</flux:button></div></div>
                         <div class="grid gap-3 md:grid-cols-3">
-                            <flux:input wire:model.live="fields.{{ $index }}.label" label="Label" required dusk="field-label-{{ $index }}" /><flux:input wire:model="fields.{{ $index }}.key" label="Key" required dusk="field-key-{{ $index }}" />
+                            <flux:input wire:model.live.debounce.400ms="fields.{{ $index }}.label" label="Label" required dusk="field-label-{{ $index }}" />
                             <flux:select wire:model.live="fields.{{ $index }}.type" label="Type" dusk="field-type-{{ $index }}">@foreach (RequestFieldType::cases() as $case)<flux:select.option :value="$case->value">{{ Str::headline($case->value) }}</flux:select.option>@endforeach</flux:select>
                             <flux:input wire:model="fields.{{ $index }}.section" label="Section" /><flux:input wire:model="fields.{{ $index }}.placeholder" label="Placeholder" /><flux:input wire:model="fields.{{ $index }}.help" label="Help text" />
                             <flux:input wire:model="fields.{{ $index }}.instructions" label="Instructions" /><flux:input wire:model="fields.{{ $index }}.default" label="Default value" /><flux:checkbox wire:model="fields.{{ $index }}.is_required" label="Always required" dusk="field-required-{{ $index }}" />
@@ -419,8 +491,47 @@ new #[Title('Request types')] class extends Component {
                             <div class="mt-3 grid gap-3 md:grid-cols-2"><flux:textarea wire:model="fields.{{ $index }}.options" label="Options (one per line)" /><div><flux:textarea wire:model="fields.{{ $index }}.optionsCsv" label="CSV options" /><div class="mt-2 flex gap-2"><flux:button size="sm" wire:click="importOptions({{ $index }})">{{ __('Import CSV') }}</flux:button><flux:button size="sm" wire:click="exportOptions({{ $index }})">{{ __('Export CSV') }}</flux:button></div></div></div>
                         @endif
                         @if ($field['type'] === 'file')<div class="mt-3"><flux:input wire:model="fields.{{ $index }}.allowedTypes" label="Allowed extensions (comma separated)" /></div>@endif
-                        @if ($field['type'] === 'calculated')<div class="mt-3"><flux:input wire:model="fields.{{ $index }}.calculationFields" label="Fields to sum (comma separated keys)" /></div>@endif
-                        <details class="mt-3"><summary class="cursor-pointer font-medium">{{ __('Conditional rules') }}</summary><div class="mt-3 grid gap-3 md:grid-cols-3"><flux:input wire:model="fields.{{ $index }}.visibilityField" label="Show when field" /><flux:select wire:model="fields.{{ $index }}.visibilityOperator" label="Operator">@foreach (\App\Services\RequestTypes\RequestSchemaCompiler::CONDITION_OPERATORS as $operator)<flux:select.option :value="$operator">{{ Str::headline($operator) }}</flux:select.option>@endforeach</flux:select><flux:input wire:model="fields.{{ $index }}.visibilityValue" label="Value" /><flux:input wire:model="fields.{{ $index }}.requiredField" label="Require when field" /><flux:select wire:model="fields.{{ $index }}.requiredOperator" label="Operator">@foreach (\App\Services\RequestTypes\RequestSchemaCompiler::CONDITION_OPERATORS as $operator)<flux:select.option :value="$operator">{{ Str::headline($operator) }}</flux:select.option>@endforeach</flux:select><flux:input wire:model="fields.{{ $index }}.requiredValue" label="Value" /></div></details>
+                        @if ($field['type'] === 'calculated')
+                            <fieldset class="mt-3 space-y-2">
+                                <legend class="text-sm font-medium">{{ __('Fields to sum') }}</legend>
+                                @foreach ($fields as $sourceIndex => $source)
+                                    @if ($sourceIndex < $index && in_array($source['type'], ['number', 'currency'], true) && ($source['key'] ?? '') !== '')
+                                        <flux:checkbox
+                                            :checked="in_array($source['key'], $this->options($field['calculationFields'] ?? ''), true)"
+                                            wire:click="toggleCalculationField({{ $index }}, {{ $sourceIndex }})"
+                                            :label="$source['label'] ?: __('Untitled field')"
+                                        />
+                                    @endif
+                                @endforeach
+                                @if (collect($fields)->take($index)->whereIn('type', ['number', 'currency'])->isEmpty())
+                                    <p class="text-sm text-zinc-500">{{ __('Add a number or currency field above this one first.') }}</p>
+                                @endif
+                            </fieldset>
+                        @endif
+                        <details class="mt-3"><summary class="cursor-pointer font-medium">{{ __('Conditional rules') }}</summary>
+                            <div class="mt-3 grid gap-3 md:grid-cols-3">
+                                <flux:select wire:model="fields.{{ $index }}.visibilityField" :label="__('Show when')">
+                                    <flux:select.option value="">{{ __('Always show') }}</flux:select.option>
+                                    @foreach ($fields as $sourceIndex => $source)
+                                        @if ($sourceIndex < $index && ($source['key'] ?? '') !== '')
+                                            <flux:select.option :value="$source['key']">{{ $source['label'] ?: __('Untitled field') }}</flux:select.option>
+                                        @endif
+                                    @endforeach
+                                </flux:select>
+                                <flux:select wire:model="fields.{{ $index }}.visibilityOperator" label="Operator">@foreach (\App\Services\RequestTypes\RequestSchemaCompiler::CONDITION_OPERATORS as $operator)<flux:select.option :value="$operator">{{ Str::headline($operator) }}</flux:select.option>@endforeach</flux:select>
+                                <flux:input wire:model="fields.{{ $index }}.visibilityValue" label="Value" />
+                                <flux:select wire:model="fields.{{ $index }}.requiredField" :label="__('Require when')">
+                                    <flux:select.option value="">{{ __('Use the required checkbox only') }}</flux:select.option>
+                                    @foreach ($fields as $sourceIndex => $source)
+                                        @if ($sourceIndex < $index && ($source['key'] ?? '') !== '')
+                                            <flux:select.option :value="$source['key']">{{ $source['label'] ?: __('Untitled field') }}</flux:select.option>
+                                        @endif
+                                    @endforeach
+                                </flux:select>
+                                <flux:select wire:model="fields.{{ $index }}.requiredOperator" label="Operator">@foreach (\App\Services\RequestTypes\RequestSchemaCompiler::CONDITION_OPERATORS as $operator)<flux:select.option :value="$operator">{{ Str::headline($operator) }}</flux:select.option>@endforeach</flux:select>
+                                <flux:input wire:model="fields.{{ $index }}.requiredValue" label="Value" />
+                            </div>
+                        </details>
                     </section>
                 @endforeach
             </div>

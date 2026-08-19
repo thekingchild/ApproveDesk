@@ -9,6 +9,7 @@ All notable changes to ApproveDesk are documented here. The project follows
 ### Added
 
 - Request-type workflow assignment: each form selects the template for new submissions, many named templates may be active, and one default remains the fallback.
+- Form-builder field keys are generated from labels and hidden from administrators.
 - Feature definitions article in the Help centre, and a phase-exit rule that Help must define and explain every shipped feature.
 - Administrator knowledge base in `docs/kb/` rendered as the in-app Help centre, with a compact Help menu and per-screen life-ring links that do not add Administration clutter.
 - Local/testing-only design-system reference covering typography, colour, actions, feedback, loading, empty, modal, and responsive-table patterns.
@@ -21,6 +22,7 @@ All notable changes to ApproveDesk are documented here. The project follows
 ### Changed
 
 - Workflow templates no longer exclusively own Document, Note, Memo, or Request. Those labels are optional; routing follows the request type assignment.
+- Request type builder condition and calculated-field controls pick earlier fields by label instead of raw keys.
 - Standardized product typography, accessible light/dark tokens, focus treatment, component surfaces, reduced-motion behavior, and touch target sizing.
 - Converted the submissions table into labelled cards on narrow screens and improved the core dashboard, submission, and approval empty states.
 - Removed Laravel starter-kit repository and documentation links from authenticated production navigation.

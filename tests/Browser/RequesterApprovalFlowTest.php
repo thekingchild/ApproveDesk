@@ -73,7 +73,6 @@ class RequesterApprovalFlowTest extends DuskTestCase
                 ->waitFor('@request-type-name')
                 ->type('@request-type-name', 'Browser Leave Request')
                 ->type('@field-label-0', 'Leave reason')
-                ->type('@field-key-0', 'leave_reason')
                 ->check('@field-required-0')
                 ->click('@publish-request-type')
                 ->waitForText('Request type published.');

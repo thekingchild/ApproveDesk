@@ -66,6 +66,61 @@ class RequestTypeBuilderTest extends TestCase
         $this->assertFalse($type->fresh()->is_active);
     }
 
+    public function test_builder_hides_keys_and_generates_them_from_labels(): void
+    {
+        $admin = User::factory()->create()->assignRole('admin');
+        $field = [
+            'label' => 'Leave reason', 'key' => '', 'keyAuto' => true, 'type' => 'long_text', 'is_required' => true,
+            'section' => '', 'instructions' => '', 'placeholder' => '', 'help' => '',
+            'default' => '', 'maxLength' => '', 'min' => '', 'max' => '', 'options' => '', 'optionsCsv' => '', 'allowedTypes' => '',
+            'visibilityField' => '', 'visibilityOperator' => 'equals', 'visibilityValue' => '',
+            'requiredField' => '', 'requiredOperator' => 'equals', 'requiredValue' => '', 'calculationFields' => '',
+        ];
+
+        Livewire::actingAs($admin)
+            ->test('pages::admin.request-types')
+            ->call('createType')
+            ->assertDontSee('dusk="field-key-0"', false)
+            ->set('name', 'Auto Key Form')
+            ->set('fields', [$field, [...$field, 'label' => 'Leave reason']])
+            ->call('save', true)
+            ->assertHasNoErrors();
+
+        $keys = RequestType::query()->where('slug', 'auto-key-form')->firstOrFail()
+            ->publishedVersion
+            ->fields()
+            ->orderBy('position')
+            ->pluck('key')
+            ->all();
+
+        $this->assertSame(['leave_reason', 'leave_reason_2'], $keys);
+    }
+
+    public function test_existing_field_keeps_its_key_when_the_label_changes(): void
+    {
+        $admin = User::factory()->create()->assignRole('admin');
+        $type = RequestType::factory()->create(['name' => 'Stable Keys']);
+        $version = RequestTypeVersion::factory()->for($type)->create();
+        RequestFieldDefinition::factory()->for($version)->create([
+            'key' => 'leave_reason',
+            'label' => 'Leave reason',
+            'type' => RequestFieldType::LongText,
+        ]);
+
+        Livewire::actingAs($admin)
+            ->test('pages::admin.request-types')
+            ->call('editType', $type->id)
+            ->set('fields.0.label', 'Reason for absence')
+            ->call('save', false)
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('request_field_definitions', [
+            'request_type_version_id' => $type->versions()->where('status', RequestTypeVersionStatus::Draft)->value('id'),
+            'key' => 'leave_reason',
+            'label' => 'Reason for absence',
+        ]);
+    }
+
     public function test_requester_can_save_reopen_review_and_submit_a_custom_form(): void
     {
         $submitter = User::factory()->create()->assignRole('submitter');

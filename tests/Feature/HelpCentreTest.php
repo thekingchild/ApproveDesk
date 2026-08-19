@@ -79,6 +79,7 @@ class HelpCentreTest extends TestCase
             ->assertSee('schema hash')
             ->assertSee('Workflow assignment')
             ->assertSee('Document, Note, Memo, and Request are not')
+            ->assertSee('The builder asks for a label, not a machine name')
             ->assertSee('data-test="help-article-body"', false);
     }
 

@@ -38,6 +38,10 @@ The current state of a request: Draft, Pending, In review, Awaiting information,
 
 See [Request statuses](statuses.md).
 
+## Field key
+
+The hidden machine name for a form field, generated from the label. Administrators do not type it. Search, analytics, and conditional rules use it internally.
+
 ## Audit trail
 
 The append-only list of workflow actions on a request. ApproveDesk does not edit or delete those rows.

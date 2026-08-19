@@ -38,6 +38,8 @@ Short text, long text, rich text, number, currency, date, date-time, choice, che
 
 Each field can have a section, instructions, placeholder, default, required flag, limits, allowed file types, and help text.
 
+The builder asks for a label, not a machine name. ApproveDesk generates a hidden field key from that label (`Leave reason` becomes `leave_reason`) and keeps it unique in the version. Existing fields keep their key if you later change the label, so visibility rules you already set stay attached. Conditional and calculated-field pickers show labels; the stored rules still use keys.
+
 Visibility and required-when rules may only reference an earlier field, and only with equals, not equals, in, and not empty.
 
 ## Search and reporting flags
