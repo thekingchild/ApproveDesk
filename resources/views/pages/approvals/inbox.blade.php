@@ -199,7 +199,7 @@ new #[Title('Approvals')] class extends Component {
 <div class="space-y-6">
     <x-ui.breadcrumbs :items="[['label' => __('Dashboard'), 'url' => route('dashboard')], ['label' => __('Approvals')]]" :back="route('dashboard')" back-label="Back to dashboard" />
 
-    <x-ui.page-header :title="__('Approval workbench')" :description="__('Review the highest-priority decisions first, preview context, and act without losing your place.')" />
+    <x-ui.page-header :title="__('Approval workbench')" :description="__('Review the highest-priority decisions first, preview context, and act without losing your place.')" help-article="approvals" />
 
     <nav aria-label="{{ __('Saved approval views') }}" class="flex gap-2 overflow-x-auto pb-1">
         @foreach ([

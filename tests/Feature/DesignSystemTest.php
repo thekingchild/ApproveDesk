@@ -30,6 +30,7 @@ class DesignSystemTest extends TestCase
             ->assertSee('Control notifications')
             ->assertSee('Skip to main content')
             ->assertSee(route('notifications.edit'), escape: false)
+            ->assertSee('data-test="help-menu"', escape: false)
             ->assertDontSee('github.com/laravel/livewire-starter-kit', escape: false)
             ->assertDontSee('laravel.com/docs/starter-kits', escape: false);
     }

@@ -77,9 +77,7 @@
 
             <flux:sidebar.nav>
                 <livewire:notification-indicator />
-                <flux:sidebar.item icon="lifebuoy" :href="route('help')" :current="request()->routeIs('help')" wire:navigate>
-                    {{ __('Help') }}
-                </flux:sidebar.item>
+                <x-help-menu variant="sidebar" />
             </flux:sidebar.nav>
 
             <x-desktop-user-menu class="hidden lg:block" :name="auth()->user()->name" />
@@ -96,6 +94,8 @@
             </flux:modal.trigger>
 
             <livewire:notification-indicator mobile />
+
+            <x-help-menu variant="mobile" />
 
             <flux:dropdown position="top" align="end">
                 <flux:profile
@@ -125,6 +125,9 @@
                     <flux:menu.radio.group>
                         <flux:menu.item :href="route('profile.edit')" icon="cog" wire:navigate>
                             {{ __('Settings') }}
+                        </flux:menu.item>
+                        <flux:menu.item :href="route('help')" icon="lifebuoy" wire:navigate>
+                            {{ __('Help') }}
                         </flux:menu.item>
                     </flux:menu.radio.group>
 

@@ -165,7 +165,10 @@ new #[Title('User management')] class extends Component {
 
     <div class="flex flex-wrap items-start justify-between gap-3">
         <div>
-            <flux:heading size="lg">{{ __('Users') }}</flux:heading>
+            <div class="flex items-center gap-1">
+                <flux:heading size="lg">{{ __('Users') }}</flux:heading>
+                <x-ui.help-link article="users-and-roles" />
+            </div>
             <flux:subheading>{{ __('Manage access, roles, departments, and account status.') }}</flux:subheading>
         </div>
 

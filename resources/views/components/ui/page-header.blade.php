@@ -2,6 +2,7 @@
     'title',
     'description' => null,
     'eyebrow' => null,
+    'helpArticle' => null,
 ])
 
 <header {{ $attributes->class('ad-page-header') }}>
@@ -10,7 +11,12 @@
             <p class="ad-eyebrow">{{ $eyebrow }}</p>
         @endif
 
-        <h1 class="ad-page-title">{{ $title }}</h1>
+        <div class="flex items-start gap-1">
+            <h1 class="ad-page-title">{{ $title }}</h1>
+            @if ($helpArticle)
+                <x-ui.help-link :article="$helpArticle" class="mt-1" />
+            @endif
+        </div>
 
         @if ($description)
             <p class="ad-page-description">{{ $description }}</p>

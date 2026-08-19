@@ -424,7 +424,10 @@ new #[Title('Workflow templates')] class extends Component {
 
     <div class="flex flex-wrap items-start justify-between gap-3">
         <div>
-            <flux:heading size="lg">{{ __('Workflow templates') }}</flux:heading>
+            <div class="flex items-center gap-1">
+                <flux:heading size="lg">{{ __('Workflow templates') }}</flux:heading>
+                <x-ui.help-link article="workflow-templates" />
+            </div>
             <flux:subheading>{{ __('Configure manual, conditional, and automatic approval chains by submission type.') }}</flux:subheading>
         </div>
         <flux:button variant="primary" icon="plus" wire:click="createTemplate" data-test="create-template">{{ __('Add template') }}</flux:button>

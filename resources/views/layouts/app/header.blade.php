@@ -23,15 +23,7 @@
                 <flux:modal.trigger name="global-search">
                     <flux:navbar.item class="h-10 [&>div>svg]:size-5" icon="magnifying-glass" :label="__('Search')" />
                 </flux:modal.trigger>
-                <flux:tooltip :content="__('Help')" position="bottom">
-                    <flux:navbar.item
-                        class="h-10 max-lg:hidden [&>div>svg]:size-5"
-                        icon="lifebuoy"
-                        :href="route('help')"
-                        :label="__('Help')"
-                        wire:navigate
-                    />
-                </flux:tooltip>
+                <x-help-menu variant="header" />
             </flux:navbar>
 
             <x-desktop-user-menu />
@@ -56,9 +48,7 @@
 
             <flux:sidebar.nav>
                 <livewire:notification-indicator />
-                <flux:sidebar.item icon="lifebuoy" :href="route('help')" wire:navigate>
-                    {{ __('Help') }}
-                </flux:sidebar.item>
+                <x-help-menu variant="sidebar" />
             </flux:sidebar.nav>
         </flux:sidebar>
 

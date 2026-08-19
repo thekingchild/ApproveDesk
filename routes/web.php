@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AnalyticsExportController;
 use App\Http\Controllers\EmailApprovalController;
+use App\Http\Controllers\HelpController;
 use App\Http\Controllers\InstallController;
 use App\Http\Controllers\OAuthController;
 use App\Http\Controllers\SubmissionFileDownloadController;
@@ -65,7 +66,8 @@ Route::middleware(['auth', 'verified', 'can:reports.view'])->prefix('admin')->na
 });
 
 Route::middleware(['auth', 'verified'])->group(function (): void {
-    Route::view('help', 'pages.help')->name('help');
+    Route::get('help', [HelpController::class, 'index'])->name('help');
+    Route::get('help/{article}', [HelpController::class, 'show'])->name('help.show');
     Route::livewire('notifications', 'pages::notifications.index')->name('notifications.index');
     Route::livewire('submissions', 'pages::submissions.index')->name('submissions.index');
     Route::livewire('submissions/new', 'pages::submissions.choose-type')

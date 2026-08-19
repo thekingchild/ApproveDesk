@@ -89,6 +89,21 @@ A task is complete only when it has:
 - Feature flags must have an owner, removal phase, default value, and test coverage.
 - Record material architecture decisions in `docs/adr/NNNN-title.md`.
 
+### 3.4 Administrator knowledge base
+
+The in-app Help centre (`/help`) and Markdown source in `docs/kb/` are the administrator knowledge base. They explain how to use the product. They do not cover installation, hosting, Docker, CI/CD, or `.env` files.
+
+The Help entry stays in the sidebar footer as a compact menu, with a matching icon in the mobile header. It must not add another item under Administration or crowd page headers. Administration screens may include a life-ring icon that opens the matching article.
+
+After each completed phase:
+
+1. Update `docs/kb/` for new or changed screens.
+2. Register those articles in `App\Support\HelpCatalogue`.
+3. Confirm Help as an administrator and as a requester.
+4. Commit the Markdown, catalogue, Help UI, and this plan together.
+
+**Administrator knowledge base through Phase 6 — Complete (2026-08-19):** getting around, requests, approvals, statuses, account settings, users and roles, departments, workflow templates, request types, analytics, webhooks, organization settings, and the audit trail.
+
 ## 4. Release map and status
 
 | Phase | Target | Theme | Status |
@@ -191,6 +206,8 @@ A task is complete only when it has:
 - **P6-TEST-05 — Complete:** Dusk covers an administrator building and publishing a custom form and a requester completing, saving, reopening, reviewing, and submitting it.
 
 **Phase 6 demo:** an administrator builds and publishes a Leave Request form; a requester completes it; search/report filters use its typed fields; editing the form creates a new version without altering the old request.
+
+The administrator knowledge base in `docs/kb/` and `/help` covers every shipped product area through this phase. Later phases must extend those articles before they are marked complete.
 
 ---
 

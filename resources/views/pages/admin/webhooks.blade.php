@@ -151,7 +151,10 @@ new #[Title('Webhook endpoints')] class extends Component {
 
     <div class="flex flex-wrap items-start justify-between gap-3">
         <div>
-            <flux:heading size="lg">{{ __('Webhook endpoints') }}</flux:heading>
+            <div class="flex items-center gap-1">
+                <flux:heading size="lg">{{ __('Webhook endpoints') }}</flux:heading>
+                <x-ui.help-link article="webhooks" />
+            </div>
             <flux:subheading>{{ __('Send signed workflow events to trusted HTTPS integrations.') }}</flux:subheading>
         </div>
 

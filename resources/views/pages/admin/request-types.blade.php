@@ -262,7 +262,7 @@ new #[Title('Request types')] class extends Component {
 
 <div class="space-y-6">
     <x-ui.breadcrumbs :items="[['label' => __('Dashboard'), 'url' => route('dashboard')], ['label' => __('Administration')], ['label' => __('Request types')]]" :back="route('dashboard')" back-label="Back to dashboard" />
-    <x-ui.page-header title="Request types" description="Build versioned forms without code.">
+    <x-ui.page-header title="Request types" description="Build versioned forms without code." help-article="request-types">
         <x-slot:actions><flux:button variant="primary" icon="plus" wire:click="createType" dusk="create-request-type">{{ __('Add request type') }}</flux:button></x-slot:actions>
     </x-ui.page-header>
 

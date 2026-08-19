@@ -13,6 +13,7 @@ Approval Workflow Application — submit documents, notes, and memos; route them
 | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Installer runbook, cPanel/Plesk bring-up, hardening |
 | [docs/AUTHENTICATION.md](docs/AUTHENTICATION.md) | Signed email approvals and Google/Microsoft login setup |
 | [docs/API.md](docs/API.md) | Personal API tokens, v1 REST endpoints, and signed webhooks |
+| [docs/kb/README.md](docs/kb/README.md) | Administrator knowledge base (in-app Help source) |
 | [ROADMAP.md](ROADMAP.md) | Candidate post-v2 work (planning only) |
 
 ## Quick Start (development)

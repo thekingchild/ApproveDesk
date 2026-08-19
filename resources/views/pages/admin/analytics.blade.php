@@ -74,7 +74,10 @@ new #[Title('Approval analytics')] class extends Component {
 
     <div class="flex flex-wrap items-end justify-between gap-4">
         <div>
-            <flux:heading size="lg">{{ __('Approval analytics') }}</flux:heading>
+            <div class="flex items-center gap-1">
+                <flux:heading size="lg">{{ __('Approval analytics') }}</flux:heading>
+                <x-ui.help-link article="analytics" />
+            </div>
             <flux:subheading>{{ __('Organization-wide workflows started between :from and :to. Calculated live at :time.', ['from' => $this->report['from']->format('M j, Y'), 'to' => $this->report['to']->format('M j, Y'), 'time' => now()->format('M j, Y g:i A')]) }}</flux:subheading>
         </div>
 

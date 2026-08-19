@@ -292,6 +292,69 @@
         box-shadow: var(--ad-shadow-md);
     }
 
+    .ad-help-prose {
+        color: var(--ad-text);
+        font-size: 0.9375rem;
+        line-height: 1.6;
+        max-width: 72ch;
+    }
+
+    .ad-help-prose > * + * {
+        margin-block-start: 0.85em;
+    }
+
+    .ad-help-prose h2,
+    .ad-help-prose h3 {
+        margin-block-start: 1.5em;
+        color: var(--ad-text-strong);
+        font-size: 1.0625rem;
+        line-height: 1.35;
+    }
+
+    .ad-help-prose p,
+    .ad-help-prose li {
+        color: var(--ad-text);
+    }
+
+    .ad-help-prose ul,
+    .ad-help-prose ol {
+        padding-inline-start: 1.25rem;
+    }
+
+    .ad-help-prose ul {
+        list-style: disc;
+    }
+
+    .ad-help-prose ol {
+        list-style: decimal;
+    }
+
+    .ad-help-prose a {
+        color: var(--ad-brand);
+        text-decoration: underline;
+        text-underline-offset: 0.15em;
+    }
+
+    .ad-help-prose table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.875rem;
+    }
+
+    .ad-help-prose th,
+    .ad-help-prose td {
+        border: 1px solid var(--ad-border);
+        padding: 0.5rem 0.75rem;
+        text-align: start;
+        vertical-align: top;
+    }
+
+    .ad-help-prose th {
+        background: var(--ad-surface-subtle);
+        color: var(--ad-text-strong);
+        font-weight: 600;
+    }
+
     [data-test='reject-modal-trigger'] {
         background: #b91c1c !important;
         color: #ffffff !important;

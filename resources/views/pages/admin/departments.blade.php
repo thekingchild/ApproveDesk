@@ -140,7 +140,10 @@ new #[Title('Department management')] class extends Component {
 
     <div class="flex flex-wrap items-start justify-between gap-3">
         <div>
-            <flux:heading size="lg">{{ __('Departments') }}</flux:heading>
+            <div class="flex items-center gap-1">
+                <flux:heading size="lg">{{ __('Departments') }}</flux:heading>
+                <x-ui.help-link article="departments" />
+            </div>
             <flux:subheading>{{ __('Organize teams, reporting lines, and department managers.') }}</flux:subheading>
         </div>
 

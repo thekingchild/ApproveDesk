@@ -8,6 +8,7 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Added
 
+- Administrator knowledge base in `docs/kb/` rendered as the in-app Help centre, with a compact Help menu and per-screen life-ring links that do not add Administration clutter.
 - Local/testing-only design-system reference covering typography, colour, actions, feedback, loading, empty, modal, and responsive-table patterns.
 - Authenticated help centre and product-level Help and Notifications navigation.
 - Reusable semantic page-header, alert, validation-summary, empty-state, and skeleton Blade components.
