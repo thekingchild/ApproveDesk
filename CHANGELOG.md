@@ -8,6 +8,7 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Added
 
+- Versioned workflow templates: published graphs are frozen, instances bind to a version, and a later publish retires the previous version without rewriting in-flight work.
 - Request-type workflow assignment: each form selects the template for new submissions, many named templates may be active, and one default remains the fallback.
 - Form-builder field keys are generated from labels and hidden from administrators.
 - Feature definitions article in the Help centre, and a phase-exit rule that Help must define and explain every shipped feature.

@@ -3,8 +3,11 @@
 namespace App\Actions\WorkflowTemplates;
 
 use App\DTOs\WorkflowTemplateData;
+use App\DTOs\WorkflowTemplateStepData;
+use App\Enums\WorkflowTemplateVersionStatus;
 use App\Models\User;
 use App\Models\WorkflowTemplate;
+use App\Models\WorkflowTemplateVersion;
 use Illuminate\Support\Facades\DB;
 
 final class CreateWorkflowTemplateAction
@@ -25,22 +28,40 @@ final class CreateWorkflowTemplateAction
                 'created_by' => $creator->id,
             ]);
 
-            foreach ($data->steps as $index => $step) {
-                $template->steps()->create([
-                    'step_order' => $index + 1,
-                    'name' => $step->name,
-                    'step_type' => $step->stepType,
-                    'quorum_count' => $step->quorumCount,
-                    'assignee_type' => $step->assigneeType,
-                    'assignee_ids' => $step->assigneeIds,
-                    'allow_delegation' => $step->allowDelegation,
-                    'conditions' => $step->conditions,
-                    'timeout_hours' => $step->timeoutHours,
-                    'timeout_action' => $step->timeoutAction,
-                ]);
-            }
+            $version = $template->versions()->create([
+                'version' => 1,
+                'status' => WorkflowTemplateVersionStatus::Draft,
+                'change_summary' => $data->changeSummary ?: 'Initial version.',
+                'created_by' => $creator->id,
+            ]);
 
-            return $template->load(['steps', 'creator']);
+            $this->writeSteps($template, $version, $data->steps);
+
+            app(PublishWorkflowTemplateVersionAction::class)->execute($version);
+
+            return $template->load(['publishedVersion.steps', 'creator']);
         });
+    }
+
+    /**
+     * @param  array<int, WorkflowTemplateStepData>  $steps
+     */
+    private function writeSteps(WorkflowTemplate $template, WorkflowTemplateVersion $version, array $steps): void
+    {
+        foreach ($steps as $index => $step) {
+            $version->steps()->create([
+                'template_id' => $template->id,
+                'step_order' => $index + 1,
+                'name' => $step->name,
+                'step_type' => $step->stepType,
+                'quorum_count' => $step->quorumCount,
+                'assignee_type' => $step->assigneeType,
+                'assignee_ids' => $step->assigneeIds,
+                'allow_delegation' => $step->allowDelegation,
+                'conditions' => $step->conditions,
+                'timeout_hours' => $step->timeoutHours,
+                'timeout_action' => $step->timeoutAction,
+            ]);
+        }
     }
 }

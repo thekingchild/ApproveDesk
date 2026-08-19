@@ -1,6 +1,7 @@
 <?php
 
 use App\Actions\WorkflowTemplates\CreateWorkflowTemplateAction;
+use App\Actions\WorkflowTemplates\PublishWorkflowTemplateVersionAction;
 use App\Actions\WorkflowTemplates\UpdateWorkflowTemplateAction;
 use App\DTOs\WorkflowTemplateData;
 use App\DTOs\WorkflowTemplateStepData;
@@ -31,6 +32,12 @@ new #[Title('Workflow templates')] class extends Component {
 
     public bool $editingTemplateUsed = false;
 
+    public string $changeSummary = '';
+
+    public ?int $editingVersionNumber = null;
+
+    public ?string $editingVersionStatus = null;
+
     public string $name = '';
 
     public string $description = '';
@@ -54,8 +61,13 @@ new #[Title('Workflow templates')] class extends Component {
     public function templates(): \Illuminate\Contracts\Pagination\LengthAwarePaginator
     {
         return WorkflowTemplate::query()
-            ->with(['creator', 'requestTypes'])
-            ->withCount(['steps', 'instances'])
+            ->with([
+                'creator',
+                'requestTypes',
+                'publishedVersion' => fn ($query) => $query->withCount('steps'),
+                'draftVersion',
+            ])
+            ->withCount(['instances', 'versions'])
             ->when($this->search !== '', fn (Builder $query) => $query->where('name', 'like', '%'.$this->search.'%'))
             ->orderByDesc('is_default')
             ->orderBy('name')
@@ -94,18 +106,26 @@ new #[Title('Workflow templates')] class extends Component {
 
     public function editTemplate(int $templateId): void
     {
-        $template = WorkflowTemplate::query()->with('steps')->withCount('instances')->findOrFail($templateId);
+        $template = WorkflowTemplate::query()
+            ->with(['publishedVersion.steps', 'draftVersion.steps'])
+            ->withCount('instances')
+            ->findOrFail($templateId);
         $this->authorize('update', $template);
+
+        $graph = $template->draftVersion ?? $template->publishedVersion;
 
         $this->resetValidation();
         $this->editingTemplateId = $template->id;
         $this->editingTemplateUsed = $template->instances_count > 0;
+        $this->editingVersionNumber = $graph?->version;
+        $this->editingVersionStatus = $graph?->status->value;
+        $this->changeSummary = $graph?->change_summary ?? '';
         $this->name = $template->name;
         $this->description = $template->description ?? '';
         $this->submissionTypes = $template->submission_types ?? [];
         $this->isDefault = $template->is_default;
         $this->isActive = $template->is_active;
-        $this->steps = $template->steps->map(fn ($step) => [
+        $this->steps = ($graph?->steps ?? collect())->map(fn ($step) => [
             'name' => $step->name,
             'stepType' => $step->step_type->value,
             'quorumCount' => $step->quorum_count,
@@ -128,16 +148,12 @@ new #[Title('Workflow templates')] class extends Component {
 
     public function addStep(): void
     {
-        if ($this->editingTemplateUsed) {
-            return;
-        }
-
         $this->steps[] = $this->blankStep(count($this->steps) + 1);
     }
 
     public function removeStep(int $index): void
     {
-        if ($this->editingTemplateUsed || count($this->steps) <= 1) {
+        if (count($this->steps) <= 1) {
             return;
         }
 
@@ -147,10 +163,6 @@ new #[Title('Workflow templates')] class extends Component {
 
     public function moveStep(int $index, int $direction): void
     {
-        if ($this->editingTemplateUsed) {
-            return;
-        }
-
         $destination = $index + $direction;
 
         if (! isset($this->steps[$index], $this->steps[$destination])) {
@@ -284,10 +296,11 @@ new #[Title('Workflow templates')] class extends Component {
             isDefault: $validated['isDefault'],
             isActive: $validated['isActive'],
             steps: $stepData,
+            changeSummary: $this->changeSummary !== '' ? $this->changeSummary : null,
         );
 
         if ($target) {
-            app(UpdateWorkflowTemplateAction::class)->execute($target, $data);
+            app(UpdateWorkflowTemplateAction::class)->execute($target, $data, Auth::user());
             $message = 'Workflow template updated.';
         } else {
             app(CreateWorkflowTemplateAction::class)->execute($data, Auth::user());
@@ -405,12 +418,34 @@ new #[Title('Workflow templates')] class extends Component {
         };
     }
 
+    public function publish(): void
+    {
+        $templateId = $this->editingTemplateId;
+        $summary = $this->changeSummary !== '' ? $this->changeSummary : null;
+        $this->save();
+
+        if ($templateId === null) {
+            return;
+        }
+
+        $template = WorkflowTemplate::query()->with('draftVersion')->find($templateId);
+
+        if ($template?->draftVersion === null) {
+            return;
+        }
+
+        $this->authorize('update', $template);
+        app(PublishWorkflowTemplateVersionAction::class)->execute($template->draftVersion, $summary);
+        unset($this->templates);
+        Flux::toast('Workflow version published.', variant: 'success');
+    }
+
     private function resetForm(): void
     {
         $this->resetValidation();
         $this->reset([
-            'editingTemplateId', 'editingTemplateUsed', 'name', 'description',
-            'submissionTypes', 'isDefault', 'steps',
+            'editingTemplateId', 'editingTemplateUsed', 'editingVersionNumber', 'editingVersionStatus',
+            'changeSummary', 'name', 'description', 'submissionTypes', 'isDefault', 'steps',
         ]);
         $this->isActive = true;
         $this->steps = [$this->blankStep(1)];
@@ -465,9 +500,19 @@ new #[Title('Workflow templates')] class extends Component {
                             @endforelse
                         </div>
                     </flux:table.cell>
-                    <flux:table.cell><flux:badge color="zinc">{{ $template->steps_count }}</flux:badge></flux:table.cell>
+                    <flux:table.cell><flux:badge color="zinc">{{ $template->publishedVersion?->steps_count ?? 0 }}</flux:badge></flux:table.cell>
                     <flux:table.cell><flux:badge :color="$template->instances_count ? 'amber' : 'zinc'">{{ $template->instances_count }}</flux:badge></flux:table.cell>
-                    <flux:table.cell><flux:badge :color="$template->is_active ? 'lime' : 'zinc'">{{ $template->is_active ? __('Active') : __('Inactive') }}</flux:badge></flux:table.cell>
+                    <flux:table.cell>
+                        <div class="flex flex-wrap gap-1">
+                            <flux:badge :color="$template->is_active ? 'lime' : 'zinc'">{{ $template->is_active ? __('Active') : __('Inactive') }}</flux:badge>
+                            @if ($template->publishedVersion)
+                                <flux:badge color="indigo">{{ __('Published v:version', ['version' => $template->publishedVersion->version]) }}</flux:badge>
+                            @endif
+                            @if ($template->draftVersion)
+                                <flux:badge color="amber">{{ __('Draft v:version', ['version' => $template->draftVersion->version]) }}</flux:badge>
+                            @endif
+                        </div>
+                    </flux:table.cell>
                     <flux:table.cell class="text-right"><flux:button size="xs" variant="ghost" wire:click="editTemplate({{ $template->id }})">{{ __('Edit') }}</flux:button></flux:table.cell>
                 </flux:table.row>
             @empty
@@ -483,9 +528,9 @@ new #[Title('Workflow templates')] class extends Component {
                 <flux:subheading>{{ __('Steps run from top to bottom. Each step may target users, roles, or a department.') }}</flux:subheading>
             </div>
 
-            @if ($editingTemplateUsed)
-                <flux:callout variant="warning" icon="lock-closed" heading="{{ __('Approval steps are locked') }}">
-                    {{ __('This template has workflow history. You may update its name, description, coverage, or active status, but not its steps.') }}
+            @if ($editingVersionNumber)
+                <flux:callout variant="info" icon="document-duplicate" heading="{{ __('Version :number (:status)', ['number' => $editingVersionNumber, 'status' => $editingVersionStatus]) }}">
+                    {{ __('Published versions stay frozen. Saving a changed chain creates a draft. Publish the draft so new requests use it. In-flight requests keep the version they started.') }}
                 </flux:callout>
             @endif
 
@@ -496,6 +541,7 @@ new #[Title('Workflow templates')] class extends Component {
                     <flux:checkbox wire:model="isActive" :label="__('Active')" />
                 </div>
                 <div class="sm:col-span-2"><flux:textarea wire:model="description" :label="__('Description')" rows="2" /></div>
+                <div class="sm:col-span-2"><flux:input wire:model="changeSummary" :label="__('Change summary')" :description="__('Recorded on the draft and at publish time.')" /></div>
             </div>
 
             @if ($isDefault)
@@ -513,7 +559,7 @@ new #[Title('Workflow templates')] class extends Component {
             <div class="space-y-4">
                 <div class="flex items-center justify-between">
                     <flux:heading size="sm">{{ __('Approval steps') }}</flux:heading>
-                    @unless ($editingTemplateUsed)<flux:button type="button" size="sm" variant="ghost" icon="plus" wire:click="addStep">{{ __('Add step') }}</flux:button>@endunless
+                    <flux:button type="button" size="sm" variant="ghost" icon="plus" wire:click="addStep">{{ __('Add step') }}</flux:button>
                 </div>
                 <flux:error name="steps" />
 
@@ -522,8 +568,8 @@ new #[Title('Workflow templates')] class extends Component {
                         <div class="flex items-start gap-3">
                             <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-sm font-semibold dark:bg-zinc-800">{{ $index + 1 }}</div>
                             <div class="grid flex-1 gap-4 sm:grid-cols-3">
-                                <flux:input wire:model="steps.{{ $index }}.name" :label="__('Step name')" :disabled="$editingTemplateUsed" />
-                                <flux:select wire:model="steps.{{ $index }}.stepType" :label="__('Step behavior')" :disabled="$editingTemplateUsed">
+                                <flux:input wire:model="steps.{{ $index }}.name" :label="__('Step name')" />
+                                <flux:select wire:model="steps.{{ $index }}.stepType" :label="__('Step behavior')">
                                     <flux:select.option value="sequential">{{ __('Sequential — one approval') }}</flux:select.option>
                                     <flux:select.option value="parallel">{{ __('Parallel — all must approve') }}</flux:select.option>
                                     <flux:select.option value="quorum">{{ __('Quorum — N must approve') }}</flux:select.option>
@@ -531,7 +577,7 @@ new #[Title('Workflow templates')] class extends Component {
                                     <flux:select.option value="auto">{{ __('Automatic approval') }}</flux:select.option>
                                 </flux:select>
                                 @if (! in_array($step['stepType'], ['conditional', 'auto'], true))
-                                    <flux:select wire:model="steps.{{ $index }}.assigneeType" wire:change="resetAssignees({{ $index }})" :label="__('Assign by')" :disabled="$editingTemplateUsed">
+                                    <flux:select wire:model="steps.{{ $index }}.assigneeType" wire:change="resetAssignees({{ $index }})" :label="__('Assign by')">
                                         @foreach (AssigneeType::cases() as $type)
                                             <flux:select.option :value="$type->value">{{ str($type->value)->title() }}</flux:select.option>
                                         @endforeach
@@ -544,27 +590,27 @@ new #[Title('Workflow templates')] class extends Component {
 
                                 @if ($step['stepType'] === 'quorum')
                                     <div class="sm:col-span-3">
-                                        <flux:input wire:model="steps.{{ $index }}.quorumCount" type="number" min="1" :label="__('Approvals required')" :disabled="$editingTemplateUsed" />
+                                        <flux:input wire:model="steps.{{ $index }}.quorumCount" type="number" min="1" :label="__('Approvals required')" />
                                         <flux:error name="steps.{{ $index }}.quorumCount" />
                                     </div>
                                 @endif
 
                                 @if ($step['stepType'] === 'conditional')
                                     <div class="grid gap-4 sm:col-span-3 sm:grid-cols-3">
-                                        <flux:input wire:model="steps.{{ $index }}.conditionField" :label="__('Field')" placeholder="priority or metadata.amount" :disabled="$editingTemplateUsed" />
-                                        <flux:select wire:model="steps.{{ $index }}.conditionOperator" :label="__('Operator')" :disabled="$editingTemplateUsed">
+                                        <flux:input wire:model="steps.{{ $index }}.conditionField" :label="__('Field')" placeholder="priority or metadata.amount" />
+                                        <flux:select wire:model="steps.{{ $index }}.conditionOperator" :label="__('Operator')">
                                             @foreach (['equals' => 'Equals', 'not_equals' => 'Does not equal', 'in' => 'In comma-separated list', 'not_in' => 'Not in list', 'gt' => 'Greater than', 'gte' => 'At least', 'lt' => 'Less than', 'lte' => 'At most', 'contains' => 'Contains', 'present' => 'Is present'] as $value => $label)
                                                 <flux:select.option :value="$value">{{ __($label) }}</flux:select.option>
                                             @endforeach
                                         </flux:select>
-                                        <flux:input wire:model="steps.{{ $index }}.conditionValue" :label="__('Value')" :disabled="$editingTemplateUsed || $step['conditionOperator'] === 'present'" />
-                                        <flux:select wire:model="steps.{{ $index }}.trueStep" :label="__('When true')" :disabled="$editingTemplateUsed">
+                                        <flux:input wire:model="steps.{{ $index }}.conditionValue" :label="__('Value')" :disabled="$step['conditionOperator'] === 'present'" />
+                                        <flux:select wire:model="steps.{{ $index }}.trueStep" :label="__('When true')">
                                             <flux:select.option value="">{{ __('Complete workflow') }}</flux:select.option>
                                             @foreach ($steps as $targetIndex => $targetStep)
                                                 @if ($targetIndex > $index)<flux:select.option :value="$targetIndex + 1">{{ ($targetIndex + 1).'. '.$targetStep['name'] }}</flux:select.option>@endif
                                             @endforeach
                                         </flux:select>
-                                        <flux:select wire:model="steps.{{ $index }}.falseStep" :label="__('When false')" :disabled="$editingTemplateUsed">
+                                        <flux:select wire:model="steps.{{ $index }}.falseStep" :label="__('When false')">
                                             <flux:select.option value="">{{ __('Complete workflow') }}</flux:select.option>
                                             @foreach ($steps as $targetIndex => $targetStep)
                                                 @if ($targetIndex > $index)<flux:select.option :value="$targetIndex + 1">{{ ($targetIndex + 1).'. '.$targetStep['name'] }}</flux:select.option>@endif
@@ -578,8 +624,8 @@ new #[Title('Workflow templates')] class extends Component {
 
                                 @if (! in_array($step['stepType'], ['conditional', 'auto'], true))
                                     <div class="grid gap-4 sm:col-span-3 sm:grid-cols-2">
-                                        <flux:input wire:model="steps.{{ $index }}.timeoutHours" type="number" min="1" max="8760" :label="__('SLA duration (hours)')" :placeholder="__('No deadline')" :disabled="$editingTemplateUsed" />
-                                        <flux:select wire:model="steps.{{ $index }}.timeoutAction" :label="__('When overdue')" :disabled="$editingTemplateUsed">
+                                        <flux:input wire:model="steps.{{ $index }}.timeoutHours" type="number" min="1" max="8760" :label="__('SLA duration (hours)')" :placeholder="__('No deadline')" />
+                                        <flux:select wire:model="steps.{{ $index }}.timeoutAction" :label="__('When overdue')">
                                             <flux:select.option value="">{{ __('No automatic action') }}</flux:select.option>
                                             <flux:select.option value="escalate">{{ __('Escalate to next step') }}</flux:select.option>
                                             <flux:select.option value="auto_approve">{{ __('Automatically approve') }}</flux:select.option>
@@ -590,13 +636,13 @@ new #[Title('Workflow templates')] class extends Component {
                                     </div>
 
                                     <div class="sm:col-span-3">
-                                        <flux:checkbox wire:model="steps.{{ $index }}.allowDelegation" :label="__('Allow assigned approvers to delegate')" :disabled="$editingTemplateUsed" />
+                                        <flux:checkbox wire:model="steps.{{ $index }}.allowDelegation" :label="__('Allow assigned approvers to delegate')" />
                                     </div>
 
                                     <div class="sm:col-span-3">
                                         <flux:checkbox.group wire:model="steps.{{ $index }}.assigneeIds" :label="__('Assignees')" class="grid max-h-40 gap-2 overflow-y-auto sm:grid-cols-2">
                                             @foreach ($step['assigneeType'] === 'role' ? $this->roles : ($step['assigneeType'] === 'department' ? $this->departments : $this->users) as $assignee)
-                                                <flux:checkbox :value="$assignee->id" :label="$assignee->name" :disabled="$editingTemplateUsed" />
+                                                <flux:checkbox :value="$assignee->id" :label="$assignee->name" />
                                             @endforeach
                                         </flux:checkbox.group>
                                         <flux:error name="steps.{{ $index }}.assigneeIds" />
@@ -604,13 +650,11 @@ new #[Title('Workflow templates')] class extends Component {
                                 @endif
                             </div>
 
-                            @unless ($editingTemplateUsed)
-                                <div class="flex shrink-0 flex-col gap-1">
-                                    <flux:button type="button" size="xs" variant="ghost" icon="chevron-up" wire:click="moveStep({{ $index }}, -1)" :disabled="$index === 0" />
-                                    <flux:button type="button" size="xs" variant="ghost" icon="chevron-down" wire:click="moveStep({{ $index }}, 1)" :disabled="$index === count($steps) - 1" />
-                                    <flux:button type="button" size="xs" variant="ghost" icon="trash" wire:click="removeStep({{ $index }})" :disabled="count($steps) === 1" />
-                                </div>
-                            @endunless
+                            <div class="flex shrink-0 flex-col gap-1">
+                                <flux:button type="button" size="xs" variant="ghost" icon="chevron-up" wire:click="moveStep({{ $index }}, -1)" :disabled="$index === 0" />
+                                <flux:button type="button" size="xs" variant="ghost" icon="chevron-down" wire:click="moveStep({{ $index }}, 1)" :disabled="$index === count($steps) - 1" />
+                                <flux:button type="button" size="xs" variant="ghost" icon="trash" wire:click="removeStep({{ $index }})" :disabled="count($steps) === 1" />
+                            </div>
                         </div>
                     </flux:card>
                 @endforeach
@@ -619,6 +663,9 @@ new #[Title('Workflow templates')] class extends Component {
             <div class="flex justify-end gap-2">
                 <flux:modal.close><flux:button variant="ghost">{{ __('Cancel') }}</flux:button></flux:modal.close>
                 <flux:button type="submit" variant="primary" data-test="save-template">{{ __('Save template') }}</flux:button>
+                @if ($editingTemplateId)
+                    <flux:button type="button" wire:click="publish" data-test="publish-template">{{ __('Publish version') }}</flux:button>
+                @endif
             </div>
         </form>
     </flux:modal>

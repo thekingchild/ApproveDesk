@@ -18,7 +18,7 @@ New submissions do not pick a template. The **request type** (the form) does.
 2. Otherwise the **default template** starts.
 3. If there is no active default, the request cannot enter a workflow.
 
-Changing an assignment or the default does not rewrite requests that already have a workflow. Those keep the template stored on their workflow instance.
+Changing an assignment or the default does not rewrite requests that already have a workflow. Those keep the **version** they started on.
 
 ## How to create a template
 
@@ -28,6 +28,8 @@ Open **Administration → Workflow templates** and add a template.
 - Mark **Default template** only for the one fallback chain. Choosing a new default turns the previous default off.
 - Leave the template **Active** if new work should be able to use it. An inactive template is ignored at submit time.
 - Add steps from top to bottom.
+- Save records a draft if the chain changed. **Publish version** freezes that graph for new requests and retires the previous published version.
+- Write a short change summary so later administrators can see why the chain changed.
 
 You do not have to pick a submission type. The old Document / Note / Memo / Request checkboxes are optional labels only. They do not block a second template, and they do not choose the chain for new work.
 
@@ -45,9 +47,22 @@ Assignees can be a user, a role, or a department.
 
 Each step can have a deadline and a timeout action, such as escalate, auto-approve, or auto-reject. Overdue work shows in the workbench and on analytics.
 
+## Versions
+
+A template is the name of the process. A **version** is one frozen chain.
+
+| Status | Meaning |
+|---|---|
+| Draft | Editable. New requests do not use it until you publish. |
+| Published | Frozen. New requests of assigned types use this version. |
+| Retired | Frozen. It was published before a later version took over. In-flight requests on it continue. |
+| Archived | Frozen and hidden from new work. |
+
+Each published version stores who published it, when, a change summary, and a schema hash of the ordered steps.
+
 ## What not to do
 
-Do not expect an edit of the steps to rewrite history. After a template has been used, its steps stay locked. You may still rename it, describe it, or deactivate it.
+Do not expect an edit of the steps to rewrite history. Published, retired, and archived versions cannot change their steps. Save a draft and publish it for new work instead.
 
 Do not create a second default. Only one default is active at a time.
 

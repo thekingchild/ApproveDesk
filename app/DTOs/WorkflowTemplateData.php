@@ -15,5 +15,6 @@ final readonly class WorkflowTemplateData
         public bool $isDefault,
         public bool $isActive,
         public array $steps,
+        public ?string $changeSummary = null,
     ) {}
 }

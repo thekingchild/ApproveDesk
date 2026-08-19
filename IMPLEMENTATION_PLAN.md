@@ -105,7 +105,7 @@ After each completed phase:
 4. Confirm Help as an administrator and as a requester.
 5. Commit the Markdown, catalogue, Help UI, and this plan together.
 
-**Administrator knowledge base through Phase 6A — Complete (2026-08-19):** feature definitions, getting around, requests, approvals, statuses, account settings, users and roles, departments, workflow templates, request types (including workflow assignment), analytics, webhooks, organization settings, and the audit trail.
+**Administrator knowledge base through Phase 7.1 — Complete (2026-08-19):** feature definitions (including workflow version), getting around, requests, approvals, statuses, account settings, users and roles, departments, workflow templates, request types (including workflow assignment), analytics, webhooks, organization settings, and the audit trail.
 
 ### 3.5 Request types own workflows
 
@@ -128,7 +128,7 @@ Phase 6A implements this assignment. Phase 7 keeps its original scope: versioned
 | 5 | v2.1.0 | Non-enterprise UX, accessibility, and approver productivity | Complete |
 | 6 | v2.2.0 | Configurable request types and form builder | In progress — 6.1–6.2 complete |
 | 6A | v2.2.1 | Request-type workflow assignment | Complete |
-| 7 | v2.3.0 | Visual workflows, versioning, and dynamic assignment | Not started |
+| 7 | v2.3.0 | Visual workflows, versioning, and dynamic assignment | In progress — 7.1 complete |
 | 8 | v2.4.0 | Collaboration, notifications, and integration hub | Not started |
 | 9 | v2.5.0 | Governance, audit evidence, security, and reliability | Not started |
 | 10 | v3.0.0 | SaaS multi-tenancy foundation | Not started |
@@ -273,12 +273,12 @@ This phase is additive. Phases 0–6 stay complete as written. Phase 7 task IDs 
 
 Phase 6A is a prerequisite for routing but is not part of this phase. Do not renumber or rewrite the tasks below. `P7-RTE-05` adds value-based selection on top of request-type assignment; it does not replace Phase 6A and must not restore exclusive Document/Note/Memo/Request template locking.
 
-### 7.1 Workflow version model
+### 7.1 Workflow version model — Complete (2026-08-19)
 
-- **P7-DATA-01:** Introduce immutable `workflow_template_versions`; instances reference a version, not a mutable template.
-- **P7-DATA-02:** Backfill existing templates and instances while preserving step/action IDs required by historical audit entries.
-- **P7-DATA-03:** Separate workflow lifecycle into Draft, Published, Retired, and Archived.
-- **P7-DATA-04:** Record author, publication time, change summary, and a canonical schema hash for every version.
+- **P7-DATA-01 — Complete:** Introduce immutable `workflow_template_versions`; instances reference a version, not a mutable template.
+- **P7-DATA-02 — Complete:** Backfill existing templates and instances while preserving step/action IDs required by historical audit entries.
+- **P7-DATA-03 — Complete:** Separate workflow lifecycle into Draft, Published, Retired, and Archived.
+- **P7-DATA-04 — Complete:** Record author, publication time, change summary, and a canonical schema hash for every version.
 
 ### 7.2 Visual builder
 

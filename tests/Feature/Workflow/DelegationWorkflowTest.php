@@ -136,7 +136,7 @@ class DelegationWorkflowTest extends TestCase
 
     public function test_delegation_rejects_disabled_steps_and_duplicate_seats(): void
     {
-        $this->instance->currentStep->update(['allow_delegation' => false]);
+        $this->instance->currentStep->updateQuietly(['allow_delegation' => false]);
 
         try {
             $this->engine->delegate($this->instance, $this->approver, $this->delegate, now()->addHour());
@@ -145,10 +145,10 @@ class DelegationWorkflowTest extends TestCase
             $this->assertStringContainsString('disables it', $exception->getMessage());
         }
 
-        $this->instance->currentStep->update(['allow_delegation' => true]);
+        $this->instance->currentStep->updateQuietly(['allow_delegation' => true]);
         $otherAssigned = User::factory()->create();
         $ids = $this->instance->currentStep->assignee_ids;
-        $this->instance->currentStep->update(['assignee_ids' => [...$ids, $otherAssigned->id]]);
+        $this->instance->currentStep->updateQuietly(['assignee_ids' => [...$ids, $otherAssigned->id]]);
 
         $this->expectException(WorkflowException::class);
         $this->expectExceptionMessage('already holds a seat');

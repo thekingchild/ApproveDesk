@@ -16,6 +16,7 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property int $submission_id
  * @property int $template_id
+ * @property int|null $template_version_id
  * @property int|null $current_step_id
  * @property WorkflowStatus $status
  * @property Carbon $started_at
@@ -25,6 +26,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $updated_at
  * @property-read Submission $submission
  * @property-read WorkflowTemplate $template
+ * @property-read WorkflowTemplateVersion|null $templateVersion
  * @property-read WorkflowTemplateStep|null $currentStep
  * @property-read Collection<int, WorkflowAction> $actions
  */
@@ -43,7 +45,7 @@ class WorkflowInstance extends Model
     public ?WorkflowTemplateStep $advancedToStep = null;
 
     protected $fillable = [
-        'submission_id', 'template_id', 'current_step_id', 'status', 'started_at', 'step_started_at', 'completed_at',
+        'submission_id', 'template_id', 'template_version_id', 'current_step_id', 'status', 'started_at', 'step_started_at', 'completed_at',
     ];
 
     protected function casts(): array
@@ -88,6 +90,12 @@ class WorkflowInstance extends Model
     public function template(): BelongsTo
     {
         return $this->belongsTo(WorkflowTemplate::class, 'template_id');
+    }
+
+    /** @return BelongsTo<WorkflowTemplateVersion, $this> */
+    public function templateVersion(): BelongsTo
+    {
+        return $this->belongsTo(WorkflowTemplateVersion::class, 'template_version_id');
     }
 
     /**

@@ -18,8 +18,15 @@ class VersionedRequestSchemaMigrationTest extends TestCase
 
     private const WORKFLOW_ASSIGNMENT_MIGRATION_PATH = 'database/migrations/2026_08_19_030000_add_workflow_template_to_request_types.php';
 
+    private const WORKFLOW_VERSION_MIGRATION_PATH = 'database/migrations/2026_08_19_040000_create_workflow_template_versions.php';
+
     public function test_v21_database_fixture_is_upgraded_without_changing_reference_or_workflow_history(): void
     {
+        $this->artisan('migrate:rollback', [
+            '--path' => self::WORKFLOW_VERSION_MIGRATION_PATH,
+            '--force' => true,
+        ])->assertExitCode(0);
+
         $this->artisan('migrate:rollback', [
             '--path' => self::WORKFLOW_ASSIGNMENT_MIGRATION_PATH,
             '--force' => true,
@@ -81,5 +88,22 @@ class VersionedRequestSchemaMigrationTest extends TestCase
             'id' => 9501,
             'template_id' => 9201,
         ]);
+
+        $this->artisan('migrate', [
+            '--path' => self::WORKFLOW_VERSION_MIGRATION_PATH,
+            '--force' => true,
+        ])->assertExitCode(0);
+
+        $this->assertTrue(Schema::hasTable('workflow_template_versions'));
+        $this->assertDatabaseHas('workflow_template_steps', [
+            'id' => 9301,
+            'template_id' => 9201,
+        ]);
+        $this->assertDatabaseHas('workflow_actions', ['id' => 9601, 'comment' => 'Preserved v2.1 approval.']);
+        $this->assertNotNull(DB::table('workflow_instances')->where('id', 9501)->value('template_version_id'));
+        $this->assertSame(
+            DB::table('workflow_instances')->where('id', 9501)->value('template_version_id'),
+            DB::table('workflow_template_steps')->where('id', 9301)->value('template_version_id'),
+        );
     }
 }

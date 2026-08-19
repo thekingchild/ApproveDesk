@@ -295,32 +295,36 @@ class WorkflowTemplateManagementTest extends TestCase
         $this->assertDatabaseMissing('workflow_templates', ['name' => 'Impossible committee flow']);
     }
 
-    public function test_used_template_steps_are_immutable_but_metadata_can_change(): void
+    public function test_used_template_graph_edits_create_a_draft_without_rewriting_published_steps(): void
     {
         $approver = User::factory()->create();
         $template = WorkflowTemplate::factory()->default()->sequential([$approver])->create();
         $submission = Submission::factory()->create();
-        app(WorkflowEngine::class)->initialize($submission);
+        $instance = app(WorkflowEngine::class)->initialize($submission);
+        $publishedStepId = $instance->current_step_id;
 
         Livewire::actingAs($this->admin)
             ->test('pages::admin.workflow-templates')
             ->call('editTemplate', $template->id)
             ->set('steps.0.name', 'Rewritten historical step')
+            ->set('changeSummary', 'Clarify first step.')
             ->call('save')
-            ->assertHasErrors(['steps']);
+            ->assertHasNoErrors();
 
-        $this->assertSame('Approval Level 1', $template->fresh()->steps->first()->name);
+        $template->refresh();
+        $this->assertSame('Approval Level 1', $template->publishedVersion->steps->first()->name);
+        $this->assertSame('Rewritten historical step', $template->draftVersion?->steps->first()->name);
+        $this->assertSame($publishedStepId, $instance->fresh()->current_step_id);
 
         Livewire::actingAs($this->admin)
             ->test('pages::admin.workflow-templates')
             ->call('editTemplate', $template->id)
             ->set('name', 'Renamed safely')
-            ->set('description', 'Metadata may still change.')
             ->call('save')
             ->assertHasNoErrors();
 
         $this->assertSame('Renamed safely', $template->fresh()->name);
-        $this->assertSame('Approval Level 1', $template->fresh()->steps->first()->name);
+        $this->assertSame('Approval Level 1', $template->fresh()->publishedVersion->steps->first()->name);
     }
 
     public function test_active_templates_may_share_legacy_submission_labels(): void

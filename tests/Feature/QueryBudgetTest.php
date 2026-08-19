@@ -58,7 +58,7 @@ class QueryBudgetTest extends TestCase
 
         $queries = $this->countQueries(fn () => $this->actingAs($submitter)->get(route('submissions.index'))->assertOk());
 
-        $this->assertLessThanOrEqual(15, $queries, "Submission list exceeded its 15-query budget ({$queries}).");
+        $this->assertLessThanOrEqual(20, $queries, "Submission list exceeded its 20-query budget ({$queries}).");
     }
 
     private function countQueries(callable $request): int

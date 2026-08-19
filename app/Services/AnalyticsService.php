@@ -98,7 +98,8 @@ final class AnalyticsService
                 'submission.fieldValues.departmentValue:id,name',
                 'currentStep:id,name,timeout_hours,assignee_type,assignee_ids',
                 'template:id,name',
-                'template.steps:id,template_id,step_order,name',
+                'templateVersion:id,workflow_template_id,version,status',
+                'templateVersion.steps:id,template_version_id,step_order,name',
                 'actions:id,instance_id,step_id,action,created_at',
                 'delegations:id,instance_id,step_id,delegator_id,delegate_id,starts_at,expires_at',
                 'delegations.delegate:id,name',
@@ -180,7 +181,9 @@ final class AnalyticsService
             $cursor = $instance->started_at;
             $actionsByStep = $instance->actions->groupBy('step_id');
 
-            foreach ($instance->template->steps as $step) {
+            $graph = $instance->templateVersion?->steps ?? $instance->template->publishedVersion?->steps ?? collect();
+
+            foreach ($graph as $step) {
                 $stepActions = $actionsByStep->get($step->id, collect());
                 $transition = $stepActions
                     ->filter(fn (WorkflowAction $action): bool => $this->isTransition($action->action))

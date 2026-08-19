@@ -20,6 +20,10 @@ A named approval chain: the ordered steps, who acts, and what happens on timeout
 
 See [Workflow templates](workflow-templates.md).
 
+## Workflow version
+
+One frozen copy of a workflow template’s steps. New requests use the published version. Requests already in flight keep the version they started.
+
 ## Default template
 
 The one fallback chain. It runs for General Request and for any request type that has no assigned template, or whose assigned template is inactive. There can be only one default.

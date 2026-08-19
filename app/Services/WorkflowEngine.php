@@ -41,16 +41,18 @@ class WorkflowEngine
     public function initialize(Submission $submission): WorkflowInstance
     {
         $template = $this->resolveTemplate($submission);
+        $version = $template->publishedVersion;
 
-        if ($template->steps->isEmpty()) {
+        if ($version === null || $version->steps->isEmpty()) {
             throw WorkflowException::templateWithoutSteps($template->name);
         }
 
-        $instance = DB::transaction(function () use ($submission, $template): WorkflowInstance {
+        $instance = DB::transaction(function () use ($submission, $template, $version): WorkflowInstance {
             $instance = WorkflowInstance::create([
                 'submission_id' => $submission->id,
                 'template_id' => $template->id,
-                'current_step_id' => $template->steps->first()->id,
+                'template_version_id' => $version->id,
+                'current_step_id' => $version->steps->first()->id,
                 'status' => WorkflowStatus::Active,
                 'started_at' => now(),
                 'step_started_at' => now(),
@@ -346,7 +348,7 @@ class WorkflowEngine
     private function applyEscalation(WorkflowInstance $instance): WorkflowInstance
     {
         $hasLaterStep = WorkflowTemplateStep::query()
-            ->where('template_id', $instance->template_id)
+            ->where('template_version_id', $instance->template_version_id)
             ->where('step_order', '>', $instance->currentStep->step_order)
             ->exists();
 
@@ -433,7 +435,7 @@ class WorkflowEngine
     private function advance(WorkflowInstance $instance): WorkflowInstance
     {
         $nextStep = WorkflowTemplateStep::query()
-            ->where('template_id', $instance->template_id)
+            ->where('template_version_id', $instance->template_version_id)
             ->where('step_order', '>', $instance->currentStep->step_order)
             ->orderBy('step_order')
             ->first();
@@ -455,7 +457,7 @@ class WorkflowEngine
     private function resolveAutomaticSteps(WorkflowInstance $instance): WorkflowInstance
     {
         $maximumTransitions = WorkflowTemplateStep::query()
-            ->where('template_id', $instance->template_id)
+            ->where('template_version_id', $instance->template_version_id)
             ->count() + 1;
 
         for ($transition = 0; $transition < $maximumTransitions; $transition++) {
@@ -521,7 +523,7 @@ class WorkflowEngine
         }
 
         $nextStep = WorkflowTemplateStep::query()
-            ->where('template_id', $instance->template_id)
+            ->where('template_version_id', $instance->template_version_id)
             ->where('step_order', $target)
             ->first();
 
@@ -572,12 +574,12 @@ class WorkflowEngine
 
     private function resolveTemplate(Submission $submission): WorkflowTemplate
     {
-        $submission->loadMissing('requestTypeVersion.requestType.workflowTemplate.steps');
+        $submission->loadMissing('requestTypeVersion.requestType.workflowTemplate.publishedVersion.steps');
 
         $assigned = $submission->requestTypeVersion->requestType->resolvedWorkflowTemplate();
 
         if ($assigned !== null) {
-            return $assigned->loadMissing('steps');
+            return $assigned->loadMissing('publishedVersion.steps');
         }
 
         throw WorkflowException::noTemplateFor($submission->type->value);
