@@ -19,7 +19,6 @@ final class UpdateWorkflowTemplateAction
                 ->lockForUpdate()
                 ->firstOrFail();
 
-            $this->guardTypeCoverage($template, $data);
             $structureChanged = $this->structureChanged($template, $data);
 
             if ($structureChanged && $template->instances()->exists()) {
@@ -38,7 +37,7 @@ final class UpdateWorkflowTemplateAction
             $template->update([
                 'name' => $data->name,
                 'description' => $data->description,
-                'submission_types' => $data->isDefault ? null : $data->submissionTypes,
+                'submission_types' => $data->isDefault ? null : ($data->submissionTypes ?: null),
                 'is_default' => $data->isDefault,
                 'is_active' => $data->isActive,
             ]);
@@ -104,28 +103,5 @@ final class UpdateWorkflowTemplateAction
         sort($ids);
 
         return $ids;
-    }
-
-    private function guardTypeCoverage(WorkflowTemplate $template, WorkflowTemplateData $data): void
-    {
-        if ($data->isDefault || ! $data->isActive) {
-            return;
-        }
-
-        $conflict = WorkflowTemplate::query()
-            ->whereKeyNot($template->getKey())
-            ->where('is_active', true)
-            ->where(function ($query) use ($data): void {
-                foreach ($data->submissionTypes as $type) {
-                    $query->orWhereJsonContains('submission_types', $type);
-                }
-            })
-            ->exists();
-
-        if ($conflict) {
-            throw ValidationException::withMessages([
-                'submissionTypes' => __('An active template already handles one or more selected submission types.'),
-            ]);
-        }
     }
 }

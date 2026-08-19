@@ -1,14 +1,17 @@
 <?php
 
 use App\Actions\RequestTypes\ArchiveRequestTypeAction;
+use App\Actions\RequestTypes\AssignRequestTypeWorkflowAction;
 use App\Actions\RequestTypes\CloneRequestTypeAction;
 use App\Actions\RequestTypes\PublishRequestTypeVersionAction;
 use App\Actions\RequestTypes\SaveRequestTypeDraftAction;
 use App\Enums\RequestFieldType;
 use App\Models\RequestType;
 use App\Models\RequestTypeVersion;
+use App\Models\WorkflowTemplate;
 use Flux\Flux;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -20,6 +23,7 @@ new #[Title('Request types')] class extends Component {
     public ?int $editingTypeId = null;
     public string $name = '';
     public string $description = '';
+    public string $workflowTemplateId = '';
 
     /** @var array<int, array<string, mixed>> */
     public array $fields = [];
@@ -33,10 +37,35 @@ new #[Title('Request types')] class extends Component {
     public function requestTypes(): \Illuminate\Contracts\Pagination\LengthAwarePaginator
     {
         return RequestType::query()
-            ->with(['versions' => fn ($query) => $query->withCount('fields')])
+            ->with([
+                'versions' => fn ($query) => $query->withCount('fields'),
+                'workflowTemplate',
+            ])
             ->where('is_system', false)
             ->orderBy('name')
             ->paginate(15);
+    }
+
+    /** @return \Illuminate\Database\Eloquent\Collection<int, RequestType> */
+    #[Computed]
+    public function systemRequestTypes(): \Illuminate\Database\Eloquent\Collection
+    {
+        return RequestType::query()
+            ->with('workflowTemplate')
+            ->where('is_system', true)
+            ->orderBy('name')
+            ->get();
+    }
+
+    /** @return \Illuminate\Database\Eloquent\Collection<int, WorkflowTemplate> */
+    #[Computed]
+    public function workflowTemplates(): \Illuminate\Database\Eloquent\Collection
+    {
+        return WorkflowTemplate::query()
+            ->where('is_active', true)
+            ->orderByDesc('is_default')
+            ->orderBy('name')
+            ->get();
     }
 
     public function createType(): void
@@ -55,6 +84,7 @@ new #[Title('Request types')] class extends Component {
         $this->editingTypeId = $type->id;
         $this->name = $type->name;
         $this->description = $type->description ?? '';
+        $this->workflowTemplateId = $type->workflow_template_id ? (string) $type->workflow_template_id : '';
         $this->fields = $version?->fields->map(fn ($field): array => $this->fieldForEditor($field))->values()->all() ?? [];
         $this->modal('request-type-builder')->show();
     }
@@ -144,6 +174,9 @@ new #[Title('Request types')] class extends Component {
         $this->validate([
             'name' => ['required', 'string', 'max:150'],
             'description' => ['nullable', 'string', 'max:2000'],
+            'workflowTemplateId' => $this->workflowTemplateId === ''
+                ? ['nullable']
+                : ['integer', Rule::exists(WorkflowTemplate::class, 'id')],
             'fields' => ['required', 'array', 'min:1', 'max:100'],
             'fields.*.label' => ['required', 'string', 'max:150'],
             'fields.*.key' => ['required', 'alpha_dash:ascii', 'max:100'],
@@ -156,6 +189,12 @@ new #[Title('Request types')] class extends Component {
             $this->name,
             $this->description ?: null,
             collect($this->fields)->map(fn (array $field): array => $this->fieldForStorage($field))->all(),
+            auth()->user(),
+        );
+
+        app(AssignRequestTypeWorkflowAction::class)->execute(
+            $version->requestType,
+            $this->workflowTemplateId !== '' ? (int) $this->workflowTemplateId : null,
             auth()->user(),
         );
 
@@ -252,32 +291,89 @@ new #[Title('Request types')] class extends Component {
         return collect(preg_split('/[\r\n,]+/', $options) ?: [])->map(fn ($item) => trim($item))->filter()->unique()->values()->all();
     }
 
+    public function assignBuiltInWorkflow(int $requestTypeId, string $templateId = ''): void
+    {
+        $type = RequestType::query()->findOrFail($requestTypeId);
+        app(AssignRequestTypeWorkflowAction::class)->execute(
+            $type,
+            $templateId !== '' ? (int) $templateId : null,
+            auth()->user(),
+        );
+        unset($this->systemRequestTypes, $this->requestTypes);
+        Flux::toast('Workflow assignment updated.', variant: 'success');
+    }
+
+    public function workflowLabel(RequestType $type): string
+    {
+        $resolved = $type->resolvedWorkflowTemplate();
+
+        if ($resolved === null) {
+            return __('No default template');
+        }
+
+        if ($type->workflow_template_id === $resolved->id) {
+            return $resolved->name;
+        }
+
+        return $resolved->name.' ('.__('default fallback').')';
+    }
+
     private function resetBuilder(): void
     {
         $this->resetValidation();
-        $this->reset(['editingTypeId', 'name', 'description', 'fields']);
+        $this->reset(['editingTypeId', 'name', 'description', 'workflowTemplateId', 'fields']);
     }
 };
 ?>
 
 <div class="space-y-6">
     <x-ui.breadcrumbs :items="[['label' => __('Dashboard'), 'url' => route('dashboard')], ['label' => __('Administration')], ['label' => __('Request types')]]" :back="route('dashboard')" back-label="Back to dashboard" />
-    <x-ui.page-header title="Request types" description="Build versioned forms without code." help-article="request-types">
+    <x-ui.page-header title="Request types" description="Build versioned forms and assign the approval chain each form uses." help-article="request-types">
         <x-slot:actions><flux:button variant="primary" icon="plus" wire:click="createType" dusk="create-request-type">{{ __('Add request type') }}</flux:button></x-slot:actions>
     </x-ui.page-header>
 
+    @if ($this->systemRequestTypes->isNotEmpty())
+        <section class="space-y-3" data-test="built-in-request-types">
+            <flux:heading size="sm">{{ __('Built-in forms') }}</flux:heading>
+            @foreach ($this->systemRequestTypes as $type)
+                <flux:card>
+                    <div class="flex flex-wrap items-end justify-between gap-4">
+                        <div>
+                            <p class="font-semibold text-zinc-950 dark:text-white">{{ $type->name }}</p>
+                            <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-300">{{ $type->description ?: __('Fixed form used when a requester does not pick a custom type.') }}</p>
+                            <p class="mt-2 text-sm text-zinc-500">{{ __('Next new submission uses') }}: {{ $this->workflowLabel($type) }}</p>
+                        </div>
+                        <div class="w-full max-w-xs">
+                            <flux:select
+                                :label="__('Workflow template')"
+                                wire:change="assignBuiltInWorkflow({{ $type->id }}, $event.target.value)"
+                                data-test="assign-built-in-workflow"
+                            >
+                                <flux:select.option value="">{{ __('Use default template') }}</flux:select.option>
+                                @foreach ($this->workflowTemplates as $template)
+                                    <flux:select.option :value="$template->id" :selected="$type->workflow_template_id === $template->id">{{ $template->name }}{{ $template->is_default ? ' ('.__('default').')' : '' }}</flux:select.option>
+                                @endforeach
+                            </flux:select>
+                        </div>
+                    </div>
+                </flux:card>
+            @endforeach
+        </section>
+    @endif
+
     <flux:table :paginate="$this->requestTypes">
-        <flux:table.columns><flux:table.column>{{ __('Request type') }}</flux:table.column><flux:table.column>{{ __('Versions') }}</flux:table.column><flux:table.column>{{ __('Status') }}</flux:table.column><flux:table.column /></flux:table.columns>
+        <flux:table.columns><flux:table.column>{{ __('Request type') }}</flux:table.column><flux:table.column>{{ __('Workflow') }}</flux:table.column><flux:table.column>{{ __('Versions') }}</flux:table.column><flux:table.column>{{ __('Status') }}</flux:table.column><flux:table.column /></flux:table.columns>
         <flux:table.rows>
             @forelse ($this->requestTypes as $type)
                 <flux:table.row :key="$type->id">
                     <flux:table.cell><div class="font-medium">{{ $type->name }}</div><div class="text-xs text-zinc-500">{{ $type->description }}</div></flux:table.cell>
+                    <flux:table.cell><span class="text-sm">{{ $this->workflowLabel($type) }}</span></flux:table.cell>
                     <flux:table.cell>{{ $type->versions->count() }}</flux:table.cell>
                     <flux:table.cell><flux:badge :color="$type->is_active ? 'lime' : 'zinc'">{{ $type->is_active ? __('Active') : __('Archived') }}</flux:badge></flux:table.cell>
                     <flux:table.cell><div class="flex flex-wrap justify-end gap-2"><flux:button size="sm" wire:click="editType({{ $type->id }})">{{ __('Edit') }}</flux:button><flux:button size="sm" wire:click="cloneType({{ $type->id }})">{{ __('Clone') }}</flux:button><flux:button size="sm" variant="danger" wire:click="archive({{ $type->id }})" wire:confirm="Archive this request type?">{{ __('Archive') }}</flux:button></div></flux:table.cell>
                 </flux:table.row>
             @empty
-                <flux:table.row><flux:table.cell colspan="4"><x-ui.empty-state title="No custom request types" description="Create the first versioned request form." /></flux:table.cell></flux:table.row>
+                <flux:table.row><flux:table.cell colspan="5"><x-ui.empty-state title="No custom request types" description="Create the first versioned request form." /></flux:table.cell></flux:table.row>
             @endforelse
         </flux:table.rows>
     </flux:table>
@@ -285,7 +381,20 @@ new #[Title('Request types')] class extends Component {
     <flux:modal name="request-type-builder" class="w-full max-w-6xl">
         <div class="space-y-5">
             <div><flux:heading size="lg">{{ $editingTypeId ? __('Edit request type') : __('New request type') }}</flux:heading><flux:subheading>{{ __('Published versions stay immutable; later edits create a new draft.') }}</flux:subheading></div>
-            <div class="grid gap-4 sm:grid-cols-2"><flux:input wire:model="name" label="Name" required dusk="request-type-name" /><flux:input wire:model="description" label="Description" /></div>
+            <div class="grid gap-4 sm:grid-cols-2">
+                <flux:input wire:model="name" label="Name" required dusk="request-type-name" />
+                <flux:input wire:model="description" label="Description" />
+                <div class="sm:col-span-2">
+                    <flux:select wire:model="workflowTemplateId" :label="__('Workflow template')" data-test="request-type-workflow">
+                        <flux:select.option value="">{{ __('Use default template') }}</flux:select.option>
+                        @foreach ($this->workflowTemplates as $template)
+                            <flux:select.option :value="$template->id">{{ $template->name }}{{ $template->is_default ? ' ('.__('default').')' : '' }}</flux:select.option>
+                        @endforeach
+                    </flux:select>
+                    <p class="mt-1 text-sm text-zinc-500">{{ __('New submissions of this form start this approval chain. In-flight requests keep the chain they already have.') }}</p>
+                    <flux:error name="workflowTemplateId" />
+                </div>
+            </div>
             <div class="flex items-center justify-between"><flux:heading size="md">{{ __('Fields') }}</flux:heading><flux:button wire:click="addField" icon="plus" dusk="add-field">{{ __('Add field') }}</flux:button></div>
             <div class="space-y-4" wire:sort="sortField">
                 @foreach ($fields as $index => $field)

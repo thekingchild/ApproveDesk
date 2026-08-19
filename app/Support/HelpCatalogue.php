@@ -15,6 +15,14 @@ final class HelpCatalogue
     {
         return collect([
             new HelpArticle(
+                slug: 'definitions',
+                title: 'Feature definitions',
+                summary: 'What request, request type, workflow template, assignment, and status mean.',
+                icon: 'book-open',
+                group: 'Using ApproveDesk',
+                audience: 'all',
+            ),
+            new HelpArticle(
                 slug: 'getting-around',
                 title: 'Getting around',
                 summary: 'Home, search, notifications, and how Help stays out of the way.',
@@ -155,8 +163,8 @@ final class HelpCatalogue
     public function menuArticles(User $user): Collection
     {
         $slugs = self::isAdministrator($user)
-            ? ['users-and-roles', 'request-types', 'workflow-templates', 'analytics', 'requests', 'approvals']
-            : ['requests', 'approvals', 'account-settings'];
+            ? ['definitions', 'users-and-roles', 'request-types', 'workflow-templates', 'analytics', 'requests', 'approvals']
+            : ['definitions', 'requests', 'approvals', 'account-settings'];
 
         return $this->visibleFor($user)
             ->filter(fn (HelpArticle $article): bool => in_array($article->slug, $slugs, true))

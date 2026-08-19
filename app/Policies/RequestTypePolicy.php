@@ -22,6 +22,11 @@ class RequestTypePolicy
         return $user->can('templates.manage') && ! $requestType->is_system;
     }
 
+    public function assignWorkflow(User $user, RequestType $requestType): bool
+    {
+        return $user->can('templates.manage');
+    }
+
     public function use(User $user, RequestType $requestType): bool
     {
         return $user->can('submissions.create') && $requestType->is_active && $requestType->publishedVersion()->exists();

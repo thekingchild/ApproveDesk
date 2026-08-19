@@ -45,6 +45,7 @@ class HelpCentreTest extends TestCase
             ->assertSee('Administration')
             ->assertSee('Users and roles')
             ->assertSee('Request types')
+            ->assertSee('Feature definitions')
             ->assertSee('Keeping this guide current');
     }
 
@@ -76,6 +77,8 @@ class HelpCentreTest extends TestCase
             ->assertSee('Request types')
             ->assertSee('Open this screen')
             ->assertSee('schema hash')
+            ->assertSee('Workflow assignment')
+            ->assertSee('Document, Note, Memo, and Request are not')
             ->assertSee('data-test="help-article-body"', false);
     }
 
@@ -97,6 +100,19 @@ class HelpCentreTest extends TestCase
             ->assertOk()
             ->assertSee('data-test="contextual-help"', false)
             ->assertSee(route('help.show', 'users-and-roles'), false);
+    }
+
+    public function test_definitions_article_explains_core_features(): void
+    {
+        $user = User::factory()->create()->assignRole('submitter');
+
+        $this->actingAs($user)
+            ->get(route('help.show', 'definitions'))
+            ->assertOk()
+            ->assertSee('A single case waiting for a decision')
+            ->assertSee('A named form')
+            ->assertSee('A named approval chain')
+            ->assertSee('The link from a request type');
     }
 
     public function test_catalogue_matches_markdown_files(): void

@@ -572,17 +572,15 @@ class WorkflowEngine
 
     private function resolveTemplate(Submission $submission): WorkflowTemplate
     {
-        $template = WorkflowTemplate::query()
-            ->where('is_active', true)
-            ->whereJsonContains('submission_types', $submission->type->value)
-            ->orderByDesc('is_default')
-            ->first()
-            ?? WorkflowTemplate::query()
-                ->where('is_active', true)
-                ->where('is_default', true)
-                ->first();
+        $submission->loadMissing('requestTypeVersion.requestType.workflowTemplate.steps');
 
-        return $template ?? throw WorkflowException::noTemplateFor($submission->type->value);
+        $assigned = $submission->requestTypeVersion->requestType->resolvedWorkflowTemplate();
+
+        if ($assigned !== null) {
+            return $assigned->loadMissing('steps');
+        }
+
+        throw WorkflowException::noTemplateFor($submission->type->value);
     }
 
     private function hasActedOn(WorkflowInstance $instance, WorkflowTemplateStep $step, User $actor): bool

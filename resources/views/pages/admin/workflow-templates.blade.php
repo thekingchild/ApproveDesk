@@ -54,7 +54,7 @@ new #[Title('Workflow templates')] class extends Component {
     public function templates(): \Illuminate\Contracts\Pagination\LengthAwarePaginator
     {
         return WorkflowTemplate::query()
-            ->with('creator')
+            ->with(['creator', 'requestTypes'])
             ->withCount(['steps', 'instances'])
             ->when($this->search !== '', fn (Builder $query) => $query->where('name', 'like', '%'.$this->search.'%'))
             ->orderByDesc('is_default')
@@ -212,9 +212,7 @@ new #[Title('Workflow templates')] class extends Component {
         }
 
         if (! $validated['isDefault'] && $validated['submissionTypes'] === []) {
-            throw ValidationException::withMessages([
-                'submissionTypes' => __('Select at least one submission type or make this the default template.'),
-            ]);
+            $validated['submissionTypes'] = [];
         }
 
         $stepCount = count($validated['steps']);
@@ -428,7 +426,7 @@ new #[Title('Workflow templates')] class extends Component {
                 <flux:heading size="lg">{{ __('Workflow templates') }}</flux:heading>
                 <x-ui.help-link article="workflow-templates" />
             </div>
-            <flux:subheading>{{ __('Configure manual, conditional, and automatic approval chains by submission type.') }}</flux:subheading>
+            <flux:subheading>{{ __('Name as many approval chains as you need. Assign each one from a request type. The default is the fallback.') }}</flux:subheading>
         </div>
         <flux:button variant="primary" icon="plus" wire:click="createTemplate" data-test="create-template">{{ __('Add template') }}</flux:button>
     </div>
@@ -440,7 +438,7 @@ new #[Title('Workflow templates')] class extends Component {
     <flux:table :paginate="$this->templates">
         <flux:table.columns>
             <flux:table.column>{{ __('Template') }}</flux:table.column>
-            <flux:table.column>{{ __('Covers') }}</flux:table.column>
+            <flux:table.column>{{ __('Assigned request types') }}</flux:table.column>
             <flux:table.column>{{ __('Steps') }}</flux:table.column>
             <flux:table.column>{{ __('Usage') }}</flux:table.column>
             <flux:table.column>{{ __('Status') }}</flux:table.column>
@@ -454,11 +452,18 @@ new #[Title('Workflow templates')] class extends Component {
                         <div class="text-xs text-zinc-500">{{ __('Created by') }} {{ $template->creator->name }}</div>
                     </flux:table.cell>
                     <flux:table.cell>
-                        @if ($template->is_default)
-                            <flux:badge color="indigo">{{ __('Default') }}</flux:badge>
-                        @else
-                            {{ collect($template->submission_types)->map(fn ($type) => ucfirst($type))->implode(', ') }}
-                        @endif
+                        <div class="flex flex-wrap items-center gap-1">
+                            @if ($template->is_default)
+                                <flux:badge color="indigo">{{ __('Default fallback') }}</flux:badge>
+                            @endif
+                            @forelse ($template->requestTypes as $requestType)
+                                <flux:badge color="zinc">{{ $requestType->name }}</flux:badge>
+                            @empty
+                                @unless ($template->is_default)
+                                    <span class="text-sm text-zinc-500">{{ __('Not assigned') }}</span>
+                                @endunless
+                            @endforelse
+                        </div>
                     </flux:table.cell>
                     <flux:table.cell><flux:badge color="zinc">{{ $template->steps_count }}</flux:badge></flux:table.cell>
                     <flux:table.cell><flux:badge :color="$template->instances_count ? 'amber' : 'zinc'">{{ $template->instances_count }}</flux:badge></flux:table.cell>
@@ -493,15 +498,16 @@ new #[Title('Workflow templates')] class extends Component {
                 <div class="sm:col-span-2"><flux:textarea wire:model="description" :label="__('Description')" rows="2" /></div>
             </div>
 
-            @if (! $isDefault)
-                <flux:checkbox.group wire:model="submissionTypes" :label="__('Submission types')" class="grid gap-2 sm:grid-cols-4">
+            @if ($isDefault)
+                <p class="text-sm text-zinc-500">{{ __('The default template runs for any request type with no assigned workflow, including General Request until you assign one.') }}</p>
+            @else
+                <flux:checkbox.group wire:model="submissionTypes" :label="__('Legacy submission labels (optional)')" class="grid gap-2 sm:grid-cols-4">
                     @foreach (SubmissionType::cases() as $type)
                         <flux:checkbox :value="$type->value" :label="str($type->value)->replace('_', ' ')->title()" />
                     @endforeach
                 </flux:checkbox.group>
+                <p class="text-sm text-zinc-500">{{ __('These labels do not reserve a type. New requests follow the template assigned on the request type.') }}</p>
                 <flux:error name="submissionTypes" />
-            @else
-                <p class="text-sm text-zinc-500">{{ __('The default template handles types without a matching active type-specific template.') }}</p>
             @endif
 
             <div class="space-y-4">

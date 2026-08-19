@@ -16,8 +16,15 @@ class VersionedRequestSchemaMigrationTest extends TestCase
 
     private const SEARCH_MIGRATION_PATH = 'database/migrations/2026_08_19_020000_add_request_field_discovery_and_saved_views.php';
 
+    private const WORKFLOW_ASSIGNMENT_MIGRATION_PATH = 'database/migrations/2026_08_19_030000_add_workflow_template_to_request_types.php';
+
     public function test_v21_database_fixture_is_upgraded_without_changing_reference_or_workflow_history(): void
     {
+        $this->artisan('migrate:rollback', [
+            '--path' => self::WORKFLOW_ASSIGNMENT_MIGRATION_PATH,
+            '--force' => true,
+        ])->assertExitCode(0);
+
         $this->artisan('migrate:rollback', [
             '--path' => self::SEARCH_MIGRATION_PATH,
             '--force' => true,
@@ -41,6 +48,10 @@ class VersionedRequestSchemaMigrationTest extends TestCase
             '--path' => self::SEARCH_MIGRATION_PATH,
             '--force' => true,
         ])->assertExitCode(0);
+        $this->artisan('migrate', [
+            '--path' => self::WORKFLOW_ASSIGNMENT_MIGRATION_PATH,
+            '--force' => true,
+        ])->assertExitCode(0);
 
         $generalVersionId = DB::table('request_type_versions')
             ->join('request_types', 'request_types.id', '=', 'request_type_versions.request_type_id')
@@ -61,5 +72,14 @@ class VersionedRequestSchemaMigrationTest extends TestCase
         ]);
         $this->assertTrue(Schema::hasColumns('request_field_definitions', ['is_searchable', 'is_sensitive']));
         $this->assertTrue(Schema::hasTable('submission_saved_views'));
+        $this->assertTrue(Schema::hasColumn('request_types', 'workflow_template_id'));
+        $this->assertDatabaseHas('request_types', [
+            'slug' => RequestType::GENERAL_SLUG,
+            'workflow_template_id' => 9201,
+        ]);
+        $this->assertDatabaseHas('workflow_instances', [
+            'id' => 9501,
+            'template_id' => 9201,
+        ]);
     }
 }

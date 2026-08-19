@@ -20,6 +20,9 @@ final class CloneRequestTypeAction
             'configuration' => $field->configuration,
         ])->all();
 
-        return $this->saveDraft->execute(null, $source->name.' copy', $source->description, $fields, $actor)->requestType;
+        $copy = $this->saveDraft->execute(null, $source->name.' copy', $source->description, $fields, $actor)->requestType;
+        $copy->update(['workflow_template_id' => $source->workflow_template_id]);
+
+        return $copy;
     }
 }

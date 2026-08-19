@@ -6,6 +6,7 @@ use App\Enums\RequestTypeVersionStatus;
 use Database\Factories\RequestTypeFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
@@ -17,8 +18,10 @@ use Illuminate\Support\Carbon;
  * @property string|null $description
  * @property bool $is_active
  * @property bool $is_system
+ * @property int|null $workflow_template_id
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
+ * @property-read WorkflowTemplate|null $workflowTemplate
  */
 class RequestType extends Model
 {
@@ -28,7 +31,7 @@ class RequestType extends Model
     public const GENERAL_SLUG = 'general-request';
 
     protected $fillable = [
-        'name', 'slug', 'description', 'is_active', 'is_system',
+        'name', 'slug', 'description', 'is_active', 'is_system', 'workflow_template_id',
     ];
 
     protected function casts(): array
@@ -51,5 +54,25 @@ class RequestType extends Model
         return $this->hasOne(RequestTypeVersion::class)
             ->where('status', RequestTypeVersionStatus::Published)
             ->ofMany('version', 'max');
+    }
+
+    /** @return BelongsTo<WorkflowTemplate, $this> */
+    public function workflowTemplate(): BelongsTo
+    {
+        return $this->belongsTo(WorkflowTemplate::class);
+    }
+
+    public function resolvedWorkflowTemplate(): ?WorkflowTemplate
+    {
+        $assigned = $this->workflowTemplate;
+
+        if ($assigned !== null && $assigned->is_active) {
+            return $assigned;
+        }
+
+        return WorkflowTemplate::query()
+            ->where('is_active', true)
+            ->where('is_default', true)
+            ->first();
     }
 }

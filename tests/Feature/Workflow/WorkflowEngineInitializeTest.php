@@ -5,6 +5,7 @@ namespace Tests\Feature\Workflow;
 use App\Enums\SubmissionStatus;
 use App\Enums\WorkflowStatus;
 use App\Exceptions\WorkflowException;
+use App\Models\RequestTypeVersion;
 use App\Models\Submission;
 use App\Models\User;
 use App\Models\WorkflowTemplate;
@@ -30,21 +31,38 @@ class WorkflowEngineInitializeTest extends TestCase
         $this->assertTrue($submission->refresh()->status === SubmissionStatus::InReview);
     }
 
-    public function test_initialize_prefers_type_specific_template_over_default(): void
+    public function test_initialize_prefers_request_type_assignment_over_default(): void
     {
         $approver = User::factory()->create();
-        $typeSpecific = WorkflowTemplate::factory()->sequential([$approver])->create([
+        $assigned = WorkflowTemplate::factory()->sequential([$approver])->create([
+            'submission_types' => ['memo'],
+        ]);
+        $default = WorkflowTemplate::factory()->default()->sequential([$approver])->create();
+        $requestType = RequestTypeVersion::general()->requestType;
+        $requestType->update(['workflow_template_id' => $assigned->id]);
+
+        $memo = Submission::factory()->create(['type' => 'memo']);
+        $instance = app(WorkflowEngine::class)->initialize($memo);
+
+        $this->assertSame($assigned->id, $instance->template_id);
+
+        $requestType->update(['workflow_template_id' => null]);
+        $note = Submission::factory()->create(['type' => 'note']);
+        $instance = app(WorkflowEngine::class)->initialize($note);
+
+        $this->assertSame($default->id, $instance->template_id);
+    }
+
+    public function test_initialize_ignores_legacy_submission_type_coverage(): void
+    {
+        $approver = User::factory()->create();
+        WorkflowTemplate::factory()->sequential([$approver])->create([
             'submission_types' => ['memo'],
         ]);
         $default = WorkflowTemplate::factory()->default()->sequential([$approver])->create();
 
         $memo = Submission::factory()->create(['type' => 'memo']);
         $instance = app(WorkflowEngine::class)->initialize($memo);
-
-        $this->assertSame($typeSpecific->id, $instance->template_id);
-
-        $note = Submission::factory()->create(['type' => 'note']);
-        $instance = app(WorkflowEngine::class)->initialize($note);
 
         $this->assertSame($default->id, $instance->template_id);
     }

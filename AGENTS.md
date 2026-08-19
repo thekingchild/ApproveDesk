@@ -3,6 +3,7 @@
 This file gives any AI agent (or human contributor) the essential context to work on **ApproveDesk** safely and consistently. Read it before writing any code. Detailed companion docs:
 
 - [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) — what gets built, in what order, with acceptance criteria
+- [docs/kb/README.md](docs/kb/README.md) — administrator Help centre source; update after every phase
 - [docs/CI-CD.md](docs/CI-CD.md) — pipelines, branching, releases, deployment automation
 - [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) — local environment setup and commands
 - [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — installer runbook, cPanel/Plesk procedures
@@ -36,7 +37,7 @@ php artisan test --parallel               # faster, use before pushing
 php artisan migrate:fresh --seed          # reset dev database
 ```
 
-**Before you consider any task done:** `php artisan test --parallel` passes and `./vendor/bin/pint --dirty` is clean. CI runs the same checks and rejects anything less.
+**Before you consider any task done:** `php artisan test --parallel` passes and `./vendor/bin/pint --dirty` is clean. CI runs the same checks and rejects anything less. If the work completes an implementation phase, the Help centre must be updated in the same change (see Help Centre below).
 
 ## Architecture
 
@@ -81,6 +82,29 @@ app/
 - Don't use raw SQL string interpolation; Eloquent/parameterized query builder only.
 - Don't serve uploaded files directly from the webroot; use signed temporary URLs.
 - Don't update migrations that have been merged/released — write new ones.
+
+## Help Centre (required after every phase)
+
+The in-app Help centre at `/help` is sourced from `docs/kb/`. It is product documentation for people who use the application, not for operators installing it.
+
+A phase in `IMPLEMENTATION_PLAN.md` is **not complete** until Help is updated in the same delivery. Do not mark phase tasks complete, or ship the phase, with stale Help.
+
+Each article must include:
+
+1. A definition of the feature in plain language
+2. When to use it
+3. How to use the live screens
+4. What not to do, including anything that is immutable
+
+After each completed phase:
+
+1. Update or add Markdown under `docs/kb/`
+2. Refresh `docs/kb/definitions.md` for any new term
+3. Register articles in `App\Support\HelpCatalogue`
+4. Confirm Help as an administrator and as a requester
+5. Commit the Markdown, catalogue, and `IMPLEMENTATION_PLAN.md` together
+
+Do not document installer, Docker, CI/CD, queues, or `.env` in Help. Those stay in `docs/DEPLOYMENT.md` and `docs/DEVELOPMENT.md`.
 
 ## Testing Policy
 

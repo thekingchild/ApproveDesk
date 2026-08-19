@@ -76,7 +76,7 @@ A task is complete only when it has:
 3. Policy authorization and tenant scoping where applicable.
 4. Unit/feature tests for success, denial, invalid input, and race/idempotency risks.
 5. UI states for loading, empty, success, validation error, authorization denial, and retry where applicable.
-6. Documentation for operators and future contributors.
+6. Documentation for operators and future contributors, **including the in-app Help centre**. Every new or changed product feature needs a definition and a detailed explanation in `docs/kb/` and `/help` before the phase can be marked complete. See section 3.4.
 7. No unresolved TODO that is necessary for the task to function.
 
 ### 3.3 Safe delivery pattern
@@ -91,18 +91,21 @@ A task is complete only when it has:
 
 ### 3.4 Administrator knowledge base
 
-The in-app Help centre (`/help`) and Markdown source in `docs/kb/` are the administrator knowledge base. They explain how to use the product. They do not cover installation, hosting, Docker, CI/CD, or `.env` files.
+The in-app Help centre (`/help`) and Markdown source in `docs/kb/` are the product knowledge base. They explain how to use the application. They do not cover installation, hosting, Docker, CI/CD, or `.env` files.
+
+This is a phase exit requirement. A phase in this plan is not complete until Help has been updated for every new or changed feature. Articles must define the feature, explain when to use it, explain how the live screens work, and state what not to do.
 
 The Help entry stays in the sidebar footer as a compact menu, with a matching icon in the mobile header. It must not add another item under Administration or crowd page headers. Administration screens may include a life-ring icon that opens the matching article.
 
 After each completed phase:
 
-1. Update `docs/kb/` for new or changed screens.
-2. Register those articles in `App\Support\HelpCatalogue`.
-3. Confirm Help as an administrator and as a requester.
-4. Commit the Markdown, catalogue, Help UI, and this plan together.
+1. Update `docs/kb/` for new or changed screens, with definitions and detailed explanations.
+2. Refresh `docs/kb/definitions.md` for any new product term.
+3. Register those articles in `App\Support\HelpCatalogue`.
+4. Confirm Help as an administrator and as a requester.
+5. Commit the Markdown, catalogue, Help UI, and this plan together.
 
-**Administrator knowledge base through Phase 6 — Complete (2026-08-19):** getting around, requests, approvals, statuses, account settings, users and roles, departments, workflow templates, request types, analytics, webhooks, organization settings, and the audit trail.
+**Administrator knowledge base through Phase 6A — Complete (2026-08-19):** feature definitions, getting around, requests, approvals, statuses, account settings, users and roles, departments, workflow templates, request types (including workflow assignment), analytics, webhooks, organization settings, and the audit trail.
 
 ### 3.5 Request types own workflows
 
@@ -124,7 +127,7 @@ Phase 6A implements this assignment. Phase 7 keeps its original scope: versioned
 | 0–4 | v2.0.0 | Existing workflow platform | Complete |
 | 5 | v2.1.0 | Non-enterprise UX, accessibility, and approver productivity | Complete |
 | 6 | v2.2.0 | Configurable request types and form builder | In progress — 6.1–6.2 complete |
-| 6A | v2.2.1 | Request-type workflow assignment | Not started |
+| 6A | v2.2.1 | Request-type workflow assignment | Complete |
 | 7 | v2.3.0 | Visual workflows, versioning, and dynamic assignment | Not started |
 | 8 | v2.4.0 | Collaboration, notifications, and integration hub | Not started |
 | 9 | v2.5.0 | Governance, audit evidence, security, and reliability | Not started |
@@ -225,7 +228,7 @@ The administrator knowledge base in `docs/kb/` and `/help` covers every shipped 
 
 ---
 
-## Phase 6A — Request-type workflow assignment
+## Phase 6A — Request-type workflow assignment — Complete (2026-08-19)
 
 **Goal:** let administrators create as many workflow templates as they need, and attach each request type to the template that should run for new submissions. This is the industry-standard binding (the form owns the process). It does not start the Phase 7 visual builder, workflow versioning, or form-value selection rules.
 
@@ -233,29 +236,29 @@ This phase is additive. Phases 0–6 stay complete as written. Phase 7 task IDs 
 
 ### 6A.1 Assignment model
 
-- **P6A-DATA-01:** Add a nullable `workflow_template_id` on `request_types`, with a foreign key to `workflow_templates`. No existing columns are removed.
-- **P6A-DATA-02:** Backfill each existing request type to the template `WorkflowEngine` would resolve today (type-specific match, else the default template). Historical `workflow_instances.template_id` values must not change.
-- **P6A-DATA-03:** Keep Document, Note, Memo, and Request on General Request for compatibility. Stop using those four values as the exclusive routing key.
+- **P6A-DATA-01 — Complete:** Add a nullable `workflow_template_id` on `request_types`, with a foreign key to `workflow_templates`. No existing columns are removed.
+- **P6A-DATA-02 — Complete:** Backfill each existing request type to the template `WorkflowEngine` would resolve today (type-specific match, else the default template). Historical `workflow_instances.template_id` values must not change.
+- **P6A-DATA-03 — Complete:** Keep Document, Note, Memo, and Request on General Request for compatibility. Stop using those four values as the exclusive routing key.
 
 ### 6A.2 Routing and uniqueness
 
-- **P6A-RULE-01:** Remove the active-template guard that rejects a second template sharing a submission type. Many active templates are valid.
-- **P6A-RULE-02:** Keep uniqueness of the default template: at most one `is_default = true` active template.
-- **P6A-RULE-03:** `WorkflowEngine::resolveTemplate()` uses, in order: the submission's request type assignment if that template is active; else the active default template; else the existing no-template error. Do not re-introduce submission-type JSON matching as the primary resolver.
-- **P6A-RULE-04:** Changing a request type’s template or the default template must not rewrite running or completed instances.
+- **P6A-RULE-01 — Complete:** Remove the active-template guard that rejects a second template sharing a submission type. Many active templates are valid.
+- **P6A-RULE-02 — Complete:** Keep uniqueness of the default template: at most one `is_default = true` active template.
+- **P6A-RULE-03 — Complete:** `WorkflowEngine::resolveTemplate()` uses, in order: the submission's request type assignment if that template is active; else the active default template; else the existing no-template error. Do not re-introduce submission-type JSON matching as the primary resolver.
+- **P6A-RULE-04 — Complete:** Changing a request type’s template or the default template must not rewrite running or completed instances.
 
 ### 6A.3 Administration UI
 
-- **P6A-UI-01:** On the request type screen, administrators select the workflow template for that type and see which template will apply to the next new submission.
-- **P6A-UI-02:** The workflow template screen allows multiple active templates without requiring unused submission types. Default remains a single fallback. Submission-type checkboxes, if still shown, are informational only and must not enforce exclusivity.
-- **P6A-UI-03:** Requesters continue to choose a request type only. They are not asked to choose a workflow.
+- **P6A-UI-01 — Complete:** On the request type screen, administrators select the workflow template for that type and see which template will apply to the next new submission.
+- **P6A-UI-02 — Complete:** The workflow template screen allows multiple active templates without requiring unused submission types. Default remains a single fallback. Submission-type checkboxes, if still shown, are informational only and must not enforce exclusivity.
+- **P6A-UI-03 — Complete:** Requesters continue to choose a request type only. They are not asked to choose a workflow.
 
 ### 6A.4 Tests, docs, and exit gate
 
-- **P6A-TEST-01:** Two active templates may exist without conflict. Two request types may share one template. A type with no assignment uses the default.
-- **P6A-TEST-02:** Submitting Leave Request (or any custom type) starts the assigned template; a later assignment change does not alter an in-flight instance.
-- **P6A-TEST-03:** Upgrade test: a copy of the Phase 6 database still opens, submits, and completes, and backfilled assignments match pre-6A resolution.
-- **P6A-DOC-01:** Update `docs/kb/workflow-templates.md` and `docs/kb/request-types.md`, then the in-app Help catalogue, per section 3.4.
+- **P6A-TEST-01 — Complete:** Two active templates may exist without conflict. Two request types may share one template. A type with no assignment uses the default.
+- **P6A-TEST-02 — Complete:** Submitting Leave Request (or any custom type) starts the assigned template; a later assignment change does not alter an in-flight instance.
+- **P6A-TEST-03 — Complete:** Upgrade test: a copy of the Phase 6 database still opens, submits, and completes, and backfilled assignments match pre-6A resolution.
+- **P6A-DOC-01 — Complete:** Update `docs/kb/workflow-templates.md` and `docs/kb/request-types.md`, then the in-app Help catalogue, per section 3.4.
 
 **Phase 6A demo:** an administrator publishes two templates and assigns Leave Request to one and Purchase Request to the other; both remain active; General Request still uses the default; an in-progress Leave Request keeps its original chain after the assignment is changed.
 

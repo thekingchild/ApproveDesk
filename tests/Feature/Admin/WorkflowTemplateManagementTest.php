@@ -323,7 +323,7 @@ class WorkflowTemplateManagementTest extends TestCase
         $this->assertSame('Approval Level 1', $template->fresh()->steps->first()->name);
     }
 
-    public function test_active_type_specific_templates_cannot_overlap(): void
+    public function test_active_templates_may_share_legacy_submission_labels(): void
     {
         $approver = User::factory()->create();
         WorkflowTemplate::factory()->sequential([$approver])->create([
@@ -333,13 +333,30 @@ class WorkflowTemplateManagementTest extends TestCase
         Livewire::actingAs($this->admin)
             ->test('pages::admin.workflow-templates')
             ->call('createTemplate')
-            ->set('name', 'Duplicate memo flow')
+            ->set('name', 'Second memo flow')
             ->set('submissionTypes', ['memo'])
             ->set('steps.0.assigneeIds', [$approver->id])
             ->call('save')
-            ->assertHasErrors(['submissionTypes']);
+            ->assertHasNoErrors();
 
-        $this->assertDatabaseMissing('workflow_templates', ['name' => 'Duplicate memo flow']);
+        $this->assertDatabaseHas('workflow_templates', ['name' => 'Second memo flow']);
+        $this->assertSame(2, WorkflowTemplate::query()->whereJsonContains('submission_types', 'memo')->count());
+    }
+
+    public function test_non_default_template_can_be_saved_without_submission_types(): void
+    {
+        $approver = User::factory()->create();
+
+        Livewire::actingAs($this->admin)
+            ->test('pages::admin.workflow-templates')
+            ->call('createTemplate')
+            ->set('name', 'Unlabelled flow')
+            ->set('submissionTypes', [])
+            ->set('steps.0.assigneeIds', [$approver->id])
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('workflow_templates', ['name' => 'Unlabelled flow']);
     }
 
     public function test_selecting_a_new_default_replaces_the_previous_default(): void

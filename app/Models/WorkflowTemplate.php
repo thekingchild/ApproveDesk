@@ -23,6 +23,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $updated_at
  * @property-read Collection<int, WorkflowTemplateStep> $steps
  * @property-read Collection<int, WorkflowInstance> $instances
+ * @property-read Collection<int, RequestType> $requestTypes
  * @property-read User $creator
  */
 class WorkflowTemplate extends Model
@@ -66,5 +67,13 @@ class WorkflowTemplate extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * @return HasMany<RequestType, $this>
+     */
+    public function requestTypes(): HasMany
+    {
+        return $this->hasMany(RequestType::class);
     }
 }
