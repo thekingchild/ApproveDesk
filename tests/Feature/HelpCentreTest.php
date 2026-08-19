@@ -117,7 +117,8 @@ class HelpCentreTest extends TestCase
             ->assertSee('The canvas and list editor')
             ->assertSee('One frozen copy of a workflow template')
             ->assertSee('An ordered rule on a request type')
-            ->assertSee('Working days and holidays');
+            ->assertSee('Working days and holidays')
+            ->assertSee('The checks that run before a workflow version is published');
     }
 
     public function test_workflow_templates_article_explains_builder_and_versions(): void
@@ -130,7 +131,8 @@ class HelpCentreTest extends TestCase
             ->assertSee('canvas and list views of the same chain')
             ->assertSee('read-only simulation')
             ->assertSee('Notification')
-            ->assertSee('cannot change their steps');
+            ->assertSee('cannot change their steps')
+            ->assertSee('Requests that already started keep the');
     }
 
     public function test_catalogue_matches_markdown_files(): void

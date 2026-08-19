@@ -20,8 +20,15 @@ class VersionedRequestSchemaMigrationTest extends TestCase
 
     private const WORKFLOW_VERSION_MIGRATION_PATH = 'database/migrations/2026_08_19_040000_create_workflow_template_versions.php';
 
+    private const DYNAMIC_ROUTING_MIGRATION_PATH = 'database/migrations/2026_08_19_050000_add_dynamic_routing_and_assignment.php';
+
     public function test_v21_database_fixture_is_upgraded_without_changing_reference_or_workflow_history(): void
     {
+        $this->artisan('migrate:rollback', [
+            '--path' => self::DYNAMIC_ROUTING_MIGRATION_PATH,
+            '--force' => true,
+        ])->assertExitCode(0);
+
         $this->artisan('migrate:rollback', [
             '--path' => self::WORKFLOW_VERSION_MIGRATION_PATH,
             '--force' => true,
@@ -105,5 +112,15 @@ class VersionedRequestSchemaMigrationTest extends TestCase
             DB::table('workflow_instances')->where('id', 9501)->value('template_version_id'),
             DB::table('workflow_template_steps')->where('id', 9301)->value('template_version_id'),
         );
+
+        $this->artisan('migrate', [
+            '--path' => self::DYNAMIC_ROUTING_MIGRATION_PATH,
+            '--force' => true,
+        ])->assertExitCode(0);
+
+        $this->assertTrue(Schema::hasColumn('users', 'manager_id'));
+        $this->assertTrue(Schema::hasTable('workflow_selection_rules'));
+        $this->assertDatabaseHas('workflow_actions', ['id' => 9601, 'comment' => 'Preserved v2.1 approval.']);
+        $this->assertSame('first_response', DB::table('workflow_template_steps')->where('id', 9301)->value('completion_rule'));
     }
 }

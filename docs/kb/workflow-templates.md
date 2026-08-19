@@ -80,3 +80,7 @@ Do not create a second default. Only one default is active at a time.
 Do not rely on Document / Note / Memo / Request to pick the chain. Assign the template on the request type instead.
 
 Keep one default active so General Request and any unassigned form can still start a workflow.
+
+## What stays true after an upgrade
+
+Requests that already started keep the **version** they started on, including the original step IDs. Publishing a later version, restoring an older draft, or changing selection rules does not rewrite that history. Simulation and Explain routing never write audit rows. Graph validation runs before publish so unreachable steps, missing assignees, and unsafe timeouts are refused.

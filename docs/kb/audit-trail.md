@@ -12,6 +12,8 @@ On a request you will see who acted, what they did, and when. Automatic steps an
 
 If a form needs to change, publish a new version. Old requests keep the version they were submitted against.
 
+If a workflow needs to change, publish a new workflow version. In-flight requests finish on the version they already have. The original step IDs stay on the audit rows.
+
 If a person leaves, deactivate the account. Their name stays on the actions they recorded.
 
 Use analytics for trends. Use the request history when you need evidence of a single case.

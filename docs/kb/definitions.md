@@ -26,7 +26,11 @@ The canvas and list editor for a workflow template. Start and End are shown for 
 
 ## Workflow version
 
-One frozen copy of a workflow template’s steps. New requests use the published version. Requests already in flight keep the version they started.
+One frozen copy of a workflow template’s steps. New requests use the published version. Requests already in flight keep the version they started, including after an upgrade.
+
+## Graph validation
+
+The checks that run before a workflow version is published: unreachable steps, cycles, missing assignees, impossible quorum, invalid branches, and unsafe timeouts.
 
 ## Default template
 

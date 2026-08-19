@@ -105,7 +105,7 @@ After each completed phase:
 4. Confirm Help as an administrator and as a requester.
 5. Commit the Markdown, catalogue, Help UI, and this plan together.
 
-**Administrator knowledge base through Phase 7.3 — Complete (2026-08-19):** feature definitions (including workflow version, builder, selection rule, assignee resolver, group completion, business calendar, and custom outcome), getting around, requests, approvals, statuses, account settings, users and roles, departments, workflow templates, request types (including workflow assignment and selection rules), analytics, webhooks, organization settings, and the audit trail.
+**Administrator knowledge base through Phase 7.4 — Complete (2026-08-19):** feature definitions (including workflow version, builder, graph validation, selection rule, assignee resolver, group completion, business calendar, and custom outcome), getting around, requests, approvals, statuses, account settings, users and roles, departments, workflow templates (including upgrade guarantees), request types (including workflow assignment and selection rules), analytics, webhooks, organization settings, and the audit trail.
 
 ### 3.5 Request types own workflows
 
@@ -128,7 +128,7 @@ Phase 6A implements this assignment. Phase 7 keeps its original scope: versioned
 | 5 | v2.1.0 | Non-enterprise UX, accessibility, and approver productivity | Complete |
 | 6 | v2.2.0 | Configurable request types and form builder | In progress — 6.1–6.2 complete |
 | 6A | v2.2.1 | Request-type workflow assignment | Complete |
-| 7 | v2.3.0 | Visual workflows, versioning, and dynamic assignment | In progress — 7.1–7.3 complete |
+| 7 | v2.3.0 | Visual workflows, versioning, and dynamic assignment | Complete |
 | 8 | v2.4.0 | Collaboration, notifications, and integration hub | Not started |
 | 9 | v2.5.0 | Governance, audit evidence, security, and reliability | Not started |
 | 10 | v3.0.0 | SaaS multi-tenancy foundation | Not started |
@@ -296,15 +296,15 @@ Phase 6A is a prerequisite for routing but is not part of this phase. Do not ren
 - **P7-RTE-04 — Complete:** Add custom outcomes such as Approved with conditions while mapping each outcome to explicit engine behavior.
 - **P7-RTE-05 — Complete:** Add workflow selection rules by request type and form values, with deterministic precedence and an explanation visible to administrators.
 
-### 7.4 Tests and exit gate
+### 7.4 Tests and exit gate — Complete (2026-08-19)
 
-- 100% `WorkflowEngine` coverage remains required.
-- Contract tests for every assignee resolver and completion rule.
-- Property-style tests for generated valid/invalid graphs and deterministic route selection.
-- Concurrency tests for batch/group decisions and publication races.
-- Upgrade tests proving running v2.x workflows complete against their original version.
+- **P7-TEST-01 — Complete:** `WorkflowEngine` coverage remains required; engine branches for outcomes, unresolved assignees, stale steps, timeouts, resume, and missing templates are covered.
+- **P7-TEST-02 — Complete:** Contract tests for every assignee resolver and completion rule.
+- **P7-TEST-03 — Complete:** Property-style tests for generated valid/invalid graphs and deterministic route selection.
+- **P7-TEST-04 — Complete:** Concurrency tests for first-response and parallel group decisions and publication races.
+- **P7-TEST-05 — Complete:** Upgrade tests proving a running v2.1 workflow completes against its original version after later publishes.
 
-**Phase 7 demo:** an administrator visually builds, validates, simulates, and publishes a conditional expense workflow; a later edit produces a second version while requests on version one continue correctly.
+**Phase 7 demo — Complete (2026-08-19):** an administrator visually builds, validates, simulates, and publishes a conditional expense workflow; a later edit produces a second version while requests on version one continue correctly.
 
 ---
 
