@@ -120,6 +120,18 @@ Locked product decision for work after Phase 6. It does not reopen Phases 0–6.
 
 Phase 6A implements this assignment. Phase 7 keeps its original scope: versioned templates, visual builder, and later selection rules on form values. Phase 7 must not revert exclusive submission-type locking.
 
+### 3.6 Notification channels — generic vs administrator options
+
+Locked product decision for Phase 8.2. It does not reopen Phase 8.1. Design: [docs/design/8.2-notification-channels.md](docs/design/8.2-notification-channels.md).
+
+- **Generic (always on):** in-app (database) inbox and email. Email uses built-in copy until an administrator publishes an override. No extra credentials. Signed approval links stay on action-required email.
+- **Administrator options (off until configured):** Microsoft Teams, Slack, WhatsApp, and Telegram. Each needs credentials, a health/test action, and identity mapping. Unconfigured channels skip; they do not fail the notification or the workflow.
+- **WhatsApp** uses WhatsApp Business Platform **template mapping**: fetch approved Meta templates, map each ApproveDesk notification `kind` to a template name + language + placeholders. Do not send free-form WhatsApp for these events.
+- **Editable email templates** are an organization override of generic email copy (subject, body, merge fields, restore default). Action-required templates must keep the signed confirmation URL. Stored in ApproveDesk; not Meta/WhatsApp copy.
+- **Telegram** is outbound notification through a bot (webhook, not long-polling). Messages may include the same signed review URL as email. Interactive in-chat approve/reject is not required in 8.2 (that remains Teams/Slack in P8-NOT-02).
+- Users still choose **when** mail is sent (immediate / digest / in-app only) on their own Notifications settings. They do not enable org-level bots.
+- SMS and web push stay in the channel interface as originally planned; they are not part of this administrator-options set until their own tasks (SMS with WhatsApp phone storage; web push with P8-NOT-03).
+
 ## 4. Release map and status
 
 | Phase | Target | Theme | Status |
@@ -387,10 +399,12 @@ Design: [docs/design/7b-organization-working-hours.md](docs/design/7b-organizati
 
 ### 8.2 Notification delivery
 
-- **P8-NOT-01:** Use a channel interface for database, email, web push, Microsoft Teams, Slack, SMS, and WhatsApp.
+Follow section 3.6. Design: [docs/design/8.2-notification-channels.md](docs/design/8.2-notification-channels.md).
+
+- **P8-NOT-01:** Use a channel interface for database, email, web push, Microsoft Teams, Slack, SMS, WhatsApp, and Telegram. Database and email are generic and always enabled. Teams, Slack, WhatsApp, and Telegram are administrator options: credentials, test connection, and identity mapping live on an admin Notifications / channels screen; unconfigured drivers skip. SMS and web push remain interface members but stay disabled until their later work. Do not put bot tokens in Livewire or logs.
 - **P8-NOT-02:** Implement Teams and Slack interactive notifications with signed action state and the same stale-step policy checks as email approvals.
 - **P8-NOT-03:** Add installable PWA shell, web-push notifications, mobile-web attachment capture, and safe offline draft editing. Approval decisions always require an online server check.
-- **P8-NOT-04:** Add delivery receipts, retry visibility, per-tenant templates, quiet hours, and escalation rules for undelivered critical notifications.
+- **P8-NOT-04:** Add delivery receipts, retry visibility, quiet hours, and escalation rules for undelivered critical notifications. Add **editable organization email templates** (per notification `kind`: subject, body, merge fields, restore default; action-required must retain the signed confirmation URL). Add **WhatsApp Business Platform template fetch and mapping**: cache approved templates from the Graph API (faked in CI), map each `kind` to template name + language + placeholder binds, skip WhatsApp when unmapped or no longer approved. Telegram copy uses the same `kind` payloads as generic email unless a later task adds Telegram-specific templates.
 
 ### 8.3 Integration hub
 
@@ -405,10 +419,13 @@ Design: [docs/design/7b-organization-working-hours.md](docs/design/7b-organizati
 - Connector contract test suite with faked providers; no live service dependency in CI.
 - Webhook/action idempotency and replay tests.
 - Signed-action tampering and stale-step tests for Teams/Slack/email.
+- WhatsApp mapping tests: fetch cache, bind placeholders, skip when unmapped/unapproved; no live Graph calls.
+- Editable email template tests: override generic copy, restore default, action-required still contains a valid signed confirmation URL.
+- Telegram outbound tests with a faked Bot API; long-polling is not used.
 - Offline draft conflict tests and online-only decision enforcement.
 - Queue failure and retry tests using the database driver.
 
-**Phase 8 demo:** a request starts from a custom form, notifies an approver in Teams or Slack, receives a policy-checked decision, uploads the approved document to Drive/SharePoint, and records every delivery/action.
+**Phase 8 demo:** a request starts from a custom form, notifies an approver in Teams or Slack (and, if configured, WhatsApp or Telegram), receives a policy-checked decision, uploads the approved document to Drive/SharePoint, and records every delivery/action.
 
 ---
 
