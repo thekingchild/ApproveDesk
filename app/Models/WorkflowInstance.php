@@ -13,6 +13,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Log;
+use RuntimeException;
 
 /**
  * @property int $id
@@ -70,7 +72,16 @@ class WorkflowInstance extends Model
         }
 
         if ($this->currentStep->timeoutCalendar() === TimeoutCalendar::Business) {
-            return app(BusinessCalendar::class)->addBusinessHours($this->step_started_at, $hours);
+            try {
+                return app(BusinessCalendar::class)->addBusinessHours($this->step_started_at, $hours);
+            } catch (RuntimeException $exception) {
+                Log::error('Business calendar failed to compute deadline', [
+                    'instance_id' => $this->id,
+                    'message' => $exception->getMessage(),
+                ]);
+
+                return null;
+            }
         }
 
         return $this->step_started_at->addHours($hours);

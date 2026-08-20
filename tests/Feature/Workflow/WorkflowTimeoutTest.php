@@ -5,15 +5,18 @@ namespace Tests\Feature\Workflow;
 use App\Enums\StepType;
 use App\Enums\SubmissionStatus;
 use App\Enums\TimeoutAction;
+use App\Enums\TimeoutCalendar;
 use App\Enums\WorkflowActionType;
 use App\Enums\WorkflowStatus;
 use App\Jobs\ProcessEscalation;
+use App\Models\Setting;
 use App\Models\Submission;
 use App\Models\User;
 use App\Models\WorkflowAction;
 use App\Models\WorkflowInstance;
 use App\Models\WorkflowTemplate;
 use App\Models\WorkflowTemplateStep;
+use App\Services\Workflow\BusinessCalendar;
 use App\Services\WorkflowEngine;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -89,6 +92,63 @@ class WorkflowTimeoutTest extends TestCase
         $this->assertSame(1, $instance->fresh()->currentStep->step_order);
         $this->assertSame(0, WorkflowAction::query()->count());
         $this->assertFalse($instance->fresh()->isOverdue());
+    }
+
+    public function test_business_office_hours_timeout_fires_after_one_working_hour(): void
+    {
+        Setting::put('calendar.working_days', '1,2,3,4,5');
+        Setting::put('calendar.working_hours', json_encode(['start' => '09:00', 'end' => '17:00']));
+        Carbon::setTestNow('2026-08-17 09:00:00');
+        $approver = User::factory()->create();
+        $template = WorkflowTemplate::factory()->default()->sequential([$approver])->create();
+        $template->publishedVersion->steps->first()->updateQuietly([
+            'timeout_hours' => 1,
+            'timeout_calendar' => TimeoutCalendar::Business->value,
+            'timeout_action' => TimeoutAction::AutoApprove->value,
+        ]);
+        $instance = app(WorkflowEngine::class)->initialize(Submission::factory()->create());
+
+        Carbon::setTestNow('2026-08-17 09:59:59');
+        app(ProcessEscalation::class)->handle();
+        $this->assertSame(WorkflowStatus::Active, $instance->fresh()->status);
+
+        Carbon::setTestNow('2026-08-17 10:00:00');
+        app(ProcessEscalation::class)->handle();
+        $this->assertSame(WorkflowStatus::Completed, $instance->fresh()->status);
+    }
+
+    public function test_unconsumable_business_deadline_does_not_block_elapsed_timeout(): void
+    {
+        Carbon::setTestNow('2026-08-17 09:00:00');
+        [$elapsed] = $this->timedWorkflow(TimeoutAction::AutoReject);
+        $approver = User::factory()->create();
+        $template = WorkflowTemplate::factory()->sequential([$approver])->create();
+        $step = $template->publishedVersion->steps->first();
+        $step->updateQuietly([
+            'timeout_hours' => 1,
+            'timeout_calendar' => TimeoutCalendar::Business->value,
+            'timeout_action' => TimeoutAction::AutoReject->value,
+        ]);
+        $business = WorkflowInstance::factory()->create([
+            'template_id' => $template->id,
+            'template_version_id' => $template->publishedVersion->id,
+            'current_step_id' => $step->id,
+            'status' => WorkflowStatus::Active,
+            'started_at' => '2026-08-17 09:00:00',
+            'step_started_at' => '2026-08-17 09:00:00',
+        ]);
+
+        $this->app->instance(BusinessCalendar::class, new BusinessCalendar(
+            workingDaysOverride: [],
+            holidaysOverride: [],
+            workingHoursOverride: ['start' => '09:00', 'end' => '09:01'],
+        ));
+
+        Carbon::setTestNow('2026-08-17 11:00:01');
+        app(ProcessEscalation::class)->handle();
+
+        $this->assertSame(WorkflowStatus::Rejected, $elapsed->fresh()->status);
+        $this->assertSame(WorkflowStatus::Active, $business->fresh()->status);
     }
 
     public function test_resume_restarts_the_step_sla_clock(): void

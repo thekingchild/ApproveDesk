@@ -704,7 +704,7 @@ new #[Title('Workflow templates')] class extends Component {
                                 @if (! in_array($step['stepType'], ['conditional', 'auto', 'notification'], true))
                                     <div class="grid gap-4 sm:col-span-3 sm:grid-cols-2">
                                         <flux:input wire:model="steps.{{ $index }}.timeoutHours" type="number" min="1" max="8760" :label="__('SLA duration (hours)')" :placeholder="__('No deadline')" />
-                                        <flux:select wire:model="steps.{{ $index }}.timeoutCalendar" :label="__('Calendar')">
+                                        <flux:select wire:model="steps.{{ $index }}.timeoutCalendar" :label="__('Calendar')" :description="__('Business hours use the organization working days, office hours, and holidays. Elapsed hours count every hour on the clock.')">
                                             <flux:select.option value="elapsed">{{ __('Elapsed hours') }}</flux:select.option>
                                             <flux:select.option value="business">{{ __('Business hours') }}</flux:select.option>
                                         </flux:select>

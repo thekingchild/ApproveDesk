@@ -96,7 +96,7 @@ final class AnalyticsService
                 'submission.fieldValues.field',
                 'submission.fieldValues.userValue:id,name',
                 'submission.fieldValues.departmentValue:id,name',
-                'currentStep:id,name,timeout_hours,assignee_type,assignee_ids',
+                'currentStep:id,name,timeout_hours,timeout_calendar,assignee_type,assignee_ids',
                 'template:id,name',
                 'templateVersion:id,workflow_template_id,version,status',
                 'templateVersion.steps:id,template_version_id,step_order,name',

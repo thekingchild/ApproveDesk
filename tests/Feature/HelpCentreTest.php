@@ -117,7 +117,7 @@ class HelpCentreTest extends TestCase
             ->assertSee('The canvas and list editor')
             ->assertSee('One frozen copy of a workflow template')
             ->assertSee('An ordered rule on a request type')
-            ->assertSee('Working days and holidays')
+            ->assertSee('Working days, office hours, and holidays')
             ->assertSee('The checks that run before a workflow version is published')
             ->assertSee('The search field on a workflow step');
     }
@@ -134,7 +134,20 @@ class HelpCentreTest extends TestCase
             ->assertSee('Notification')
             ->assertSee('cannot change their steps')
             ->assertSee('Requests that already started keep the')
-            ->assertSee('type at least two characters to search');
+            ->assertSee('type at least two characters to search')
+            ->assertSee('Business hours use organization working days, office hours, and holidays');
+    }
+
+    public function test_organization_settings_article_explains_office_hours(): void
+    {
+        $admin = User::factory()->create()->assignRole('admin');
+
+        $this->actingAs($admin)
+            ->get(route('help.show', 'organization-settings'))
+            ->assertOk()
+            ->assertSee('optional office hours')
+            ->assertSee('do not enter 00:00–23:59')
+            ->assertSee('life-ring on Approval settings');
     }
 
     public function test_catalogue_matches_markdown_files(): void

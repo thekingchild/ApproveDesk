@@ -7,6 +7,8 @@ use App\Models\WorkflowInstance;
 use App\Services\WorkflowEngine;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class ProcessEscalation implements ShouldQueue
 {
@@ -24,8 +26,15 @@ class ProcessEscalation implements ShouldQueue
             ->with('currentStep')
             ->chunkById(100, function ($instances): void {
                 foreach ($instances as $instance) {
-                    if ($instance->isOverdue()) {
-                        app(WorkflowEngine::class)->processTimeout($instance);
+                    try {
+                        if ($instance->isOverdue()) {
+                            app(WorkflowEngine::class)->processTimeout($instance);
+                        }
+                    } catch (Throwable $exception) {
+                        Log::error('Escalation processing failed for instance', [
+                            'instance_id' => $instance->id,
+                            'message' => $exception->getMessage(),
+                        ]);
                     }
                 }
             });

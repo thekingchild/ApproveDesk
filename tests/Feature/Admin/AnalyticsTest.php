@@ -3,8 +3,10 @@
 namespace Tests\Feature\Admin;
 
 use App\Enums\SubmissionStatus;
+use App\Enums\TimeoutCalendar;
 use App\Enums\WorkflowActionType;
 use App\Enums\WorkflowStatus;
+use App\Models\Setting;
 use App\Models\Submission;
 use App\Models\User;
 use App\Models\WorkflowAction;
@@ -103,6 +105,31 @@ class AnalyticsTest extends TestCase
         $this->assertSame($this->actor->name, $report['workload_by_approver'][0]['approver']);
         $this->assertSame(1, $report['workload_by_approver'][0]['active']);
         $this->assertSame(1, $report['workload_by_approver'][0]['overdue']);
+    }
+
+    public function test_business_calendar_overdue_is_not_scored_as_elapsed(): void
+    {
+        Carbon::setTestNow('2026-12-26 12:00:00');
+        Setting::put('calendar.working_days', '1,2,3,4,5');
+        Setting::put('calendar.holidays', '2026-12-25');
+        $this->step->updateQuietly([
+            'timeout_hours' => 24,
+            'timeout_calendar' => TimeoutCalendar::Business->value,
+        ]);
+        $active = $this->submission(SubmissionStatus::InReview, 'Weekend purchase');
+        WorkflowInstance::factory()->create([
+            'submission_id' => $active->id,
+            'template_id' => $this->template->id,
+            'current_step_id' => $this->step->id,
+            'status' => WorkflowStatus::Active,
+            'started_at' => '2026-12-24 09:00:00',
+            'step_started_at' => '2026-12-24 09:00:00',
+        ]);
+
+        $report = app(AnalyticsService::class)->dashboard(7);
+
+        $this->assertSame(1, $report['summary']['active']);
+        $this->assertSame(0, $report['summary']['overdue']);
     }
 
     public function test_analytics_page_is_report_permission_protected_and_period_is_reactive(): void

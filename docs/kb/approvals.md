@@ -6,7 +6,7 @@ The approval workbench is the queue of work assigned to you, including work dele
 
 - Needs my decision: you are the current actor.
 - Due soon: a deadline is close.
-- Overdue: the step deadline has passed.
+- Overdue: the step deadline has passed. Overdue uses the step’s deadline calendar (elapsed or business, including office hours when set).
 - Waiting on others: you are involved, but someone else must act.
 - Completed: finished work you can still open.
 

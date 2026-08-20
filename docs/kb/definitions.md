@@ -58,7 +58,7 @@ How a step with more than one assignee finishes: first response, all assignees, 
 
 ## Business calendar
 
-Working days and holidays used when a step deadline is measured in business hours instead of elapsed hours.
+Working days, office hours, and holidays used when a step deadline is measured in business hours instead of elapsed hours. Empty office hours mean every hour of a working day counts; elapsed hours ignore the calendar.
 
 ## Custom outcome
 

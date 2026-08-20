@@ -8,6 +8,7 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Added
 
+- Optional organization office hours on the business calendar. Workflow steps that use Business hours count only inside the saved window on working, non-holiday days; empty hours keep today’s 24-hour working-day behaviour.
 - Searchable assignee picker with chips on the workflow builder and template form, and an optional E.164 phone number on user records for later SMS and WhatsApp delivery.
 - Phase 7 exit tests: resolver and completion contracts, generated graph validation, concurrent group decisions and publish races, and a v2.1 in-flight upgrade that finishes on the original workflow version.
 - Dynamic workflow routing: assignee resolvers (including managers, form-field users, and an external resolver interface), group completion rules, business-calendar deadlines, custom outcomes such as approve with conditions, and request-type selection rules with an administrator explanation.
@@ -26,6 +27,7 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Changed
 
+- Help copy for Business hours now includes office hours. Analytics overdue counts use the step’s deadline calendar instead of treating every step as elapsed.
 - Workflow templates no longer exclusively own Document, Note, Memo, or Request. Those labels are optional; routing follows the request type assignment.
 - Request type builder condition and calculated-field controls pick earlier fields by label instead of raw keys.
 - Standardized product typography, accessible light/dark tokens, focus treatment, component surfaces, reduced-motion behavior, and touch target sizing.

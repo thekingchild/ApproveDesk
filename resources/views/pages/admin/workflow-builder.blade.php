@@ -637,7 +637,7 @@ new #[Title('Workflow builder')] class extends Component {
                             @else
                                 <p class="text-xs text-zinc-500">{{ $selected['assigneeType'] === 'requester_manager' ? __("Resolved from the requester's line manager at submit time.") : __('Resolved from the request or requester department manager at submit time.') }}</p>
                             @endif
-                            <flux:select wire:model="steps.{{ $selectedIndex }}.timeoutCalendar" :label="__('Deadline calendar')">
+                            <flux:select wire:model="steps.{{ $selectedIndex }}.timeoutCalendar" :label="__('Deadline calendar')" :description="__('Business hours use the organization working days, office hours, and holidays. Elapsed hours count every hour on the clock.')">
                                 <flux:select.option value="elapsed">{{ __('Elapsed hours') }}</flux:select.option>
                                 <flux:select.option value="business">{{ __('Business hours') }}</flux:select.option>
                             </flux:select>

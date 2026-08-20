@@ -105,7 +105,7 @@ After each completed phase:
 4. Confirm Help as an administrator and as a requester.
 5. Commit the Markdown, catalogue, Help UI, and this plan together.
 
-**Administrator knowledge base through Phase 7A — Complete (2026-08-20):** feature definitions (including workflow version, builder, graph validation, selection rule, assignee resolver, group completion, business calendar, custom outcome, and assignee picker), getting around, requests, approvals, statuses, account settings, users and roles (including E.164 phone numbers), departments, workflow templates (including upgrade guarantees and the searchable assignee picker), request types (including workflow assignment and selection rules), analytics, webhooks, organization settings, and the audit trail.
+**Administrator knowledge base through Phase 7B — Complete (2026-08-20):** feature definitions (including workflow version, builder, graph validation, selection rule, assignee resolver, group completion, business calendar / office hours, custom outcome, and assignee picker), getting around, requests, approvals, statuses, account settings, users and roles (including E.164 phone numbers), departments, workflow templates (including upgrade guarantees and the searchable assignee picker), request types (including workflow assignment and selection rules), analytics, webhooks, organization settings (including office hours), and the audit trail.
 
 ### 3.5 Request types own workflows
 
@@ -130,6 +130,7 @@ Phase 6A implements this assignment. Phase 7 keeps its original scope: versioned
 | 6A | v2.2.1 | Request-type workflow assignment | Complete |
 | 7 | v2.3.0 | Visual workflows, versioning, and dynamic assignment | Complete |
 | 7A | v2.3.1 | Assignee picker UX and user phone numbers | Complete |
+| 7B | v2.3.2 | Organization working / office hours | Complete |
 | 8 | v2.4.0 | Collaboration, notifications, and integration hub | Not started |
 | 9 | v2.5.0 | Governance, audit evidence, security, and reliability | Not started |
 | 10 | v3.0.0 | SaaS multi-tenancy foundation | Not started |
@@ -335,6 +336,40 @@ This phase is additive. Phases 0–7 stay complete as written. Phase 8 task IDs 
 **Phase 7A demo:** an administrator types part of an approver's name in the builder, pins them as a chip, and saves; the published step still stores only that user's ID.
 
 **Out of scope (remain in Phase 8):** SMS and WhatsApp delivery, quiet hours, and channel templates. The phone column is storage only.
+
+---
+
+## Phase 7B — Organization working / office hours — Complete (2026-08-20)
+
+**Goal:** make "Business hours" on workflow steps mean organization office hours as well as working days and holidays, without changing Elapsed-hour deadlines or snapshotting due times onto instances.
+
+This phase is additive. Phases 0–7 stay complete as written. Phase 7A stays complete as written. Phase 6 remains in progress with its remaining tasks unchanged. Phase 8 task IDs and scope stay unchanged. Do not reopen exclusive Document/Note/Memo/Request locking. Do not rewrite P7-RTE-03.
+
+Design: [docs/design/7b-organization-working-hours.md](docs/design/7b-organization-working-hours.md).
+
+### 7B.1 Business calendar office hours
+
+- **P7B-CAL-01 — Complete:** Extend `App\Services\Workflow\BusinessCalendar` so an instant counts toward a Business-hour SLA only when the weekday is in `calendar.working_days`, the date is not in `calendar.holidays`, and (when office hours are set) the time of day falls in that weekday's half-open `[start, end)` window. Keep the existing hour-tick `addHour()` loop when `calendar.working_hours` is unset or empty. When a window is set, add remaining time with a window-skipping algorithm over integer seconds (`hours * 3600`); `take > 0` or jump strictly forward. Keep the public `int $hours` API. Include `timeout_calendar` in `AnalyticsService`'s constrained `currentStep` eager load so analytics overdue uses the Business clock. `deadlineAt()` must not throw through list mappers.
+
+- **P7B-CAL-02 — Complete:** Persist JSON `calendar.working_hours` (`{"start":"HH:MM","end":"HH:MM","by_day":{...}}`) through `UpdateApprovalSettingsAction` and `Setting::put`. No new table and no migration. Do not backfill 09:00–17:00. Honor `by_day` in the calendar if present; the 7B UI does not edit it. Merging default start/end on save must not wipe an existing `by_day`. Hours are in `config('app.timezone')` (currently UTC). Require `start < end` (no overnight shifts). Action contract: `null`+`null` leave the key unchanged; empty+empty clear it.
+
+### 7B.2 Approval settings and template copy
+
+- **P7B-UI-01 — Complete:** On Approval settings, add office-hours start and end time inputs. Empty means all hours on working days. Copy must state that this applies only to Business-hour steps, that Elapsed hours ignore it, that a 24-hour working day is empty fields (not 00:00–23:59), and that changing hours immediately affects in-flight Business deadlines. Label times with the application timezone. Normalize `H:i:s` before validate.
+
+- **P7B-UI-02 — Complete:** Relabel/help-text only on the workflow builder and template form: Business hours use organization working days, office hours, and holidays. Do not add a third `TimeoutCalendar` case and do not change published-graph schema.
+
+### 7B.3 Tests, docs, and exit gate
+
+- **P7B-TEST-01 — Complete:** Unit-test `BusinessCalendar` for hour-tick 24h landings (weekend start, holiday midnight, unset canary time 09:00:00), window inside/outside, `09:00:30`+8h → next working 09:00:30, `16:59:30`+1h → 09:59:30, Friday `by_day` close and spill, holiday, overnight rejected, and safety-cap throw. `test_business_calendar_skips_weekend` must still pass with unset hours.
+
+- **P7B-TEST-02 — Complete:** Feature-test that saving office hours on Approval settings changes a Business deadline and does not change an Elapsed deadline; lifetime-only save does not wipe hours; Livewire validation: start < end, HH:MM, both empty allowed, `09:00:00` accepted. `ProcessEscalation` continues after an unconsumable Business instance. Analytics Business 24h over a weekend is not overdue. `WorkflowEngine` coverage remains 100%.
+
+- **P7B-DOC-01 — Complete:** Record ADR `docs/adr/0001-organization-working-hours.md`. Update `CHANGELOG.md`, `docs/kb/organization-settings.md`, `docs/kb/workflow-templates.md`, `docs/kb/definitions.md` (Business calendar), `docs/kb/README.md` index line, §3.4 Help sentence, and `App\Support\HelpCatalogue` per section 3.4.
+
+**Phase 7B demo:** an administrator leaves office hours empty and a Thursday 09:00 + 24 Business-hour step still skips the weekend as today; they then save 09:00–17:00 and a Monday 09:00 + 8 Business-hour step falls due at 17:00 the same day, while an Elapsed-hour step is unchanged.
+
+**Out of scope (remain in later phases):** per-user hours; P8-COL-03 nudge quiet hours; P8-COL-04 out-of-office schedules; P8-COL-05 estimated due time (may consume this calendar later); P8-NOT-04 notification quiet hours; P10-TEN-01 organization timezone; overnight shifts; named multiple calendars; changing email-link expiry to business hours.
 
 ---
 

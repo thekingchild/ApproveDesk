@@ -52,7 +52,7 @@ For named users, roles, and departments, type at least two characters to search.
 
 Group completion is first response, all assignees, or quorum N-of-M. Sequential, parallel, and quorum step types still set that default.
 
-Deadlines can use elapsed hours or business hours. Business hours skip non-working days and holidays from **Settings → Approval settings**.
+Deadlines can use elapsed hours or business hours. Business hours use organization working days, office hours, and holidays from **Settings → Approval settings**. Elapsed hours count every hour on the clock.
 
 Custom outcomes on a published version add extra decision buttons. Approve with conditions is always available and requires a comment. Every custom outcome maps to approve, reject, return, request information, or escalate.
 

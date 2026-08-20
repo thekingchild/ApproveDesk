@@ -123,7 +123,7 @@ final class HelpCatalogue
             new HelpArticle(
                 slug: 'organization-settings',
                 title: 'Organization settings',
-                summary: 'Login branding, registration, and email approval link lifetime.',
+                summary: 'Login branding, registration, email approval link lifetime, and the business calendar (working days, office hours, holidays).',
                 icon: 'cog-6-tooth',
                 group: 'Administration',
                 audience: 'admin',
