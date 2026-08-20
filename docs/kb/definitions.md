@@ -44,6 +44,10 @@ The link from a request type to a workflow template. New submissions of that for
 
 An ordered rule on a request type that chooses a workflow from form values. Priority 1 is evaluated first. The first match wins, then the assigned template, then the default.
 
+## Assignee picker
+
+The search field on a workflow step that finds users, roles, or departments without listing the whole directory. Selected records show as chips. The stored step still uses IDs.
+
 ## Assignee resolver
 
 How a step decides who acts: named users, a role, department members, the requester's manager, the department manager, a user picked on the form, or an external resolver.

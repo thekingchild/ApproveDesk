@@ -105,7 +105,7 @@ After each completed phase:
 4. Confirm Help as an administrator and as a requester.
 5. Commit the Markdown, catalogue, Help UI, and this plan together.
 
-**Administrator knowledge base through Phase 7.4 — Complete (2026-08-19):** feature definitions (including workflow version, builder, graph validation, selection rule, assignee resolver, group completion, business calendar, and custom outcome), getting around, requests, approvals, statuses, account settings, users and roles, departments, workflow templates (including upgrade guarantees), request types (including workflow assignment and selection rules), analytics, webhooks, organization settings, and the audit trail.
+**Administrator knowledge base through Phase 7A — Complete (2026-08-20):** feature definitions (including workflow version, builder, graph validation, selection rule, assignee resolver, group completion, business calendar, custom outcome, and assignee picker), getting around, requests, approvals, statuses, account settings, users and roles (including E.164 phone numbers), departments, workflow templates (including upgrade guarantees and the searchable assignee picker), request types (including workflow assignment and selection rules), analytics, webhooks, organization settings, and the audit trail.
 
 ### 3.5 Request types own workflows
 
@@ -129,6 +129,7 @@ Phase 6A implements this assignment. Phase 7 keeps its original scope: versioned
 | 6 | v2.2.0 | Configurable request types and form builder | In progress — 6.1–6.2 complete |
 | 6A | v2.2.1 | Request-type workflow assignment | Complete |
 | 7 | v2.3.0 | Visual workflows, versioning, and dynamic assignment | Complete |
+| 7A | v2.3.1 | Assignee picker UX and user phone numbers | Complete |
 | 8 | v2.4.0 | Collaboration, notifications, and integration hub | Not started |
 | 9 | v2.5.0 | Governance, audit evidence, security, and reliability | Not started |
 | 10 | v3.0.0 | SaaS multi-tenancy foundation | Not started |
@@ -305,6 +306,35 @@ Phase 6A is a prerequisite for routing but is not part of this phase. Do not ren
 - **P7-TEST-05 — Complete:** Upgrade tests proving a running v2.1 workflow completes against its original version after later publishes.
 
 **Phase 7 demo — Complete (2026-08-19):** an administrator visually builds, validates, simulates, and publishes a conditional expense workflow; a later edit produces a second version while requests on version one continue correctly.
+
+---
+
+## Phase 7A — Assignee picker UX and user phone numbers — Complete (2026-08-20)
+
+**Goal:** let administrators find assignees in large directories without loading the whole roster, and store an international phone number on each user for later SMS and WhatsApp delivery. This does not change routing, versions, or resolver semantics.
+
+This phase is additive. Phases 0–7 stay complete as written. Phase 8 task IDs and scope stay unchanged. Do not reopen exclusive Document/Note/Memo/Request locking.
+
+### 7A.1 Searchable assignee picker
+
+- **P7A-UI-01 — Complete:** Replace the full checkbox roster on the workflow builder and template form with a searchable picker. Selected people, roles, or departments appear as chips. Search runs on the server after a short debounce, requires at least two characters, and returns a capped result set. The Livewire page must not load every active user on open.
+- **P7A-UI-02 — Complete:** Keep `assignee_ids` as the stored contract. Search is only how an administrator finds a record. Published graphs stay frozen.
+- **P7A-UI-03 — Complete:** The line-manager control on the user form uses the same search pattern instead of listing every user.
+
+### 7A.2 User phone numbers
+
+- **P7A-DATA-01 — Complete:** Add a nullable unique `users.phone` column. Values are stored in E.164 (`+` and 8–15 digits, no spaces). Empty is allowed.
+- **P7A-UI-04 — Complete:** Administrators can set the phone number on create and edit user. Invalid local formats are rejected.
+
+### 7A.3 Tests, docs, and exit gate
+
+- **P7A-TEST-01 — Complete:** Opening the builder does not render the full user directory. Typing two or more characters returns matching assignees; adding and removing a chip updates `assignee_ids`.
+- **P7A-TEST-02 — Complete:** User create/update accepts a valid E.164 number and rejects numbers that are not international.
+- **P7A-DOC-01 — Complete:** Update Help for workflow templates (picker) and users (phone), per section 3.4.
+
+**Phase 7A demo:** an administrator types part of an approver's name in the builder, pins them as a chip, and saves; the published step still stores only that user's ID.
+
+**Out of scope (remain in Phase 8):** SMS and WhatsApp delivery, quiet hours, and channel templates. The phone column is storage only.
 
 ---
 

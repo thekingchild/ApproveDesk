@@ -13,6 +13,7 @@ use App\Enums\TimeoutAction;
 use App\Models\Department;
 use App\Models\User;
 use App\Models\WorkflowTemplate;
+use App\Services\Workflow\AssigneeDirectory;
 use Flux\Flux;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
@@ -75,22 +76,49 @@ new #[Title('Workflow templates')] class extends Component {
             ->paginate(15);
     }
 
-    #[Computed]
-    public function users(): \Illuminate\Database\Eloquent\Collection
+    public function addAssignee(int $index, int $id): void
     {
-        return User::query()->where('is_active', true)->orderBy('name')->get();
+        if (! isset($this->steps[$index])) {
+            return;
+        }
+        $ids = array_map('intval', $this->steps[$index]['assigneeIds'] ?? []);
+        $ids[] = $id;
+        $this->steps[$index]['assigneeIds'] = array_values(array_unique($ids));
+        $this->steps[$index]['assigneeQuery'] = '';
     }
 
-    #[Computed]
-    public function roles(): \Illuminate\Database\Eloquent\Collection
+    public function removeAssignee(int $index, int $id): void
     {
-        return Role::query()->orderBy('name')->get();
+        if (! isset($this->steps[$index])) {
+            return;
+        }
+        $this->steps[$index]['assigneeIds'] = array_values(array_filter(
+            array_map('intval', $this->steps[$index]['assigneeIds'] ?? []),
+            fn (int $assigned): bool => $assigned !== $id,
+        ));
     }
 
-    #[Computed]
-    public function departments(): \Illuminate\Database\Eloquent\Collection
+    /** @return \Illuminate\Support\Collection<int, object> */
+    public function assigneeResultsFor(int $index): \Illuminate\Support\Collection
     {
-        return Department::query()->orderBy('name')->get();
+        $step = $this->steps[$index] ?? [];
+
+        return app(AssigneeDirectory::class)->search(
+            (string) ($step['assigneeType'] ?? 'user'),
+            (string) ($step['assigneeQuery'] ?? ''),
+            $step['assigneeIds'] ?? [],
+        );
+    }
+
+    /** @return \Illuminate\Support\Collection<int, object> */
+    public function selectedAssigneesFor(int $index): \Illuminate\Support\Collection
+    {
+        $step = $this->steps[$index] ?? [];
+
+        return app(AssigneeDirectory::class)->selected(
+            (string) ($step['assigneeType'] ?? 'user'),
+            $step['assigneeIds'] ?? [],
+        );
     }
 
     public function updatedSearch(): void
@@ -143,6 +171,7 @@ new #[Title('Workflow templates')] class extends Component {
             'quorumCount' => $step->quorum_count,
             'assigneeType' => $step->assignee_type->value,
             'assigneeIds' => $step->assignee_ids,
+            'assigneeQuery' => '',
             'assigneeField' => data_get($step->assignee_config, 'field_key', ''),
             'assigneeResolver' => data_get($step->assignee_config, 'resolver', ''),
             'allowDelegation' => $step->allow_delegation,
@@ -359,6 +388,7 @@ new #[Title('Workflow templates')] class extends Component {
             'quorumCount' => null,
             'assigneeType' => AssigneeType::User->value,
             'assigneeIds' => [],
+            'assigneeQuery' => '',
             'assigneeField' => '',
             'assigneeResolver' => '',
             'allowDelegation' => true,
@@ -694,11 +724,15 @@ new #[Title('Workflow templates')] class extends Component {
 
                                     <div class="sm:col-span-3">
                                         @if (in_array($step['assigneeType'], ['user', 'role', 'department'], true))
-                                            <flux:checkbox.group wire:model="steps.{{ $index }}.assigneeIds" :label="__('Assignees')" class="grid max-h-40 gap-2 overflow-y-auto sm:grid-cols-2">
-                                                @foreach ($step['assigneeType'] === 'role' ? $this->roles : ($step['assigneeType'] === 'department' ? $this->departments : $this->users) as $assignee)
-                                                    <flux:checkbox :value="$assignee->id" :label="$assignee->name" />
-                                                @endforeach
-                                            </flux:checkbox.group>
+                                            <x-ui.assignee-picker
+                                                :type="$step['assigneeType']"
+                                                query="steps.{{ $index }}.assigneeQuery"
+                                                :selected="$this->selectedAssigneesFor($index)"
+                                                :results="$this->assigneeResultsFor($index)"
+                                                add="addAssignee"
+                                                remove="removeAssignee"
+                                                :step-index="$index"
+                                            />
                                             <flux:error name="steps.{{ $index }}.assigneeIds" />
                                         @elseif ($step['assigneeType'] === 'form_field')
                                             <flux:input wire:model="steps.{{ $index }}.assigneeField" :label="__('User field key')" />

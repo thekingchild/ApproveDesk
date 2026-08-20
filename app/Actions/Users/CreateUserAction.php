@@ -17,6 +17,7 @@ final class CreateUserAction
             $user = User::create([
                 'name' => $data->name,
                 'email' => $data->email,
+                'phone' => $data->phone,
                 'password' => $data->password,
                 'department_id' => $data->departmentId,
                 'manager_id' => $data->managerId,

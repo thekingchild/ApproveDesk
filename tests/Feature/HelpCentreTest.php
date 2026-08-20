@@ -118,7 +118,8 @@ class HelpCentreTest extends TestCase
             ->assertSee('One frozen copy of a workflow template')
             ->assertSee('An ordered rule on a request type')
             ->assertSee('Working days and holidays')
-            ->assertSee('The checks that run before a workflow version is published');
+            ->assertSee('The checks that run before a workflow version is published')
+            ->assertSee('The search field on a workflow step');
     }
 
     public function test_workflow_templates_article_explains_builder_and_versions(): void
@@ -132,7 +133,8 @@ class HelpCentreTest extends TestCase
             ->assertSee('read-only simulation')
             ->assertSee('Notification')
             ->assertSee('cannot change their steps')
-            ->assertSee('Requests that already started keep the');
+            ->assertSee('Requests that already started keep the')
+            ->assertSee('type at least two characters to search');
     }
 
     public function test_catalogue_matches_markdown_files(): void

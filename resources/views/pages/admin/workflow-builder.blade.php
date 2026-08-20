@@ -11,20 +11,17 @@ use App\Enums\OutcomeBehavior;
 use App\Enums\StepType;
 use App\Enums\TimeoutAction;
 use App\Enums\TimeoutCalendar;
-use App\Models\Department;
-use App\Models\User;
 use App\Models\WorkflowTemplate;
 use App\Models\WorkflowTemplateVersion;
+use App\Services\Workflow\AssigneeDirectory;
 use App\Services\WorkflowTemplates\WorkflowGraphSimulator;
 use App\Services\WorkflowTemplates\WorkflowGraphValidator;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
-use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
-use Spatie\Permission\Models\Role;
 
 new #[Title('Workflow builder')] class extends Component {
     public int $templateId;
@@ -43,6 +40,8 @@ new #[Title('Workflow builder')] class extends Component {
     public array $steps = [];
 
     public string $viewMode = 'canvas';
+
+    public string $assigneeQuery = '';
 
     public ?int $selectedIndex = 0;
 
@@ -89,25 +88,51 @@ new #[Title('Workflow builder')] class extends Component {
             ->findOrFail($this->templateId);
     }
 
-    /** @return \Illuminate\Database\Eloquent\Collection<int, User> */
-    #[Computed]
-    public function users(): \Illuminate\Database\Eloquent\Collection
+    public function addAssignee(int $id): void
     {
-        return User::query()->where('is_active', true)->orderBy('name')->get();
+        if ($this->selectedIndex === null || ! isset($this->steps[$this->selectedIndex])) {
+            return;
+        }
+        $ids = array_map('intval', $this->steps[$this->selectedIndex]['assigneeIds'] ?? []);
+        $ids[] = $id;
+        $this->steps[$this->selectedIndex]['assigneeIds'] = array_values(array_unique($ids));
+        $this->assigneeQuery = '';
+        $this->pushHistory();
     }
 
-    /** @return \Illuminate\Database\Eloquent\Collection<int, Role> */
-    #[Computed]
-    public function roles(): \Illuminate\Database\Eloquent\Collection
+    public function removeAssignee(int $id): void
     {
-        return Role::query()->orderBy('name')->get();
+        if ($this->selectedIndex === null || ! isset($this->steps[$this->selectedIndex])) {
+            return;
+        }
+        $this->steps[$this->selectedIndex]['assigneeIds'] = array_values(array_filter(
+            array_map('intval', $this->steps[$this->selectedIndex]['assigneeIds'] ?? []),
+            fn (int $assigned): bool => $assigned !== $id,
+        ));
+        $this->pushHistory();
     }
 
-    /** @return \Illuminate\Database\Eloquent\Collection<int, Department> */
-    #[Computed]
-    public function departments(): \Illuminate\Database\Eloquent\Collection
+    /** @return \Illuminate\Support\Collection<int, object> */
+    public function assigneeResults(): \Illuminate\Support\Collection
     {
-        return Department::query()->orderBy('name')->get();
+        $step = $this->selectedIndex !== null ? ($this->steps[$this->selectedIndex] ?? []) : [];
+
+        return app(AssigneeDirectory::class)->search(
+            (string) ($step['assigneeType'] ?? 'user'),
+            $this->assigneeQuery,
+            $step['assigneeIds'] ?? [],
+        );
+    }
+
+    /** @return \Illuminate\Support\Collection<int, object> */
+    public function selectedAssignees(): \Illuminate\Support\Collection
+    {
+        $step = $this->selectedIndex !== null ? ($this->steps[$this->selectedIndex] ?? []) : [];
+
+        return app(AssigneeDirectory::class)->selected(
+            (string) ($step['assigneeType'] ?? 'user'),
+            $step['assigneeIds'] ?? [],
+        );
     }
 
     public function addNode(string $kind): void
@@ -187,6 +212,7 @@ new #[Title('Workflow builder')] class extends Component {
         }
 
         $this->selectedIndex = $index;
+        $this->assigneeQuery = '';
     }
 
     public function beginConnect(string $mode): void
@@ -596,11 +622,14 @@ new #[Title('Workflow builder')] class extends Component {
                                 @endforeach
                             </flux:select>
                             @if (in_array($selected['assigneeType'], ['user', 'role', 'department'], true))
-                                <div class="max-h-40 space-y-1 overflow-auto">
-                                    @foreach ($selected['assigneeType'] === 'role' ? $this->roles : ($selected['assigneeType'] === 'department' ? $this->departments : $this->users) as $assignee)
-                                        <flux:checkbox wire:model="steps.{{ $selectedIndex }}.assigneeIds" :value="$assignee->id" :label="$assignee->name" />
-                                    @endforeach
-                                </div>
+                                <x-ui.assignee-picker
+                                    :type="$selected['assigneeType']"
+                                    query="assigneeQuery"
+                                    :selected="$this->selectedAssignees()"
+                                    :results="$this->assigneeResults()"
+                                    add="addAssignee"
+                                    remove="removeAssignee"
+                                />
                             @elseif ($selected['assigneeType'] === 'form_field')
                                 <flux:input wire:model="steps.{{ $selectedIndex }}.assigneeField" :label="__('User field key')" :description="__('The form field that picks the approver.')" />
                             @elseif ($selected['assigneeType'] === 'external')

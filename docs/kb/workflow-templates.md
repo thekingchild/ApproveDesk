@@ -48,6 +48,8 @@ You do not have to pick a submission type. The old Document / Note / Memo / Requ
 
 Assignees can be named users, a role, department members, the requester's line manager, the department manager, a user selected on the form, or an external resolver key. Manager and form-field assignees are resolved when the request starts.
 
+For named users, roles, and departments, type at least two characters to search. Chosen records appear as chips. The page does not list the whole directory. The stored step still holds only IDs.
+
 Group completion is first response, all assignees, or quorum N-of-M. Sequential, parallel, and quorum step types still set that default.
 
 Deadlines can use elapsed hours or business hours. Business hours skip non-working days and holidays from **Settings → Approval settings**.

@@ -54,6 +54,36 @@ class UserManagementTest extends TestCase
         $this->assertTrue($user->is_active);
         $this->assertNotNull($user->email_verified_at);
         $this->assertTrue(Hash::check('Secure-password-123', $user->password));
+        $this->assertNull($user->phone);
+    }
+
+    public function test_admin_can_save_an_e164_phone_number_and_rejects_local_formats(): void
+    {
+        $admin = User::factory()->create()->assignRole('admin');
+
+        Livewire::actingAs($admin)
+            ->test('pages::admin.users')
+            ->set('name', 'Kemi SMS')
+            ->set('email', 'kemi@example.test')
+            ->set('phone', '08012345678')
+            ->set('roles', ['approver'])
+            ->set('password', 'Secure-password-123')
+            ->set('password_confirmation', 'Secure-password-123')
+            ->call('save')
+            ->assertHasErrors(['phone']);
+
+        Livewire::actingAs($admin)
+            ->test('pages::admin.users')
+            ->set('name', 'Kemi SMS')
+            ->set('email', 'kemi@example.test')
+            ->set('phone', '+234 801 234 5678')
+            ->set('roles', ['approver'])
+            ->set('password', 'Secure-password-123')
+            ->set('password_confirmation', 'Secure-password-123')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertSame('+2348012345678', User::query()->where('email', 'kemi@example.test')->value('phone'));
     }
 
     public function test_admin_can_update_roles_department_and_account_status(): void

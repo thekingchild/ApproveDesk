@@ -20,6 +20,7 @@ final class UpdateUserAction
             $attributes = [
                 'name' => $data->name,
                 'email' => $data->email,
+                'phone' => $data->phone,
                 'department_id' => $data->departmentId,
                 'manager_id' => $data->managerId,
                 'is_active' => $data->isActive,

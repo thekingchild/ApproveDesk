@@ -27,4 +27,8 @@ Assigning a department is how department routing and filters find the person. It
 
 ## Line manager
 
-Set a line manager on the user record when workflow steps should assign the requester's manager. The department manager on the department record is a separate assignee type.
+Set a line manager on the user record when workflow steps should assign the requester's manager. Search by name or email; the form does not list every user. The department manager on the department record is a separate assignee type.
+
+## Phone number
+
+Phone is optional. Enter it in international E.164 form, starting with `+` and the country code, for example `+2348012345678`. Spaces are stripped on save. Local numbers such as `08012345678` are rejected. This value is stored for later SMS and WhatsApp delivery; those channels are not sent from this screen.

@@ -10,6 +10,7 @@ final readonly class UserData
     public function __construct(
         public string $name,
         public string $email,
+        public ?string $phone,
         public ?int $departmentId,
         public array $roles,
         public bool $isActive,

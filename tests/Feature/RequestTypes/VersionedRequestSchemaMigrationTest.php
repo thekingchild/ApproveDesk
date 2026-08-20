@@ -22,8 +22,15 @@ class VersionedRequestSchemaMigrationTest extends TestCase
 
     private const DYNAMIC_ROUTING_MIGRATION_PATH = 'database/migrations/2026_08_19_050000_add_dynamic_routing_and_assignment.php';
 
+    private const USER_PHONE_MIGRATION_PATH = 'database/migrations/2026_08_20_060000_add_phone_to_users_table.php';
+
     public function test_v21_database_fixture_is_upgraded_without_changing_reference_or_workflow_history(): void
     {
+        $this->artisan('migrate:rollback', [
+            '--path' => self::USER_PHONE_MIGRATION_PATH,
+            '--force' => true,
+        ])->assertExitCode(0);
+
         $this->artisan('migrate:rollback', [
             '--path' => self::DYNAMIC_ROUTING_MIGRATION_PATH,
             '--force' => true,
@@ -122,5 +129,12 @@ class VersionedRequestSchemaMigrationTest extends TestCase
         $this->assertTrue(Schema::hasTable('workflow_selection_rules'));
         $this->assertDatabaseHas('workflow_actions', ['id' => 9601, 'comment' => 'Preserved v2.1 approval.']);
         $this->assertSame('first_response', DB::table('workflow_template_steps')->where('id', 9301)->value('completion_rule'));
+
+        $this->artisan('migrate', [
+            '--path' => self::USER_PHONE_MIGRATION_PATH,
+            '--force' => true,
+        ])->assertExitCode(0);
+
+        $this->assertTrue(Schema::hasColumn('users', 'phone'));
     }
 }
