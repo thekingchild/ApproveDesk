@@ -16,6 +16,7 @@ use App\Events\WorkflowRejected;
 use App\Events\WorkflowReturned;
 use App\Exceptions\WorkflowException;
 use App\Models\Delegation;
+use App\Models\OutOfOffice;
 use App\Models\Submission;
 use App\Models\User;
 use App\Models\WorkflowAction;
@@ -158,15 +159,18 @@ class WorkflowEngine
         User $delegate,
         CarbonInterface $expiresAt,
         ?string $comment = null,
+        ?CarbonInterface $startsAt = null,
     ): Delegation {
-        $delegation = DB::transaction(function () use ($instance, $delegator, $delegate, $expiresAt, $comment): Delegation {
+        $startsAt ??= now();
+
+        $delegation = DB::transaction(function () use ($instance, $delegator, $delegate, $expiresAt, $comment, $startsAt): Delegation {
             /** @var WorkflowInstance $instance */
             $instance = WorkflowInstance::query()
                 ->whereKey($instance->getKey())
                 ->lockForUpdate()
                 ->firstOrFail();
 
-            $this->authorizeDelegation($instance, $delegator, $delegate, $expiresAt);
+            $this->authorizeDelegation($instance, $delegator, $delegate, $expiresAt, $startsAt);
             $step = $instance->currentStep;
 
             $delegation = Delegation::create([
@@ -174,7 +178,7 @@ class WorkflowEngine
                 'step_id' => $step->id,
                 'delegator_id' => $delegator->id,
                 'delegate_id' => $delegate->id,
-                'starts_at' => now(),
+                'starts_at' => $startsAt,
                 'expires_at' => $expiresAt,
             ]);
 
@@ -268,6 +272,7 @@ class WorkflowEngine
         User $delegator,
         User $delegate,
         CarbonInterface $expiresAt,
+        CarbonInterface $startsAt,
     ): void {
         if ($instance->status !== WorkflowStatus::Active) {
             throw WorkflowException::instanceNotActive($instance->status->value);
@@ -295,13 +300,24 @@ class WorkflowEngine
             throw WorkflowException::delegationNotAllowed('the expiry must be in the future');
         }
 
+        if ($startsAt->greaterThanOrEqualTo($expiresAt)) {
+            throw WorkflowException::delegationNotAllowed('the start must be before the expiry');
+        }
+
         if ($step->assignedUsers($instance->submission)->contains($delegate)
-            || $this->hasActiveIncomingDelegation($instance, $step, $delegate)) {
+            || $this->hasOverlappingIncomingDelegation($instance, $step, $delegate, $startsAt, $expiresAt)) {
             throw WorkflowException::delegationNotAllowed('the delegate already holds a seat on this step');
         }
 
-        if ($this->hasActiveOutgoingDelegation($instance, $step, $delegator)) {
+        if ($this->hasOverlappingOutgoingDelegation($instance, $step, $delegator, $startsAt, $expiresAt)) {
             throw WorkflowException::delegationNotAllowed('you already have an active delegation');
+        }
+
+        if (OutOfOffice::query()
+            ->where('user_id', $delegate->id)
+            ->overlapping($startsAt, $expiresAt)
+            ->exists()) {
+            throw WorkflowException::delegationNotAllowed('the delegate is out of office during this period');
         }
     }
 
@@ -326,6 +342,38 @@ class WorkflowEngine
             ->where('instance_id', $instance->id)
             ->where('step_id', $step->id)
             ->where('delegator_id', $user->id)
+            ->exists();
+    }
+
+    private function hasOverlappingOutgoingDelegation(
+        WorkflowInstance $instance,
+        WorkflowTemplateStep $step,
+        User $user,
+        CarbonInterface $startsAt,
+        CarbonInterface $expiresAt,
+    ): bool {
+        return Delegation::query()
+            ->where('instance_id', $instance->id)
+            ->where('step_id', $step->id)
+            ->where('delegator_id', $user->id)
+            ->where('starts_at', '<', $expiresAt)
+            ->where('expires_at', '>', $startsAt)
+            ->exists();
+    }
+
+    private function hasOverlappingIncomingDelegation(
+        WorkflowInstance $instance,
+        WorkflowTemplateStep $step,
+        User $user,
+        CarbonInterface $startsAt,
+        CarbonInterface $expiresAt,
+    ): bool {
+        return Delegation::query()
+            ->where('instance_id', $instance->id)
+            ->where('step_id', $step->id)
+            ->where('delegate_id', $user->id)
+            ->where('starts_at', '<', $expiresAt)
+            ->where('expires_at', '>', $startsAt)
             ->exists();
     }
 

@@ -23,4 +23,4 @@ The bell in the sidebar shows unread count. Open it to read items, mark them rea
 
 Help sits at the bottom of the sidebar, next to Notifications. It does not add another Administration item. On phones it is the life-ring icon in the header. The menu opens a short list of guides; **Help centre** lists every article you can read.
 
-Administrators also see a life-ring on Administration screens. It opens the guide for that screen without changing the page layout.
+Administrators also see a life-ring on Administration screens. It opens the guide for that screen without changing the page layout. Request pages include a life-ring for collaboration (followers, comments, reminders, out of office).

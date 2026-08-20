@@ -7,6 +7,7 @@ Route::middleware(['auth'])->group(function () {
 
     Route::livewire('settings/profile', 'pages::settings.profile')->name('profile.edit');
     Route::livewire('settings/notifications', 'pages::settings.notifications')->name('notifications.edit');
+    Route::livewire('settings/out-of-office', 'pages::settings.out-of-office')->name('out-of-office.edit');
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {

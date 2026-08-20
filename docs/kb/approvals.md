@@ -26,7 +26,11 @@ You can approve several requests at once only when they are the same workflow st
 
 ## Delegate, escalate, ask for information
 
-Delegate hands your current step to another active user for a limited time. Escalate moves the work to the next step when policy allows. Request information pauses the step until the requester replies.
+Delegate hands your current step to another active user for a limited time. You can set a future start; until then you still decide. Escalate moves the work to the next step when policy allows. Request information pauses the step until the requester replies.
+
+Delegation is refused if the other person is out of office during that window, already holds a seat, or the window overlaps a grant you already made.
+
+A requester or watcher can send a reminder to the current approver. Quiet hours and rate limits apply; see [Collaboration](collaboration.md).
 
 ## Email links
 

@@ -16,7 +16,11 @@ Open drafts from **My submissions** using the Drafts view.
 
 ## Files and comments
 
-Attachments are private. People with access to the request download them through a short-lived signed link. Comments stay on the request and are part of the record.
+Attachments are private. People with access to the request download them through a short-lived signed link. Comments stay on the request and are part of the record. You can reply to a top-level comment, mention a person (they are added as a follower), and edit your own comment for 15 minutes. Earlier wording is kept in the edit history.
+
+Followers can open the request even if they are not on the workflow. Unfollow yourself from the Followers card. Reminders go to the current approver from the same page.
+
+After you submit, the workflow card shows the current step, the expected next step, and an estimated due time when the step has a timeout. See [Collaboration](collaboration.md).
 
 ## Submit, withdraw, revise
 

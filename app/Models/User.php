@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Enums\NotificationFrequency;
+use Carbon\CarbonInterface;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -45,6 +46,8 @@ use Spatie\Permission\Traits\HasRoles;
  * @property-read Collection<int, Submission> $submissions
  * @property-read Collection<int, OAuthIdentity> $oauthIdentities
  * @property-read Collection<int, SubmissionSavedView> $submissionSavedViews
+ * @property-read Collection<int, OutOfOffice> $outOfOffice
+ * @property-read Collection<int, SubmissionWatcher> $watchedSubmissions
  */
 #[Fillable(['name', 'email', 'phone', 'password', 'department_id', 'manager_id', 'is_active', 'email_verified_at', 'notification_frequency', 'last_notification_digest_at', 'avatar'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
@@ -108,6 +111,32 @@ class User extends Authenticatable implements PasskeyUser
     public function submissionSavedViews(): HasMany
     {
         return $this->hasMany(SubmissionSavedView::class);
+    }
+
+    /** @return HasMany<OutOfOffice, $this> */
+    public function outOfOffice(): HasMany
+    {
+        return $this->hasMany(OutOfOffice::class);
+    }
+
+    /** @return HasMany<SubmissionWatcher, $this> */
+    public function watchedSubmissions(): HasMany
+    {
+        return $this->hasMany(SubmissionWatcher::class);
+    }
+
+    public function isOutOfOffice(?CarbonInterface $at = null): bool
+    {
+        $at ??= now();
+
+        return $this->outOfOffice()->active($at)->exists();
+    }
+
+    public function activeOutOfOffice(?CarbonInterface $at = null): ?OutOfOffice
+    {
+        $at ??= now();
+
+        return $this->outOfOffice()->active($at)->latest('id')->first();
     }
 
     /**

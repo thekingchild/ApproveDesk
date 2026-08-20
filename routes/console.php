@@ -1,5 +1,6 @@
 <?php
 
+use App\Jobs\ApplyOutOfOfficeFallbacksJob;
 use App\Jobs\ProcessEscalation;
 use App\Jobs\PurgeExpiredDelegations;
 use App\Jobs\SendNotificationDigests;
@@ -20,3 +21,4 @@ Schedule::command('queue:work --stop-when-empty --tries=3 --timeout=90')
 Schedule::job(new PurgeExpiredDelegations)->daily();
 Schedule::job(new SendNotificationDigests)->dailyAt('08:00');
 Schedule::job(new ProcessEscalation)->everyFifteenMinutes()->withoutOverlapping();
+Schedule::job(new ApplyOutOfOfficeFallbacksJob)->everyFifteenMinutes()->withoutOverlapping();

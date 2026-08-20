@@ -8,6 +8,7 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Added
 
+- Request collaboration: followers with explicit view access and per-request notification preferences, @mentions, threaded replies, a 15-minute comment edit window with append-only history, rate-limited reminders with optional quiet hours, out-of-office schedules with fallback approvers, future-dated delegation, and requester-visible expected next step plus estimated due time.
 - Optional organization office hours on the business calendar. Workflow steps that use Business hours count only inside the saved window on working, non-holiday days; empty hours keep today’s 24-hour working-day behaviour.
 - Searchable assignee picker with chips on the workflow builder and template form, and an optional E.164 phone number on user records for later SMS and WhatsApp delivery.
 - Phase 7 exit tests: resolver and completion contracts, generated graph validation, concurrent group decisions and publish races, and a v2.1 in-flight upgrade that finishes on the original workflow version.

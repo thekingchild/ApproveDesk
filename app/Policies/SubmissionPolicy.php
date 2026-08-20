@@ -16,6 +16,10 @@ class SubmissionPolicy
             return true;
         }
 
+        if ($submission->isWatchedBy($user)) {
+            return true;
+        }
+
         // Approvers: anyone who has acted on, or is assigned to the current
         // step of, this submission's workflow may view it.
         $instance = $submission->workflowInstance()->first();
@@ -75,6 +79,29 @@ class SubmissionPolicy
     }
 
     public function comment(User $user, Submission $submission): bool
+    {
+        return $this->view($user, $submission);
+    }
+
+    public function follow(User $user, Submission $submission): bool
+    {
+        return $this->view($user, $submission);
+    }
+
+    public function addWatcher(User $user, Submission $submission): bool
+    {
+        if ($submission->submitter_id === $user->id || $user->can('submissions.view.all')) {
+            return true;
+        }
+
+        $instance = $submission->workflowInstance()->first();
+        $step = $instance?->currentStep;
+
+        return $step !== null
+            && $step->assignedUsers($instance->submission)->contains($user);
+    }
+
+    public function nudge(User $user, Submission $submission): bool
     {
         return $this->view($user, $submission);
     }

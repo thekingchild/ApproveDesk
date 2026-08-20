@@ -43,6 +43,8 @@ use Illuminate\Support\Carbon;
  * @property-read WorkflowInstance|null $workflowInstance
  * @property-read Collection<int, Comment> $comments
  * @property-read Collection<int, Tag> $tags
+ * @property-read Collection<int, SubmissionWatcher> $watchers
+ * @property-read Collection<int, SubmissionNudge> $nudges
  */
 class Submission extends Model
 {
@@ -142,5 +144,26 @@ class Submission extends Model
     public function tags(): MorphToMany
     {
         return $this->morphToMany(Tag::class, 'taggable');
+    }
+
+    /** @return HasMany<SubmissionWatcher, $this> */
+    public function watchers(): HasMany
+    {
+        return $this->hasMany(SubmissionWatcher::class);
+    }
+
+    /** @return HasMany<SubmissionNudge, $this> */
+    public function nudges(): HasMany
+    {
+        return $this->hasMany(SubmissionNudge::class);
+    }
+
+    public function isWatchedBy(User $user): bool
+    {
+        if ($this->relationLoaded('watchers')) {
+            return $this->watchers->contains('user_id', $user->id);
+        }
+
+        return $this->watchers()->where('user_id', $user->id)->exists();
     }
 }

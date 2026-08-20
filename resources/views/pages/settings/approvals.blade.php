@@ -1,6 +1,8 @@
 <?php
 
 use App\Actions\Settings\UpdateApprovalSettingsAction;
+use App\Actions\Settings\UpdateNudgeSettingsAction;
+use App\Services\Collaboration\QuietHours;
 use App\Services\Workflow\BusinessCalendar;
 use App\Support\EmailApprovalLinks;
 use Flux\Flux;
@@ -19,6 +21,10 @@ new #[Title('Approval settings')] class extends Component {
 
     public string $workingHoursEnd = '';
 
+    public string $quietHoursStart = '';
+
+    public string $quietHoursEnd = '';
+
     public function mount(): void
     {
         $this->authorize('settings.manage');
@@ -29,13 +35,18 @@ new #[Title('Approval settings')] class extends Component {
         $hours = $calendar->workingHours();
         $this->workingHoursStart = $hours['start'] ?? '';
         $this->workingHoursEnd = $hours['end'] ?? '';
+        $quiet = app(QuietHours::class)->window();
+        $this->quietHoursStart = $quiet['start'] ?? '';
+        $this->quietHoursEnd = $quiet['end'] ?? '';
     }
 
-    public function save(UpdateApprovalSettingsAction $updateSettings): void
+    public function save(UpdateApprovalSettingsAction $updateSettings, UpdateNudgeSettingsAction $updateNudges): void
     {
         $this->authorize('settings.manage');
         $this->workingHoursStart = $this->normalizePostedTime($this->workingHoursStart);
         $this->workingHoursEnd = $this->normalizePostedTime($this->workingHoursEnd);
+        $this->quietHoursStart = $this->normalizePostedTime($this->quietHoursStart);
+        $this->quietHoursEnd = $this->normalizePostedTime($this->quietHoursEnd);
 
         $validated = $this->validate([
             'emailLinkExpirationHours' => ['required', 'integer', 'min:1', 'max:'.EmailApprovalLinks::MAX_EXPIRATION_HOURS],
@@ -44,6 +55,8 @@ new #[Title('Approval settings')] class extends Component {
             'holidays' => ['nullable', 'string', 'max:5000'],
             'workingHoursStart' => ['nullable', 'string', 'required_with:workingHoursEnd', 'regex:/^([01]\d|2[0-3]):[0-5]\d$/'],
             'workingHoursEnd' => ['nullable', 'string', 'required_with:workingHoursStart', 'regex:/^([01]\d|2[0-3]):[0-5]\d$/'],
+            'quietHoursStart' => ['nullable', 'string', 'required_with:quietHoursEnd', 'regex:/^([01]\d|2[0-3]):[0-5]\d$/'],
+            'quietHoursEnd' => ['nullable', 'string', 'required_with:quietHoursStart', 'regex:/^([01]\d|2[0-3]):[0-5]\d$/'],
         ]);
 
         $start = $validated['workingHoursStart'] ?? '';
@@ -61,6 +74,23 @@ new #[Title('Approval settings')] class extends Component {
             $start,
             $end,
         );
+
+        $quietStart = $validated['quietHoursStart'] ?? '';
+        $quietEnd = $validated['quietHoursEnd'] ?? '';
+        if ($quietStart !== '' && $quietEnd !== '' && $quietStart === $quietEnd) {
+            $this->addError('quietHoursEnd', __('Quiet hours start and end cannot be the same time.'));
+
+            return;
+        }
+
+        try {
+            $updateNudges->execute($quietStart, $quietEnd);
+        } catch (\InvalidArgumentException $exception) {
+            $this->addError('quietHoursEnd', $exception->getMessage());
+
+            return;
+        }
+
         Flux::toast('Approval settings updated.', variant: 'success');
     }
 
@@ -115,6 +145,28 @@ new #[Title('Approval settings')] class extends Component {
         </p>
         <flux:error name="workingHoursStart" />
         <flux:error name="workingHoursEnd" />
+
+        <div class="grid gap-4 sm:grid-cols-2">
+            <flux:input
+                wire:model="quietHoursStart"
+                type="time"
+                step="60"
+                :label="__('Reminder quiet hours start')"
+                :placeholder="__('22:00')"
+            />
+            <flux:input
+                wire:model="quietHoursEnd"
+                type="time"
+                step="60"
+                :label="__('Reminder quiet hours end')"
+                :placeholder="__('07:00')"
+            />
+        </div>
+        <p class="text-sm text-zinc-500">
+            {{ __('Optional. Manual reminders wait until this window ends. Overnight ranges such as 22:00–07:00 are allowed. Empty fields send reminders immediately. Times are in the application timezone (:tz).', ['tz' => config('app.timezone')]) }}
+        </p>
+        <flux:error name="quietHoursStart" />
+        <flux:error name="quietHoursEnd" />
 
         <flux:button type="submit" variant="primary">{{ __('Save approval settings') }}</flux:button>
     </form>

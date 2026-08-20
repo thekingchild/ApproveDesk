@@ -50,6 +50,15 @@ final class HelpCatalogue
                 screenRoute: 'approvals.inbox',
             ),
             new HelpArticle(
+                slug: 'collaboration',
+                title: 'Collaboration',
+                summary: 'Follow a request, mention people, send reminders, set out of office, and read the next step.',
+                icon: 'chat-bubble-left-right',
+                group: 'Using ApproveDesk',
+                audience: 'all',
+                screenRoute: 'submissions.index',
+            ),
+            new HelpArticle(
                 slug: 'statuses',
                 title: 'Request statuses',
                 summary: 'What each status means and who can act on it.',
@@ -164,7 +173,7 @@ final class HelpCatalogue
     {
         $slugs = self::isAdministrator($user)
             ? ['definitions', 'users-and-roles', 'request-types', 'workflow-templates', 'analytics', 'requests', 'approvals']
-            : ['definitions', 'requests', 'approvals', 'account-settings'];
+            : ['definitions', 'requests', 'approvals', 'collaboration', 'account-settings'];
 
         return $this->visibleFor($user)
             ->filter(fn (HelpArticle $article): bool => in_array($article->slug, $slugs, true))

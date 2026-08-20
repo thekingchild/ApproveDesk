@@ -16,15 +16,25 @@ use Illuminate\Support\Carbon;
  * @property int $author_id
  * @property int|null $parent_id
  * @property string $body
+ * @property Carbon|null $edited_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
 class Comment extends Model
 {
+    public const EDIT_WINDOW_MINUTES = 15;
+
     /** @use HasFactory<CommentFactory> */
     use HasFactory;
 
-    protected $fillable = ['commentable_id', 'commentable_type', 'author_id', 'parent_id', 'body'];
+    protected $fillable = ['commentable_id', 'commentable_type', 'author_id', 'parent_id', 'body', 'edited_at'];
+
+    protected function casts(): array
+    {
+        return [
+            'edited_at' => 'datetime',
+        ];
+    }
 
     /**
      * @return MorphTo<Model, $this>
@@ -55,6 +65,31 @@ class Comment extends Model
      */
     public function replies(): HasMany
     {
-        return $this->hasMany(self::class, 'parent_id');
+        return $this->hasMany(self::class, 'parent_id')->orderBy('id');
+    }
+
+    /** @return HasMany<CommentRevision, $this> */
+    public function revisions(): HasMany
+    {
+        return $this->hasMany(CommentRevision::class)->orderBy('id');
+    }
+
+    /** @return HasMany<CommentMention, $this> */
+    public function mentions(): HasMany
+    {
+        return $this->hasMany(CommentMention::class);
+    }
+
+    public function isWithinEditWindow(?Carbon $at = null): bool
+    {
+        $at ??= now();
+
+        return $this->created_at !== null
+            && $this->created_at->copy()->addMinutes(self::EDIT_WINDOW_MINUTES)->greaterThan($at);
+    }
+
+    public function isEditableBy(User $user, ?Carbon $at = null): bool
+    {
+        return $this->author_id === $user->id && $this->isWithinEditWindow($at);
     }
 }

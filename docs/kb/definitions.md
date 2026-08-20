@@ -78,6 +78,32 @@ See [Request statuses](statuses.md).
 
 The hidden machine name for a form field, generated from the label. Administrators do not type it. Search, analytics, and conditional rules use it internally.
 
+## Follower
+
+Someone granted explicit view access to a request so they can open it and receive comment or status notifications. Followers are not approvers unless the workflow also assigns them. They can unfollow themselves.
+
+See [Collaboration](collaboration.md).
+
+## Mention
+
+A named person in a comment. A mention notifies them and adds them as a follower so they can open the request.
+
+## Reminder
+
+A manual nudge to the current approver. It is recorded, rate limited, and delayed when reminder quiet hours are in effect.
+
+## Out of office
+
+A dated absence on your account, with an optional fallback approver. While it is active, current steps that allow delegation pass to the fallback.
+
+## Expected next step
+
+The next approval step the current request is expected to reach after the people on the current step decide. It is a preview, not a change to the bound workflow version.
+
+## Estimated due time
+
+The clock for the current step’s timeout, using elapsed hours or the business calendar (working days, office hours, holidays). It updates if the business calendar changes.
+
 ## Audit trail
 
 The append-only list of workflow actions on a request. ApproveDesk does not edit or delete those rows.

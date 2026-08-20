@@ -119,7 +119,24 @@ class HelpCentreTest extends TestCase
             ->assertSee('An ordered rule on a request type')
             ->assertSee('Working days, office hours, and holidays')
             ->assertSee('The checks that run before a workflow version is published')
-            ->assertSee('The search field on a workflow step');
+            ->assertSee('The search field on a workflow step')
+            ->assertSee('Someone granted explicit view access')
+            ->assertSee('A named person in a comment')
+            ->assertSee('A dated absence on your account');
+    }
+
+    public function test_collaboration_article_explains_followers_and_ooo(): void
+    {
+        $user = User::factory()->create()->assignRole('submitter');
+
+        $this->actingAs($user)
+            ->get(route('help.show', 'collaboration'))
+            ->assertOk()
+            ->assertSee('Adding a person grants them view access')
+            ->assertSee('15 minutes')
+            ->assertSee('quiet hours')
+            ->assertSee('fallback approver')
+            ->assertSee('estimated due time');
     }
 
     public function test_workflow_templates_article_explains_builder_and_versions(): void

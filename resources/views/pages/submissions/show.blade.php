@@ -1,12 +1,22 @@
 <?php
 
+use App\Actions\Collaboration\EditCommentAction;
+use App\Actions\Collaboration\FollowSubmissionAction;
+use App\Actions\Collaboration\NudgeApproversAction;
+use App\Actions\Collaboration\PostCommentAction;
+use App\Actions\Collaboration\UnfollowSubmissionAction;
+use App\Actions\Collaboration\UpdateWatcherPreferencesAction;
 use App\Enums\WorkflowActionType;
+use App\Exceptions\CollaborationException;
 use App\Exceptions\WorkflowException;
 use App\Models\Comment;
 use App\Models\Delegation;
 use App\Models\Submission;
 use App\Models\User;
 use App\Services\ApproverWorkbench;
+use App\Services\Collaboration\ExpectedProgress;
+use App\Services\Collaboration\MentionParser;
+use App\Services\Workflow\AssigneeDirectory;
 use App\Services\WorkflowEngine;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
@@ -25,9 +35,32 @@ new #[Title('Submission')] class extends Component {
 
     public string $delegateUserId = '';
 
+    public string $delegationStartsAt = '';
+
     public string $delegationExpiresAt = '';
 
     public string $delegationComment = '';
+
+    public string $watcherQuery = '';
+
+    public string $mentionQuery = '';
+
+    public string $nudgeMessage = '';
+
+    public string $replyBody = '';
+
+    public ?int $replyParentId = null;
+
+    public ?int $editingCommentId = null;
+
+    public string $editBody = '';
+
+    public bool $notifyComments = true;
+
+    public bool $notifyStatus = true;
+
+    /** @var array<int, int> */
+    public array $mentionedUserIds = [];
 
     public string $resubmissionComment = '';
 
@@ -44,10 +77,17 @@ new #[Title('Submission')] class extends Component {
             'workflowInstance.templateVersion',
             'workflowInstance.currentStep',
             'workflowInstance.actions.actor',
+            'watchers.user',
             'submitter.manager',
             'submitter.department.manager',
             'department.manager',
         ]);
+
+        $mine = $this->submission->watchers->firstWhere('user_id', Auth::id());
+        if ($mine) {
+            $this->notifyComments = $mine->notify_comments;
+            $this->notifyStatus = $mine->notify_status;
+        }
     }
 
     #[Computed]
@@ -203,9 +243,20 @@ new #[Title('Submission')] class extends Component {
     {
         $validated = $this->validate([
             'delegateUserId' => ['required', 'integer', Rule::exists(User::class, 'id')->where('is_active', true)],
+            'delegationStartsAt' => ['nullable', 'date'],
             'delegationExpiresAt' => ['required', 'date', 'after:now'],
             'delegationComment' => ['nullable', 'string', 'max:1000'],
         ]);
+
+        $startsAt = filled($validated['delegationStartsAt'] ?? null)
+            ? \Illuminate\Support\Carbon::parse($validated['delegationStartsAt'])
+            : now();
+
+        if ($startsAt->greaterThanOrEqualTo(\Illuminate\Support\Carbon::parse($validated['delegationExpiresAt']))) {
+            $this->addError('delegationStartsAt', __('The start must be before the expiry.'));
+
+            return;
+        }
 
         try {
             app(WorkflowEngine::class)->delegate(
@@ -214,6 +265,7 @@ new #[Title('Submission')] class extends Component {
                 User::query()->findOrFail((int) $validated['delegateUserId']),
                 \Illuminate\Support\Carbon::parse($validated['delegationExpiresAt']),
                 $validated['delegationComment'] ?: null,
+                $startsAt,
             );
         } catch (WorkflowException $exception) {
             $this->addError('delegateUserId', $exception->getMessage());
@@ -261,18 +313,262 @@ new #[Title('Submission')] class extends Component {
     public function postComment(): void
     {
         $this->validate(['comment' => ['required', 'string', 'max:5000']]);
-
         $this->authorize('comment', $this->submission);
 
-        Comment::create([
-            'commentable_id' => $this->submission->id,
-            'commentable_type' => Submission::class,
-            'author_id' => Auth::id(),
-            'body' => $this->comment,
-        ]);
+        try {
+            app(PostCommentAction::class)->execute(
+                $this->submission,
+                Auth::user(),
+                $this->comment,
+                null,
+                $this->mentionedUserIds,
+            );
+        } catch (CollaborationException $exception) {
+            $this->addError('comment', $exception->getMessage());
 
-        $this->reset('comment');
-        $this->submission->load('comments.author');
+            return;
+        }
+
+        $this->reset('comment', 'mentionedUserIds', 'mentionQuery');
+        $this->refreshCollaboration();
+    }
+
+    public function postReply(): void
+    {
+        $this->validate([
+            'replyBody' => ['required', 'string', 'max:5000'],
+            'replyParentId' => ['required', 'integer'],
+        ]);
+        $this->authorize('comment', $this->submission);
+
+        try {
+            app(PostCommentAction::class)->execute(
+                $this->submission,
+                Auth::user(),
+                $this->replyBody,
+                $this->replyParentId,
+            );
+        } catch (CollaborationException $exception) {
+            $this->addError('replyBody', $exception->getMessage());
+
+            return;
+        }
+
+        $this->reset('replyBody', 'replyParentId');
+        $this->refreshCollaboration();
+    }
+
+    public function startReply(int $commentId): void
+    {
+        $this->replyParentId = $commentId;
+        $this->replyBody = '';
+        $this->editingCommentId = null;
+    }
+
+    public function startEdit(int $commentId): void
+    {
+        $comment = Comment::query()->findOrFail($commentId);
+        $this->authorize('update', $comment);
+        $this->editingCommentId = $comment->id;
+        $this->editBody = $comment->body;
+        $this->replyParentId = null;
+    }
+
+    public function saveEdit(): void
+    {
+        $this->validate(['editBody' => ['required', 'string', 'max:5000']]);
+        $comment = Comment::query()->findOrFail($this->editingCommentId);
+
+        try {
+            app(EditCommentAction::class)->execute($comment, Auth::user(), $this->editBody);
+        } catch (CollaborationException $exception) {
+            $this->addError('editBody', $exception->getMessage());
+
+            return;
+        }
+
+        $this->reset('editingCommentId', 'editBody');
+        $this->refreshCollaboration();
+    }
+
+    public function cancelEdit(): void
+    {
+        $this->reset('editingCommentId', 'editBody', 'replyParentId', 'replyBody');
+    }
+
+    public function follow(): void
+    {
+        try {
+            app(FollowSubmissionAction::class)->execute($this->submission, Auth::user(), Auth::user(), [
+                'notify_comments' => $this->notifyComments,
+                'notify_status' => $this->notifyStatus,
+            ]);
+        } catch (CollaborationException $exception) {
+            Flux::toast($exception->getMessage(), variant: 'danger');
+
+            return;
+        }
+
+        $this->refreshCollaboration();
+        Flux::toast('You are following this request.', variant: 'success');
+    }
+
+    public function unfollow(): void
+    {
+        try {
+            app(UnfollowSubmissionAction::class)->execute($this->submission, Auth::user(), Auth::user());
+        } catch (CollaborationException $exception) {
+            Flux::toast($exception->getMessage(), variant: 'danger');
+
+            return;
+        }
+
+        $this->refreshCollaboration();
+        Flux::toast('You unfollowed this request.', variant: 'success');
+    }
+
+    public function addWatcher(int $userId): void
+    {
+        try {
+            app(FollowSubmissionAction::class)->execute(
+                $this->submission,
+                Auth::user(),
+                User::query()->findOrFail($userId),
+            );
+        } catch (CollaborationException $exception) {
+            Flux::toast($exception->getMessage(), variant: 'danger');
+
+            return;
+        }
+
+        $this->watcherQuery = '';
+        $this->refreshCollaboration();
+        Flux::toast('Follower added.', variant: 'success');
+    }
+
+    public function removeWatcher(int $userId): void
+    {
+        try {
+            app(UnfollowSubmissionAction::class)->execute(
+                $this->submission,
+                Auth::user(),
+                User::query()->findOrFail($userId),
+            );
+        } catch (CollaborationException $exception) {
+            Flux::toast($exception->getMessage(), variant: 'danger');
+
+            return;
+        }
+
+        $this->refreshCollaboration();
+    }
+
+    public function saveWatcherPreferences(): void
+    {
+        try {
+            app(UpdateWatcherPreferencesAction::class)->execute(
+                $this->submission,
+                Auth::user(),
+                $this->notifyComments,
+                $this->notifyStatus,
+            );
+        } catch (CollaborationException $exception) {
+            Flux::toast($exception->getMessage(), variant: 'danger');
+
+            return;
+        }
+
+        Flux::toast('Follow preferences saved.', variant: 'success');
+    }
+
+    public function addMention(int $userId): void
+    {
+        $parser = app(MentionParser::class);
+        $this->comment = $parser->appendToken($this->comment, $userId);
+        $this->mentionedUserIds = array_values(array_unique([...$this->mentionedUserIds, $userId]));
+        $this->mentionQuery = '';
+        unset($this->mentionResults);
+    }
+
+    public function removeMention(int $userId): void
+    {
+        $this->mentionedUserIds = array_values(array_filter($this->mentionedUserIds, fn (int $id): bool => $id !== $userId));
+        $this->comment = trim((string) preg_replace('/@\{'.$userId.'\}/', '', $this->comment));
+        unset($this->mentionResults);
+    }
+
+    public function sendNudge(): void
+    {
+        try {
+            app(NudgeApproversAction::class)->execute(
+                $this->submission,
+                Auth::user(),
+                $this->nudgeMessage !== '' ? $this->nudgeMessage : null,
+            );
+        } catch (CollaborationException $exception) {
+            $this->addError('nudgeMessage', $exception->getMessage());
+
+            return;
+        }
+
+        $this->reset('nudgeMessage');
+        Flux::toast('Reminder sent.', variant: 'success');
+    }
+
+    #[Computed]
+    public function commentThreads(): \Illuminate\Database\Eloquent\Collection
+    {
+        return $this->submission->comments()
+            ->with(['author', 'mentions.user', 'revisions.editor', 'replies.author', 'replies.mentions.user', 'replies.revisions.editor'])
+            ->whereNull('parent_id')
+            ->orderBy('id')
+            ->get();
+    }
+
+    #[Computed]
+    public function expectedProgress(): ?array
+    {
+        return app(ExpectedProgress::class)->for($this->submission);
+    }
+
+    #[Computed]
+    public function watcherResults(): \Illuminate\Support\Collection
+    {
+        $exclude = $this->submission->watchers->pluck('user_id')->all();
+        $exclude[] = $this->submission->submitter_id;
+
+        return app(AssigneeDirectory::class)->search('user', $this->watcherQuery, $exclude);
+    }
+
+    #[Computed]
+    public function mentionResults(): \Illuminate\Support\Collection
+    {
+        return app(AssigneeDirectory::class)->search('user', $this->mentionQuery, [Auth::id(), ...$this->mentionedUserIds]);
+    }
+
+    #[Computed]
+    public function mentionedUsers(): \Illuminate\Support\Collection
+    {
+        return app(AssigneeDirectory::class)->selected('user', $this->mentionedUserIds);
+    }
+
+    public function displayComment(Comment $comment): string
+    {
+        return app(MentionParser::class)->display(
+            $comment->body,
+            $comment->mentions->map->user->filter(),
+        );
+    }
+
+    private function refreshCollaboration(): void
+    {
+        $this->submission->load(['watchers.user', 'comments.author']);
+        unset($this->commentThreads, $this->watcherResults, $this->mentionResults, $this->mentionedUsers);
+        $mine = $this->submission->watchers->firstWhere('user_id', Auth::id());
+        if ($mine) {
+            $this->notifyComments = $mine->notify_comments;
+            $this->notifyStatus = $mine->notify_status;
+        }
     }
 
     public function withdraw(): void
@@ -295,12 +591,11 @@ new #[Title('Submission')] class extends Component {
                 'resubmissionComment' => ['required', 'string', 'max:5000'],
             ]);
 
-            Comment::create([
-                'commentable_id' => $this->submission->id,
-                'commentable_type' => Submission::class,
-                'author_id' => Auth::id(),
-                'body' => $validated['resubmissionComment'],
-            ]);
+            app(PostCommentAction::class)->execute(
+                $this->submission,
+                Auth::user(),
+                $validated['resubmissionComment'],
+            );
         }
 
         app(\App\Actions\Submissions\SubmitSubmissionAction::class)->execute($this->submission);
@@ -366,6 +661,7 @@ new #[Title('Submission')] class extends Component {
         </div>
 
         <div class="flex items-center gap-2">
+            <x-ui.help-link article="collaboration" />
             @can('update', $submission)
                 <flux:button :href="$submission->requestTypeVersion->requestType->is_system ? route('submissions.edit', $submission) : route('submissions.custom.edit', $submission)" variant="primary" wire:navigate>{{ __('Edit draft') }}</flux:button>
             @endcan
@@ -382,8 +678,30 @@ new #[Title('Submission')] class extends Component {
                         : __('Due').' '.$submission->workflowInstance->deadlineAt()->diffForHumans() }}
                 </flux:badge>
             @endif
+            @can('nudge', $submission)
+                @if ($submission->workflowInstance?->status->value === 'active')
+                    <flux:modal.trigger name="nudge-modal">
+                        <flux:button size="sm" variant="ghost" data-test="nudge-trigger">{{ __('Remind approver') }}</flux:button>
+                    </flux:modal.trigger>
+                @endif
+            @endcan
         </div>
     </div>
+
+    <flux:modal name="nudge-modal">
+        <form wire:submit="sendNudge" class="space-y-4">
+            <div>
+                <flux:heading size="md">{{ __('Send a reminder') }}</flux:heading>
+                <flux:subheading>{{ __('The current approvers are notified. Quiet hours and rate limits still apply.') }}</flux:subheading>
+            </div>
+            <flux:textarea wire:model="nudgeMessage" :label="__('Note (optional)')" rows="3" />
+            <flux:error name="nudgeMessage" />
+            <div class="flex justify-end gap-2">
+                <flux:modal.close><flux:button variant="ghost">{{ __('Cancel') }}</flux:button></flux:modal.close>
+                <flux:button type="submit" variant="primary" data-test="send-nudge">{{ __('Send reminder') }}</flux:button>
+            </div>
+        </form>
+    </flux:modal>
 
     <flux:card>
         <dl class="grid gap-4 text-sm sm:grid-cols-4">
@@ -440,6 +758,30 @@ new #[Title('Submission')] class extends Component {
             <flux:heading size="sm">{{ __('Workflow progress') }}</flux:heading>
             @if ($submission->workflowInstance?->selection_explanation)
                 <p class="mt-1 text-sm text-zinc-500" data-test="selection-explanation">{{ $submission->workflowInstance->selection_explanation }}</p>
+            @endif
+            @if ($this->expectedProgress)
+                <dl class="mt-3 grid gap-2 text-sm sm:grid-cols-2" data-test="expected-progress">
+                    <div>
+                        <dt class="text-xs text-zinc-500">{{ __('Current step') }}</dt>
+                        <dd class="font-medium">{{ $this->expectedProgress['current_step'] ?? '—' }}</dd>
+                        <dd class="text-xs text-zinc-500">{{ $this->expectedProgress['current_assignees'] }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs text-zinc-500">{{ __('Expected next step') }}</dt>
+                        <dd class="font-medium" data-test="expected-next-step">{{ $this->expectedProgress['next_step'] ?? '—' }}</dd>
+                    </div>
+                    <div class="sm:col-span-2">
+                        <dt class="text-xs text-zinc-500">{{ __('Estimated due') }}</dt>
+                        <dd class="font-medium" data-test="estimated-due">
+                            @if ($this->expectedProgress['estimated_due_at'])
+                                {{ $this->expectedProgress['estimated_due_at']->timezone(config('app.timezone'))->format('d M Y H:i') }}
+                                <span class="text-xs font-normal text-zinc-500">({{ app(\App\Services\Collaboration\ExpectedProgress::class)->calendarLabel($this->expectedProgress['calendar']) }})</span>
+                            @else
+                                {{ __('No step deadline') }}
+                            @endif
+                        </dd>
+                    </div>
+                </dl>
             @endif
 
             @if (count($this->timeline))
@@ -602,6 +944,8 @@ new #[Title('Submission')] class extends Component {
                         @endforeach
                     </flux:select>
                     <flux:error name="delegateUserId" />
+                    <flux:input wire:model="delegationStartsAt" type="datetime-local" :label="__('Starts at (optional)')" :description="__('Leave empty to start immediately. A future start keeps your authority until then.')" />
+                    <flux:error name="delegationStartsAt" />
                     <flux:input wire:model="delegationExpiresAt" type="datetime-local" :label="__('Expires at')" />
                     <flux:textarea wire:model="delegationComment" :label="__('Note (optional)')" rows="2" />
                     <div class="flex justify-end gap-2">
@@ -643,15 +987,134 @@ new #[Title('Submission')] class extends Component {
         </flux:card>
     @endif
 
+    <flux:card data-test="watchers-card">
+        <div class="flex flex-wrap items-start justify-between gap-3">
+            <div>
+                <flux:heading size="sm">{{ __('Followers') }}</flux:heading>
+                <flux:subheading>{{ __('Followers can open this request. You can unfollow yourself at any time.') }}</flux:subheading>
+            </div>
+            @if ($submission->isWatchedBy(auth()->user()))
+                <flux:button size="sm" variant="ghost" wire:click="unfollow" data-test="unfollow">{{ __('Unfollow') }}</flux:button>
+            @else
+                <flux:button size="sm" variant="subtle" wire:click="follow" data-test="follow">{{ __('Follow') }}</flux:button>
+            @endif
+        </div>
+
+        @if ($submission->isWatchedBy(auth()->user()))
+            <form wire:submit="saveWatcherPreferences" class="mt-3 flex flex-wrap items-end gap-3">
+                <flux:checkbox wire:model="notifyComments" :label="__('Notify me of comments')" />
+                <flux:checkbox wire:model="notifyStatus" :label="__('Notify me of status changes')" />
+                <flux:button type="submit" size="xs" variant="ghost">{{ __('Save') }}</flux:button>
+            </form>
+        @endif
+
+        <ul class="mt-3 flex flex-wrap gap-2" data-test="watcher-list">
+            @forelse ($submission->watchers as $watcher)
+                <li class="inline-flex items-center gap-1 rounded-full border border-zinc-300 bg-zinc-50 px-2 py-1 text-xs dark:border-zinc-600 dark:bg-zinc-800">
+                    {{ $watcher->user->name }}
+                    @if (auth()->id() === $watcher->user_id || auth()->user()?->can('addWatcher', $submission))
+                        <button type="button" class="text-zinc-500" wire:click="removeWatcher({{ $watcher->user_id }})" aria-label="{{ __('Remove :name', ['name' => $watcher->user->name]) }}">×</button>
+                    @endif
+                </li>
+            @empty
+                <li class="text-sm text-zinc-500">{{ __('No followers yet.') }}</li>
+            @endforelse
+        </ul>
+
+        @can('addWatcher', $submission)
+            <div class="mt-4">
+                <x-ui.assignee-picker
+                    type="user"
+                    query="watcherQuery"
+                    :selected="collect()"
+                    :results="$this->watcherResults"
+                    add="addWatcher"
+                    remove="removeWatcher"
+                    :hide-empty="true"
+                    placeholder="Type a name to add a follower…"
+                />
+            </div>
+        @endcan
+    </flux:card>
+
     <flux:card>
         <flux:heading size="sm">{{ __('Comments') }}</flux:heading>
 
-        <ul class="mt-4 space-y-3">
-            @forelse ($submission->comments()->with('author')->latest('id')->get() as $c)
-                <li class="text-sm">
+        <ul class="mt-4 space-y-4">
+            @forelse ($this->commentThreads as $c)
+                <li class="text-sm" data-test="comment-{{ $c->id }}">
                     <span class="font-medium">{{ $c->author->name }}</span>
                     <span class="text-xs text-zinc-400">{{ $c->created_at->format('d M Y H:i') }}</span>
-                    <p class="mt-1 rounded-md bg-zinc-50 p-2 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">{{ $c->body }}</p>
+                    @if ($c->edited_at)
+                        <span class="text-xs text-zinc-400">{{ __('(edited)') }}</span>
+                    @endif
+                    @if ($this->editingCommentId === $c->id)
+                        <form wire:submit="saveEdit" class="mt-2 space-y-2">
+                            <flux:textarea wire:model="editBody" rows="2" />
+                            <flux:error name="editBody" />
+                            <div class="flex gap-2">
+                                <flux:button type="submit" size="xs" variant="primary">{{ __('Save') }}</flux:button>
+                                <flux:button type="button" size="xs" variant="ghost" wire:click="cancelEdit">{{ __('Cancel') }}</flux:button>
+                            </div>
+                        </form>
+                    @else
+                        <p class="mt-1 rounded-md bg-zinc-50 p-2 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">{{ $this->displayComment($c) }}</p>
+                    @endif
+                    @if ($c->revisions->isNotEmpty())
+                        <details class="mt-1 text-xs text-zinc-500">
+                            <summary>{{ __('Edit history') }}</summary>
+                            <ul class="mt-1 space-y-1">
+                                @foreach ($c->revisions as $revision)
+                                    <li>{{ $revision->created_at->format('d M Y H:i') }}: {{ $revision->body }}</li>
+                                @endforeach
+                            </ul>
+                        </details>
+                    @endif
+                    <div class="mt-1 flex gap-2">
+                        @can('comment', $submission)
+                            <flux:button size="xs" variant="ghost" wire:click="startReply({{ $c->id }})" data-test="reply-{{ $c->id }}">{{ __('Reply') }}</flux:button>
+                        @endcan
+                        @can('update', $c)
+                            <flux:button size="xs" variant="ghost" wire:click="startEdit({{ $c->id }})" data-test="edit-comment-{{ $c->id }}">{{ __('Edit') }}</flux:button>
+                        @endcan
+                    </div>
+                    @if ($c->replies->isNotEmpty())
+                        <ul class="mt-2 space-y-2 border-l border-zinc-200 pl-3 dark:border-zinc-700">
+                            @foreach ($c->replies as $reply)
+                                <li>
+                                    <span class="font-medium">{{ $reply->author->name }}</span>
+                                    <span class="text-xs text-zinc-400">{{ $reply->created_at->format('d M Y H:i') }}</span>
+                                    @if ($reply->edited_at)
+                                        <span class="text-xs text-zinc-400">{{ __('(edited)') }}</span>
+                                    @endif
+                                    @if ($this->editingCommentId === $reply->id)
+                                        <form wire:submit="saveEdit" class="mt-2 space-y-2">
+                                            <flux:textarea wire:model="editBody" rows="2" />
+                                            <div class="flex gap-2">
+                                                <flux:button type="submit" size="xs" variant="primary">{{ __('Save') }}</flux:button>
+                                                <flux:button type="button" size="xs" variant="ghost" wire:click="cancelEdit">{{ __('Cancel') }}</flux:button>
+                                            </div>
+                                        </form>
+                                    @else
+                                        <p class="mt-1 rounded-md bg-zinc-50 p-2 dark:bg-zinc-800">{{ $this->displayComment($reply) }}</p>
+                                    @endif
+                                    @can('update', $reply)
+                                        <flux:button size="xs" variant="ghost" wire:click="startEdit({{ $reply->id }})">{{ __('Edit') }}</flux:button>
+                                    @endcan
+                                </li>
+                            @endforeach
+                        </ul>
+                    @endif
+                    @if ($this->replyParentId === $c->id)
+                        <form wire:submit="postReply" class="mt-2 space-y-2">
+                            <flux:textarea wire:model="replyBody" :placeholder="__('Write a reply…')" rows="2" />
+                            <flux:error name="replyBody" />
+                            <div class="flex gap-2">
+                                <flux:button type="submit" size="xs" variant="primary" data-test="submit-reply">{{ __('Reply') }}</flux:button>
+                                <flux:button type="button" size="xs" variant="ghost" wire:click="cancelEdit">{{ __('Cancel') }}</flux:button>
+                            </div>
+                        </form>
+                    @endif
                 </li>
             @empty
                 <li class="text-sm text-zinc-500">{{ __('No comments yet.') }}</li>
@@ -660,8 +1123,17 @@ new #[Title('Submission')] class extends Component {
 
         @can('comment', $submission)
             <form wire:submit="postComment" class="mt-4 space-y-2">
-                <flux:textarea wire:model="comment" :placeholder="__('Add a comment…')" rows="2" />
+                <flux:textarea wire:model="comment" :placeholder="__('Add a comment. Use search below to mention someone…')" rows="2" />
                 <flux:error name="comment" />
+                <x-ui.assignee-picker
+                    type="user"
+                    query="mentionQuery"
+                    :selected="$this->mentionedUsers"
+                    :results="$this->mentionResults"
+                    add="addMention"
+                    remove="removeMention"
+                    placeholder="Type two characters to mention someone…"
+                />
                 <flux:button type="submit" variant="ghost" size="sm">{{ __('Comment') }}</flux:button>
             </form>
         @endcan

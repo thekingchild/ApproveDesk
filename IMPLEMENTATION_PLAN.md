@@ -105,7 +105,7 @@ After each completed phase:
 4. Confirm Help as an administrator and as a requester.
 5. Commit the Markdown, catalogue, Help UI, and this plan together.
 
-**Administrator knowledge base through Phase 7B — Complete (2026-08-20):** feature definitions (including workflow version, builder, graph validation, selection rule, assignee resolver, group completion, business calendar / office hours, custom outcome, and assignee picker), getting around, requests, approvals, statuses, account settings, users and roles (including E.164 phone numbers), departments, workflow templates (including upgrade guarantees and the searchable assignee picker), request types (including workflow assignment and selection rules), analytics, webhooks, organization settings (including office hours), and the audit trail.
+**Administrator knowledge base through Phase 8.1 — Complete (2026-08-20):** feature definitions (including workflow version, builder, graph validation, selection rule, assignee resolver, group completion, business calendar / office hours, custom outcome, assignee picker, follower, mention, reminder, out of office, expected next step, and estimated due time), getting around, requests, approvals, collaboration, statuses, account settings (including out of office), users and roles (including E.164 phone numbers), departments, workflow templates (including upgrade guarantees and the searchable assignee picker), request types (including workflow assignment and selection rules), analytics, webhooks, organization settings (including office hours and reminder quiet hours), and the audit trail.
 
 ### 3.5 Request types own workflows
 
@@ -131,7 +131,7 @@ Phase 6A implements this assignment. Phase 7 keeps its original scope: versioned
 | 7 | v2.3.0 | Visual workflows, versioning, and dynamic assignment | Complete |
 | 7A | v2.3.1 | Assignee picker UX and user phone numbers | Complete |
 | 7B | v2.3.2 | Organization working / office hours | Complete |
-| 8 | v2.4.0 | Collaboration, notifications, and integration hub | Not started |
+| 8 | v2.4.0 | Collaboration, notifications, and integration hub | In progress — 8.1 complete |
 | 9 | v2.5.0 | Governance, audit evidence, security, and reliability | Not started |
 | 10 | v3.0.0 | SaaS multi-tenancy foundation | Not started |
 | 11 | v3.1.0 | Paystack and Flutterwave subscriptions | Not started |
@@ -377,13 +377,13 @@ Design: [docs/design/7b-organization-working-hours.md](docs/design/7b-organizati
 
 **Goal:** keep work moving without requiring every participant to remain inside ApproveDesk and provide useful integrations without custom code.
 
-### 8.1 Collaboration
+### 8.1 Collaboration — Complete (2026-08-20)
 
-- **P8-COL-01:** Add watchers/followers with explicit view permission, notification preferences, and self-unfollow.
-- **P8-COL-02:** Add @mentions, mention notifications, thread replies, edit window, and append-only edit history.
-- **P8-COL-03:** Add manual reminders/nudges with rate limits, audit records, and quiet-hour handling.
-- **P8-COL-04:** Add out-of-office schedules, future delegation, fallback approvers, and conflict detection.
-- **P8-COL-05:** Add requester-visible expected next step and estimated due time.
+- **P8-COL-01 — Complete:** Add watchers/followers with explicit view permission, notification preferences, and self-unfollow.
+- **P8-COL-02 — Complete:** Add @mentions, mention notifications, thread replies, edit window, and append-only edit history.
+- **P8-COL-03 — Complete:** Add manual reminders/nudges with rate limits, audit records, and quiet-hour handling.
+- **P8-COL-04 — Complete:** Add out-of-office schedules, future delegation, fallback approvers, and conflict detection.
+- **P8-COL-05 — Complete:** Add requester-visible expected next step and estimated due time.
 
 ### 8.2 Notification delivery
 

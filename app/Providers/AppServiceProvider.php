@@ -10,10 +10,12 @@ use App\Events\WorkflowDelegated;
 use App\Events\WorkflowInformationRequested;
 use App\Events\WorkflowRejected;
 use App\Events\WorkflowReturned;
+use App\Listeners\ApplyOutOfOfficeFallbacks;
 use App\Listeners\DispatchWebhookDeliveries;
 use App\Listeners\NotifyCurrentApprovers;
 use App\Listeners\NotifyDelegate;
 use App\Listeners\NotifySubmitterOfDecision;
+use App\Listeners\NotifyWatchersOfDecision;
 use App\Services\Workflow\AssigneeResolver;
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -67,12 +69,19 @@ class AppServiceProvider extends ServiceProvider
     {
         Event::listen(SubmissionCreated::class, NotifyCurrentApprovers::class);
         Event::listen(WorkflowAdvanced::class, NotifyCurrentApprovers::class);
+        Event::listen(SubmissionCreated::class, ApplyOutOfOfficeFallbacks::class);
+        Event::listen(WorkflowAdvanced::class, ApplyOutOfOfficeFallbacks::class);
         Event::listen(WorkflowDelegated::class, NotifyDelegate::class);
 
         Event::listen(WorkflowCompleted::class, NotifySubmitterOfDecision::class);
         Event::listen(WorkflowRejected::class, NotifySubmitterOfDecision::class);
         Event::listen(WorkflowReturned::class, NotifySubmitterOfDecision::class);
         Event::listen(WorkflowInformationRequested::class, NotifySubmitterOfDecision::class);
+
+        Event::listen(WorkflowCompleted::class, NotifyWatchersOfDecision::class);
+        Event::listen(WorkflowRejected::class, NotifyWatchersOfDecision::class);
+        Event::listen(WorkflowReturned::class, NotifyWatchersOfDecision::class);
+        Event::listen(WorkflowInformationRequested::class, NotifyWatchersOfDecision::class);
 
         Event::listen(SubmissionCreated::class, DispatchWebhookDeliveries::class);
         Event::listen(WorkflowAdvanced::class, DispatchWebhookDeliveries::class);

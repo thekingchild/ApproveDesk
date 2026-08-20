@@ -7,6 +7,7 @@
     'remove' => '',
     'stepIndex' => null,
     'placeholder' => 'Type at least two characters to search…',
+    'hideEmpty' => false,
 ])
 
 <div class="space-y-2" data-test="assignee-picker">
@@ -17,7 +18,9 @@
                 <button type="button" class="text-zinc-500 hover:text-zinc-900 dark:hover:text-white" wire:click="{{ $remove }}({{ $stepIndex !== null ? $stepIndex.', ' : '' }}{{ $item->id }})" aria-label="{{ __('Remove :name', ['name' => $item->name]) }}" data-test="remove-assignee-{{ $item->id }}">×</button>
             </span>
         @empty
-            <span class="text-xs text-zinc-500">{{ __('No assignees selected.') }}</span>
+            @unless ($hideEmpty)
+                <span class="text-xs text-zinc-500">{{ __('No assignees selected.') }}</span>
+            @endunless
         @endforelse
     </div>
 
