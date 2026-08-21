@@ -138,7 +138,7 @@ Locked product decision for Phase 8.2. It does not reopen Phase 8.1. Design: [do
 |---|---|---|---|
 | 0–4 | v2.0.0 | Existing workflow platform | Complete |
 | 5 | v2.1.0 | Non-enterprise UX, accessibility, and approver productivity | Complete |
-| 6 | v2.2.0 | Configurable request types and form builder | In progress — 6.1–6.2 complete |
+| 6 | v2.2.0 | Configurable request types and form builder | Complete |
 | 6A | v2.2.1 | Request-type workflow assignment | Complete |
 | 7 | v2.3.0 | Visual workflows, versioning, and dynamic assignment | Complete |
 | 7A | v2.3.1 | Assignee picker UX and user phone numbers | Complete |
@@ -202,7 +202,7 @@ Locked product decision for Phase 8.2. It does not reopen Phase 8.1. Design: [do
 
 ---
 
-## Phase 6 — Configurable request types and form builder
+## Phase 6 — Configurable request types and form builder — Complete (2026-08-19)
 
 **Goal:** allow non-technical administrators to define reusable request forms instead of forcing every submission into the fixed type/title/body schema.
 
@@ -355,7 +355,7 @@ This phase is additive. Phases 0–7 stay complete as written. Phase 8 task IDs 
 
 **Goal:** make "Business hours" on workflow steps mean organization office hours as well as working days and holidays, without changing Elapsed-hour deadlines or snapshotting due times onto instances.
 
-This phase is additive. Phases 0–7 stay complete as written. Phase 7A stays complete as written. Phase 6 remains in progress with its remaining tasks unchanged. Phase 8 task IDs and scope stay unchanged. Do not reopen exclusive Document/Note/Memo/Request locking. Do not rewrite P7-RTE-03.
+This phase is additive. Phases 0–7 stay complete as written. Phase 7A stays complete as written. Phase 6 stays complete as written. Phase 8 task IDs and scope stay unchanged. Do not reopen exclusive Document/Note/Memo/Request locking. Do not rewrite P7-RTE-03.
 
 Design: [docs/design/7b-organization-working-hours.md](docs/design/7b-organization-working-hours.md).
 
