@@ -3,6 +3,7 @@
 use App\Jobs\ApplyOutOfOfficeFallbacksJob;
 use App\Jobs\ProcessEscalation;
 use App\Jobs\PurgeExpiredDelegations;
+use App\Jobs\RetryNotificationDeliveries;
 use App\Jobs\SendNotificationDigests;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -22,3 +23,5 @@ Schedule::job(new PurgeExpiredDelegations)->daily();
 Schedule::job(new SendNotificationDigests)->dailyAt('08:00');
 Schedule::job(new ProcessEscalation)->everyFifteenMinutes()->withoutOverlapping();
 Schedule::job(new ApplyOutOfOfficeFallbacksJob)->everyFifteenMinutes()->withoutOverlapping();
+Schedule::job(new RetryNotificationDeliveries)->everyFifteenMinutes()->withoutOverlapping();
+Schedule::command('approvedesk:fetch-whatsapp-templates')->dailyAt('03:15')->withoutOverlapping();

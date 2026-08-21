@@ -2,10 +2,13 @@
 
 namespace App\Notifications;
 
+use App\Enums\NotificationKind;
 use App\Models\Comment;
 use App\Models\Submission;
 use App\Models\User;
+use App\Notifications\Concerns\RendersNotificationCopy;
 use App\Notifications\Concerns\RespectsNotificationFrequency;
+use App\Services\Notifications\NotificationContext;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -14,6 +17,7 @@ use Illuminate\Notifications\Notification;
 class MentionedInCommentNotification extends Notification implements ShouldQueue
 {
     use Queueable;
+    use RendersNotificationCopy;
     use RespectsNotificationFrequency;
 
     public function __construct(
@@ -29,11 +33,13 @@ class MentionedInCommentNotification extends Notification implements ShouldQueue
 
     public function toMail(User $notifiable): MailMessage
     {
-        return (new MailMessage)
-            ->subject("[{$this->submission->reference_number}] You were mentioned")
-            ->greeting('Hello '.$notifiable->name.',')
-            ->line($this->comment->author?->name.' mentioned you on '.$this->submission->title.'.')
-            ->action('Open request', route('submissions.show', $this->submission));
+        return $this->mailFromCopy(
+            $notifiable,
+            NotificationKind::Mention,
+            NotificationContext::forSubmission($this->submission, $notifiable, [
+                'comment' => $this->comment->author?->name.' mentioned you.',
+            ]),
+        );
     }
 
     /** @return array<string, mixed> */

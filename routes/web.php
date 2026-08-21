@@ -7,11 +7,32 @@ use App\Http\Controllers\HelpController;
 use App\Http\Controllers\InstallController;
 use App\Http\Controllers\NotificationChannelCredentialController;
 use App\Http\Controllers\OAuthController;
+use App\Http\Controllers\PushSubscriptionController;
+use App\Http\Controllers\SlackInteractionsController;
 use App\Http\Controllers\SubmissionFileDownloadController;
+use App\Http\Controllers\TeamsActionsController;
 use App\Http\Controllers\TelegramWebhookController;
+use App\Support\Branding;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'welcome')->name('home');
+
+Route::get('manifest.webmanifest', function () {
+    $name = Branding::name();
+
+    return response()->json([
+        'name' => $name,
+        'short_name' => $name,
+        'start_url' => '/dashboard',
+        'display' => 'standalone',
+        'background_color' => '#0a0a0b',
+        'theme_color' => Branding::accentColor(),
+        'icons' => [
+            ['src' => '/apple-touch-icon.png', 'sizes' => '180x180', 'type' => 'image/png'],
+            ['src' => '/favicon.svg', 'sizes' => 'any', 'type' => 'image/svg+xml', 'purpose' => 'any'],
+        ],
+    ])->header('Content-Type', 'application/manifest+json');
+})->name('manifest');
 
 Route::get('branding/assets/{file}', BrandingAssetController::class)
     ->where('file', '[A-Za-z0-9._-]+')
@@ -20,6 +41,14 @@ Route::get('branding/assets/{file}', BrandingAssetController::class)
 Route::post('integrations/telegram/webhook', TelegramWebhookController::class)
     ->middleware('throttle:telegram-webhook')
     ->name('integrations.telegram.webhook');
+
+Route::post('integrations/slack/interactions', SlackInteractionsController::class)
+    ->middleware('throttle:60,1')
+    ->name('integrations.slack.interactions');
+
+Route::post('integrations/teams/actions', TeamsActionsController::class)
+    ->middleware('throttle:60,1')
+    ->name('integrations.teams.actions');
 
 Route::middleware('guest')->prefix('auth')->name('oauth.')->group(function (): void {
     Route::get('{provider}/redirect', [OAuthController::class, 'redirect'])->name('redirect');
@@ -81,6 +110,9 @@ Route::middleware(['auth', 'verified', 'can:reports.view'])->prefix('admin')->na
 });
 
 Route::middleware(['auth', 'verified'])->group(function (): void {
+    Route::post('settings/push-subscriptions', [PushSubscriptionController::class, 'store'])->name('settings.push-subscriptions.store');
+    Route::delete('settings/push-subscriptions', [PushSubscriptionController::class, 'destroy'])->name('settings.push-subscriptions.destroy');
+
     Route::get('help', [HelpController::class, 'index'])->name('help');
     Route::get('help/{article}', [HelpController::class, 'show'])->name('help.show');
     Route::livewire('notifications', 'pages::notifications.index')->name('notifications.index');

@@ -25,7 +25,7 @@ enum NotificationChannelKey: string
 
     public function isDeferred(): bool
     {
-        return $this === self::Sms || $this === self::WebPush;
+        return $this === self::Sms;
     }
 
     public function label(): string

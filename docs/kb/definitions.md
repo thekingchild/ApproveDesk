@@ -58,9 +58,21 @@ How a step with more than one assignee finishes: first response, all assignees, 
 
 ## Notification channel
 
-A delivery path for events such as “action required”. In-app and email are always on. Teams, Slack, WhatsApp, and Telegram are optional administrator channels.
+A delivery path for events such as “action required”. In-app and email are always on. Teams, Slack, WhatsApp, and Telegram are optional administrator channels. Browser push is opted in per device.
 
 See [Notification channels](notification-channels.md).
+
+## Email template
+
+Organisation-owned subject and body for a notification kind. Generic copy is the fallback until an administrator saves an override. Action-required templates must keep `{{approval_url}}`.
+
+## WhatsApp template mapping
+
+A link from an ApproveDesk notification kind to an approved WhatsApp Business template name, language, and placeholders. Unmapped or unapproved templates skip WhatsApp; ApproveDesk does not send free-form WhatsApp.
+
+## Telegram bot
+
+An optional outbound bot. People link their Telegram account; ApproveDesk sends text and a review URL. It does not approve from chat. The bot uses a webhook, not long-polling.
 
 ## Branding
 

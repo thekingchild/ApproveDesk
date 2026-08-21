@@ -27,7 +27,8 @@ class ChannelRegistryTest extends TestCase
         $registry = app(ChannelRegistry::class);
 
         $this->assertFalse($registry->driver(NotificationChannelKey::Sms)->isConfigured());
-        $this->assertFalse($registry->driver(NotificationChannelKey::WebPush)->isConfigured());
+        $this->assertFalse($registry->driver(NotificationChannelKey::Sms)->canReceive($user = User::factory()->create()));
+        $this->assertFalse($registry->driver(NotificationChannelKey::WebPush)->canReceive($user));
     }
 
     public function test_unconfigured_optional_channels_are_omitted_from_via(): void

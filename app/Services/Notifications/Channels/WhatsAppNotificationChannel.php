@@ -7,6 +7,8 @@ use App\DTOs\ChannelTestResult;
 use App\DTOs\OutboundNotification;
 use App\Enums\NotificationChannelKey;
 use App\Models\User;
+use App\Models\WhatsappMessageTemplate;
+use App\Models\WhatsappNotificationMap;
 use App\Services\Notifications\ChannelSettings;
 use Illuminate\Support\Facades\Http;
 use Throwable;
@@ -43,7 +45,63 @@ final class WhatsAppNotificationChannel implements OptionalNotificationChannel
 
     public function send(User $notifiable, OutboundNotification $message): void
     {
-        // Template mapping and Graph sends land in P8-NOT-04. Never send type=text.
+        if (! $this->isEnabled() || ! $this->isConfigured() || ! $this->canReceive($notifiable)) {
+            return;
+        }
+
+        $map = WhatsappNotificationMap::query()->where('kind', $message->kind)->first();
+        $catalog = $map === null ? null : WhatsappMessageTemplate::query()
+            ->where('name', $map->template_name)
+            ->where('language', $map->language)
+            ->first();
+
+        if ($map === null || ! $map->is_healthy || $catalog === null || ! $catalog->isApproved()) {
+            return;
+        }
+
+        $credentials = $this->settings->credentials($this->key());
+        $parameters = [];
+        $context = array_merge($message->payload, [
+            'recipient_name' => $notifiable->name,
+            'title' => $message->payload['title'] ?? $message->subject,
+        ]);
+        if ($message->actionUrl) {
+            $context['submission_url'] = $message->actionUrl;
+            $context['approval_url'] = $message->actionUrl;
+        }
+
+        foreach ($map->bindings as $slot => $placeholder) {
+            $parameters[] = [
+                'type' => 'text',
+                'text' => (string) ($context[$slot] ?? $message->subject),
+            ];
+        }
+
+        try {
+            $response = Http::timeout(15)
+                ->withToken($credentials['access_token'] ?? '')
+                ->acceptJson()
+                ->post('https://graph.facebook.com/v21.0/'.($credentials['phone_number_id'] ?? '').'/messages', [
+                    'messaging_product' => 'whatsapp',
+                    'to' => ltrim((string) $notifiable->phone, '+'),
+                    'type' => 'template',
+                    'template' => [
+                        'name' => $map->template_name,
+                        'language' => ['code' => $map->language],
+                        'components' => [[
+                            'type' => 'body',
+                            'parameters' => $parameters,
+                        ]],
+                    ],
+                ]);
+
+            if ($response->failed()) {
+                $map->forceFill(['is_healthy' => false])->save();
+                $this->settings->recordSendFailure($this->key(), 'WhatsApp send failed: '.$response->status());
+            }
+        } catch (Throwable $exception) {
+            $this->settings->recordSendFailure($this->key(), $exception->getMessage());
+        }
     }
 
     public function testConnection(): ChannelTestResult

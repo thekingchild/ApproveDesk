@@ -225,7 +225,7 @@ new #[Title('New submission')] class extends Component {
     }
 } ?>
 
-<div wire:poll.30s="autosave">
+<div wire:poll.30s="autosave" data-offline-draft="submission-draft-{{ $draftId ?? 'new' }}">
     <x-ui.breadcrumbs :items="[['label' => __('Submissions'), 'url' => route('submissions.index')], ['label' => $draftId ? __('Edit draft') : __('New submission')]]" :back="$draftId ? route('submissions.show', $draftId) : route('submissions.index')" back-label="Back to submissions" class="mb-6" />
 
     <x-ui.page-header
@@ -313,7 +313,8 @@ new #[Title('New submission')] class extends Component {
             </div>
         @elseif ($step === 2)
             <div>
-                <flux:input type="file" wire:model="attachments" multiple accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.doc,.docx,.xls,.xlsx,.csv,.txt" :label="__('Attachments')" />
+                <flux:input type="file" wire:model="attachments" multiple accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.doc,.docx,.xls,.xlsx,.csv,.txt,image/*" :label="__('Attachments')" />
+                <p class="mt-1 text-xs text-zinc-500">{{ __('On a phone you can take a photo or choose a file. Approval decisions wait until you are online.') }}</p>
                 <flux:error name="attachments.*" />
 
                 @if (count($attachments))

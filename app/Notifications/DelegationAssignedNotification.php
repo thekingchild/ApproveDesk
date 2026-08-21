@@ -2,9 +2,12 @@
 
 namespace App\Notifications;
 
+use App\Enums\NotificationKind;
 use App\Models\Delegation;
 use App\Models\User;
+use App\Notifications\Concerns\RendersNotificationCopy;
 use App\Notifications\Concerns\RespectsNotificationFrequency;
+use App\Services\Notifications\NotificationContext;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -13,6 +16,7 @@ use Illuminate\Notifications\Notification;
 class DelegationAssignedNotification extends Notification implements ShouldQueue
 {
     use Queueable;
+    use RendersNotificationCopy;
     use RespectsNotificationFrequency;
 
     public function __construct(public readonly Delegation $delegation) {}
@@ -27,12 +31,13 @@ class DelegationAssignedNotification extends Notification implements ShouldQueue
     {
         $submission = $this->delegation->instance->submission;
 
-        return (new MailMessage)
-            ->subject("[{$submission->reference_number}] Approval delegated to you")
-            ->greeting('Hello '.$notifiable->name.',')
-            ->line($this->delegation->delegator->name.' delegated an approval to you.')
-            ->line('Expires: '.$this->delegation->expires_at->format('d M Y H:i'))
-            ->action('Review submission', route('submissions.show', $submission));
+        return $this->mailFromCopy(
+            $notifiable,
+            NotificationKind::Delegated,
+            NotificationContext::forSubmission($submission, $notifiable, [
+                'comment' => 'Expires '.$this->delegation->expires_at->format('d M Y H:i'),
+            ]),
+        );
     }
 
     /** @return array{kind: string, submission_id: int, reference_number: string|null, title: string, delegator_id: int, expires_at: string, delivery_frequency: string} */

@@ -18,5 +18,11 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 @endif
 
+<meta name="theme-color" content="{{ \App\Support\Branding::accentColor() }}">
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<link rel="manifest" href="{{ route('manifest') }}">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+
 @vite(['resources/css/app.css', 'resources/js/app.js'])
 @fluxAppearance

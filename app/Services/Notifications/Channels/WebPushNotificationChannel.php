@@ -7,12 +7,12 @@ use App\DTOs\ChannelTestResult;
 use App\DTOs\OutboundNotification;
 use App\Enums\NotificationChannelKey;
 use App\Models\User;
+use App\Services\Notifications\WebPushService;
 
-/**
- * Interface member only until P8-NOT-03. Never selected by the registry.
- */
 final class WebPushNotificationChannel implements OptionalNotificationChannel
 {
+    public function __construct(private readonly WebPushService $push) {}
+
     public function key(): NotificationChannelKey
     {
         return NotificationChannelKey::WebPush;
@@ -20,23 +20,31 @@ final class WebPushNotificationChannel implements OptionalNotificationChannel
 
     public function isEnabled(): bool
     {
-        return false;
+        return true;
     }
 
     public function isConfigured(): bool
     {
-        return false;
+        return $this->push->publicKey() !== '';
     }
 
     public function canReceive(User $notifiable): bool
     {
-        return false;
+        return $notifiable->pushSubscriptions()->exists();
     }
 
-    public function send(User $notifiable, OutboundNotification $message): void {}
+    public function send(User $notifiable, OutboundNotification $message): void
+    {
+        if (! $this->canReceive($notifiable)) {
+            return;
+        }
+
+        $notifiable->loadMissing('pushSubscriptions');
+        $this->push->send($notifiable, $message);
+    }
 
     public function testConnection(): ChannelTestResult
     {
-        return new ChannelTestResult(false, 'Web push ships with the installable app shell.');
+        return new ChannelTestResult(true, 'Browser push is ready. People opt in from their Notifications settings.');
     }
 }

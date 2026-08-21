@@ -2,7 +2,9 @@
 
 namespace App\Notifications;
 
+use App\Enums\NotificationKind;
 use App\Models\User;
+use App\Notifications\Concerns\RendersNotificationCopy;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -11,6 +13,7 @@ use Illuminate\Notifications\Notification;
 class NotificationDigest extends Notification implements ShouldQueue
 {
     use Queueable;
+    use RendersNotificationCopy;
 
     /**
      * @param  array<int, array{title: string, reference_number: string|null, kind: string, created_at: string}>  $items
@@ -25,10 +28,16 @@ class NotificationDigest extends Notification implements ShouldQueue
 
     public function toMail(User $notifiable): MailMessage
     {
+        $copy = $this->renderedCopy(NotificationKind::Digest, [
+            'recipient_name' => $notifiable->name,
+            'count' => (string) count($this->items),
+        ]);
         $mail = (new MailMessage)
-            ->subject('Your ApproveDesk notification digest')
-            ->greeting('Hello '.$notifiable->name.',')
-            ->line('You have '.count($this->items).' approval update(s) since your last digest.');
+            ->subject($copy->subject)
+            ->greeting('Hello '.$notifiable->name.',');
+        foreach ($copy->lines as $line) {
+            $mail->line($line);
+        }
 
         foreach (array_slice($this->items, 0, 20) as $item) {
             $reference = $item['reference_number'] ? '['.$item['reference_number'].'] ' : '';

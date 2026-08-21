@@ -6,6 +6,7 @@ use App\Contracts\OptionalNotificationChannel;
 use App\DTOs\ChannelTestResult;
 use App\DTOs\OutboundNotification;
 use App\Enums\NotificationChannelKey;
+use App\Models\Setting;
 use App\Models\User;
 use App\Services\Notifications\ChannelSettings;
 use Illuminate\Support\Facades\Http;
@@ -74,6 +75,11 @@ final class TelegramNotificationChannel implements OptionalNotificationChannel
                 ->get('https://api.telegram.org/bot'.$token.'/getMe');
 
             if ($response->ok() && $response->json('ok') === true) {
+                $username = $response->json('result.username');
+                if (is_string($username) && $username !== '') {
+                    Setting::put('notifications.telegram.bot_username', $username);
+                }
+
                 return new ChannelTestResult(true, 'Telegram accepted the bot token.');
             }
 

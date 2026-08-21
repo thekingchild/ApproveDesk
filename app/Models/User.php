@@ -122,6 +122,12 @@ class User extends Authenticatable implements PasskeyUser
         return $this->hasMany(OutOfOffice::class);
     }
 
+    /** @return HasMany<PushSubscription, $this> */
+    public function pushSubscriptions(): HasMany
+    {
+        return $this->hasMany(PushSubscription::class);
+    }
+
     /** @return HasMany<SubmissionWatcher, $this> */
     public function watchedSubmissions(): HasMany
     {

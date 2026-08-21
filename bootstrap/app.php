@@ -19,6 +19,11 @@ return Application::configure(basePath: dirname(__DIR__))
             EnsureAppConfigured::class,
             EnsureUserIsActive::class,
         ]);
+        $middleware->validateCsrfTokens(except: [
+            'integrations/telegram/webhook',
+            'integrations/slack/interactions',
+            'integrations/teams/actions',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

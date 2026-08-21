@@ -41,7 +41,7 @@ class NotificationChannelsTest extends TestCase
             ->assertOk()
             ->assertSee('Notification channels')
             ->assertSee('Microsoft Teams')
-            ->assertSee('Identity mapping')
+            ->assertSee('People')
             ->assertDontSee('xoxb-secret-token');
     }
 

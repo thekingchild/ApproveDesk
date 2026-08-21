@@ -2,10 +2,13 @@
 
 namespace App\Notifications;
 
+use App\Enums\NotificationKind;
 use App\Enums\SubmissionStatus;
 use App\Models\Submission;
 use App\Models\User;
+use App\Notifications\Concerns\RendersNotificationCopy;
 use App\Notifications\Concerns\RespectsNotificationFrequency;
+use App\Services\Notifications\NotificationContext;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -14,6 +17,7 @@ use Illuminate\Notifications\Notification;
 class WatcherStatusNotification extends Notification implements ShouldQueue
 {
     use Queueable;
+    use RendersNotificationCopy;
     use RespectsNotificationFrequency;
 
     public function __construct(
@@ -29,11 +33,13 @@ class WatcherStatusNotification extends Notification implements ShouldQueue
 
     public function toMail(User $notifiable): MailMessage
     {
-        return (new MailMessage)
-            ->subject("[{$this->submission->reference_number}] Status update")
-            ->greeting('Hello '.$notifiable->name.',')
-            ->line($this->submission->title.' is now '.$this->decision->value.'.')
-            ->action('Open request', route('submissions.show', $this->submission));
+        return $this->mailFromCopy(
+            $notifiable,
+            NotificationKind::WatcherStatus,
+            NotificationContext::forSubmission($this->submission, $notifiable, [
+                'decision' => $this->decision->value,
+            ]),
+        );
     }
 
     /** @return array<string, mixed> */

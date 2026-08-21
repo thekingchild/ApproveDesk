@@ -1,3 +1,4 @@
+import './pwa.js'
 import { Editor } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
 

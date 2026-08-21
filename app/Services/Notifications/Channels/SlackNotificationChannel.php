@@ -8,6 +8,7 @@ use App\DTOs\OutboundNotification;
 use App\Enums\NotificationChannelKey;
 use App\Models\User;
 use App\Services\Notifications\ChannelSettings;
+use App\Services\Notifications\ChatCard;
 use Illuminate\Support\Facades\Http;
 use Throwable;
 
@@ -44,12 +45,42 @@ final class SlackNotificationChannel implements OptionalNotificationChannel
         $token = $this->settings->credentials($this->key())['bot_token'] ?? '';
 
         try {
+            $card = ChatCard::actionFor($notifiable, $message);
+            $blocks = [
+                [
+                    'type' => 'section',
+                    'text' => ['type' => 'mrkdwn', 'text' => $message->textBody()],
+                ],
+            ];
+            $elements = [];
+            if ($card['showApprove'] && is_string($card['token'])) {
+                $elements[] = [
+                    'type' => 'button',
+                    'text' => ['type' => 'plain_text', 'text' => 'Approve'],
+                    'style' => 'primary',
+                    'action_id' => 'approvedesk_approve',
+                    'value' => $card['token'],
+                ];
+            }
+            if (is_string($card['confirmUrl'])) {
+                $elements[] = [
+                    'type' => 'button',
+                    'text' => ['type' => 'plain_text', 'text' => 'Open in ApproveDesk'],
+                    'url' => $card['confirmUrl'],
+                    'action_id' => 'approvedesk_open',
+                ];
+            }
+            if ($elements !== []) {
+                $blocks[] = ['type' => 'actions', 'elements' => $elements];
+            }
+
             $response = Http::timeout(10)
                 ->withToken($token)
                 ->acceptJson()
                 ->post('https://slack.com/api/chat.postMessage', [
                     'channel' => $notifiable->slack_user_id,
                     'text' => $message->textBody(),
+                    'blocks' => $blocks,
                 ]);
 
             if ($response->failed() || $response->json('ok') !== true) {

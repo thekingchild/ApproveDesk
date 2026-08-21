@@ -180,7 +180,9 @@ class HelpCentreTest extends TestCase
             ->assertOk()
             ->assertSee('In-app')
             ->assertSee('In-app only')
-            ->assertSee('Settings → Notification channels');
+            ->assertSee('Settings → Notification channels')
+            ->assertSee('{{approval_url}}')
+            ->assertSee('approved template');
     }
 
     public function test_catalogue_matches_markdown_files(): void

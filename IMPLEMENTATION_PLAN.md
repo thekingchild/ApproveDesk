@@ -143,7 +143,7 @@ Locked product decision for Phase 8.2. It does not reopen Phase 8.1. Design: [do
 | 7 | v2.3.0 | Visual workflows, versioning, and dynamic assignment | Complete |
 | 7A | v2.3.1 | Assignee picker UX and user phone numbers | Complete |
 | 7B | v2.3.2 | Organization working / office hours | Complete |
-| 8 | v2.4.0 | Collaboration, notifications, and integration hub | In progress — 8.1 complete |
+| 8 | v2.4.0 | Collaboration, notifications, and integration hub | In progress — 8.1–8.2 complete |
 | 9 | v2.5.0 | Governance, audit evidence, security, and reliability | Not started |
 | 10 | v3.0.0 | SaaS multi-tenancy foundation | Not started |
 | 11 | v3.1.0 | Paystack and Flutterwave subscriptions | Not started |
@@ -415,14 +415,14 @@ This is additive. It does not reopen Phases 0–8. No new table. Values stay in 
 - **P8-COL-04 — Complete:** Add out-of-office schedules, future delegation, fallback approvers, and conflict detection.
 - **P8-COL-05 — Complete:** Add requester-visible expected next step and estimated due time.
 
-### 8.2 Notification delivery
+### 8.2 Notification delivery — Complete (2026-08-21)
 
 Follow section 3.6. Design: [docs/design/8.2-notification-channels.md](docs/design/8.2-notification-channels.md).
 
 - **P8-NOT-01 — Complete (2026-08-21):** Channel interface and registry for database, email, web push, Microsoft Teams, Slack, SMS, WhatsApp, and Telegram. Database and email stay generic and always on. Teams, Slack, WhatsApp, and Telegram are administrator options on Settings → Notification channels (enable, encrypted credentials posted outside Livewire, test connection, identity mapping). Unconfigured, unmapped, or failed optional drivers skip and do not fail the notification or the workflow. SMS and web push remain interface members and stay disabled. Bot tokens are not Livewire public properties and are redacted from logs and last-error text. WhatsApp send waits for P8-NOT-04 template mapping; Telegram uses a webhook route (no long-poll).
-- **P8-NOT-02:** Implement Teams and Slack interactive notifications with signed action state and the same stale-step policy checks as email approvals.
-- **P8-NOT-03:** Add installable PWA shell, web-push notifications, mobile-web attachment capture, and safe offline draft editing. Approval decisions always require an online server check.
-- **P8-NOT-04:** Add delivery receipts, retry visibility, quiet hours, and escalation rules for undelivered critical notifications. Add **editable organization email templates** (per notification `kind`: subject, body, merge fields, restore default; action-required must retain the signed confirmation URL). Add **WhatsApp Business Platform template fetch and mapping**: cache approved templates from the Graph API (faked in CI), map each `kind` to template name + language + placeholder binds, skip WhatsApp when unmapped or no longer approved. Telegram copy uses the same `kind` payloads as generic email unless a later task adds Telegram-specific templates.
+- **P8-NOT-02 — Complete (2026-08-21):** Teams and Slack action-required messages include a signed Approve control plus an Open-in-ApproveDesk URL. Inbound Slack/Teams HTTP verifies the platform signature or organisation enablement, then the ApproveDesk token. Expiry, current-step, and `approveViaEmail` policy match email approvals. Message delivery never mutates workflow.
+- **P8-NOT-03 — Complete (2026-08-21):** Installable PWA shell (manifest, service worker, offline page), browser web push with VAPID keys and per-user subscriptions, phone-friendly attachment picking, local draft cache, and decision controls that disable while offline. Approvals still require a live server.
+- **P8-NOT-04 — Complete (2026-08-21):** Editable email templates per kind with preview and restore; action-required copy must keep `{{approval_url}}`. WhatsApp catalog fetch and mapping; send is `type=template` only and skips when unmapped or unapproved. Telegram uses the same rendered copy as email. Delivery receipts, quiet-hour deferral of optional channels, and up to three retries for failed action-required chat.
 
 ### 8.3 Integration hub
 

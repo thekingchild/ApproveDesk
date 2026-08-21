@@ -2,33 +2,44 @@
 
 ## Definition
 
-A notification channel is a way ApproveDesk tells someone that a request needs them. **In-app** (the bell) and **email** are always on. **Microsoft Teams**, **Slack**, **WhatsApp**, and **Telegram** are optional. An administrator turns each option on, stores credentials, tests the connection, and maps people to that system.
-
-SMS and web push exist in the product’s channel list so later work can use them. They have no administrator options yet.
+A notification channel is a way ApproveDesk tells someone that a request needs them. **In-app** (the bell) and **email** are always on. **Microsoft Teams**, **Slack**, **WhatsApp**, and **Telegram** are optional. **Browser push** is optional per person on their own device.
 
 ## When to use it
 
-Use **Settings → Notification channels** when people should also hear about approvals in chat. Leave every optional channel off if email and the inbox are enough.
+Open **Settings → Notification channels** when this organisation should also notify people in chat, override email wording, map WhatsApp templates, or inspect delivery. People still choose email timing on **Settings → Notifications**.
 
-Do not use this screen for how often *you* get email. That is **Settings → Notifications** on your own account: Immediate, Daily, Weekly, or In-app only.
+## How the live screens work
 
-## How the live screen works
+### Overview
 
-Administrators with settings access open **Settings → Notification channels**.
+Cards show whether each optional channel is off, missing credentials, or ready. In-app and email do not appear as switches; they stay on.
 
-1. Tick the optional channels this organisation will use and save.
-2. Paste credentials for that channel. Secrets are stored encrypted. Leave a field blank to keep the current secret. Clear credentials removes them.
-3. Test the connection. A successful test is recorded. Failures show a redacted error — tokens are not shown.
-4. Map people to Teams, Slack, or Telegram IDs. WhatsApp uses the phone number already stored on the user. Unmapped people are skipped on that channel.
-5. Telegram shows a webhook URL. ApproveDesk does not long-poll Telegram.
+### Email copy
 
-In-app and email still go out when an optional channel is off, missing credentials, unmapped, or unhealthy. Optional delivery never changes workflow state.
+Pick a notification kind, edit subject and body, preview, save, or restore the default. Merge fields such as `{{title}}` and `{{approval_url}}` are replaced when a message is sent. **Action required** copy must include `{{approval_url}}`. Saving does not change signed-link lifetime.
 
-Email template editing and WhatsApp template mapping are later work on this same area. Until WhatsApp templates are mapped, WhatsApp will not send even if it is enabled.
+### Chat channels
+
+Enable a channel, paste credentials (secrets are not Livewire fields), and test. Disable leaves credentials in place. Slack needs an interactivity URL. Telegram needs a webhook URL. WhatsApp fetch loads Meta templates; map each kind to an **approved** template. Unmapped or paused templates skip WhatsApp. ApproveDesk never sends free-form WhatsApp text.
+
+Teams and Slack action-required messages can include an **Approve** button. That button uses a signed token with the same stale-step rules as email. Opening the message does not approve.
+
+### People
+
+Map a person to a Teams, Slack, or Telegram id. **Remove** clears that mapping. WhatsApp uses the E.164 phone on the user record. Unmapped people are skipped on that channel.
+
+### Delivery
+
+Recent optional-channel attempts show sent, skipped, deferred, or failed. Reminder quiet hours also delay chat and browser push; they do not delay the inbox. Failed action-required chat retries up to three times.
+
+### Your account
+
+**Settings → Notifications** is still Immediate / Daily / Weekly / In-app only for **email**. In-app only does not mute chat or browser push. You can install the app, allow browser notifications, and link or unlink Telegram when the organisation has Telegram ready.
 
 ## What not to do
 
-- Do not paste bot tokens into a person’s Notifications settings. Only this administrator screen stores them.
-- Do not expect In-app only to mute Teams, Slack, WhatsApp, or Telegram. That radio only stops **email**. Optional channels follow organisation enablement and the mapped identity.
-- Do not treat a failed chat delivery as a failed approval. Approvals still complete in ApproveDesk.
-- Do not put confidential tokens in Help comments or screenshots.
+- Do not paste bot tokens on a personal Notifications page.
+- Do not treat a failed chat delivery as a failed approval.
+- Do not remove `{{approval_url}}` from action-required email copy.
+- Do not expect WhatsApp to send until a kind is mapped to an approved template.
+- Do not approve from a stale Teams/Slack button; ApproveDesk will refuse it.

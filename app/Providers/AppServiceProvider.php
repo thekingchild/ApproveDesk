@@ -27,6 +27,7 @@ use App\Services\Notifications\Channels\TeamsNotificationChannel;
 use App\Services\Notifications\Channels\TelegramNotificationChannel;
 use App\Services\Notifications\Channels\WebPushNotificationChannel;
 use App\Services\Notifications\Channels\WhatsAppNotificationChannel;
+use App\Services\Notifications\NotificationDeliveryRecorder;
 use App\Services\Workflow\AssigneeResolver;
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -91,9 +92,13 @@ class AppServiceProvider extends ServiceProvider
             NotificationChannelKey::Slack,
             NotificationChannelKey::WhatsApp,
             NotificationChannelKey::Telegram,
+            NotificationChannelKey::WebPush,
         ] as $channel) {
             Notification::extend($channel->value, function ($app) use ($channel): OptionalLaravelNotificationChannel {
-                return new OptionalLaravelNotificationChannel($app->make(ChannelRegistry::class)->driver($channel));
+                return new OptionalLaravelNotificationChannel(
+                    $app->make(ChannelRegistry::class)->driver($channel),
+                    $app->make(NotificationDeliveryRecorder::class),
+                );
             });
         }
 

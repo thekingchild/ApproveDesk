@@ -8,6 +8,7 @@ use App\DTOs\OutboundNotification;
 use App\Enums\NotificationChannelKey;
 use App\Models\User;
 use App\Services\Notifications\ChannelSettings;
+use App\Services\Notifications\ChatCard;
 use Illuminate\Support\Facades\Http;
 use Throwable;
 
@@ -45,6 +46,26 @@ final class TeamsNotificationChannel implements OptionalNotificationChannel
 
         try {
             $token = $this->accessToken($credentials);
+            $card = ChatCard::actionFor($notifiable, $message);
+            $actions = [];
+            if ($card['showApprove'] && is_string($card['token'])) {
+                $actions[] = [
+                    'type' => 'Action.Http',
+                    'title' => 'Approve',
+                    'method' => 'POST',
+                    'url' => route('integrations.teams.actions'),
+                    'body' => json_encode(['token' => $card['token']], JSON_THROW_ON_ERROR),
+                    'headers' => [['name' => 'Content-Type', 'value' => 'application/json']],
+                ];
+            }
+            if (is_string($card['confirmUrl'])) {
+                $actions[] = [
+                    'type' => 'Action.OpenUrl',
+                    'title' => 'Open in ApproveDesk',
+                    'url' => $card['confirmUrl'],
+                ];
+            }
+
             $response = Http::timeout(10)
                 ->withToken($token)
                 ->acceptJson()
@@ -52,10 +73,19 @@ final class TeamsNotificationChannel implements OptionalNotificationChannel
                     'topic' => [
                         'source' => 'text',
                         'value' => $message->subject,
-                        'webUrl' => $message->actionUrl,
+                        'webUrl' => $card['confirmUrl'] ?? $message->actionUrl,
                     ],
                     'activityType' => 'systemDefault',
                     'previewText' => ['content' => $message->subject],
+                    'templateParameters' => [
+                        ['name' => 'body', 'value' => $message->textBody()],
+                    ],
+                    'adaptiveCard' => [
+                        'type' => 'AdaptiveCard',
+                        'version' => '1.4',
+                        'body' => [['type' => 'TextBlock', 'text' => $message->textBody(), 'wrap' => true]],
+                        'actions' => $actions,
+                    ],
                 ]);
 
             if ($response->failed()) {

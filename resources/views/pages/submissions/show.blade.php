@@ -885,9 +885,9 @@ new #[Title('Submission')] class extends Component {
 
             <div class="mt-4 flex flex-wrap gap-3">
                 <flux:modal.trigger name="approve-modal">
-                    <flux:button variant="primary" data-test="approve-modal-trigger">{{ __('Approve') }}</flux:button>
+                    <flux:button variant="primary" data-test="approve-modal-trigger" data-requires-online>{{ __('Approve') }}</flux:button>
                 </flux:modal.trigger>
-                <flux:button variant="primary" wire:click="act('approve_with_conditions')" data-test="approve-with-conditions">{{ __('Approve with conditions') }}</flux:button>
+                <flux:button variant="primary" wire:click="act('approve_with_conditions')" data-test="approve-with-conditions" data-requires-online>{{ __('Approve with conditions') }}</flux:button>
                 @foreach (app(\App\Services\Workflow\StepOutcomes::class)->forVersion($submission->workflowInstance?->templateVersion) as $outcome)
                     @if ($outcome['custom'])
                         <flux:button variant="subtle" wire:click="act('{{ $outcome['key'] }}')" data-test="outcome-{{ $outcome['key'] }}">{{ $outcome['label'] }}</flux:button>

@@ -8,7 +8,7 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Added
 
-- Notification channel interface with always-on in-app and email delivery, optional Microsoft Teams, Slack, WhatsApp, and Telegram administrator settings (enable, encrypted credentials, test, identity mapping), and disabled SMS and web-push drivers reserved for later work.
+- Notification channel interface with always-on in-app and email delivery, optional Microsoft Teams, Slack, WhatsApp, and Telegram (enable, encrypted credentials, test, identity mapping, signed chat approve, WhatsApp template mapping, email copy overrides, delivery receipts), installable PWA with browser push, and offline-safe draft editing. SMS remains interface-only.
 - Branding settings for application name, meta description, application logo, and favicon, applied on login, the welcome page, and the signed-in chrome.
 - Request collaboration: followers with explicit view access and per-request notification preferences, @mentions, threaded replies, a 15-minute comment edit window with append-only history, rate-limited reminders with optional quiet hours, out-of-office schedules with fallback approvers, future-dated delegation, and requester-visible expected next step plus estimated due time.
 - Optional organization office hours on the business calendar. Workflow steps that use Business hours count only inside the saved window on working, non-holiday days; empty hours keep today’s 24-hour working-day behaviour.
