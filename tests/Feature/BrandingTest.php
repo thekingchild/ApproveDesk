@@ -62,7 +62,9 @@ class BrandingTest extends TestCase
             ->assertSee('/branding/assets/bg.jpg', false)
             ->assertSee('data-test="login-background"', false)
             ->assertSee('data-test="login-background-mobile"', false)
-            ->assertDontSee('/storage/branding/bg.jpg', false);
+            ->assertDontSee('/storage/branding/bg.jpg', false)
+            ->assertDontSee('bg-white/95', false)
+            ->assertSee('lg:bg-white', false);
     }
 
     public function test_background_asset_is_served_without_a_storage_symlink(): void

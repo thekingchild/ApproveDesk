@@ -22,7 +22,7 @@
                 <div class="absolute inset-0 lg:hidden" style="background-color: rgba(0,0,0, {{ $overlay }})"></div>
             @endif
 
-            <div class="relative hidden h-full flex-col p-10 text-white lg:flex dark:border-e dark:border-neutral-800">
+            <div class="relative hidden h-full flex-col overflow-hidden p-10 text-white lg:flex dark:border-e dark:border-neutral-800">
                 @if ($background)
                     <div class="absolute inset-0 bg-cover bg-center" style="background-image: url('{{ $background }}')" data-test="login-background"></div>
                     <div class="absolute inset-0" style="background-color: rgba(0,0,0, {{ $overlay }})"></div>
@@ -52,10 +52,10 @@
                     </blockquote>
                 </div>
             </div>
-            <div class="relative z-10 w-full lg:p-8">
+            <div class="relative z-10 w-full lg:bg-white lg:p-8 dark:lg:bg-neutral-950">
                 <div @class([
                     'mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]',
-                    'rounded-xl bg-white/95 p-6 shadow-lg dark:bg-neutral-950/90 lg:bg-transparent lg:p-0 lg:shadow-none' => $background !== null,
+                    'max-lg:rounded-xl max-lg:bg-white max-lg:p-6 max-lg:shadow-lg max-lg:dark:bg-neutral-950' => $background !== null,
                 ])>
                     <a href="{{ route('home') }}" class="z-20 flex flex-col items-center gap-2 font-medium lg:hidden" wire:navigate>
                         <span class="flex h-9 w-9 items-center justify-center overflow-hidden rounded-md">
