@@ -167,7 +167,20 @@ class HelpCentreTest extends TestCase
             ->assertSee('life-ring on Approval settings')
             ->assertSee('Application logo')
             ->assertSee('Favicon')
-            ->assertSee('Meta description');
+            ->assertSee('Meta description')
+            ->assertSee('Notification channels');
+    }
+
+    public function test_notification_channels_article_explains_optional_delivery(): void
+    {
+        $admin = User::factory()->create()->assignRole('admin');
+
+        $this->actingAs($admin)
+            ->get(route('help.show', 'notification-channels'))
+            ->assertOk()
+            ->assertSee('In-app')
+            ->assertSee('In-app only')
+            ->assertSee('Settings → Notification channels');
     }
 
     public function test_catalogue_matches_markdown_files(): void

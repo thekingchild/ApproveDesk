@@ -29,10 +29,29 @@ return [
     ],
 
     'slack' => [
+        'bot_token' => env('SLACK_BOT_TOKEN', env('SLACK_BOT_USER_OAUTH_TOKEN')),
+        'signing_secret' => env('SLACK_SIGNING_SECRET'),
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
+    ],
+
+    'teams' => [
+        'app_id' => env('TEAMS_APP_ID'),
+        'app_password' => env('TEAMS_APP_PASSWORD'),
+        'tenant_id' => env('TEAMS_TENANT_ID', 'common'),
+    ],
+
+    'whatsapp' => [
+        'waba_id' => env('WHATSAPP_WABA_ID'),
+        'phone_number_id' => env('WHATSAPP_PHONE_NUMBER_ID'),
+        'access_token' => env('WHATSAPP_ACCESS_TOKEN'),
+    ],
+
+    'telegram' => [
+        'bot_token' => env('TELEGRAM_BOT_TOKEN'),
+        'webhook_secret' => env('TELEGRAM_WEBHOOK_SECRET'),
     ],
 
     'oauth' => [

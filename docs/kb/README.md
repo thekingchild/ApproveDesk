@@ -25,7 +25,7 @@ After each completed phase in `IMPLEMENTATION_PLAN.md`:
 4. Check the Help centre as an administrator and as a requester.
 5. Commit the Markdown, catalogue, Help UI, and plan update together.
 
-## Article index (through branding identity)
+## Article index (through P8-NOT-01)
 
 Using ApproveDesk:
 
@@ -46,4 +46,5 @@ Administration:
 - [Analytics and export](analytics.md)
 - [Webhooks](webhooks.md)
 - [Organization settings](organization-settings.md)
+- [Notification channels](notification-channels.md)
 - [Audit trail](audit-trail.md)

@@ -39,6 +39,12 @@ Times are in the application timezone (UTC). Changing working days, office hours
 
 Optional start and end times on Approval settings. Manual reminders sent inside the window are recorded at once and delivered when the window ends. Overnight ranges such as 22:00–07:00 are allowed. Empty fields send reminders immediately. This does not change office hours or email-link expiry.
 
+## Notification channels
+
+**Settings → Notification channels** is a separate administrator screen. In-app and email stay on. Teams, Slack, WhatsApp, and Telegram are optional: enable, store credentials, test, and map people. Unconfigured channels skip. They do not replace email. Personal delivery frequency stays on **Settings → Notifications**.
+
+See [Notification channels](notification-channels.md).
+
 ## What stays out of these screens
 
 Queues, mail server, database, and installer options are hosting concerns. They are not in this knowledge base.

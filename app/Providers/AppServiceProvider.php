@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Contracts\ExternalAssigneeResolver;
+use App\Enums\NotificationChannelKey;
 use App\Events\SubmissionCreated;
 use App\Events\WorkflowAdvanced;
 use App\Events\WorkflowCompleted;
@@ -16,6 +17,16 @@ use App\Listeners\NotifyCurrentApprovers;
 use App\Listeners\NotifyDelegate;
 use App\Listeners\NotifySubmitterOfDecision;
 use App\Listeners\NotifyWatchersOfDecision;
+use App\Notifications\Channels\OptionalLaravelNotificationChannel;
+use App\Services\Notifications\ChannelRegistry;
+use App\Services\Notifications\Channels\DatabaseNotificationChannel;
+use App\Services\Notifications\Channels\MailNotificationChannel;
+use App\Services\Notifications\Channels\SlackNotificationChannel;
+use App\Services\Notifications\Channels\SmsNotificationChannel;
+use App\Services\Notifications\Channels\TeamsNotificationChannel;
+use App\Services\Notifications\Channels\TelegramNotificationChannel;
+use App\Services\Notifications\Channels\WebPushNotificationChannel;
+use App\Services\Notifications\Channels\WhatsAppNotificationChannel;
 use App\Services\Workflow\AssigneeResolver;
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -24,6 +35,7 @@ use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
@@ -38,6 +50,21 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->singleton(AssigneeResolver::class, function ($app): AssigneeResolver {
             return new AssigneeResolver($app->tagged(ExternalAssigneeResolver::class));
+        });
+
+        $this->app->tag([
+            DatabaseNotificationChannel::class,
+            MailNotificationChannel::class,
+            TeamsNotificationChannel::class,
+            SlackNotificationChannel::class,
+            WhatsAppNotificationChannel::class,
+            TelegramNotificationChannel::class,
+            SmsNotificationChannel::class,
+            WebPushNotificationChannel::class,
+        ], 'notification.channels');
+
+        $this->app->singleton(ChannelRegistry::class, function ($app): ChannelRegistry {
+            return new ChannelRegistry($app->tagged('notification.channels'));
         });
     }
 
@@ -57,6 +84,18 @@ class AppServiceProvider extends ServiceProvider
             ->by((string) ($request->user()?->getAuthIdentifier() ?? $request->ip())));
 
         RateLimiter::for('approval-links', fn (Request $request): Limit => Limit::perMinute(10)->by($request->ip()));
+        RateLimiter::for('telegram-webhook', fn (Request $request): Limit => Limit::perMinute(60)->by($request->ip()));
+
+        foreach ([
+            NotificationChannelKey::Teams,
+            NotificationChannelKey::Slack,
+            NotificationChannelKey::WhatsApp,
+            NotificationChannelKey::Telegram,
+        ] as $channel) {
+            Notification::extend($channel->value, function ($app) use ($channel): OptionalLaravelNotificationChannel {
+                return new OptionalLaravelNotificationChannel($app->make(ChannelRegistry::class)->driver($channel));
+            });
+        }
 
         $this->registerWorkflowListeners();
     }

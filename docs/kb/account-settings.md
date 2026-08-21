@@ -14,6 +14,8 @@ Change your password from Security. You can add passkeys and turn on two-factor 
 
 Choose Immediate, Daily, Weekly, or In-app only. Immediate sends as events happen. Daily and weekly send a digest. In-app only keeps the bell and does not email you.
 
+In-app only does not mute Microsoft Teams, Slack, WhatsApp, or Telegram. Those optional channels are organisation settings. If they are on and your account is mapped, they still notify you. See [Notification channels](notification-channels.md).
+
 Per-request follower preferences (comments vs status) live on the request, not here.
 
 ## Out of office

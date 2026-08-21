@@ -132,11 +132,20 @@ final class HelpCatalogue
             new HelpArticle(
                 slug: 'organization-settings',
                 title: 'Organization settings',
-                summary: 'Login branding, application logo and favicon, browser title and description, registration, email approval link lifetime, and the business calendar (working days, office hours, holidays).',
+                summary: 'Login branding, application logo and favicon, browser title and description, registration, email approval link lifetime, the business calendar, and optional notification channels.',
                 icon: 'cog-6-tooth',
                 group: 'Administration',
                 audience: 'admin',
                 screenRoute: 'settings.branding',
+            ),
+            new HelpArticle(
+                slug: 'notification-channels',
+                title: 'Notification channels',
+                summary: 'Keep in-app and email on; optionally enable Teams, Slack, WhatsApp, and Telegram without putting tokens on personal settings.',
+                icon: 'bell',
+                group: 'Administration',
+                audience: 'admin',
+                screenRoute: 'settings.notification-channels',
             ),
             new HelpArticle(
                 slug: 'audit-trail',

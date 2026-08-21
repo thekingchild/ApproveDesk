@@ -5,8 +5,10 @@ use App\Http\Controllers\BrandingAssetController;
 use App\Http\Controllers\EmailApprovalController;
 use App\Http\Controllers\HelpController;
 use App\Http\Controllers\InstallController;
+use App\Http\Controllers\NotificationChannelCredentialController;
 use App\Http\Controllers\OAuthController;
 use App\Http\Controllers\SubmissionFileDownloadController;
+use App\Http\Controllers\TelegramWebhookController;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'welcome')->name('home');
@@ -14,6 +16,10 @@ Route::view('/', 'welcome')->name('home');
 Route::get('branding/assets/{file}', BrandingAssetController::class)
     ->where('file', '[A-Za-z0-9._-]+')
     ->name('branding.asset');
+
+Route::post('integrations/telegram/webhook', TelegramWebhookController::class)
+    ->middleware('throttle:telegram-webhook')
+    ->name('integrations.telegram.webhook');
 
 Route::middleware('guest')->prefix('auth')->name('oauth.')->group(function (): void {
     Route::get('{provider}/redirect', [OAuthController::class, 'redirect'])->name('redirect');
@@ -43,6 +49,9 @@ Route::prefix('install')->name('install.')->group(function (): void {
 Route::middleware(['auth', 'verified', 'can:settings.manage'])->group(function (): void {
     Route::livewire('settings/branding', 'pages::settings.branding')->name('settings.branding');
     Route::livewire('settings/approvals', 'pages::settings.approvals')->name('settings.approvals');
+    Route::livewire('settings/notification-channels', 'pages::settings.notification-channels')->name('settings.notification-channels');
+    Route::post('settings/notification-channels/credentials', NotificationChannelCredentialController::class)
+        ->name('settings.notification-channels.credentials');
 });
 
 Route::middleware(['auth', 'verified', 'can:viewAny,App\Models\User'])->group(function (): void {

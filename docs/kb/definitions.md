@@ -56,6 +56,12 @@ How a step decides who acts: named users, a role, department members, the reques
 
 How a step with more than one assignee finishes: first response, all assignees, or quorum N-of-M.
 
+## Notification channel
+
+A delivery path for events such as “action required”. In-app and email are always on. Teams, Slack, WhatsApp, and Telegram are optional administrator channels.
+
+See [Notification channels](notification-channels.md).
+
 ## Branding
 
 The organisation identity administrators set under Settings → Branding: application name, meta description, logo, favicon, login tagline, accent colour, and login background. The logo and name appear after sign-in; the background is the public login screen.

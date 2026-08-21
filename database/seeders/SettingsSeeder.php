@@ -22,6 +22,10 @@ class SettingsSeeder extends Seeder
         'brand.meta_description' => null,
         'auth.allow_registration' => 'true',
         'approvals.email_link_expiration_hours' => '72',
+        'notifications.teams.enabled' => 'false',
+        'notifications.slack.enabled' => 'false',
+        'notifications.whatsapp.enabled' => 'false',
+        'notifications.telegram.enabled' => 'false',
     ];
 
     public function run(): void

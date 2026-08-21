@@ -1,3 +1,9 @@
+@props([
+    'heading' => '',
+    'subheading' => '',
+    'wide' => false,
+])
+
 <div class="flex items-start max-md:flex-col">
     <div class="me-10 w-full pb-4 md:w-[220px]">
         <flux:navlist aria-label="{{ __('Settings') }}">
@@ -10,6 +16,7 @@
             @if (auth()->user()?->can('settings.manage'))
                 <flux:navlist.item :href="route('settings.branding')" wire:navigate>{{ __('Branding') }}</flux:navlist.item>
                 <flux:navlist.item :href="route('settings.approvals')" wire:navigate>{{ __('Approvals') }}</flux:navlist.item>
+                <flux:navlist.item :href="route('settings.notification-channels')" wire:navigate>{{ __('Notification channels') }}</flux:navlist.item>
             @endif
         </flux:navlist>
     </div>
@@ -17,10 +24,10 @@
     <flux:separator class="md:hidden" />
 
     <div class="flex-1 self-stretch max-md:pt-6">
-        <flux:heading>{{ $heading ?? '' }}</flux:heading>
-        <flux:subheading>{{ $subheading ?? '' }}</flux:subheading>
+        <flux:heading>{{ $heading }}</flux:heading>
+        <flux:subheading>{{ $subheading }}</flux:subheading>
 
-        <div class="mt-5 w-full max-w-lg">
+        <div @class(['mt-5 w-full', 'max-w-3xl' => $wide, 'max-w-lg' => ! $wide])>
             {{ $slot }}
         </div>
     </div>
