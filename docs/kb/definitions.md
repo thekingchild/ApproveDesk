@@ -56,6 +56,12 @@ How a step decides who acts: named users, a role, department members, the reques
 
 How a step with more than one assignee finishes: first response, all assignees, or quorum N-of-M.
 
+## Branding
+
+The organisation identity administrators set under Settings → Branding: application name, meta description, logo, favicon, login tagline, accent colour, and login background. The logo and name appear after sign-in; the background is the public login screen.
+
+See [Organization settings](organization-settings.md).
+
 ## Business calendar
 
 Working days, office hours, and holidays used when a step deadline is measured in business hours instead of elapsed hours. Empty office hours mean every hour of a working day counts; elapsed hours ignore the calendar.

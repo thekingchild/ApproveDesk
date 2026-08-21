@@ -122,4 +122,4 @@ Do not document installer, Docker, CI/CD, queues, or `.env` in Help. Those stay 
 ## Installer & Branding Constraints
 
 - The installer must self-disable after completion (lock file at `storage/app/installed.lock`; middleware refuses `/install` routes once it exists).
-- Login page branding (background image, logo, accent color, tagline, custom CSS) lives in the `settings` table and is read through a cached settings helper — never query per request.
+- Login and application branding (background image, logo, favicon, accent color, tagline, meta title/description, custom CSS) lives in the `settings` table and is read through `App\Support\Branding` — never query per request. Branding files are served by `GET /branding/assets/{file}`, not by depending on `storage:link`.

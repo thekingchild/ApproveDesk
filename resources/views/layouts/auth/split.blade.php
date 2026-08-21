@@ -12,21 +12,33 @@
         @endif
     </head>
     <body class="min-h-screen bg-white antialiased dark:bg-linear-to-b dark:from-neutral-950 dark:to-neutral-900">
-        <div class="relative grid h-dvh flex-col items-center justify-center px-8 sm:px-0 lg:max-w-none lg:grid-cols-2 lg:px-0">
+        @php($background = \App\Support\Branding::backgroundUrl())
+        @php($overlay = \App\Support\Branding::overlayPercent() / 100)
+        @php($logoUrl = \App\Support\Branding::logoUrl())
+        @php($appName = \App\Support\Branding::name())
+        <div class="relative grid min-h-dvh flex-col items-center justify-center px-8 sm:px-0 lg:h-dvh lg:max-w-none lg:grid-cols-2 lg:px-0">
+            @if ($background)
+                <div class="absolute inset-0 bg-cover bg-center lg:hidden" style="background-image: url('{{ $background }}')" data-test="login-background-mobile"></div>
+                <div class="absolute inset-0 lg:hidden" style="background-color: rgba(0,0,0, {{ $overlay }})"></div>
+            @endif
+
             <div class="relative hidden h-full flex-col p-10 text-white lg:flex dark:border-e dark:border-neutral-800">
-                @php($background = \App\Support\Branding::backgroundUrl())
                 @if ($background)
-                    <div class="absolute inset-0 bg-cover bg-center" style="background-image: url('{{ $background }}')"></div>
-                    <div class="absolute inset-0" style="background-color: rgba(0,0,0, {{ \App\Support\Branding::overlayPercent() / 100 }})"></div>
+                    <div class="absolute inset-0 bg-cover bg-center" style="background-image: url('{{ $background }}')" data-test="login-background"></div>
+                    <div class="absolute inset-0" style="background-color: rgba(0,0,0, {{ $overlay }})"></div>
                 @else
                     <div class="absolute inset-0" style="background: linear-gradient(150deg, var(--brand-accent) 0%, #17173a 45%, #0a0a0b 100%)"></div>
                 @endif
 
                 <a href="{{ route('home') }}" class="relative z-20 flex items-center text-lg font-medium" wire:navigate>
-                    <span class="flex h-10 w-10 items-center justify-center rounded-md">
-                        <x-app-logo-icon class="me-2 h-7 fill-current text-white" />
+                    <span class="flex h-10 w-10 items-center justify-center overflow-hidden rounded-md">
+                        @if ($logoUrl)
+                            <img src="{{ $logoUrl }}" alt="" class="h-10 w-10 object-contain" />
+                        @else
+                            <x-app-logo-icon class="me-2 h-7 fill-current text-white" />
+                        @endif
                     </span>
-                    {{ config('app.name', 'ApproveDesk') }}
+                    {{ $appName }}
                 </a>
 
                 <div class="relative z-20 mt-auto">
@@ -34,20 +46,27 @@
                         <flux:heading size="lg">{{ \App\Support\Branding::tagline() }}</flux:heading>
                         <footer>
                             <flux:heading>
-                                <span class="opacity-70">{{ config('app.name', 'ApproveDesk') }}</span>
+                                <span class="opacity-70">{{ $appName }}</span>
                             </flux:heading>
                         </footer>
                     </blockquote>
                 </div>
             </div>
-            <div class="w-full lg:p-8">
-                <div class="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
+            <div class="relative z-10 w-full lg:p-8">
+                <div @class([
+                    'mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]',
+                    'rounded-xl bg-white/95 p-6 shadow-lg dark:bg-neutral-950/90 lg:bg-transparent lg:p-0 lg:shadow-none' => $background !== null,
+                ])>
                     <a href="{{ route('home') }}" class="z-20 flex flex-col items-center gap-2 font-medium lg:hidden" wire:navigate>
-                        <span class="flex h-9 w-9 items-center justify-center rounded-md">
-                            <x-app-logo-icon class="size-9 fill-current text-black dark:text-white" />
+                        <span class="flex h-9 w-9 items-center justify-center overflow-hidden rounded-md">
+                            @if ($logoUrl)
+                                <img src="{{ $logoUrl }}" alt="" class="h-9 w-9 object-contain" />
+                            @else
+                                <x-app-logo-icon class="size-9 fill-current text-black dark:text-white" />
+                            @endif
                         </span>
 
-                        <span class="sr-only">{{ config('app.name', 'ApproveDesk') }}</span>
+                        <span class="sr-only">{{ $appName }}</span>
                     </a>
                     {{ $slot }}
                 </div>

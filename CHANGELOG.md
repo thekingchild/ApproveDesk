@@ -8,6 +8,7 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Added
 
+- Branding settings for application name, meta description, application logo, and favicon, applied on login, the welcome page, and the signed-in chrome.
 - Request collaboration: followers with explicit view access and per-request notification preferences, @mentions, threaded replies, a 15-minute comment edit window with append-only history, rate-limited reminders with optional quiet hours, out-of-office schedules with fallback approvers, future-dated delegation, and requester-visible expected next step plus estimated due time.
 - Optional organization office hours on the business calendar. Workflow steps that use Business hours count only inside the saved window on working, non-holiday days; empty hours keep today’s 24-hour working-day behaviour.
 - Searchable assignee picker with chips on the workflow builder and template form, and an optional E.164 phone number on user records for later SMS and WhatsApp delivery.
@@ -28,6 +29,8 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Changed
 
+- Login background, logo, and favicon files are served from `/branding/assets/{file}` so a saved login background is visible without a public storage symlink.
+- The login background is shown on narrow screens behind the sign-in form, not only in the large-screen split panel.
 - Help copy for Business hours now includes office hours. Analytics overdue counts use the step’s deadline calendar instead of treating every step as elapsed.
 - Workflow templates no longer exclusively own Document, Note, Memo, or Request. Those labels are optional; routing follows the request type assignment.
 - Request type builder condition and calculated-field controls pick earlier fields by label instead of raw keys.

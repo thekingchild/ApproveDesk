@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AnalyticsExportController;
+use App\Http\Controllers\BrandingAssetController;
 use App\Http\Controllers\EmailApprovalController;
 use App\Http\Controllers\HelpController;
 use App\Http\Controllers\InstallController;
@@ -9,6 +10,10 @@ use App\Http\Controllers\SubmissionFileDownloadController;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'welcome')->name('home');
+
+Route::get('branding/assets/{file}', BrandingAssetController::class)
+    ->where('file', '[A-Za-z0-9._-]+')
+    ->name('branding.asset');
 
 Route::middleware('guest')->prefix('auth')->name('oauth.')->group(function (): void {
     Route::get('{provider}/redirect', [OAuthController::class, 'redirect'])->name('redirect');

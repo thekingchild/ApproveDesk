@@ -23,6 +23,7 @@ bring_up() {
 trap bring_up EXIT
 
 php artisan migrate --force
+php artisan storage:link --force || true
 php artisan optimize:clear
 php artisan config:cache
 php artisan route:cache

@@ -249,6 +249,14 @@ class Installer
             '--force' => true,
         ]);
 
+        if (! app()->environment('testing')) {
+            try {
+                Artisan::call('storage:link');
+            } catch (\Throwable) {
+                // Symlinks fail on some shared hosts; branding assets use a route fallback.
+            }
+        }
+
         return ['migration_output' => $migrationOutput, 'seeded' => true];
     }
 

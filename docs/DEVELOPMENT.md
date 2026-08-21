@@ -31,6 +31,7 @@ npm install
 cp .env.example .env
 php artisan key:generate
 php artisan migrate --seed        # SQLite database + roles + demo data
+php artisan storage:link          # public disk symlink (branding also has a route fallback)
 npm run dev                       # Vite dev server (keep running)
 php artisan serve                 # http://127.0.0.1:8000 (separate terminal)
 ```

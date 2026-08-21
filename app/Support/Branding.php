@@ -6,9 +6,9 @@ use App\Models\Setting;
 use Illuminate\Support\Facades\Storage;
 
 /**
- * Cached, settings-driven branding used by the login page and auth layout.
- * All reads go through Setting::get (cache-backed), so hot pages never
- * query the settings table.
+ * Cached, settings-driven branding used by the login page, auth layout,
+ * signed-in chrome, and document head. All reads go through Setting::get
+ * (cache-backed), so hot pages never query the settings table.
  */
 final class Branding
 {
@@ -22,13 +22,43 @@ final class Branding
         return (string) Setting::get('brand.accent_color', '#4f46e5');
     }
 
+    /**
+     * Visible application name: the saved meta title, or APP_NAME.
+     */
+    public static function name(): string
+    {
+        $title = Setting::get('brand.meta_title');
+
+        return $title !== null && $title !== ''
+            ? $title
+            : (string) config('app.name', 'ApproveDesk');
+    }
+
+    public static function metaTitle(): string
+    {
+        return self::name();
+    }
+
+    public static function metaDescription(): ?string
+    {
+        $description = Setting::get('brand.meta_description');
+
+        return $description === null || $description === '' ? null : $description;
+    }
+
     public static function backgroundUrl(): ?string
     {
-        $path = Setting::get('brand.login_background');
+        return self::urlFor(Setting::get('brand.login_background'));
+    }
 
-        return $path !== null && $path !== ''
-            ? Storage::disk('public')->url($path)
-            : null;
+    public static function logoUrl(): ?string
+    {
+        return self::urlFor(Setting::get('brand.logo'));
+    }
+
+    public static function faviconUrl(): ?string
+    {
+        return self::urlFor(Setting::get('brand.favicon'));
     }
 
     public static function overlayPercent(): int
@@ -47,5 +77,31 @@ final class Branding
     public static function registrationOpen(): bool
     {
         return Setting::get('auth.allow_registration', 'true') !== 'false';
+    }
+
+    /**
+     * Public URL for a file stored under branding/ on the public disk.
+     * Uses the application route so the image is reachable without a
+     * storage symlink (common miss on local `artisan serve` and cPanel).
+     */
+    public static function urlFor(?string $path): ?string
+    {
+        if ($path === null || $path === '') {
+            return null;
+        }
+
+        $file = basename($path);
+
+        if ($file === '' || $file === '.' || $file === '..') {
+            return null;
+        }
+
+        $disk = Storage::disk('public');
+
+        if (! $disk->exists('branding/'.$file) && ! $disk->exists($path)) {
+            return null;
+        }
+
+        return route('branding.asset', ['file' => $file], absolute: false);
     }
 }

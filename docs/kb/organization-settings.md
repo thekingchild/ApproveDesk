@@ -4,9 +4,22 @@ These screens sit under Settings and are limited to administrators.
 
 ## Branding
 
-Set the login tagline, accent colour, background image, overlay, and optional CSS. This is the public login screen only. It does not restyle the signed-in application.
+Set the organisation identity and the public login screen.
 
-You can allow or block self-registration. If registration is off, only administrators create accounts.
+**Application identity** is used after people sign in as well as on login:
+
+- Application name appears next to the logo and in the browser tab. Leave it blank to keep the installed product name.
+- Meta description is the short text search engines and link previews can show. It is optional.
+- Application logo replaces the default mark in the sidebar, header, and login screen. PNG, JPG, or WebP, up to 1 MB.
+- Favicon replaces the browser-tab icon. ICO, PNG, JPG, or WebP, up to 512 KB.
+
+**Login page** settings are the public login screen:
+
+- Tagline, accent colour, background image, overlay, and optional CSS.
+- The background image is shown on large screens in the left panel and on smaller screens behind the sign-in form.
+- You can allow or block self-registration. If registration is off, only administrators create accounts.
+
+Removing a logo, favicon, or background restores the product default. Uploaded files replace the previous file. Identity artwork is public; do not upload confidential images here.
 
 ## Approval email links
 

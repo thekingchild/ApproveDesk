@@ -164,7 +164,10 @@ class HelpCentreTest extends TestCase
             ->assertOk()
             ->assertSee('optional office hours')
             ->assertSee('do not enter 00:00–23:59')
-            ->assertSee('life-ring on Approval settings');
+            ->assertSee('life-ring on Approval settings')
+            ->assertSee('Application logo')
+            ->assertSee('Favicon')
+            ->assertSee('Meta description');
     }
 
     public function test_catalogue_matches_markdown_files(): void

@@ -16,6 +16,10 @@ class SettingsSeeder extends Seeder
         'brand.login_background' => null,
         'brand.login_background_overlay' => 40,
         'brand.custom_css' => null,
+        'brand.logo' => null,
+        'brand.favicon' => null,
+        'brand.meta_title' => null,
+        'brand.meta_description' => null,
         'auth.allow_registration' => 'true',
         'approvals.email_link_expiration_hours' => '72',
     ];

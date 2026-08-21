@@ -105,7 +105,7 @@ After each completed phase:
 4. Confirm Help as an administrator and as a requester.
 5. Commit the Markdown, catalogue, Help UI, and this plan together.
 
-**Administrator knowledge base through Phase 8.1 — Complete (2026-08-20):** feature definitions (including workflow version, builder, graph validation, selection rule, assignee resolver, group completion, business calendar / office hours, custom outcome, assignee picker, follower, mention, reminder, out of office, expected next step, and estimated due time), getting around, requests, approvals, collaboration, statuses, account settings (including out of office), users and roles (including E.164 phone numbers), departments, workflow templates (including upgrade guarantees and the searchable assignee picker), request types (including workflow assignment and selection rules), analytics, webhooks, organization settings (including office hours and reminder quiet hours), and the audit trail.
+**Administrator knowledge base through branding identity (2026-08-21):** feature definitions (including workflow version, builder, graph validation, selection rule, assignee resolver, group completion, business calendar / office hours, custom outcome, assignee picker, follower, mention, reminder, out of office, expected next step, estimated due time, and branding), getting around, requests, approvals, collaboration, statuses, account settings (including out of office), users and roles (including E.164 phone numbers), departments, workflow templates (including upgrade guarantees and the searchable assignee picker), request types (including workflow assignment and selection rules), analytics, webhooks, organization settings (including login branding, application logo, favicon, meta title and description, office hours, and reminder quiet hours), and the audit trail.
 
 ### 3.5 Request types own workflows
 
@@ -382,6 +382,24 @@ Design: [docs/design/7b-organization-working-hours.md](docs/design/7b-organizati
 **Phase 7B demo:** an administrator leaves office hours empty and a Thursday 09:00 + 24 Business-hour step still skips the weekend as today; they then save 09:00–17:00 and a Monday 09:00 + 8 Business-hour step falls due at 17:00 the same day, while an Elapsed-hour step is unchanged.
 
 **Out of scope (remain in later phases):** per-user hours; P8-COL-03 nudge quiet hours; P8-COL-04 out-of-office schedules; P8-COL-05 estimated due time (may consume this calendar later); P8-NOT-04 notification quiet hours; P10-TEN-01 organization timezone; overnight shifts; named multiple calendars; changing email-link expiry to business hours.
+
+---
+
+## Branding identity — Complete (2026-08-21)
+
+**Goal:** make a saved login background actually appear on the login page, and let administrators set the application logo, favicon, browser title, and meta description without waiting for multi-tenant organization records.
+
+This is additive. It does not reopen Phases 0–8. No new table. Values stay in the `settings` table and are read through `App\Support\Branding` (cache-backed). Tenant-scoped organization logos remain P10-TEN-01.
+
+- **BRAND-01 — Complete:** Login background, logo, and favicon files are stored on the public disk under `branding/` and served by `GET /branding/assets/{file}`. The login page no longer depends on `php artisan storage:link` or an `APP_URL`-prefixed `/storage/...` URL, which is why a saved background was stored but not visible. The image is shown in the left panel on large screens and behind the sign-in form on narrower viewports.
+- **BRAND-02 — Complete:** Branding settings include application name (`brand.meta_title`), meta description (`brand.meta_description`), application logo (`brand.logo`), and favicon (`brand.favicon`), in addition to the existing tagline, accent colour, background, overlay, custom CSS, and registration toggle. The logo replaces the default mark on login and in the signed-in sidebar/header. Favicon and meta tags apply on every page that uses `partials.head` and on the welcome page.
+- **BRAND-03 — Complete:** Saving branding goes through `UpdateBrandingSettingsAction` and `BrandingSettingsData`. Replacing or removing a file deletes the previous object. Missing stored files fall back to the product defaults instead of emitting a broken URL.
+- **BRAND-TEST-01 — Complete:** Feature tests cover default and custom identity on login, background and identity uploads through the settings page, the asset route (success, missing file, path traversal, disallowed extension), and restoration of defaults when logo/favicon are removed.
+- **BRAND-DOC-01 — Complete:** Help for organization settings and the Branding definition, `CHANGELOG.md`, `docs/DEVELOPMENT.md` (storage link plus route fallback), installer/post-deploy `storage:link` best-effort, and this plan, per section 3.4.
+
+**Branding identity demo:** an administrator uploads a login background, logo, and favicon, sets the application name and meta description, saves, signs out, and sees the background, logo, tab title, and description on `/login` without running `storage:link`.
+
+**Out of scope:** restyling the signed-in application chrome beyond logo and name; email template logos (Phase 8.2 editable email); per-tenant branding (P10-TEN-01); SVG uploads (XSS risk on a public asset route).
 
 ---
 
