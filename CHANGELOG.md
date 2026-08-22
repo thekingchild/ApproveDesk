@@ -8,6 +8,10 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Added
 
+- Form builder refinements (Phase 6B): date and date-time fields now enforce their configured minimum and maximum as inclusive bounds, publishing rejects a choice default outside its option list or an inverted date range, the builder preview renders real controls and honors visibility/required rules against sample values, an advisory draft-checks panel lists schema problems before saving (choice fields without options, inverted ranges, defaults missing from options, conditions pointing at missing earlier fields, calculated fields with no sources), and conditional-rule value pickers offer the referenced choice field's options.
+
+### Changed
+
 - Notification channel interface with always-on in-app and email delivery, optional Microsoft Teams, Slack, WhatsApp, and Telegram (enable, encrypted credentials, test, identity mapping, signed chat approve, WhatsApp template mapping, email copy overrides, delivery receipts), installable PWA with browser push, and offline-safe draft editing. SMS remains interface-only.
 - Branding settings for application name, meta description, application logo, and favicon, applied on login, the welcome page, and the signed-in chrome.
 - Request collaboration: followers with explicit view access and per-request notification preferences, @mentions, threaded replies, a 15-minute comment edit window with append-only history, rate-limited reminders with optional quiet hours, out-of-office schedules with fallback approvers, future-dated delegation, and requester-visible expected next step plus estimated due time.

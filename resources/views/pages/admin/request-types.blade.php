@@ -39,6 +39,9 @@ new #[Title('Request types')] class extends Component {
     /** @var array<int, array<string, mixed>> */
     public array $fields = [];
 
+    /** @var array<string, mixed> Sample values driving the live builder preview (P6B-UI-01). */
+    public array $previewValues = [];
+
     public function mount(): void
     {
         $this->authorize('viewAny', RequestType::class);
@@ -457,6 +460,124 @@ new #[Title('Request types')] class extends Component {
             'metadata' => is_array($metadata) ? $metadata : [],
         ]);
     }
+
+    /**
+     * Advisory draft-time warnings for the builder (P6B-UI-02). Server-side
+     * validation at save/publish remains the authority.
+     *
+     * @return list<array{index: int, message: string}>
+     */
+    #[Computed]
+    public function draftWarnings(): array
+    {
+        $warnings = [];
+        $keysByIndex = [];
+
+        foreach ($this->fields as $index => $field) {
+            $keysByIndex[$index] = (string) ($field['key'] ?? '');
+        }
+
+        foreach ($this->fields as $index => $field) {
+            $type = (string) ($field['type'] ?? '');
+
+            if (in_array($type, ['select', 'multi_select', 'radio'], true) && $this->options((string) ($field['options'] ?? '')) === []) {
+                $warnings[] = ['index' => $index, 'message' => __('Choice fields need at least one option before publishing.')];
+            }
+
+            if (in_array($type, ['select', 'radio'], true)) {
+                $default = trim((string) ($field['default'] ?? ''));
+                $choices = $this->options((string) ($field['options'] ?? ''));
+
+                if ($default !== '' && $choices !== [] && ! in_array($default, $choices, true)) {
+                    $warnings[] = ['index' => $index, 'message' => __('The default value is not one of the field options.')];
+                }
+            }
+
+            if (in_array($type, ['date', 'date_time'], true)) {
+                $min = (string) ($field['min'] ?? '');
+                $max = (string) ($field['max'] ?? '');
+
+                if ($min !== '' && $max !== '' && strtotime($min) > strtotime($max)) {
+                    $warnings[] = ['index' => $index, 'message' => __('The earliest date is after the latest date.')];
+                }
+            }
+
+            foreach (['visibilityField' => __('visibility'), 'requiredField' => __('required')] as $sourceProperty => $ruleLabel) {
+                $sourceKey = (string) ($field[$sourceProperty] ?? '');
+
+                if ($sourceKey === '') {
+                    continue;
+                }
+
+                $sourceIndex = null;
+
+                foreach ($keysByIndex as $otherIndex => $key) {
+                    if ($key === $sourceKey && $otherIndex < $index) {
+                        $sourceIndex = $otherIndex;
+                        break;
+                    }
+                }
+
+                if ($sourceIndex === null) {
+                    $warnings[] = ['index' => $index, 'message' => __('The :label rule references an earlier field that no longer exists.', ['label' => $ruleLabel])];
+                }
+            }
+
+            if ($type === 'calculated' && $this->options((string) ($field['calculationFields'] ?? '')) === []) {
+                $warnings[] = ['index' => $index, 'message' => __('Calculated fields must sum at least one earlier number or currency field.')];
+            }
+        }
+
+        return $warnings;
+    }
+
+    /** Whether a field passes its visibility rule against the preview values (P6B-UI-01). */
+    public function previewVisible(int $index): bool
+    {
+        $field = $this->fields[$index] ?? null;
+
+        if ($field === null || (string) ($field['visibilityField'] ?? '') === '') {
+            return true;
+        }
+
+        $actual = $this->previewValues[(string) $field['visibilityField']] ?? '';
+        $expected = (string) ($field['visibilityValue'] ?? '');
+
+        return match ((string) $field['visibilityOperator']) {
+            'equals' => (string) $actual === $expected,
+            'not_equals' => (string) $actual !== $expected,
+            'in' => in_array((string) $actual, array_map('strval', (array) ($field['visibilityValue'] ?? [])), true),
+            'not_empty' => ! blank($actual),
+            default => true,
+        };
+    }
+
+    /** Whether a visible field is currently required against the preview values (P6B-UI-01). */
+    public function previewRequired(int $index): bool
+    {
+        $field = $this->fields[$index] ?? null;
+
+        if ($field === null || ! $this->previewVisible($index)) {
+            return false;
+        }
+
+        if ((bool) ($field['is_required'] ?? false)) {
+            return true;
+        }
+
+        if ((string) ($field['requiredField'] ?? '') === '') {
+            return false;
+        }
+
+        $actual = $this->previewValues[(string) $field['requiredField']] ?? '';
+
+        return match ((string) $field['requiredOperator']) {
+            'equals' => (string) $actual === (string) ($field['requiredValue'] ?? ''),
+            'not_equals' => (string) $actual !== (string) ($field['requiredValue'] ?? ''),
+            'not_empty' => ! blank($actual),
+            default => false,
+        };
+    }
 };
 ?>
 
@@ -623,7 +744,19 @@ new #[Title('Request types')] class extends Component {
                                     @endforeach
                                 </flux:select>
                                 <flux:select wire:model="fields.{{ $index }}.visibilityOperator" label="Operator">@foreach (\App\Services\RequestTypes\RequestSchemaCompiler::CONDITION_OPERATORS as $operator)<flux:select.option :value="$operator">{{ Str::headline($operator) }}</flux:select.option>@endforeach</flux:select>
-                                <flux:input wire:model="fields.{{ $index }}.visibilityValue" label="Value" />
+                                <div>
+                                    @php($conditionSource = collect($fields)->take($index)->firstWhere('key', $field['visibilityField'] ?? ''))
+                                    @if (in_array($conditionSource['type'] ?? '', ['select', 'multi_select', 'radio'], true))
+                                        <flux:select wire:model="fields.{{ $index }}.visibilityValue" label="Value">
+                                            <flux:select.option value="">—</flux:select.option>
+                                            @foreach ($this->options((string) ($conditionSource['options'] ?? '')) as $choice)
+                                                <flux:select.option :value="$choice">{{ $choice }}</flux:select.option>
+                                            @endforeach
+                                        </flux:select>
+                                    @else
+                                        <flux:input wire:model="fields.{{ $index }}.visibilityValue" label="Value" />
+                                    @endif
+                                </div>
                                 <flux:select wire:model="fields.{{ $index }}.requiredField" :label="__('Require when')">
                                     <flux:select.option value="">{{ __('Use the required checkbox only') }}</flux:select.option>
                                     @foreach ($fields as $sourceIndex => $source)
@@ -633,13 +766,105 @@ new #[Title('Request types')] class extends Component {
                                     @endforeach
                                 </flux:select>
                                 <flux:select wire:model="fields.{{ $index }}.requiredOperator" label="Operator">@foreach (\App\Services\RequestTypes\RequestSchemaCompiler::CONDITION_OPERATORS as $operator)<flux:select.option :value="$operator">{{ Str::headline($operator) }}</flux:select.option>@endforeach</flux:select>
-                                <flux:input wire:model="fields.{{ $index }}.requiredValue" label="Value" />
+                                <div>
+                                    @php($requiredSource = collect($fields)->take($index)->firstWhere('key', $field['requiredField'] ?? ''))
+                                    @if (in_array($requiredSource['type'] ?? '', ['select', 'multi_select', 'radio'], true))
+                                        <flux:select wire:model="fields.{{ $index }}.requiredValue" label="Value">
+                                            <flux:select.option value="">—</flux:select.option>
+                                            @foreach ($this->options((string) ($requiredSource['options'] ?? '')) as $choice)
+                                                <flux:select.option :value="$choice">{{ $choice }}</flux:select.option>
+                                            @endforeach
+                                        </flux:select>
+                                    @else
+                                        <flux:input wire:model="fields.{{ $index }}.requiredValue" label="Value" />
+                                    @endif
+                                </div>
                             </div>
                         </details>
                     </section>
                 @endforeach
             </div>
-            <details class="rounded-xl border border-zinc-200 p-4 dark:border-zinc-700"><summary class="cursor-pointer font-semibold">{{ __('Preview form') }}</summary><div class="mt-4 space-y-4">@foreach ($fields as $field)<div><label class="text-sm font-medium">{{ $field['label'] ?: __('Untitled field') }} @if($field['is_required'])<span aria-hidden="true">*</span>@endif</label><input class="mt-1 w-full rounded-lg border bg-white p-2 dark:bg-zinc-900" placeholder="{{ $field['placeholder'] }}" disabled><p class="mt-1 text-sm text-zinc-500">{{ $field['help'] }}</p></div>@endforeach</div></details>
+            <details class="rounded-xl border border-zinc-200 p-4 dark:border-zinc-700" dusk="builder-preview">
+                <summary class="cursor-pointer font-semibold">{{ __('Preview form') }}</summary>
+                <p class="mt-2 text-sm text-zinc-500">{{ __('Enter sample values to see visibility and required rules behave exactly as requesters will experience them. This preview does not save anything.') }}</p>
+                <div class="mt-4 space-y-4">
+                    @foreach ($fields as $index => $field)
+                        @if ($this->previewVisible($index))
+                            <div wire:key="preview-field-{{ $index }}" data-test="preview-field-{{ $index }}">
+                                @php($required = $this->previewRequired($index))
+                                @if (in_array($field['type'], ['select', 'radio'], true))
+                                    <flux:select
+                                        wire:model.live="previewValues.{{ $field['key'] }}"
+                                        :label="$field['label'] ?: __('Untitled field')"
+                                        :required="$required"
+                                        :description="$field['help']"
+                                    >
+                                        <flux:select.option value="">—</flux:select.option>
+                                        @foreach ($this->options((string) ($field['options'] ?? '')) as $choice)
+                                            <flux:select.option :value="$choice">{{ $choice }}</flux:select.option>
+                                        @endforeach
+                                    </flux:select>
+                                @elseif ($field['type'] === 'multi_select')
+                                    <flux:checkbox.group wire:model.live="previewValues.{{ $field['key'] }}" :label="$field['label'] ?: __('Untitled field')" :description="$field['help']">
+                                        @foreach ($this->options((string) ($field['options'] ?? '')) as $choice)
+                                            <flux:checkbox :value="$choice" :label="$choice" />
+                                        @endforeach
+                                    </flux:checkbox.group>
+                                @elseif ($field['type'] === 'checkbox')
+                                    <flux:checkbox wire:model.live="previewValues.{{ $field['key'] }}" :label="$field['label'] ?: __('Untitled field')" :checked="(bool) ($field['default'] ?? false)" />
+                                @elseif (in_array($field['type'], ['number', 'currency'], true))
+                                    <flux:input
+                                        wire:model.live="previewValues.{{ $field['key'] }}"
+                                        type="number"
+                                        :label="$field['label'] ?: __('Untitled field')"
+                                        :placeholder="$field['placeholder']"
+                                        :description="$field['help']"
+                                    />
+                                @elseif (in_array($field['type'], ['date', 'date_time'], true))
+                                    <flux:input
+                                        wire:model.live="previewValues.{{ $field['key'] }}"
+                                        type="{{ $field['type'] === 'date' ? 'date' : 'datetime-local' }}"
+                                        :label="$field['label'] ?: __('Untitled field')"
+                                        :description="$field['help']"
+                                    />
+                                @elseif ($field['type'] === 'long_text' || $field['type'] === 'rich_text')
+                                    <flux:textarea
+                                        wire:model.live="previewValues.{{ $field['key'] }}"
+                                        :label="$field['label'] ?: __('Untitled field')"
+                                        :placeholder="$field['placeholder']"
+                                        :description="$field['help']"
+                                    />
+                                @elseif (in_array($field['type'], ['calculated', 'json', 'file', 'user', 'department'], true))
+                                    <div>
+                                        <label class="text-sm font-medium">{{ $field['label'] ?: __('Untitled field') }} @if($required)<span aria-hidden="true">*</span>@endif</label>
+                                        <p class="mt-1 text-sm text-zinc-500">{{ __('This field renders fully on the live form.') }} {{ $field['help'] }}</p>
+                                    </div>
+                                @else
+                                    <flux:input
+                                        wire:model.live="previewValues.{{ $field['key'] }}"
+                                        :label="$field['label'] ?: __('Untitled field')"
+                                        :placeholder="$field['placeholder']"
+                                        :description="$field['help']"
+                                    />
+                                @endif
+                                @if ($required && blank($this->previewValues[$field['key']] ?? null))
+                                    <p class="mt-1 text-sm text-amber-600 dark:text-amber-400">{{ __('Required by the current conditional rule.') }}</p>
+                                @endif
+                            </div>
+                        @endif
+                    @endforeach
+                </div>
+            </details>
+            @if ($this->draftWarnings !== [])
+                <div class="space-y-1 rounded-xl border border-amber-300 bg-amber-50 p-4 dark:border-amber-700 dark:bg-amber-900/30" data-test="draft-warnings">
+                    <p class="font-medium text-amber-800 dark:text-amber-200">{{ __('Draft checks') }}</p>
+                    @foreach ($this->draftWarnings as $warning)
+                        <button type="button" class="block text-left text-sm text-amber-800 underline decoration-dotted dark:text-amber-200" wire:click="\$dispatch('scroll-to-field', { index: {{ $warning['index'] }} })" data-test="draft-warning">
+                            {{ __('Field') }} {{ $warning['index'] + 1 }}: {{ $warning['message'] }}
+                        </button>
+                    @endforeach
+                </div>
+            @endif
             <flux:error name="fields" /><div class="flex flex-wrap justify-end gap-2"><flux:modal.close><flux:button>{{ __('Cancel') }}</flux:button></flux:modal.close><flux:button wire:click="save(false)">{{ __('Save draft') }}</flux:button><flux:button variant="primary" wire:click="save(true)" dusk="publish-request-type">{{ __('Publish') }}</flux:button></div>
         </div>
     </flux:modal>

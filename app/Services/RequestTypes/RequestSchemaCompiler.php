@@ -62,6 +62,25 @@ final class RequestSchemaCompiler
                 }
             }
 
+            if (in_array($field->type, [RequestFieldType::Select, RequestFieldType::MultiSelect, RequestFieldType::Radio], true)
+                && isset($configuration['default'])
+                && $configuration['default'] !== ''
+                && ! in_array($configuration['default'], $configuration['options'] ?? [], true)) {
+                throw ValidationException::withMessages([
+                    "fields.{$index}.default" => 'The default value must be one of the field options.',
+                ]);
+            }
+
+            if (in_array($field->type, [RequestFieldType::Date, RequestFieldType::DateTime], true)
+                && isset($configuration['min'], $configuration['max'])
+                && $configuration['min'] !== ''
+                && $configuration['max'] !== ''
+                && strtotime((string) $configuration['min']) > strtotime((string) $configuration['max'])) {
+                throw ValidationException::withMessages([
+                    "fields.{$index}.min" => 'The earliest date must not be after the latest date.',
+                ]);
+            }
+
             $knownKeys[] = $field->key;
             $knownTypes[$field->key] = $field->type;
         }
@@ -213,8 +232,8 @@ final class RequestSchemaCompiler
             RequestFieldType::ShortText => ['string', 'max:'.min($max, 500)],
             RequestFieldType::LongText, RequestFieldType::RichText => ['string', 'max:'.$max],
             RequestFieldType::Number, RequestFieldType::Currency => ['numeric', ...$this->rangeRules($configuration)],
-            RequestFieldType::Date => ['date'],
-            RequestFieldType::DateTime => ['date'],
+            RequestFieldType::Date => ['date', ...$this->dateRangeRules($configuration)],
+            RequestFieldType::DateTime => ['date', ...$this->dateRangeRules($configuration)],
             RequestFieldType::Checkbox => ['boolean'],
             RequestFieldType::Select, RequestFieldType::Radio => [Rule::in($configuration['options'] ?? [])],
             RequestFieldType::MultiSelect => ['array'],
@@ -237,6 +256,18 @@ final class RequestSchemaCompiler
         return array_values(array_filter([
             isset($configuration['min']) ? 'min:'.$configuration['min'] : null,
             isset($configuration['max']) ? 'max:'.$configuration['max'] : null,
+        ]));
+    }
+
+    /**
+     * @param  array<string, mixed>  $configuration
+     * @return list<string>
+     */
+    private function dateRangeRules(array $configuration): array
+    {
+        return array_values(array_filter([
+            isset($configuration['min']) && $configuration['min'] !== '' ? 'after_or_equal:'.$configuration['min'] : null,
+            isset($configuration['max']) && $configuration['max'] !== '' ? 'before_or_equal:'.$configuration['max'] : null,
         ]));
     }
 

@@ -152,4 +152,93 @@ class RequestTypeBuilderTest extends TestCase
         $this->assertSame(SubmissionStatus::InReview, $draft->fresh()->status);
         $this->assertSame(2, $draft->fieldValues()->count());
     }
+
+    public function test_builder_surfaces_draft_warnings_before_publish(): void
+    {
+        $admin = User::factory()->create()->assignRole('admin');
+
+        $component = Livewire::actingAs($admin)->test('pages::admin.request-types')
+            ->call('createType')
+            ->set('name', 'Warning Form')
+            ->set('fields.0.label', 'Leave category')
+            ->set('fields.0.type', 'select')
+            ->set('fields.0.options', '')
+            ->call('addField')
+            ->set('fields.1.label', 'Start date')
+            ->set('fields.1.type', 'date')
+            ->set('fields.1.min', '2026-12-31')
+            ->set('fields.1.max', '2026-01-01');
+
+        // The advisory warnings panel lists both problems before any save.
+        $this->assertNotEmpty($component->instance()->draftWarnings);
+        $component->assertSee('Draft checks', false)
+            ->assertSee('at least one option', false)
+            ->assertSee('earliest date is after the latest date', false);
+
+        // Server-side schema validation still guards saving (authority).
+        $component->call('save', false)->assertHasErrors();
+
+        // Fixing the fields clears the warnings and the save goes through.
+        $component->set('fields.0.options', "Annual\nSick")
+            ->set('fields.1.min', '2026-01-01')
+            ->set('fields.1.max', '2026-12-31')
+            ->call('save', false)
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('request_types', ['slug' => 'warning-form']);
+    }
+
+    public function test_live_preview_honors_visibility_and_required_rules(): void
+    {
+        $admin = User::factory()->create()->assignRole('admin');
+        $type = RequestType::factory()->create(['name' => 'Preview Rules']);
+        $version = RequestTypeVersion::factory()->for($type)->create();
+        RequestFieldDefinition::factory()->for($version)->create([
+            'key' => 'category', 'label' => 'Category', 'type' => RequestFieldType::Select,
+            'configuration' => ['options' => ['Travel', 'Equipment']],
+        ]);
+        RequestFieldDefinition::factory()->for($version)->create([
+            'key' => 'destination', 'label' => 'Destination', 'type' => RequestFieldType::ShortText, 'position' => 1,
+            'configuration' => [
+                'visibility' => ['field' => 'category', 'operator' => 'equals', 'value' => 'Travel'],
+                'required_when' => ['field' => 'category', 'operator' => 'equals', 'value' => 'Travel'],
+            ],
+        ]);
+
+        $component = Livewire::actingAs($admin)->test('pages::admin.request-types')
+            ->call('editType', $type->id);
+
+        $this->assertFalse($component->instance()->previewVisible(1));
+        $this->assertFalse($component->instance()->previewRequired(1));
+
+        $component->set('previewValues.category', 'Equipment');
+        $this->assertFalse($component->instance()->previewVisible(1));
+
+        $component->set('previewValues.category', 'Travel');
+        $this->assertTrue($component->instance()->previewVisible(1));
+        $this->assertTrue($component->instance()->previewRequired(1));
+    }
+
+    public function test_condition_value_pickers_offer_source_field_options(): void
+    {
+        $admin = User::factory()->create()->assignRole('admin');
+        $type = RequestType::factory()->create(['name' => 'Picker Options']);
+        $version = RequestTypeVersion::factory()->for($type)->create();
+        RequestFieldDefinition::factory()->for($version)->create([
+            'key' => 'category', 'label' => 'Category', 'type' => RequestFieldType::Select,
+            'configuration' => ['options' => ['Travel', 'Equipment']],
+        ]);
+        RequestFieldDefinition::factory()->for($version)->create([
+            'key' => 'destination', 'label' => 'Destination', 'type' => RequestFieldType::ShortText, 'position' => 1,
+            'configuration' => ['visibility' => ['field' => 'category', 'operator' => 'equals', 'value' => 'Travel']],
+        ]);
+        app(PublishRequestTypeVersionAction::class)->execute($version);
+
+        Livewire::actingAs($admin)->test('pages::admin.request-types')
+            ->call('editType', $type->id)
+            ->assertSee('Travel</option>', false)
+            ->assertSee('Equipment</option>', false)
+            // Free-text value for the non-choice source stays available in the builder state.
+            ->set('fields.1.visibilityValue', 'Travel');
+    }
 }

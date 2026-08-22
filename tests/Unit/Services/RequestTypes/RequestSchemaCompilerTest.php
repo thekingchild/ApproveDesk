@@ -231,4 +231,97 @@ class RequestSchemaCompilerTest extends TestCase
             }
         }
     }
+
+    public function test_date_fields_enforce_configured_min_and_max_inclusively(): void
+    {
+        $version = RequestTypeVersion::factory()->create();
+        RequestFieldDefinition::factory()->for($version)->create([
+            'key' => 'window_start', 'type' => RequestFieldType::Date, 'position' => 0,
+            'configuration' => ['min' => '2026-01-01'],
+        ]);
+        RequestFieldDefinition::factory()->for($version)->create([
+            'key' => 'window_end', 'type' => RequestFieldType::Date, 'position' => 1,
+            'configuration' => ['max' => '2026-12-31'],
+        ]);
+        RequestFieldDefinition::factory()->for($version)->create([
+            'key' => 'window_both', 'type' => RequestFieldType::DateTime, 'position' => 2,
+            'configuration' => ['min' => '2026-03-01 00:00:00', 'max' => '2026-06-30 23:59:59'],
+        ]);
+        RequestFieldDefinition::factory()->for($version)->create([
+            'key' => 'unbounded', 'type' => RequestFieldType::Date, 'position' => 3,
+        ]);
+
+        $compiler = app(RequestSchemaCompiler::class);
+        $compiler->assertSchemaValid($version->fields);
+
+        // Inclusive bounds accept the edges and reject just outside them.
+        $validated = $compiler->validate($version, [
+            'window_start' => '2026-01-01',
+            'window_end' => '2026-12-31',
+            'window_both' => '2026-06-30 23:59:59',
+            'unbounded' => '1999-01-01',
+        ]);
+        $this->assertSame('2026-01-01', $validated['window_start']);
+        $this->assertSame('2026-12-31', $validated['window_end']);
+        $this->assertSame('1999-01-01', $validated['unbounded']);
+
+        try {
+            $compiler->validate($version, ['window_start' => '2025-12-31']);
+            $this->fail('Expected a date before the configured minimum to fail.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('values.window_start', $exception->errors());
+        }
+
+        try {
+            $compiler->validate($version, ['window_end' => '2027-01-01']);
+            $this->fail('Expected a date after the configured maximum to fail.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('values.window_end', $exception->errors());
+        }
+
+        try {
+            $compiler->validate($version, ['window_both' => '2026-07-01 00:00:00']);
+            $this->fail('Expected a datetime after the configured maximum to fail.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('values.window_both', $exception->errors());
+        }
+    }
+
+    public function test_publish_rejects_a_choice_default_that_is_not_one_of_the_options(): void
+    {
+        $version = RequestTypeVersion::factory()->create();
+        RequestFieldDefinition::factory()->for($version)->create([
+            'type' => RequestFieldType::Select,
+            'configuration' => ['options' => ['Annual', 'Sick'], 'default' => 'Unpaid'],
+        ]);
+
+        try {
+            app(PublishRequestTypeVersionAction::class)->execute($version);
+            $this->fail('Expected publication to reject a default outside the option list.');
+        } catch (ValidationException $exception) {
+            $errors = $exception->errors();
+            $this->assertStringContainsString('default value must be one of the field options', reset($errors)[0]);
+        }
+    }
+
+    public function test_publish_accepts_a_choice_default_from_the_options_and_rejects_inverted_date_ranges(): void
+    {
+        $valid = RequestTypeVersion::factory()->create();
+        RequestFieldDefinition::factory()->for($valid)->create([
+            'type' => RequestFieldType::Radio,
+            'configuration' => ['options' => ['Annual', 'Sick'], 'default' => 'Annual'],
+        ]);
+
+        app(PublishRequestTypeVersionAction::class)->execute($valid);
+        $this->assertNotNull($valid->refresh()->published_at);
+
+        $inverted = RequestTypeVersion::factory()->create();
+        RequestFieldDefinition::factory()->for($inverted)->create([
+            'type' => RequestFieldType::Date,
+            'configuration' => ['min' => '2026-12-31', 'max' => '2026-01-01'],
+        ]);
+
+        $this->expectException(ValidationException::class);
+        app(PublishRequestTypeVersionAction::class)->execute($inverted);
+    }
 }

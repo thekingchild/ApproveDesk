@@ -50,6 +50,18 @@ The builder asks for a label, not a machine name. ApproveDesk generates a hidden
 
 Visibility and required-when rules may only reference an earlier field, and only with equals, not equals, in, and not empty.
 
+## Dates and defaults
+
+- **Date and date-time limits:** the Minimum and Maximum boxes on a date or date-time field set the earliest and latest accepted dates. The bounds are inclusive — a maximum of 2026-12-31 accepts that day. Submissions outside the window are rejected when saving or submitting.
+- **Choice defaults:** a choice field's default value must be one of its options. Publishing rejects a default like *Unpaid* when the options are only *Annual* and *Sick*.
+- **Earliest must not come after latest** on date fields; publishing rejects an inverted range.
+
+## Preview and draft checks
+
+Open **Preview form** at the bottom of the builder to try conditional rules before publishing. Enter sample values in the preview: fields appear and disappear exactly as requesters will see them, and a field required by a rule is marked while the rule matches.
+
+The **Draft checks** panel under it lists problems while you build — a choice field without options, an inverted date range, a default outside its options, a condition pointing at a missing earlier field, or a calculated field with nothing to sum. Draft checks are warnings; they do not block drafting. Saving and publishing still run the full server-side validation, which is the authority.
+
 ## Search and reporting flags
 
 Mark a field searchable, filterable, reportable, sensitive, or approver-summary. Those flags freeze with the published version.
