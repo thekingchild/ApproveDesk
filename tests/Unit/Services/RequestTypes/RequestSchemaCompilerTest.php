@@ -324,4 +324,25 @@ class RequestSchemaCompilerTest extends TestCase
         $this->expectException(ValidationException::class);
         app(PublishRequestTypeVersionAction::class)->execute($inverted);
     }
+
+    public function test_publish_rejects_numeric_or_free_text_date_bounds(): void
+    {
+        // The min=1/max=2 trap: numbers are not dates and must never publish.
+        foreach ([['min' => '1', 'max' => '2'], ['min' => '2026-08-22', 'max' => 'soon']] as $scenario => $configuration) {
+            $version = RequestTypeVersion::factory()->create();
+            RequestFieldDefinition::factory()->for($version)->create([
+                'type' => RequestFieldType::Date,
+                'configuration' => $configuration,
+            ]);
+
+            try {
+                app(PublishRequestTypeVersionAction::class)->execute($version);
+                $this->fail("Expected scenario [{$scenario}] to be rejected at publish.");
+            } catch (ValidationException $exception) {
+                $errors = $exception->errors();
+                $message = (string) reset($errors)[0];
+                $this->assertStringContainsString('must be actual dates', $message);
+            }
+        }
+    }
 }

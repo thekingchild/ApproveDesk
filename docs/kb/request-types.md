@@ -52,9 +52,10 @@ Visibility and required-when rules may only reference an earlier field, and only
 
 ## Dates and defaults
 
-- **Date and date-time limits:** the Minimum and Maximum boxes on a date or date-time field set the earliest and latest accepted dates. The bounds are inclusive — a maximum of 2026-12-31 accepts that day. Submissions outside the window are rejected when saving or submitting.
+- **Date and date-time limits:** date fields show two calendar pickers — **Earliest date requesters can choose** and **Latest date requesters can choose**. Click a date instead of typing it; the bounds are inclusive, so a latest date of 2026-12-31 accepts that day. While you set limits, the builder echoes the window back in plain words: *Requesters can pick dates from 1 Sep 2026 up to 31 Dec 2026*. Submissions outside the window are rejected when saving or submitting. Number and currency fields keep plain Minimum value / Maximum value boxes.
+- **Limits must be real dates.** Typing a bare number (like 1 or 2) into a date limit is rejected with a clear message when saving or publishing, and the Draft checks panel warns while you build — numbers are not dates.
 - **Choice defaults:** a choice field's default value must be one of its options. Publishing rejects a default like *Unpaid* when the options are only *Annual* and *Sick*.
-- **Earliest must not come after latest** on date fields; publishing rejects an inverted range.
+- **Earliest must not come after latest** on date fields; saving and publishing reject an inverted range.
 
 ## Preview and draft checks
 

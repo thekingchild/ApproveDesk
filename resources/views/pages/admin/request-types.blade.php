@@ -385,7 +385,10 @@ new #[Title('Request types')] class extends Component {
             'placeholder' => $field['placeholder'] ?: null, 'help' => $field['help'] ?: null,
             'default' => $field['default'] !== '' ? $field['default'] : null,
             'max_length' => $field['maxLength'] !== '' ? (int) $field['maxLength'] : null,
-            'min' => $field['min'] !== '' ? (float) $field['min'] : null, 'max' => $field['max'] !== '' ? (float) $field['max'] : null,
+            // Date bounds stay strings (YYYY-MM-DD from the picker); numeric
+            // bounds are cast to float. Never cast a date bound to a number.
+            'min' => $field['min'] !== '' ? (in_array($field['type'], ['date', 'date_time'], true) ? (string) $field['min'] : (float) $field['min']) : null,
+            'max' => $field['max'] !== '' ? (in_array($field['type'], ['date', 'date_time'], true) ? (string) $field['max'] : (float) $field['max']) : null,
             'options' => $this->options($field['options']),
             'allowed_types' => $this->options($field['allowedTypes']),
             'visibility' => $field['visibilityField'] ? ['field' => $field['visibilityField'], 'operator' => $field['visibilityOperator'], 'value' => $field['visibilityValue']] : null,
@@ -548,7 +551,13 @@ new #[Title('Request types')] class extends Component {
                 $min = (string) ($field['min'] ?? '');
                 $max = (string) ($field['max'] ?? '');
 
-                if ($min !== '' && $max !== '' && strtotime($min) > strtotime($max)) {
+                foreach (['earliest' => $min, 'latest' => $max] as $boundLabel => $bound) {
+                    if ($bound !== '' && (strtotime($bound) === false || preg_match('/^\d{4}-\d{2}-\d{2}/', $bound) !== 1)) {
+                        $warnings[] = ['index' => $index, 'message' => __('The :label date limit is not a real date. Pick dates from the calendar instead of typing numbers.', ['label' => $boundLabel])];
+                    }
+                }
+
+                if ($min !== '' && $max !== '' && strtotime($min) !== false && strtotime($max) !== false && strtotime($min) > strtotime($max)) {
                     $warnings[] = ['index' => $index, 'message' => __('The earliest date is after the latest date.')];
                 }
             }
@@ -771,8 +780,22 @@ new #[Title('Request types')] class extends Component {
                             <flux:select wire:model.live="fields.{{ $index }}.type" label="Type" dusk="field-type-{{ $index }}">@foreach (RequestFieldType::cases() as $case)<flux:select.option :value="$case->value">{{ Str::headline($case->value) }}</flux:select.option>@endforeach</flux:select>
                             <flux:input wire:model="fields.{{ $index }}.section" label="Section" /><flux:input wire:model="fields.{{ $index }}.placeholder" label="Placeholder" /><flux:input wire:model="fields.{{ $index }}.help" label="Help text" />
                             <flux:input wire:model="fields.{{ $index }}.instructions" label="Instructions" /><flux:input wire:model="fields.{{ $index }}.default" label="Default value" /><flux:checkbox wire:model="fields.{{ $index }}.is_required" label="Always required" dusk="field-required-{{ $index }}" />
-                            <flux:input wire:model="fields.{{ $index }}.maxLength" type="number" label="Maximum length" /><flux:input wire:model="fields.{{ $index }}.min" type="number" label="Minimum" /><flux:input wire:model="fields.{{ $index }}.max" type="number" label="Maximum" />
+                            <flux:input wire:model="fields.{{ $index }}.maxLength" type="number" label="Maximum length" />
+                            @if (in_array($field['type'], ['date', 'date_time'], true))
+                                <flux:input wire:model="fields.{{ $index }}.min" type="date" :label="__('Earliest date requesters can choose')" dusk="field-min-{{ $index }}" />
+                                <flux:input wire:model="fields.{{ $index }}.max" type="date" :label="__('Latest date requesters can choose')" dusk="field-max-{{ $index }}" />
+                            @elseif (in_array($field['type'], ['number', 'currency'], true))
+                                <flux:input wire:model="fields.{{ $index }}.min" type="number" :label="__('Minimum value')" dusk="field-min-{{ $index }}" />
+                                <flux:input wire:model="fields.{{ $index }}.max" type="number" :label="__('Maximum value')" dusk="field-max-{{ $index }}" />
+                            @endif
                         </div>
+                        @if (in_array($field['type'], ['date', 'date_time'], true) && strtotime((string) ($field['min'] ?? '')) !== false || in_array($field['type'], ['date', 'date_time'], true) && strtotime((string) ($field['max'] ?? '')) !== false)
+                            <p class="mt-2 text-sm text-zinc-500" data-test="bounds-summary-{{ $index }}">
+                                {{ __('Requesters can pick dates') }}
+                                @if (strtotime((string) ($field['min'] ?? '')) !== false) {{ __('from') }} <strong>{{ \Carbon\Carbon::parse($field['min'])->format('j M Y') }}</strong> @endif
+                                @if (strtotime((string) ($field['max'] ?? '')) !== false) {{ __('up to') }} <strong>{{ \Carbon\Carbon::parse($field['max'])->format('j M Y') }}</strong> @endif
+                            </p>
+                        @endif
                         <fieldset class="mt-3 grid gap-2 rounded-lg bg-zinc-50 p-3 sm:grid-cols-2 lg:grid-cols-5 dark:bg-zinc-800/50">
                             <legend class="px-1 text-sm font-medium">{{ __('Discovery and privacy') }}</legend>
                             <flux:checkbox wire:model="fields.{{ $index }}.is_searchable" label="Searchable" />

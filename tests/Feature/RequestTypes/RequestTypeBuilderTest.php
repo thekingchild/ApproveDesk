@@ -291,4 +291,57 @@ class RequestTypeBuilderTest extends TestCase
             ->assertSet('name', 'Local Draft')
             ->assertSet('localDraftDiscarded', true);
     }
+
+    public function test_date_bounds_use_calendar_pickers_and_warn_on_number_limits(): void
+    {
+        $admin = User::factory()->create()->assignRole('admin');
+
+        $component = Livewire::actingAs($admin)->test('pages::admin.request-types')
+            ->call('createType')
+            ->set('name', 'Calendar Bounds')
+            ->set('fields.0.label', 'Start date')
+            ->set('fields.0.type', 'date')
+            // The min=1/max=2 trap typed into what used to be number boxes.
+            ->set('fields.0.min', '1')
+            ->set('fields.0.max', '2')
+            ->call('addField')
+            ->set('fields.1.label', 'Amount')
+            ->set('fields.1.type', 'currency')
+            ->set('fields.1.min', '1000');
+
+        // Date fields get date pickers with plain-language labels.
+        $component->assertSee('type="date"', false)
+            ->assertSee('Earliest date requesters can choose', false)
+            ->assertSee('Latest date requesters can choose', false)
+            // Numeric fields keep numeric bounds with value labels.
+            ->assertSee('Minimum value', false)
+            ->assertSee('Maximum value', false);
+
+        $this->assertNotEmpty($component->instance()->draftWarnings);
+        $component->assertSee('is not a real date', false);
+
+        // Fixing the bounds clears the warning and echoes the window back.
+        $component->set('fields.0.min', '2026-09-01')
+            ->set('fields.0.max', '2026-12-31')
+            ->assertSee('from', false)
+            ->assertSee('1 Sep 2026', false)
+            ->assertSee('up to', false)
+            ->assertSee('31 Dec 2026', false);
+
+        $this->assertTrue(collect($component->instance()->draftWarnings)
+            ->every(fn (array $warning): bool => ! str_contains((string) $warning['message'], 'not a real date')));
+
+        // Publishing a sane window succeeds end to end.
+        $component->call('save', true)->assertHasNoErrors();
+
+        $configuration = RequestType::query()->where('slug', 'calendar-bounds')->firstOrFail()
+            ->publishedVersion
+            ->fields()
+            ->where('key', 'start_date')
+            ->sole()
+            ->configuration;
+
+        $this->assertSame('2026-09-01', $configuration['min']);
+        $this->assertSame('2026-12-31', $configuration['max']);
+    }
 }

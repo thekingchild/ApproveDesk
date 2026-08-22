@@ -71,14 +71,25 @@ final class RequestSchemaCompiler
                 ]);
             }
 
-            if (in_array($field->type, [RequestFieldType::Date, RequestFieldType::DateTime], true)
-                && isset($configuration['min'], $configuration['max'])
-                && $configuration['min'] !== ''
-                && $configuration['max'] !== ''
-                && strtotime((string) $configuration['min']) > strtotime((string) $configuration['max'])) {
-                throw ValidationException::withMessages([
-                    "fields.{$index}.min" => 'The earliest date must not be after the latest date.',
-                ]);
+            if (in_array($field->type, [RequestFieldType::Date, RequestFieldType::DateTime], true)) {
+                $bounds = array_filter([
+                    'min' => $configuration['min'] ?? null,
+                    'max' => $configuration['max'] ?? null,
+                ], fn ($bound): bool => $bound !== null && $bound !== '');
+
+                foreach ($bounds as $boundName => $bound) {
+                    if (strtotime((string) $bound) === false || preg_match('/^\d{4}-\d{2}-\d{2}/', (string) $bound) !== 1) {
+                        throw ValidationException::withMessages([
+                            "fields.{$index}.{$boundName}" => __('Date limits must be actual dates in YYYY-MM-DD format, not numbers or free text.'),
+                        ]);
+                    }
+                }
+
+                if (count($bounds) === 2 && strtotime((string) $configuration['min']) > strtotime((string) $configuration['max'])) {
+                    throw ValidationException::withMessages([
+                        "fields.{$index}.min" => 'The earliest date must not be after the latest date.',
+                    ]);
+                }
             }
 
             $knownKeys[] = $field->key;
