@@ -42,9 +42,56 @@ new #[Title('Request types')] class extends Component {
     /** @var array<string, mixed> Sample values driving the live builder preview (P6B-UI-01). */
     public array $previewValues = [];
 
+    public bool $localDraftAvailable = false;
+
+    public string $localDraftSavedAt = '';
+
+    #[Locked]
+    public bool $localDraftDiscarded = false;
+
     public function mount(): void
     {
         $this->authorize('viewAny', RequestType::class);
+    }
+
+    /**
+     * Snapshot of builder state for the per-browser local draft (P6B-UI-04).
+     * Stored client-side only; the server draft remains the durable record.
+     */
+    public function localDraftSnapshot(): array
+    {
+        return [
+            'editingTypeId' => $this->editingTypeId,
+            'name' => $this->name,
+            'description' => $this->description,
+            'workflowTemplateId' => $this->workflowTemplateId,
+            'fields' => $this->fields,
+            'selectionRules' => $this->selectionRules,
+        ];
+    }
+
+    /** Restore builder state from a previously saved browser-local snapshot. */
+    public function restoreLocalDraft(array $snapshot): void
+    {
+        if ($this->localDraftDiscarded || ($snapshot['editingTypeId'] ?? null) !== $this->editingTypeId) {
+            return;
+        }
+
+        $this->name = (string) ($snapshot['name'] ?? '');
+        $this->description = (string) ($snapshot['description'] ?? '');
+        $this->workflowTemplateId = (string) ($snapshot['workflowTemplateId'] ?? '');
+        $this->fields = is_array($snapshot['fields'] ?? null) ? $snapshot['fields'] : [];
+        $this->selectionRules = is_array($snapshot['selectionRules'] ?? null) ? $snapshot['selectionRules'] : [];
+        $this->localDraftAvailable = false;
+        $this->localDraftSavedAt = '';
+    }
+
+    /** Explicitly drop the stored browser-local snapshot for this editing session. */
+    public function discardLocalDraft(): void
+    {
+        $this->localDraftDiscarded = true;
+        $this->localDraftAvailable = false;
+        $this->localDraftSavedAt = '';
     }
 
     #[Computed]
@@ -267,6 +314,10 @@ new #[Title('Request types')] class extends Component {
         if ($publish) {
             app(PublishRequestTypeVersionAction::class)->execute($version);
         }
+
+        // The server draft is now durable; drop this browser's local copy.
+        $this->localDraftDiscarded = true;
+        $this->dispatch('builder-draft-saved');
 
         $this->modal('request-type-builder')->close();
         $this->resetBuilder();
@@ -634,8 +685,26 @@ new #[Title('Request types')] class extends Component {
     </flux:table>
 
     <flux:modal name="request-type-builder" class="w-full max-w-6xl">
-        <div class="space-y-5">
-            <div><flux:heading size="lg">{{ $editingTypeId ? __('Edit request type') : __('New request type') }}</flux:heading><flux:subheading>{{ __('Published versions stay immutable; later edits create a new draft.') }}</flux:subheading></div>
+        <div class="space-y-5"
+            x-data="requestTypeBuilderDraft({
+                key: 'approvedesk.request-type-builder.' + ($wire.editingTypeId ?? 'new'),
+                snapshot: () => $wire.localDraftSnapshot(),
+                restore: (draft) => $wire.restoreLocalDraft(draft),
+                discardFlag: () => $wire.discardLocalDraft(),
+                onReady: (api) => { window.__builderDraft = api },
+            })"
+            x-on:builder-draft-saved.window="discardDraft()"
+        >
+            @if ($localDraftAvailable)
+                <div class="flex items-center justify-between gap-3 rounded-xl border border-sky-300 bg-sky-50 p-3 dark:border-sky-700 dark:bg-sky-900/30" data-test="local-draft-banner">
+                    <p class="text-sm text-sky-900 dark:text-sky-100">{{ __('An unsaved browser draft from :time is available for this form.', ['time' => $localDraftSavedAt]) }}</p>
+                    <div class="flex gap-2">
+                        <flux:button size="sm" x-on:click="restoreDraft()" dusk="restore-local-draft">{{ __('Restore draft') }}</flux:button>
+                        <flux:button size="sm" variant="danger" x-on:click="discardDraft()" dusk="discard-local-draft">{{ __('Discard') }}</flux:button>
+                    </div>
+                </div>
+            @endif
+            <div><flux:heading size="lg">{{ $editingTypeId ? __('Edit request type') : __('New request type') }}</flux:heading><flux:subheading>{{ __('Published versions stay immutable; later edits create a new draft.') }} <span class="text-zinc-400" x-show="savedAt" x-cloak data-test="local-draft-indicator">{{ __('Browser draft saved') }} <span x-text="savedAt"></span></span></flux:subheading></div>
             <div class="grid gap-4 sm:grid-cols-2">
                 <flux:input wire:model="name" label="Name" required dusk="request-type-name" />
                 <flux:input wire:model="description" label="Description" />

@@ -62,6 +62,10 @@ Open **Preview form** at the bottom of the builder to try conditional rules befo
 
 The **Draft checks** panel under it lists problems while you build — a choice field without options, an inverted date range, a default outside its options, a condition pointing at a missing earlier field, or a calculated field with nothing to sum. Draft checks are warnings; they do not block drafting. Saving and publishing still run the full server-side validation, which is the authority.
 
+## Browser draft protection
+
+While the builder is open, your edits are autosaved in this browser only (about one second after you stop typing). If the tab closes before you save, reopening the same form shows **Restore draft** with the time it was captured; discard it if you would rather start fresh. Saving or publishing on the server clears the browser copy automatically — the server draft, not the browser copy, is the record other administrators see.
+
 ## Search and reporting flags
 
 Mark a field searchable, filterable, reportable, sensitive, or approver-summary. Those flags freeze with the published version.

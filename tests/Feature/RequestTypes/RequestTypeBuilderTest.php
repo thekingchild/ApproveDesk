@@ -241,4 +241,54 @@ class RequestTypeBuilderTest extends TestCase
             // Free-text value for the non-choice source stays available in the builder state.
             ->set('fields.1.visibilityValue', 'Travel');
     }
+
+    public function test_local_draft_restore_and_discard_are_scoped_to_the_editing_session(): void
+    {
+        $admin = User::factory()->create()->assignRole('admin');
+        $type = RequestType::factory()->create(['name' => 'Local Draft']);
+        $version = RequestTypeVersion::factory()->for($type)->create();
+        RequestFieldDefinition::factory()->for($version)->create([
+            'key' => 'reason', 'label' => 'Reason', 'type' => RequestFieldType::LongText, 'is_required' => true,
+        ]);
+
+        $snapshot = [
+            'editingTypeId' => $type->id,
+            'name' => 'Local Draft Renamed',
+            'description' => '',
+            'workflowTemplateId' => '',
+            'fields' => [[
+                'label' => 'Reason', 'key' => 'reason', 'keyAuto' => false, 'type' => 'long_text', 'is_required' => true,
+                'is_searchable' => false, 'is_filterable' => false, 'is_reportable' => false,
+                'is_sensitive' => false, 'is_approver_summary' => false,
+                'section' => '', 'instructions' => '', 'placeholder' => '', 'help' => '', 'default' => '',
+                'maxLength' => '', 'min' => '', 'max' => '', 'options' => '', 'optionsCsv' => '', 'allowedTypes' => '',
+                'visibilityField' => '', 'visibilityOperator' => 'equals', 'visibilityValue' => '',
+                'requiredField' => '', 'requiredOperator' => 'equals', 'requiredValue' => '', 'calculationFields' => '',
+            ]],
+            'selectionRules' => [],
+        ];
+
+        $component = Livewire::actingAs($admin)->test('pages::admin.request-types')
+            ->call('editType', $type->id);
+
+        // A matching snapshot restores the unsaved browser edits.
+        $component->call('restoreLocalDraft', $snapshot)
+            ->assertSet('name', 'Local Draft Renamed')
+            ->assertSet('localDraftAvailable', false);
+
+        // A snapshot from a different type is rejected.
+        Livewire::actingAs($admin)->test('pages::admin.request-types')
+            ->call('editType', $type->id)
+            ->set('name', 'Fresh Edit')
+            ->call('restoreLocalDraft', ['editingTypeId' => $type->id + 999, 'fields' => []])
+            ->assertSet('name', 'Fresh Edit');
+
+        // Discard blocks later restores in the same session.
+        Livewire::actingAs($admin)->test('pages::admin.request-types')
+            ->call('editType', $type->id)
+            ->call('discardLocalDraft')
+            ->call('restoreLocalDraft', $snapshot)
+            ->assertSet('name', 'Local Draft')
+            ->assertSet('localDraftDiscarded', true);
+    }
 }

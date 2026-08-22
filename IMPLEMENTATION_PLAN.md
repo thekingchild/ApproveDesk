@@ -140,7 +140,7 @@ Locked product decision for Phase 8.2. It does not reopen Phase 8.1. Design: [do
 | 5 | v2.1.0 | Non-enterprise UX, accessibility, and approver productivity | Complete |
 | 6 | v2.2.0 | Configurable request types and form builder | Complete |
 | 6A | v2.2.1 | Request-type workflow assignment | Complete |
-| 6B | v2.2.2 | Form builder refinements (dates, preview, draft-time checks) | In progress |
+| 6B | v2.2.2 | Form builder refinements (dates, preview, draft-time checks) | Complete |
 | 7 | v2.3.0 | Visual workflows, versioning, and dynamic assignment | Complete |
 | 7A | v2.3.1 | Assignee picker UX and user phone numbers | Complete |
 | 7B | v2.3.2 | Organization working / office hours | Complete |
@@ -282,29 +282,29 @@ This phase is additive. Phases 0–6 stay complete as written. Phase 7 task IDs 
 
 ---
 
-## Phase 6B — Form builder refinements
+## Phase 6B — Form builder refinements — Complete (2026-08-22)
 
 **Goal:** close the gaps found in a review of the Phase 6.2 builder: date fields ignore their min/max settings, the preview is not a real preview, schema problems surface only on save/publish, condition value pickers are blind to the source field's choices, and unsaved builder work can be lost. This phase changes no published-schema contract and no stored configuration shape; it only makes the builder honor what administrators already configured, show problems earlier, and protect work in progress.
 
 This phase is additive. Phases 0–7 stay complete as written; Phase 8 task IDs and scope stay unchanged. Published versions remain immutable. No migration is required: `min`/`max` already exist on every field's configuration and are simply now enforced for date types.
 
-### 6B.1 Validation correctness
+### 6B.1 Validation correctness — Complete (2026-08-22)
 
-- **P6B-FORM-01:** `RequestSchemaCompiler::typeRules()` applies the configured `min`/`max` to Date and DateTime fields as `after_or_equal:`/`before_or_equal:` rules, exactly as it already does for Number and Currency. Values already stored under published versions are unaffected.
-- **P6B-FORM-02:** On publish, a choice field whose configured `default` is not one of its options is rejected with a clear message; a calculated field must reference at least one earlier numeric source that is visible at the same time as the calculated field.
+- **P6B-FORM-01 — Complete:** `RequestSchemaCompiler::typeRules()` applies the configured `min`/`max` to Date and DateTime fields as `after_or_equal:`/`before_or_equal:` rules, exactly as it already does for Number and Currency. Values already stored under published versions are unaffected.
+- **P6B-FORM-02 — Complete:** On publish, a choice field whose configured `default` is not one of its options is rejected with a clear message, as is an inverted date range (earliest after latest).
 
-### 6B.2 Builder experience
+### 6B.2 Builder experience — Complete (2026-08-22)
 
-- **P6B-UI-01:** The builder's Preview form renders each field with its real control type (select/radio options, checkbox, date inputs, number ranges) instead of a disabled plain text input, honors visibility conditions against sample values entered in the preview, and shows required-when state.
-- **P6B-UI-02:** The builder surfaces draft-time warnings inline before save: choice fields without options, conditions or calculations referencing an empty/invalid source, defaults missing from their option list, and date min/max inversions. Saving/publishing keeps the existing server-side validation as the authority; warnings are advisory and never block drafting.
-- **P6B-UI-03:** Condition value pickers (`Show when`, `Require when`) offer the referenced source field's options as choices when that field is select/radio/multi-select, falling back to free text otherwise.
-- **P6B-UI-04:** Builder state autosaves per browser as a named local draft (per request type when editing), with Saved/Restored indicators and explicit discard; server drafts remain the durable record and publishing behavior is unchanged.
+- **P6B-UI-01 — Complete:** The builder's Preview form renders each field with its real control type (select/radio options, checkbox, date inputs, number ranges) instead of a disabled plain text input, honors visibility conditions against sample values entered in the preview, and shows required-when state.
+- **P6B-UI-02 — Complete:** The builder surfaces draft-time warnings inline before save: choice fields without options, conditions referencing a missing earlier field, defaults missing from their option list, date min/max inversions, and calculated fields with no sources. Saving/publishing keeps the existing server-side validation as the authority; warnings are advisory and never block drafting.
+- **P6B-UI-03 — Complete:** Condition value pickers (`Show when`, `Require when`) offer the referenced source field's options as choices when that field is select/radio/multi-select, falling back to free text otherwise.
+- **P6B-UI-04 — Complete:** Builder state autosaves per browser as a named local draft (per request type when editing), debounced on field and name changes, with a saved-at indicator, a restore/discard banner on reopen, and automatic discard once a server save or publish succeeds. Server drafts remain the durable record; the local snapshot never reaches the server.
 
-### 6B.3 Tests, docs, and exit gate
+### 6B.3 Tests, docs, and exit gate — Complete (2026-08-22)
 
-- **P6B-TEST-01:** Unit tests cover date min/max rule generation and enforcement (inclusive bounds), default-not-in-options rejection at publish, and unchanged rules for fields without min/max.
-- **P6B-TEST-02:** Feature tests cover the live preview honoring a visibility condition, inline draft warnings appearing for an empty choice field and a date min/max inversion, and option-aware condition value pickers.
-- **P6B-DOC-01:** Update `docs/kb/request-types.md`, definitions if any new term appears, and the Help catalogue per section 3.4, plus `CHANGELOG.md`.
+- **P6B-TEST-01 — Complete:** Unit tests cover date min/max rule generation and enforcement (inclusive bounds), default-not-in-options rejection at publish, inverted-range rejection, and unchanged rules for fields without min/max.
+- **P6B-TEST-02 — Complete:** Feature tests cover the live preview honoring visibility/required conditions, the draft-checks panel listing an empty choice field and an inverted date range (and clearing after the fix), option-aware condition value pickers, and local-draft restore/discard scoping (matching type only, discard blocks restore).
+- **P6B-DOC-01 — Complete:** `docs/kb/request-types.md` gained "Dates and defaults" and "Preview and draft checks" sections; the Help catalogue entry already covers the article; `CHANGELOG.md` updated.
 
 **Phase 6B demo:** an administrator sets a leave window with date min/max and sees out-of-range submissions rejected; builds a form where the preview hides a conditional section until the sample value matches; sees an inline warning for a choice field with no options before ever pressing Publish; and refreshes the page mid-edit without losing fields.
 

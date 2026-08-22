@@ -8,7 +8,7 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Added
 
-- Form builder refinements (Phase 6B): date and date-time fields now enforce their configured minimum and maximum as inclusive bounds, publishing rejects a choice default outside its option list or an inverted date range, the builder preview renders real controls and honors visibility/required rules against sample values, an advisory draft-checks panel lists schema problems before saving (choice fields without options, inverted ranges, defaults missing from options, conditions pointing at missing earlier fields, calculated fields with no sources), and conditional-rule value pickers offer the referenced choice field's options.
+- Form builder refinements (Phase 6B): date and date-time fields now enforce their configured minimum and maximum as inclusive bounds, publishing rejects a choice default outside its option list or an inverted date range, the builder preview renders real controls and honors visibility/required rules against sample values, an advisory draft-checks panel lists schema problems before saving (choice fields without options, inverted ranges, defaults missing from options, conditions pointing at missing earlier fields, calculated fields with no sources), conditional-rule value pickers offer the referenced choice field's options, and the builder autosaves per browser with restore/discard so a lost tab does not lose unsaved edits.
 
 ### Changed
 
