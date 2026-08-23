@@ -16,6 +16,8 @@ Choose Immediate, Daily, Weekly, or In-app only. Immediate sends as events happe
 
 In-app only does not mute Microsoft Teams, Slack, WhatsApp, or Telegram. Those optional channels are organisation settings. If they are on and your account is mapped, they still notify you. See [Notification channels](notification-channels.md).
 
+You can install ApproveDesk on this device and allow browser notifications. Drafts you type while offline stay on the device until you reconnect. Decisions still need a live connection.
+
 Per-request follower preferences (comments vs status) live on the request, not here.
 
 ## Out of office

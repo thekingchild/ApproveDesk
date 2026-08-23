@@ -70,6 +70,17 @@ class EmailApprovalTest extends TestCase
         ]);
     }
 
+    public function test_tampered_signature_is_rejected_and_does_not_mutate_workflow(): void
+    {
+        $instance = $this->submission->workflowInstance()->with('currentStep')->firstOrFail();
+        $url = EmailApprovalLinks::confirmationUrl($instance, $instance->currentStep, $this->approver);
+        $tampered = (string) preg_replace('/([?&])signature=[^&]+/', '$1signature=deadbeef', $url);
+
+        $this->get($tampered)->assertForbidden();
+        $this->assertSame(0, WorkflowAction::query()->count());
+        $this->assertSame(SubmissionStatus::InReview, $this->submission->fresh()->status);
+    }
+
     public function test_expired_or_stale_email_approval_links_are_rejected(): void
     {
         Carbon::setTestNow('2026-08-17 12:00:00');

@@ -61,6 +61,43 @@ function bindDraftCache() {
 
     root.addEventListener('input', persist)
     window.addEventListener('offline', persist)
+
+    const replayStoredDraft = () => {
+        const stored = localStorage.getItem(key)
+        if (!stored || !window.Livewire) {
+            return
+        }
+
+        try {
+            const parsed = JSON.parse(stored)
+            if (!parsed?.payload) {
+                return
+            }
+
+            let node = root
+            let wireId = null
+            while (node instanceof Element) {
+                wireId = node.getAttribute('wire:id')
+                if (wireId) {
+                    break
+                }
+                node = node.parentElement
+            }
+            if (!wireId) {
+                return
+            }
+
+            Livewire.find(wireId)?.call('reviewOfflineDraft', parsed.payload)
+        } catch (error) {
+            // Corrupt cache is non-fatal.
+        }
+    }
+
+    if (window.Livewire?.find) {
+        replayStoredDraft()
+    } else {
+        document.addEventListener('livewire:init', replayStoredDraft, { once: true })
+    }
 }
 
 window.approveDeskPush = {

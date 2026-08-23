@@ -126,7 +126,9 @@ class HelpCentreTest extends TestCase
             ->assertSee('The search field on a workflow step')
             ->assertSee('Someone granted explicit view access')
             ->assertSee('A named person in a comment')
-            ->assertSee('A dated absence on your account');
+            ->assertSee('A dated absence on your account')
+            ->assertSee('A copy of a draft kept on this device')
+            ->assertSee('The email link or Teams/Slack');
     }
 
     public function test_collaboration_article_explains_followers_and_ooo(): void
@@ -141,6 +143,29 @@ class HelpCentreTest extends TestCase
             ->assertSee('quiet hours')
             ->assertSee('fallback approver')
             ->assertSee('estimated due time');
+    }
+
+    public function test_requests_article_explains_offline_drafts(): void
+    {
+        $user = User::factory()->create()->assignRole('submitter');
+
+        $this->actingAs($user)
+            ->get(route('help.show', 'requests'))
+            ->assertOk()
+            ->assertSee('Keep this device')
+            ->assertSee('Keep saved draft')
+            ->assertSee('live connection');
+    }
+
+    public function test_approvals_article_explains_offline_decisions_and_stale_links(): void
+    {
+        $user = User::factory()->create()->assignRole('submitter');
+
+        $this->actingAs($user)
+            ->get(route('help.show', 'approvals'))
+            ->assertOk()
+            ->assertSee('disable while you are offline')
+            ->assertSee('tampered links');
     }
 
     public function test_workflow_templates_article_explains_builder_and_versions(): void
@@ -186,7 +211,8 @@ class HelpCentreTest extends TestCase
             ->assertSee('In-app only')
             ->assertSee('Settings → Notification channels')
             ->assertSee('{{approval_url}}')
-            ->assertSee('approved template');
+            ->assertSee('approved template')
+            ->assertSee('does not keep an always-on chat connection');
     }
 
     public function test_catalogue_matches_markdown_files(): void

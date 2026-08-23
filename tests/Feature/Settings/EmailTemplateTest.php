@@ -68,6 +68,33 @@ class EmailTemplateTest extends TestCase
             ->assertHasErrors('templateBody');
     }
 
+    public function test_custom_action_required_template_still_contains_a_valid_signed_url(): void
+    {
+        $admin = User::factory()->create()->assignRole('admin');
+        $approver = User::factory()->create()->assignRole('approver');
+        WorkflowTemplate::factory()->default()->sequential([$approver])->create();
+        $submission = Submission::factory()->create();
+        app(WorkflowEngine::class)->initialize($submission);
+
+        Livewire::actingAs($admin)
+            ->test('pages::settings.notification-channels')
+            ->set('tab', 'email')
+            ->set('templateKind', 'action_required')
+            ->set('templateSubject', 'Please act on {{reference_number}}')
+            ->set('templateBody', 'Review {{title}} here: {{approval_url}}')
+            ->call('saveTemplate')
+            ->assertHasNoErrors();
+
+        $mail = (new ActionRequiredNotification($submission->fresh()))->toMail($approver);
+        $this->assertSame('Please act on '.$submission->reference_number, $mail->subject);
+        $this->assertNotNull($mail->actionUrl);
+        $this->assertStringContainsString('/email-approvals/', (string) $mail->actionUrl);
+        parse_str((string) parse_url((string) $mail->actionUrl, PHP_URL_QUERY), $query);
+        $this->assertArrayHasKey('signature', $query);
+        $this->assertArrayHasKey('expires', $query);
+        $this->assertGreaterThan(now()->timestamp, (int) $query['expires']);
+    }
+
     public function test_rendered_action_required_mail_still_has_a_signed_confirmation_url(): void
     {
         $approver = User::factory()->create()->assignRole('approver');

@@ -146,7 +146,7 @@ Locked product decision for Phase 8.2. It does not reopen Phase 8.1. Design: [do
 | 7B | v2.3.2 | Organization working / office hours | Complete |
 | UO | v2.3.3 | User onboarding: CSV/Excel import, registration OTP, domain allow-list | Complete |
 | LP | v2.3.4 | Public static landing page | Complete |
-| 8 | v2.4.0 | Collaboration, notifications, and integration hub | In progress — 8.1–8.3 complete |
+| 8 | v2.4.0 | Collaboration, notifications, and integration hub | Complete |
 | 9 | v2.5.0 | Governance, audit evidence, security, and reliability | Not started |
 | 10 | v3.0.0 | SaaS multi-tenancy foundation | Not started |
 | 11 | v3.1.0 | Paystack and Flutterwave subscriptions | Not started |
@@ -631,7 +631,7 @@ That is the whole update path. If a replacement site is a zip of `index.html` + 
 
 ---
 
-## Phase 8 — Collaboration, notifications, and integration hub
+## Phase 8 — Collaboration, notifications, and integration hub — Complete (2026-08-23)
 
 **Goal:** keep work moving without requiring every participant to remain inside ApproveDesk and provide useful integrations without custom code.
 
@@ -662,18 +662,19 @@ Follow section 3.6. Design: [docs/design/8.2-notification-channels.md](docs/desi
 
 Administrator screen: **Administration → Integrations**. Help: `docs/kb/integrations.md`.
 
-### 8.4 Tests and exit gate
+### 8.4 Tests and exit gate — Complete (2026-08-23)
 
-- Connector contract test suite with faked providers; no live service dependency in CI.
-- Webhook/action idempotency and replay tests.
-- Signed-action tampering and stale-step tests for Teams/Slack/email.
-- WhatsApp mapping tests: fetch cache, bind placeholders, skip when unmapped/unapproved; no live Graph calls.
-- Editable email template tests: override generic copy, restore default, action-required still contains a valid signed confirmation URL.
-- Telegram outbound tests with a faked Bot API; long-polling is not used.
-- Offline draft conflict tests and online-only decision enforcement.
-- Queue failure and retry tests using the database driver.
+- **P8-TEST-01 — Complete (2026-08-23):** Connector contract test suite with faked providers; no live service dependency in CI.
+- **P8-TEST-02 — Complete (2026-08-23):** Webhook/action idempotency and replay tests.
+- **P8-TEST-03 — Complete (2026-08-23):** Signed-action tampering and stale-step tests for Teams/Slack/email.
+- **P8-TEST-04 — Complete (2026-08-23):** WhatsApp mapping tests: fetch cache, bind placeholders, skip when unmapped/unapproved; no live Graph calls.
+- **P8-TEST-05 — Complete (2026-08-23):** Editable email template tests: override generic copy, restore default, action-required still contains a valid signed confirmation URL.
+- **P8-TEST-06 — Complete (2026-08-23):** Telegram outbound tests with a faked Bot API; long-polling is not used.
+- **P8-TEST-07 — Complete (2026-08-23):** Offline draft conflict tests and online-only decision enforcement.
+- **P8-TEST-08 — Complete (2026-08-23):** Queue failure and retry tests using the database driver.
+- **P8-DOC-01 — Complete (2026-08-23):** Help centre, `CHANGELOG.md`, and this plan.
 
-**Phase 8 demo:** a request starts from a custom form, notifies an approver in Teams or Slack (and, if configured, WhatsApp or Telegram), receives a policy-checked decision, uploads the approved document to Drive/SharePoint, and records every delivery/action.
+**Phase 8 demo — Complete (2026-08-23):** a request starts from a custom form, notifies an approver in Teams or Slack (and, if configured, WhatsApp or Telegram), receives a policy-checked decision, uploads the approved document to Drive/SharePoint, and records every delivery/action.
 
 ---
 

@@ -141,3 +141,15 @@ The administrator screen for connectors and post-approval actions (upload a file
 ## [Connector](/help/integrations)
 
 One configured destination in the integration hub, such as Slack or generic HTTP. Credentials stay hidden after you save. A disabled connector is skipped.
+
+## [Replay](/help/integrations)
+
+Send a failed post-approval delivery again from the integration hub. Replay does not create a second record and does not change the approval.
+
+## [Offline draft](/help/requests)
+
+A copy of a draft kept on this device when the form cannot reach ApproveDesk. If it differs from the saved draft after you reconnect, you choose which to keep.
+
+## [Signed approval action](/help/approvals)
+
+The email link or Teams/Slack **Approve** button for the current step. Tampered, expired, or stale actions are refused and do not change the request.

@@ -22,7 +22,9 @@ An action runs when a workflow completes (the request is approved). Choose:
 - Create or update an external record
 - Invoke a signed webhook
 
-You can limit an action to one request type, or leave it for every type. Failed deliveries retry, then sit in a dead-letter list. Replay sends them again.
+You can limit an action to one request type, or leave it for every type. Failed deliveries retry on the queue, then sit in a dead-letter list. **Replay** sends a dead-letter again without creating a second record. A completed delivery is not sent twice.
+
+Unconfigured or disabled connectors skip. They do not block the approval. Live destinations are not required for ApproveDesk to record the attempt.
 
 Generic HTTP and signed webhooks use the same signing method as **Administration → Webhooks**.
 

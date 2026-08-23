@@ -16,6 +16,8 @@ Filter by status, deadline, priority, request type, department, requester, and d
 
 Open a card for the full request, or use the preview drawer to read the summary without leaving the queue. The sticky decision bar on the request holds Approve, Approve with conditions, Reject, and related actions. A template may add extra outcomes; each one still maps to approve, reject, return, request information, or escalate.
 
+Decision buttons disable while you are offline. Approvals still need a live connection — a saved draft or an offline copy cannot record a decision.
+
 Reject, return, escalate, request information, and approve with conditions need a comment. Approval can be confirmed from the workbench for eligible items.
 
 Keyboard shortcuts move to the next or previous request and open the approve or reject dialog. Destructive actions still need confirmation.
@@ -34,4 +36,4 @@ A requester or watcher can send a reminder to the current approver. Quiet hours 
 
 ## Email links
 
-If your organization sends approval emails, the link opens a confirmation page and records the decision. Links expire after the lifetime set in Organization settings (1 to 720 hours). Stale links, reused links, and steps that have already moved on are refused.
+If your organization sends approval emails, the link opens a confirmation page and records the decision. Links expire after the lifetime set in Organization settings (1 to 720 hours). Stale links, reused links, tampered links, and steps that have already moved on are refused. Teams and Slack **Approve** buttons use the same stale-step rules.

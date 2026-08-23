@@ -30,7 +30,9 @@ Map a person to a Teams, Slack, or Telegram id. **Remove** clears that mapping. 
 
 ### Delivery
 
-Recent optional-channel attempts show sent, skipped, deferred, or failed. Reminder quiet hours also delay chat and browser push; they do not delay the inbox. Failed action-required chat retries up to three times.
+Recent optional-channel attempts show sent, skipped, deferred, or failed. Reminder quiet hours also delay chat and browser push; they do not delay the inbox. Failed action-required chat retries up to three times. A failed chat delivery does not fail the approval.
+
+Telegram sends a message to the linked account. ApproveDesk does not keep an always-on chat connection. WhatsApp sends only when the kind is mapped to an approved template.
 
 ### Your account
 

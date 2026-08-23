@@ -43,6 +43,11 @@ new #[Title('New submission')] class extends Component {
 
     public ?string $lastSavedAt = null;
 
+    public bool $offlineDraftConflict = false;
+
+    /** @var array<string, string> */
+    public array $pendingOfflineDraft = [];
+
     /** @var array<int, \Livewire\TemporaryUploadedFile> */
     public array $attachments = [];
 
@@ -134,6 +139,62 @@ new #[Title('New submission')] class extends Component {
 
         $this->lastSavedAt = now()->format('H:i:s');
         $this->autosaveState = 'saved';
+    }
+
+    /**
+     * Compare a browser-cached offline draft with the server fields.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    public function reviewOfflineDraft(array $payload): void
+    {
+        $fields = ['title', 'body', 'type', 'priority', 'due_date'];
+        $normalized = [];
+
+        foreach ($fields as $field) {
+            $normalized[$field] = isset($payload[$field]) ? (string) $payload[$field] : '';
+        }
+
+        $differs = false;
+        foreach ($fields as $field) {
+            if ($normalized[$field] !== (string) ($this->{$field} ?? '')) {
+                $differs = true;
+                break;
+            }
+        }
+
+        if (! $differs) {
+            $this->offlineDraftConflict = false;
+            $this->pendingOfflineDraft = [];
+
+            return;
+        }
+
+        $this->pendingOfflineDraft = $normalized;
+        $this->offlineDraftConflict = true;
+    }
+
+    public function keepOfflineDraft(): void
+    {
+        if ($this->pendingOfflineDraft === []) {
+            return;
+        }
+
+        foreach (['title', 'body', 'type', 'priority', 'due_date'] as $field) {
+            if (array_key_exists($field, $this->pendingOfflineDraft)) {
+                $value = $this->pendingOfflineDraft[$field];
+                $this->{$field} = $field === 'due_date' && $value === '' ? null : $value;
+            }
+        }
+
+        $this->pendingOfflineDraft = [];
+        $this->offlineDraftConflict = false;
+    }
+
+    public function keepServerDraft(): void
+    {
+        $this->pendingOfflineDraft = [];
+        $this->offlineDraftConflict = false;
     }
 
     public function saveDraft(): void
@@ -258,6 +319,16 @@ new #[Title('New submission')] class extends Component {
         </div>
         <flux:error name="autosave" />
     </div>
+
+    @if ($offlineDraftConflict)
+        <div class="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-3 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100" data-test="offline-draft-conflict">
+            <p>{{ __('This device has unsaved offline edits that differ from the saved draft.') }}</p>
+            <div class="mt-2 flex flex-wrap gap-2">
+                <flux:button size="xs" variant="primary" wire:click="keepOfflineDraft" data-test="keep-offline-draft">{{ __('Keep this device') }}</flux:button>
+                <flux:button size="xs" variant="ghost" wire:click="keepServerDraft" data-test="keep-server-draft">{{ __('Keep saved draft') }}</flux:button>
+            </div>
+        </div>
+    @endif
 
     <div class="mt-3 flex items-center gap-2">
         @foreach ([1 => __('Details'), 2 => __('Attachments'), 3 => __('Review')] as $n => $label)

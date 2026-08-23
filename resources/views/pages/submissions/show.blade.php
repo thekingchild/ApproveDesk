@@ -894,7 +894,7 @@ new #[Title('Submission')] class extends Component {
                     @endif
                 @endforeach
                 <flux:modal.trigger name="reject-modal">
-                    <flux:button variant="danger" data-test="reject-modal-trigger">{{ __('Reject') }}</flux:button>
+                    <flux:button variant="danger" data-test="reject-modal-trigger" data-requires-online>{{ __('Reject') }}</flux:button>
                 </flux:modal.trigger>
                 <flux:modal.trigger name="return-modal">
                     <flux:button variant="subtle" data-test="return">{{ __('Return for revision') }}</flux:button>
@@ -917,7 +917,7 @@ new #[Title('Submission')] class extends Component {
                 <flux:subheading class="mt-1">{{ __('Your decision is recorded in the immutable audit trail and may advance the workflow.') }}</flux:subheading>
                 <div class="mt-4 flex gap-2">
                     <flux:modal.close><flux:button variant="ghost">{{ __('Cancel') }}</flux:button></flux:modal.close>
-                    <flux:button variant="primary" wire:click="act('approve')" data-test="approve">{{ __('Confirm approval') }}</flux:button>
+                    <flux:button variant="primary" wire:click="act('approve')" data-test="approve" data-requires-online>{{ __('Confirm approval') }}</flux:button>
                 </div>
             </flux:modal>
 
@@ -927,7 +927,7 @@ new #[Title('Submission')] class extends Component {
                 <flux:textarea wire:model="actionComment" :label="__('Reason (required)')" rows="3" class="mt-4" dusk="reject-comment" />
                 <div class="mt-4 flex gap-2">
                     <flux:modal.close><flux:button variant="ghost">{{ __('Cancel') }}</flux:button></flux:modal.close>
-                    <flux:button variant="danger" wire:click="act('reject')">{{ __('Confirm rejection') }}</flux:button>
+                    <flux:button variant="danger" wire:click="act('reject')" data-requires-online>{{ __('Confirm rejection') }}</flux:button>
                 </div>
             </flux:modal>
 

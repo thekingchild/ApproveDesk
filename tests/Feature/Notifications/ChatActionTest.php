@@ -88,6 +88,30 @@ class ChatActionTest extends TestCase
         $this->assertSame(1, WorkflowAction::query()->count());
     }
 
+    public function test_tampered_chat_token_is_rejected_and_does_not_mutate_workflow(): void
+    {
+        $submitter = User::factory()->create()->assignRole('submitter');
+        $approver = User::factory()->create()->assignRole('approver');
+        WorkflowTemplate::factory()->default()->sequential([$approver])->create();
+        $submission = Submission::factory()->for($submitter, 'submitter')->create(['status' => SubmissionStatus::Draft]);
+        app(SubmitSubmissionAction::class)->execute($submission);
+        $instance = $submission->workflowInstance()->with('currentStep')->firstOrFail();
+        $token = ChatActionToken::issue($instance, $instance->currentStep, $approver);
+        $tampered = substr($token, 0, -6).'xxxxxx';
+
+        app(ChannelSettings::class)->setEnabled(NotificationChannelKey::Teams, true);
+        app(ChannelSettings::class)->putCredentials(
+            NotificationChannelKey::Teams,
+            ['app_id' => 'id', 'app_password' => 'secret'],
+        );
+
+        $this->postJson(route('integrations.teams.actions'), ['token' => $tampered])
+            ->assertOk()
+            ->assertJsonFragment(['status' => 'stale']);
+        $this->assertSame(0, WorkflowAction::query()->count());
+        $this->assertSame(SubmissionStatus::InReview, $submission->fresh()->status);
+    }
+
     public function test_expired_chat_token_is_rejected(): void
     {
         Carbon::setTestNow('2026-08-21 12:00:00');

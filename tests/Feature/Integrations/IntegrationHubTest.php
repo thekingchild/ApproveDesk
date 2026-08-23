@@ -116,6 +116,25 @@ class IntegrationHubTest extends TestCase
         $this->assertSame(IntegrationDeliveryStatus::Delivered, $delivery->fresh()->status);
     }
 
+    public function test_already_delivered_action_is_not_queued_again(): void
+    {
+        $connector = IntegrationConnector::factory()->create(['is_enabled' => true]);
+        $action = IntegrationAction::factory()->for($connector, 'connector')->create(['is_enabled' => true]);
+        $submission = $this->submittedSubmission();
+        IntegrationDelivery::factory()->create([
+            'integration_action_id' => $action->id,
+            'submission_id' => $submission->id,
+            'idempotency_key' => 'completed:'.$submission->id.':'.$action->id,
+            'status' => IntegrationDeliveryStatus::Delivered,
+        ]);
+
+        Queue::fake();
+        event(new WorkflowCompleted($submission->workflowInstance()->firstOrFail()));
+
+        $this->assertSame(1, IntegrationDelivery::query()->where('integration_action_id', $action->id)->count());
+        Queue::assertNotPushed(DeliverIntegrationAction::class);
+    }
+
     public function test_replay_requeues_a_dead_letter(): void
     {
         Queue::fake();
@@ -129,6 +148,7 @@ class IntegrationHubTest extends TestCase
             ->call('replay', $delivery->id)
             ->assertHasNoErrors();
 
+        $this->assertSame(1, IntegrationDelivery::query()->count());
         $this->assertSame(IntegrationDeliveryStatus::Pending, $delivery->fresh()->status);
         $this->assertSame(0, $delivery->fresh()->attempts);
         Queue::assertPushed(DeliverIntegrationAction::class);

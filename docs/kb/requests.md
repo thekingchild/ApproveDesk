@@ -12,6 +12,8 @@ Custom forms show the fields an administrator published. Required fields, help t
 
 You can leave a request as a draft. The form saves while you work. Status text shows Saving, Saved at, or a retry prompt if the save failed.
 
+If you go offline, the banner says the form is not being saved to ApproveDesk. This device still keeps a local copy. When you come back, if that copy differs from the saved draft, choose **Keep this device** or **Keep saved draft**. Approvals and submit still need a live connection.
+
 Open drafts from **My submissions** using the Drafts view.
 
 ## Files and comments

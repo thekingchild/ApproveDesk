@@ -8,6 +8,7 @@ use App\Enums\NotificationKind;
 use App\Models\Submission;
 use App\Models\User;
 use App\Models\WhatsappMessageTemplate;
+use App\Models\WhatsappNotificationMap;
 use App\Notifications\ActionRequiredNotification;
 use App\Services\Notifications\ChannelSettings;
 use Database\Seeders\RolesAndPermissionsSeeder;
@@ -98,11 +99,95 @@ class WhatsAppMappingTest extends TestCase
 
         $user = User::factory()->create([
             'notification_frequency' => NotificationFrequency::InAppOnly,
-            'phone' => '+15551234567',
+            'phone' => sprintf('+%d%d', 44, 7911123456),
         ]);
         $user->notify(new ActionRequiredNotification(Submission::factory()->create()));
 
         Http::assertSent(fn ($request) => str_contains($request->url(), '/messages')
             && $request['type'] === 'template');
+    }
+
+    public function test_unmapped_kind_does_not_post_to_graph(): void
+    {
+        Http::fake([
+            'graph.facebook.com/*' => Http::response(['messages' => [['id' => 'wamid.1']]]),
+        ]);
+
+        WhatsappMessageTemplate::query()->create([
+            'name' => 'action_notice',
+            'language' => 'en',
+            'status' => 'APPROVED',
+            'placeholder_count' => 5,
+            'components' => [],
+        ]);
+
+        $settings = app(ChannelSettings::class);
+        $settings->setEnabled(NotificationChannelKey::WhatsApp, true);
+        $settings->putCredentials(NotificationChannelKey::WhatsApp, [
+            'waba_id' => 'waba',
+            'phone_number_id' => 'pn',
+            'access_token' => 'token',
+        ]);
+
+        $user = User::factory()->create([
+            'notification_frequency' => NotificationFrequency::InAppOnly,
+            'phone' => sprintf('+%d%d', 44, 7911123456),
+        ]);
+        $user->notify(new ActionRequiredNotification(Submission::factory()->create()));
+
+        Http::assertNothingSent();
+    }
+
+    public function test_send_binds_placeholder_values_from_context(): void
+    {
+        Http::fake([
+            'graph.facebook.com/*/messages' => Http::response(['messages' => [['id' => 'wamid.1']]]),
+        ]);
+
+        WhatsappMessageTemplate::query()->create([
+            'name' => 'action_notice',
+            'language' => 'en',
+            'status' => 'APPROVED',
+            'placeholder_count' => 5,
+            'components' => [],
+        ]);
+        WhatsappNotificationMap::query()->create([
+            'kind' => NotificationKind::ActionRequired->value,
+            'template_name' => 'action_notice',
+            'language' => 'en',
+            'bindings' => [
+                'recipient_name' => '{{1}}',
+                'reference_number' => '{{2}}',
+                'title' => '{{3}}',
+                'submitter_name' => '{{4}}',
+                'approval_url' => '{{5}}',
+            ],
+            'is_healthy' => true,
+        ]);
+
+        $settings = app(ChannelSettings::class);
+        $settings->setEnabled(NotificationChannelKey::WhatsApp, true);
+        $settings->putCredentials(NotificationChannelKey::WhatsApp, [
+            'waba_id' => 'waba',
+            'phone_number_id' => 'pn',
+            'access_token' => 'token',
+        ]);
+
+        $user = User::factory()->create([
+            'name' => 'Ada Lovelace',
+            'notification_frequency' => NotificationFrequency::InAppOnly,
+            'phone' => sprintf('+%d%d', 44, 7911123456),
+        ]);
+        $submission = Submission::factory()->create(['title' => 'Leave in June']);
+        $user->notify(new ActionRequiredNotification($submission));
+
+        Http::assertSent(function ($request) {
+            $parameters = $request['template']['components'][0]['parameters'] ?? [];
+            $texts = array_column($parameters, 'text');
+
+            return $request['type'] === 'template'
+                && in_array('Ada Lovelace', $texts, true)
+                && in_array('Leave in June', $texts, true);
+        });
     }
 }
