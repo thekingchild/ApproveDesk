@@ -2,6 +2,12 @@
 
 The sidebar is the same on every signed-in screen. Use it to move between your work and, if you have access, administration.
 
+## Public website
+
+The address `/` is the public marketing home, not the signed-in app. Guests see **Log in** and, when self-registration is allowed, **Sign up**. If you are already signed in, that button becomes **Dashboard** and opens your usual home.
+
+The marketing files live outside the application screens. Administrators do not edit that page from Branding or any other settings screen.
+
 ## Home
 
 Dashboard content changes with your role.

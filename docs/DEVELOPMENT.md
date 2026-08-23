@@ -79,3 +79,7 @@ CI stays on SQLite; MySQL parity is a pre-release manual step (or opt-in `--grou
 - [ ] Eager loading on every relationship used in views (no N+1)
 - [ ] Shared-hosting deployments still have no runtime dependency on Redis, Docker, Node, or a long-running worker
 - [ ] Migrations are additive (never edit merged migrations)
+
+## Public website
+
+`/` is served from the `website/` directory at the repository root (see `website/README.md`). Put a new static `index.html` there — keep `<nav data-approvedesk-auth></nav>` in the header — and reload. Do not compile the landing page through Vite or copy it into `public/`.

@@ -48,6 +48,7 @@ class InstallerTest extends TestCase
     public function test_guests_are_redirected_to_the_installer(): void
     {
         $this->get('/login')->assertRedirect(route('install.welcome'));
+        $this->get('/')->assertRedirect(route('install.welcome'));
     }
 
     #[TestDox('the welcome screen lists server requirements')]

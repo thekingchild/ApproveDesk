@@ -25,7 +25,7 @@ final class HelpCatalogue
             new HelpArticle(
                 slug: 'getting-around',
                 title: 'Getting around',
-                summary: 'Home, search, notifications, and how Help stays out of the way.',
+                summary: 'Public website versus signed-in home, search, notifications, and how Help stays out of the way.',
                 icon: 'home',
                 group: 'Using ApproveDesk',
                 audience: 'all',

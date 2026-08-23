@@ -2,6 +2,12 @@
 
 Short meanings for the words used on ApproveDesk screens. Open the linked guide when you need the full how-to.
 
+## Public website
+
+The marketing page at `/`. It is a folder of static files, not a Livewire screen. Guests see Log in and Sign up; signed-in people see Dashboard.
+
+See [Getting around](getting-around.md).
+
 ## Request
 
 A single case waiting for a decision. It has a form, optional files, comments, a status, and a workflow history. Requesters create requests. Approvers act on them.

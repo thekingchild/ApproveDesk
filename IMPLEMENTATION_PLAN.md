@@ -105,7 +105,7 @@ After each completed phase:
 4. Confirm Help as an administrator and as a requester.
 5. Commit the Markdown, catalogue, Help UI, and this plan together.
 
-**Administrator knowledge base through P8-NOT-01 (2026-08-21):** feature definitions (including workflow version, builder, graph validation, selection rule, assignee resolver, group completion, business calendar / office hours, custom outcome, assignee picker, follower, mention, reminder, out of office, expected next step, estimated due time, branding, and notification channel), getting around, requests, approvals, collaboration, statuses, account settings (including out of office and that in-app only does not mute optional channels), users and roles (including E.164 phone numbers), departments, workflow templates (including upgrade guarantees and the searchable assignee picker), request types (including workflow assignment and selection rules), analytics, webhooks, organization settings (including login branding, application logo, favicon, meta title and description, office hours, and reminder quiet hours), notification channels, and the audit trail.
+**Administrator knowledge base through Phase LP (2026-08-23):** feature definitions (including public website, workflow version, builder, graph validation, selection rule, assignee resolver, group completion, business calendar / office hours, custom outcome, assignee picker, follower, mention, reminder, out of office, expected next step, estimated due time, branding, and notification channel), getting around (including the public `/` marketing home versus signed-in Dashboard), requests, approvals, collaboration, statuses, account settings (including out of office and that in-app only does not mute optional channels), users and roles (including E.164 phone numbers), departments, workflow templates (including upgrade guarantees and the searchable assignee picker), request types (including workflow assignment and selection rules), analytics, webhooks, organization settings (including login branding, application logo, favicon, meta title and description, office hours, and reminder quiet hours), notification channels, and the audit trail.
 
 ### 3.5 Request types own workflows
 
@@ -145,6 +145,7 @@ Locked product decision for Phase 8.2. It does not reopen Phase 8.1. Design: [do
 | 7A | v2.3.1 | Assignee picker UX and user phone numbers | Complete |
 | 7B | v2.3.2 | Organization working / office hours | Complete |
 | UO | v2.3.3 | User onboarding: CSV/Excel import, registration OTP, domain allow-list | Complete |
+| LP | v2.3.4 | Public static landing page | Complete |
 | 8 | v2.4.0 | Collaboration, notifications, and integration hub | In progress — 8.1–8.3 complete |
 | 9 | v2.5.0 | Governance, audit evidence, security, and reliability | Not started |
 | 10 | v3.0.0 | SaaS multi-tenancy foundation | Not started |
@@ -492,6 +493,141 @@ This phase is additive. It does not reopen Phases 0–8. Registration stays off 
 - **Deliberately excluded (later phases):** SSO/SAML/OIDC (Phase 15 territory), SCIM directory sync, per-domain default role/department mapping, invitation-link bulk onboarding, SMS OTP, and a queued importer for multi-thousand-row files.
 - **Why OTP over magic-link here:** a short numeric code on the waiting screen is simpler for non-technical staff than hunting a link in a second tab. Fortify’s signed-link flow stays for admin-initiated verification.
 - **Security posture:** OTP at rest is hashed; domain checks are an onboarding convenience, **not** an authentication boundary — anyone can type any domain, so real assurance still comes from passwords/2FA/passkeys.
+
+---
+
+## Phase LP — Public static landing page — Complete (2026-08-23)
+
+**Goal:** make `/` a real marketing home that lives entirely in one drop-in directory, so the public website can be designed or replaced outside this repository without touching Laravel, Livewire, Vite, or Flux.
+
+This phase is additive. It does not reopen Phases 0–8. It does not change Fortify `home` (`/dashboard`), the PWA `start_url`, installer behaviour, branding settings, or `WorkflowEngine`. The stock Laravel `welcome` view is retired as the public home.
+
+**Why a separate directory:** Femi will replace this site with static files built elsewhere. Every website file must live under `website/` and nowhere else. Updating the landing page is a folder swap, not a PHP change.
+
+### How to work with the `website/` directory
+
+This subsection is the working contract. Implementation must match it. Replacement sites must follow it.
+
+#### Layout
+
+```
+website/
+  README.md       # this contract, kept across replacements when possible
+  index.html      # required — served at GET /
+  css/            # optional
+  js/             # optional
+  images/         # optional
+  …               # any other static files the site needs
+```
+
+- `website/` sits at the **repository root**, next to `app/` and `public/`. It is **not** inside `public/` (that folder already holds `index.php`, `sw.js`, Vite `build/`, and favicons).
+- `index.html` is the only required page. Additional HTML (`about.html`, `pricing/index.html`) is allowed and is served if the path is free.
+- The default site shipped in this phase is committed. Replacements are also committed in place. Do **not** gitignore `website/` — a fresh clone must still have a home page.
+- No Blade, PHP, Livewire, Alpine-from-the-app, Tailwind-from-the-app, or Flux in this directory. No `npm run build` for the landing page.
+
+#### Auth hook (required)
+
+A static file cannot see the Laravel session. The directory stays dumb; the app owns one stable seam.
+
+Every `index.html` (and any other HTML that should show Login / Sign up / Dashboard) must include **exactly one** empty element in the header:
+
+```html
+<nav data-approvedesk-auth></nav>
+```
+
+When Laravel serves that HTML it replaces the element’s inner HTML:
+
+Guest, registration open (`Branding::registrationOpen()`):
+
+```html
+<nav data-approvedesk-auth data-state="guest">
+  <a href="/login" data-auth="login">Log in</a>
+  <a href="/register" data-auth="register">Sign up</a>
+</nav>
+```
+
+Guest, registration closed:
+
+```html
+<nav data-approvedesk-auth data-state="guest">
+  <a href="/login" data-auth="login">Log in</a>
+</nav>
+```
+
+Signed in:
+
+```html
+<nav data-approvedesk-auth data-state="user">
+  <a href="/dashboard" data-auth="dashboard">Dashboard</a>
+</nav>
+```
+
+Style the hook from the static site’s own CSS (`[data-approvedesk-auth]`, `[data-auth="login"]`, `[data-auth="dashboard"]`). Do not depend on Flux or `app.css`.
+
+If a replacement `index.html` omits the hook, Laravel inserts a minimal fallback bar immediately after `<body>` so Login / Dashboard still work. Replacement sites should still put the hook in their own header.
+
+Injection is **server-side** on every HTML response from `website/`. Do not use a client fetch that flashes “Log in” then “Dashboard”. HTML is `Cache-Control: private, no-store`.
+
+#### How to replace the site
+
+1. Build the site anywhere (hand-written HTML, Eleventy, export from a designer tool). The build output must be static files only.
+2. Put `<nav data-approvedesk-auth></nav>` in the header of `index.html`.
+3. Use **relative** asset URLs (`css/app.css`, `images/hero.webp`). From `/` they resolve to `/css/app.css` and `/images/hero.webp`, which Laravel serves from `website/` when the path is free.
+4. Do **not** use paths that belong to the app (see reserved paths below).
+5. Delete the current files under `website/` (keep `README.md` if you want the contract to remain).
+6. Copy the new files into `website/`.
+7. No migration, no PHP edit, no `npm run build`. Reload `/`.
+
+That is the whole update path. If a replacement site is a zip of `index.html` + `css/` + `images/`, unzip it into `website/`.
+
+#### What Laravel serves
+
+| Request | Result |
+|---|---|
+| `GET /` | `website/index.html` with auth injection |
+| `GET /css/app.css` (file exists under `website/`, path not an app route) | that file, correct MIME type |
+| `GET /about` or `/about.html` | `website/about.html` or `website/about/index.html` if present |
+| `GET /dashboard`, `/login`, `/admin`, … | **app wins** — website files never shadow these |
+| Uninstalled app | `EnsureAppConfigured` still redirects `/` to `/install` |
+| Logout | already redirects to `route('home')` — the visitor sees the landing page with Log in again |
+
+**Reserved paths** (never claim these in the static site): `/login`, `/register`, `/dashboard`, `/admin`, `/settings`, `/submissions`, `/approvals`, `/analytics`, `/help`, `/notifications`, `/api`, `/install`, `/livewire`, `/build`, `/storage`, `/sanctum`, `/up`, `/branding`, `/manifest.webmanifest`, `/integrations`.
+
+**Safety:** resolve files only inside `realpath(base_path('website'))`. Refuse `..`, absolute paths, dotfiles (`.env`, `.git`), PHP, and anything that is not a regular file. Allow a tight extension list: `html`, `htm`, `css`, `js`, `map`, `svg`, `png`, `jpg`, `jpeg`, `gif`, `webp`, `ico`, `woff`, `woff2`, `ttf`, `eot`, `txt`, `xml`, `json`, `webmanifest`, `pdf`, `mp4`, `webm`.
+
+#### What not to do
+
+- Do not put landing-page files in `public/`, `resources/views/`, or `resources/css/`.
+- Do not compile the landing page through Vite.
+- Do not change Fortify `home` — signed-in product use stays `/dashboard`.
+- Do not teach the static site to call internal Livewire or admin APIs.
+- Do not put secrets, `.env`, or Blade in `website/`.
+
+### LP.1 Directory and serving — Complete (2026-08-23)
+
+- **LP-DIR-01 — Complete:** Create `website/` with `README.md` restating this contract and a first `index.html` that already contains the auth hook.
+- **LP-SRV-01 — Complete:** Replace `Route::view('/', 'welcome')` with a `PublicWebsiteController` (thin) plus `App\Support\PublicWebsite` (path resolve, MIME, HTML injection). `GET /` is named `home`.
+- **LP-SRV-02 — Complete:** Register a **last** fallback GET route that serves a safe file from `website/` only when no earlier Laravel route matched. App routes, Fortify, settings, Livewire, and `/build` stay first. Retire `resources/views/welcome.blade.php`.
+
+### LP.2 Auth-aware header — Complete (2026-08-23)
+
+- **LP-AUTH-01 — Complete:** Inject Login + Sign up for guests and Dashboard for authenticated users into `[data-approvedesk-auth]`. Fallback bar after `<body>` if the hook is missing.
+- **LP-AUTH-02 — Complete:** Omit Sign up when `Branding::registrationOpen()` is false (same setting as Branding → Allow self-registration). `Route::has('register')` is not sufficient — Fortify still registers the feature.
+
+### LP.3 First site — Complete (2026-08-23)
+
+- **LP-SITE-01 — Complete:** Ship a self-contained marketing home in `website/` (HTML + CSS, optional JS/images). Header uses the hook. Body is ApproveDesk product copy, not the Laravel “Let’s get started” page. No Vite, no Flux. This site is a placeholder that can be deleted and replaced.
+
+### LP.4 Tests, docs, and exit gate — Complete (2026-08-23)
+
+- **LP-TEST-01 — Complete:** Feature tests: guest `/` is 200 and contains Log in + Sign up and the shipped site copy (not “Let’s get started”); authenticated `/` contains Dashboard and not Log in; registration closed omits Sign up; a file under `website/css/` is served with `text/css`; `/dashboard` and `/login` are still the app; path traversal, dotfiles, and missing files 404; `ExampleTest` and logout → `home` still pass; uninstalled app still redirects `/` to the installer.
+- **LP-DOC-01 — Complete:** `website/README.md`, `docs/DEVELOPMENT.md`, `CHANGELOG.md`, Help (`docs/kb/getting-around.md`, `docs/kb/definitions.md`, Help catalogue), and this plan.
+
+**Phase LP demo:** a visitor opens `/` and sees the static marketing site with Log in and Sign up; after signing in and returning to `/`, the header shows Dashboard; an administrator deletes `website/*` (except the README), drops in a new `index.html` that contains `<nav data-approvedesk-auth></nav>` plus its own CSS, reloads `/`, and sees the new site with the same auth buttons — no PHP change.
+
+**Out of scope:** CMS, multi-page admin editor, per-tenant marketing sites (P10-TEN-01), SEO console, blog, localizing the marketing site, changing `/dashboard` or the PWA start URL, compiling the site through Vite, Phase 8.4.
+
+**Next after this phase:** Phase 8.4 Tests and exit gate, then close Phase 8 as v2.4.0.
 
 ---
 

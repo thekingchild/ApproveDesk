@@ -9,6 +9,7 @@ use App\Http\Controllers\InstallController;
 use App\Http\Controllers\IntegrationCredentialController;
 use App\Http\Controllers\NotificationChannelCredentialController;
 use App\Http\Controllers\OAuthController;
+use App\Http\Controllers\PublicWebsiteController;
 use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\SlackInteractionsController;
 use App\Http\Controllers\SubmissionFileDownloadController;
@@ -17,7 +18,7 @@ use App\Http\Controllers\TelegramWebhookController;
 use App\Support\Branding;
 use Illuminate\Support\Facades\Route;
 
-Route::view('/', 'welcome')->name('home');
+Route::get('/', [PublicWebsiteController::class, 'home'])->name('home');
 
 Route::get('manifest.webmanifest', function () {
     $name = Branding::name();
@@ -180,3 +181,7 @@ if (app()->environment(['local', 'testing'])) {
 }
 
 require __DIR__.'/settings.php';
+
+Route::get('/{path}', [PublicWebsiteController::class, 'asset'])
+    ->where('path', '.*')
+    ->name('website.asset');
