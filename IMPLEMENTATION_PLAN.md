@@ -145,7 +145,7 @@ Locked product decision for Phase 8.2. It does not reopen Phase 8.1. Design: [do
 | 7A | v2.3.1 | Assignee picker UX and user phone numbers | Complete |
 | 7B | v2.3.2 | Organization working / office hours | Complete |
 | UO | v2.3.3 | User onboarding: CSV/Excel import, registration OTP, domain allow-list | Complete |
-| 8 | v2.4.0 | Collaboration, notifications, and integration hub | In progress — 8.1–8.2 complete |
+| 8 | v2.4.0 | Collaboration, notifications, and integration hub | In progress — 8.1–8.3 complete |
 | 9 | v2.5.0 | Governance, audit evidence, security, and reliability | Not started |
 | 10 | v3.0.0 | SaaS multi-tenancy foundation | Not started |
 | 11 | v3.1.0 | Paystack and Flutterwave subscriptions | Not started |
@@ -516,13 +516,15 @@ Follow section 3.6. Design: [docs/design/8.2-notification-channels.md](docs/desi
 - **P8-NOT-03 — Complete (2026-08-21):** Installable PWA shell (manifest, service worker, offline page), browser web push with VAPID keys and per-user subscriptions, phone-friendly attachment picking, local draft cache, and decision controls that disable while offline. Approvals still require a live server.
 - **P8-NOT-04 — Complete (2026-08-21):** Editable email templates per kind with preview and restore; action-required copy must keep `{{approval_url}}`. WhatsApp catalog fetch and mapping; send is `type=template` only and skips when unmapped or unapproved. Telegram uses the same rendered copy as email. Delivery receipts, quiet-hour deferral of optional channels, and up to three retries for failed action-required chat.
 
-### 8.3 Integration hub
+### 8.3 Integration hub — Complete (2026-08-23)
 
-- **P8-INT-01:** Define connector contracts for triggers, actions, authentication, health checks, rate limits, and redacted logs.
-- **P8-INT-02:** Ship initial connectors for Microsoft Teams, Slack, Google Drive, SharePoint/OneDrive, Gmail/Outlook, and generic HTTP.
-- **P8-INT-03:** Add post-approval actions: upload file, send email, create/update external record, or invoke a signed webhook.
-- **P8-INT-04:** Add connector credential encryption, rotation, least-privilege instructions, test connection, retry/dead-letter queues, and replay.
-- **P8-INT-05:** Extend REST API with request-type schemas, cursor pagination, idempotency keys, organization-ready scopes, and OpenAPI documentation.
+- **P8-INT-01 — Complete:** Connector contract (`Connector`) plus registry: triggers (workflow completed), actions, encrypted credentials, health checks, per-connector rate interval, and redacted error logs.
+- **P8-INT-02 — Complete:** Initial connectors — Microsoft Teams, Slack, Google Drive, SharePoint/OneDrive, Gmail/Outlook, and generic HTTP. Unconfigured or disabled connectors skip and do not fail the workflow. Live providers are faked in CI.
+- **P8-INT-03 — Complete:** Post-approval actions on workflow completion: upload file, send email, create/update an external record, or invoke a signed webhook. Actions may target one request type or all types.
+- **P8-INT-04 — Complete:** Credentials encrypted at rest, posted outside displayed secrets, test connection, least-privilege copy on the hub, queue retry with backoff, dead-letter status, and replay.
+- **P8-INT-05 — Complete:** REST API request-type schemas, cursor pagination on submissions, Idempotency-Key on mutating calls, `request-types:read` scope, and OpenAPI at `/api/v1/openapi.json`.
+
+Administrator screen: **Administration → Integrations**. Help: `docs/kb/integrations.md`.
 
 ### 8.4 Tests and exit gate
 

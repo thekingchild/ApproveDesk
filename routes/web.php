@@ -6,6 +6,7 @@ use App\Http\Controllers\BrandingAssetController;
 use App\Http\Controllers\EmailApprovalController;
 use App\Http\Controllers\HelpController;
 use App\Http\Controllers\InstallController;
+use App\Http\Controllers\IntegrationCredentialController;
 use App\Http\Controllers\NotificationChannelCredentialController;
 use App\Http\Controllers\OAuthController;
 use App\Http\Controllers\PushSubscriptionController;
@@ -126,6 +127,12 @@ Route::middleware(['auth', 'verified', 'can:viewAny,App\Models\RequestType'])->g
 
 Route::middleware(['auth', 'verified', 'can:viewAny,App\Models\WebhookEndpoint'])->group(function (): void {
     Route::livewire('admin/webhooks', 'pages::admin.webhooks')->name('admin.webhooks.index');
+});
+
+Route::middleware(['auth', 'verified', 'can:viewAny,App\Models\IntegrationConnector'])->group(function (): void {
+    Route::livewire('admin/integrations', 'pages::admin.integrations')->name('admin.integrations.index');
+    Route::post('admin/integrations/{connector}/credentials', IntegrationCredentialController::class)
+        ->name('admin.integrations.credentials');
 });
 
 Route::middleware(['auth', 'verified', 'can:reports.view'])->prefix('admin')->name('admin.')->group(function (): void {

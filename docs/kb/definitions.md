@@ -151,3 +151,13 @@ See [Organization settings](organization-settings.md).
 A spreadsheet upload on **Administration → Users** that creates many accounts at once after a dry-run preview. Passwords are generated, not imported.
 
 See [Users and roles](users-and-roles.md).
+
+## Integration hub
+
+The administrator screen for connectors and post-approval actions (upload a file, send mail, update an external record, or call a signed webhook). Failed deliveries can be replayed.
+
+See [Integration hub](integrations.md).
+
+## Connector
+
+One configured destination in the integration hub, such as Slack or generic HTTP. Credentials are encrypted. A disabled connector skips.

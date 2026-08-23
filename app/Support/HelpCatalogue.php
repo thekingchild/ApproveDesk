@@ -130,6 +130,15 @@ final class HelpCatalogue
                 screenRoute: 'admin.webhooks.index',
             ),
             new HelpArticle(
+                slug: 'integrations',
+                title: 'Integration hub',
+                summary: 'Connect Teams, Slack, Drive, SharePoint, mail, or HTTP and run post-approval actions.',
+                icon: 'puzzle-piece',
+                group: 'Administration',
+                audience: 'admin',
+                screenRoute: 'admin.integrations.index',
+            ),
+            new HelpArticle(
                 slug: 'organization-settings',
                 title: 'Organization settings',
                 summary: 'Login branding, application logo and favicon, browser title and description, self-registration (activation mode and domain allow-list), email approval link lifetime, the business calendar, and optional notification channels.',
@@ -197,7 +206,7 @@ final class HelpCatalogue
         }
 
         try {
-            foreach (['users.manage', 'departments.manage', 'templates.manage', 'settings.manage', 'reports.view', 'webhooks.manage'] as $permission) {
+            foreach (['users.manage', 'departments.manage', 'templates.manage', 'settings.manage', 'reports.view', 'webhooks.manage', 'integrations.manage'] as $permission) {
                 if ($user->can($permission)) {
                     return true;
                 }

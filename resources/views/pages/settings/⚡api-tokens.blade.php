@@ -20,7 +20,10 @@ new #[Title('API tokens')] class extends Component {
     public function availableAbilities(): array
     {
         $user = Auth::user();
-        $abilities = ['submissions:read' => __('Read submissions you can access')];
+        $abilities = [
+            'submissions:read' => __('Read submissions you can access'),
+            'request-types:read' => __('Read published request-type schemas'),
+        ];
 
         if ($user->can('create', \App\Models\Submission::class)) {
             $abilities['submissions:write'] = __('Create and submit your submissions');

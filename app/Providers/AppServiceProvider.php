@@ -12,12 +12,20 @@ use App\Events\WorkflowInformationRequested;
 use App\Events\WorkflowRejected;
 use App\Events\WorkflowReturned;
 use App\Listeners\ApplyOutOfOfficeFallbacks;
+use App\Listeners\DispatchIntegrationActions;
 use App\Listeners\DispatchWebhookDeliveries;
 use App\Listeners\NotifyCurrentApprovers;
 use App\Listeners\NotifyDelegate;
 use App\Listeners\NotifySubmitterOfDecision;
 use App\Listeners\NotifyWatchersOfDecision;
 use App\Notifications\Channels\OptionalLaravelNotificationChannel;
+use App\Services\Integrations\ConnectorRegistry;
+use App\Services\Integrations\Connectors\GoogleDriveConnector;
+use App\Services\Integrations\Connectors\HttpConnector;
+use App\Services\Integrations\Connectors\MailConnector;
+use App\Services\Integrations\Connectors\SharePointConnector;
+use App\Services\Integrations\Connectors\SlackConnector;
+use App\Services\Integrations\Connectors\TeamsConnector;
 use App\Services\Notifications\ChannelRegistry;
 use App\Services\Notifications\Channels\DatabaseNotificationChannel;
 use App\Services\Notifications\Channels\MailNotificationChannel;
@@ -66,6 +74,19 @@ class AppServiceProvider extends ServiceProvider
 
         $this->app->singleton(ChannelRegistry::class, function ($app): ChannelRegistry {
             return new ChannelRegistry($app->tagged('notification.channels'));
+        });
+
+        $this->app->tag([
+            TeamsConnector::class,
+            SlackConnector::class,
+            GoogleDriveConnector::class,
+            SharePointConnector::class,
+            MailConnector::class,
+            HttpConnector::class,
+        ], 'integration.connectors');
+
+        $this->app->singleton(ConnectorRegistry::class, function ($app): ConnectorRegistry {
+            return new ConnectorRegistry($app->tagged('integration.connectors'));
         });
     }
 
@@ -134,6 +155,7 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(WorkflowReturned::class, DispatchWebhookDeliveries::class);
         Event::listen(WorkflowInformationRequested::class, DispatchWebhookDeliveries::class);
         Event::listen(WorkflowDelegated::class, DispatchWebhookDeliveries::class);
+        Event::listen(WorkflowCompleted::class, DispatchIntegrationActions::class);
     }
 
     /**

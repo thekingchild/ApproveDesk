@@ -21,6 +21,7 @@ class IndexSubmissionRequest extends FormRequest
             'status' => ['nullable', Rule::enum(SubmissionStatus::class)],
             'type' => ['nullable', Rule::enum(SubmissionType::class)],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+            'cursor' => ['nullable', 'string'],
         ];
     }
 }

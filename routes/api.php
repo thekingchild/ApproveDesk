@@ -1,19 +1,32 @@
 <?php
 
+use App\Http\Controllers\Api\V1\OpenApiController;
+use App\Http\Controllers\Api\V1\RequestTypeSchemaController;
 use App\Http\Controllers\Api\V1\SubmissionActionController;
 use App\Http\Controllers\Api\V1\SubmissionController;
 use App\Http\Controllers\Api\V1\SubmissionSubmitController;
 use App\Http\Middleware\EnsureUserIsActive;
+use App\Http\Middleware\HandleApiIdempotency;
 use App\Http\Resources\Api\V1\UserResource;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('v1')->name('api.v1.')->middleware(['auth:sanctum', EnsureUserIsActive::class, 'throttle:api'])->group(function (): void {
+Route::get('v1/openapi.json', OpenApiController::class)->middleware('throttle:api')->name('api.v1.openapi');
+
+Route::prefix('v1')->name('api.v1.')->middleware([
+    'auth:sanctum',
+    EnsureUserIsActive::class,
+    'throttle:api',
+    HandleApiIdempotency::class,
+])->group(function (): void {
     Route::get('user', function (Request $request): UserResource {
         abort_unless($request->user()->tokenCan('submissions:read'), 403);
 
         return new UserResource($request->user());
     })->name('user');
+
+    Route::get('request-types', [RequestTypeSchemaController::class, 'index'])->name('request-types.index');
+    Route::get('request-types/{slug}', [RequestTypeSchemaController::class, 'show'])->name('request-types.show');
 
     Route::apiResource('submissions', SubmissionController::class)->only(['index', 'store', 'show']);
     Route::post('submissions/{submission}/submit', SubmissionSubmitController::class)->name('submissions.submit');

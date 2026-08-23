@@ -45,6 +45,7 @@ Administration:
 - [Request types](request-types.md)
 - [Analytics and export](analytics.md)
 - [Webhooks](webhooks.md)
+- [Integration hub](integrations.md)
 - [Organization settings](organization-settings.md)
 - [Notification channels](notification-channels.md)
 - [Audit trail](audit-trail.md)

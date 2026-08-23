@@ -38,10 +38,17 @@ class SubmissionController extends Controller
                 });
             })
             ->when(isset($validated['status']), fn ($builder) => $builder->where('status', $validated['status']))
-            ->when(isset($validated['type']), fn ($builder) => $builder->where('type', $validated['type']))
-            ->latest('updated_at');
+            ->when(isset($validated['type']), fn ($builder) => $builder->where('type', $validated['type']));
 
-        return SubmissionResource::collection($query->paginate($validated['per_page'] ?? 25)->withQueryString());
+        $perPage = $validated['per_page'] ?? 25;
+
+        if (isset($validated['cursor']) || $request->query->has('cursor')) {
+            return SubmissionResource::collection(
+                $query->orderByDesc('updated_at')->orderByDesc('id')->cursorPaginate($perPage)->withQueryString()
+            );
+        }
+
+        return SubmissionResource::collection($query->latest('updated_at')->paginate($perPage)->withQueryString());
     }
 
     public function store(

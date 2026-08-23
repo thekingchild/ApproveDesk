@@ -19,6 +19,7 @@ class RolesAndPermissionsSeeder extends Seeder
         'admin' => [
             'submissions.view.all', 'templates.manage', 'users.manage',
             'departments.manage', 'settings.manage', 'reports.view', 'webhooks.manage',
+            'integrations.manage',
             'submissions.fields.sensitive',
         ],
         'department-head' => ['submissions.view.all', 'approvals.act', 'submissions.create', 'submissions.view.own'],
