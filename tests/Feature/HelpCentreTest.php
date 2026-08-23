@@ -236,4 +236,36 @@ class HelpCentreTest extends TestCase
             }
         }
     }
+
+    public function test_requester_definitions_page_has_no_dead_or_forbidden_links(): void
+    {
+        $submitter = User::factory()->create()->assignRole('submitter');
+        $html = app(HelpCatalogue::class)->find('definitions')->html($submitter);
+
+        preg_match_all('/href="([^"]+)"/', $html, $matches);
+
+        $this->assertNotEmpty($matches[1]);
+
+        foreach ($matches[1] as $href) {
+            $path = parse_url(html_entity_decode($href, ENT_QUOTES), PHP_URL_PATH) ?: $href;
+
+            $this->actingAs($submitter)->get($path)->assertOk($href.' must be readable by a requester');
+        }
+    }
+
+    public function test_administrator_definitions_page_has_no_dead_links(): void
+    {
+        $admin = User::factory()->create()->assignRole('admin');
+        $html = app(HelpCatalogue::class)->find('definitions')->html($admin);
+
+        preg_match_all('/href="([^"]+)"/', $html, $matches);
+
+        $this->assertNotEmpty($matches[1]);
+
+        foreach ($matches[1] as $href) {
+            $path = parse_url(html_entity_decode($href, ENT_QUOTES), PHP_URL_PATH) ?: $href;
+
+            $this->actingAs($admin)->get($path)->assertOk($href.' must be readable by an administrator');
+        }
+    }
 }

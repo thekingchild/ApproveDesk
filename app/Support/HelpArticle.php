@@ -28,7 +28,7 @@ final readonly class HelpArticle
         return $this->audience === 'all' || HelpCatalogue::isAdministrator($user);
     }
 
-    public function html(): string
+    public function html(?User $user = null): string
     {
         $html = Str::markdown(File::get($this->path()), [
             'html_input' => 'strip',
@@ -37,37 +37,55 @@ final readonly class HelpArticle
 
         $html = (string) preg_replace('/^<h1>.*?<\/h1>\s*/s', '', $html, 1);
 
-        return (string) preg_replace_callback(
-            '/href="([^"]+)"/',
-            function (array $matches): string {
+        $html = (string) preg_replace_callback(
+            '/<a href="([^"]+)">(.*?)<\/a>/s',
+            function (array $matches) use ($user): string {
                 $href = html_entity_decode($matches[1], ENT_QUOTES);
+                $label = $matches[2];
+                $resolved = $this->resolveHelpHref($href);
 
-                $path = parse_url($href, PHP_URL_PATH);
-
-                if (! is_string($path) || $path === '') {
-                    $path = $href;
+                if ($resolved === null) {
+                    return $label;
                 }
 
-                if (! str_ends_with(strtolower($path), '.md')) {
-                    return $matches[0];
+                if ($user !== null) {
+                    $article = app(HelpCatalogue::class)->find($resolved);
+
+                    if ($article === null || ! $article->visibleTo($user)) {
+                        return $label;
+                    }
                 }
 
-                $slug = basename($path, '.md');
-
-                if (! preg_match('/^[a-z0-9-]+$/', $slug) || ! is_file(base_path('docs/kb/'.$slug.'.md'))) {
-                    return $matches[0];
-                }
-
-                $url = route('help.show', $slug);
-                $fragment = parse_url($href, PHP_URL_FRAGMENT);
-
-                if (is_string($fragment) && $fragment !== '') {
-                    $url .= '#'.$fragment;
-                }
-
-                return 'href="'.e($url).'"';
+                return '<a href="/help/'.$resolved.'">'.$label.'</a>';
             },
             $html,
         );
+
+        return $html;
+    }
+
+    private function resolveHelpHref(string $href): ?string
+    {
+        $path = parse_url($href, PHP_URL_PATH);
+
+        if (! is_string($path) || $path === '') {
+            $path = $href;
+        }
+
+        $path = ltrim($path, '/');
+
+        if (str_ends_with(strtolower($path), '.md')) {
+            $slug = basename($path, '.md');
+        } elseif (preg_match('#^help/([a-z0-9-]+)$#', $path, $match) === 1) {
+            $slug = $match[1];
+        } else {
+            return null;
+        }
+
+        if (preg_match('/^[a-z0-9-]+$/', $slug) !== 1 || ! is_file(base_path('docs/kb/'.$slug.'.md'))) {
+            return null;
+        }
+
+        return $slug;
     }
 }

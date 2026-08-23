@@ -377,6 +377,11 @@
         text-underline-offset: 0.15em;
     }
 
+    .ad-help-prose h2 a,
+    .ad-help-prose h3 a {
+        color: inherit;
+    }
+
     .ad-help-prose table {
         width: 100%;
         border-collapse: collapse;

@@ -39,7 +39,7 @@ class HelpController extends Controller
 
         return view('pages.help.show', [
             'article' => $item,
-            'html' => $item->html(),
+            'html' => $item->html($user),
             'siblings' => $catalogue->visibleFor($user)
                 ->filter(fn (HelpArticle $article): bool => $article->group === $item->group)
                 ->values(),
