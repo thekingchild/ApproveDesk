@@ -144,6 +144,7 @@ Locked product decision for Phase 8.2. It does not reopen Phase 8.1. Design: [do
 | 7 | v2.3.0 | Visual workflows, versioning, and dynamic assignment | Complete |
 | 7A | v2.3.1 | Assignee picker UX and user phone numbers | Complete |
 | 7B | v2.3.2 | Organization working / office hours | Complete |
+| UO | v2.3.3 | User onboarding: CSV/Excel import, registration OTP, domain allow-list | Complete |
 | 8 | v2.4.0 | Collaboration, notifications, and integration hub | In progress — 8.1–8.2 complete |
 | 9 | v2.5.0 | Governance, audit evidence, security, and reliability | Not started |
 | 10 | v3.0.0 | SaaS multi-tenancy foundation | Not started |
@@ -445,6 +446,52 @@ Follow-up UX pass over the same page. No new settings, no schema change; this on
 **Redesign demo:** an administrator opens Branding, sees current logo/favicon/background thumbnails at a glance, replaces the logo (thumbnail updates instantly, one click to undo), checks both preview tabs, and saves with confidence about what changed.
 
 **Out of scope:** restyling the signed-in application chrome beyond logo and name; email template logos (Phase 8.2 editable email); per-tenant branding (P10-TEN-01); SVG uploads (XSS risk on a public asset route).
+
+---
+
+## User onboarding & self-registration controls — Complete (2026-08-23)
+
+**Goal:** let large organizations onboard hundreds of users without one-at-a-time entry, and turn open registration from an all-or-nothing switch into a controlled, verifiable gate: administrator-chosen activation behaviour, email OTP confirmation, and domain allow-listing. This is the standard enterprise pattern (SSO-less tenancy) and directly serves BASL-style deployments where only `@company.com` addresses may self-register.
+
+This phase is additive. It does not reopen Phases 0–8. Registration stays off unless enabled; every new control defaults to safe. No change to roles/permissions semantics, `WorkflowEngine`, or append-only history.
+
+### UO.1 CSV / Excel user import — Complete (2026-08-23)
+
+- **UO-DATA-01 — Complete:** Import accepts `.csv` and `.xlsx` (PhpSpreadsheet for xlsx, native parsing for CSV with UTF-8 BOM tolerance and delimiter sniffing). A downloadable template with header `name,email,department,manager_email,phone,roles` plus a sample row is on **Administration → Users → Import users**.
+- **UO-RULE-01 — Complete:** Row-level validation: unique email (case-insensitive), E.164 phone if present, department matched by existing name (no implicit creation), manager matched by email (must exist or appear earlier in the file), roles limited to those the acting admin may grant. Invalid rows never abort the batch.
+- **UO-RULE-02 — Complete:** Dry-run first: preview table with per-row status (will create / exists / problem) before anything is written. Commit is explicit. Result summary reports created/skipped/updated; a downloadable problem-report CSV is offered when any row is not ready.
+- **UO-ACT-01 — Complete:** `UserImportService` parses, analyzes, and commits in 200-row chunks inside a transaction. This delivery runs in-request (shared-hosting safe, no extra queue worker). Files above a few hundred rows should be split; a queued job remains future work. Imported users are organization-managed and marked verified immediately — they are not put through the self-registration OTP gate.
+- **UO-ACT-02 — Complete:** Duplicate mode chosen at import time: **skip** (default) or **update** name/department/manager/phone/roles of existing accounts. Passwords are never imported or updated. New accounts get a generated password; people set their own via “Forgot password”.
+- **UO-UI-01 — Complete:** “Import users” on the Users screen (policy-gated) with template download, upload, dry-run preview, commit, and result. Non-admins cannot open the page.
+- **UO-SEC-01 — Complete:** Uploads are Livewire temporary files (not web-served, size-capped at 10 MB). Each commit writes a `users.imported` log line with actor id, counts, and duplicate mode.
+
+### UO.2 Self-registration activation & email OTP — Complete (2026-08-23)
+
+- **UO-REG-01 — Complete:** When **Allow self-registration** is on, administrators choose **Require email confirmation** (default) or **Grant immediate access** on Branding, with plain-language copy.
+- **UO-REG-02 — Complete:** Confirmation is a 6-digit OTP emailed via `RegistrationOtpMail`, valid 10 minutes, single-use, max 5 attempts, resend throttled (60s between sends, 5/hour). Codes are stored hashed. Until confirmed, login bounces to the confirmation screen; no session is kept.
+- **UO-REG-03 — Complete:** Successful confirmation sets `email_verified_at` and sends the person to login. Unconfirmed accounts older than 72 hours are pruned by `users:prune-unconfirmed` (scheduled daily at 03:45).
+- **UO-REG-04 — Complete:** Fortify’s signed-link email-verification routes remain available. The OTP bounce only applies to addresses that currently have a pending OTP, so it does not lock unverified accounts that never self-registered.
+
+### UO.3 Registration domain allow-list — Complete (2026-08-23)
+
+- **UO-DOM-01 — Complete:** Administrators may restrict self-registration to listed domains (one per line). Empty list = any domain. Comparison is case-insensitive; subdomains match only when explicitly listed.
+- **UO-DOM-02 — Complete:** Enforcement is in `CreateNewUser` before the account exists. Rejection copy is generic (“Please register with your organization email address.”) and does not enumerate the allow-list.
+- **UO-DOM-03 — Complete:** Branding card “Registration domains” textarea with hostname validation. Applies to self-registration only — administrator-created and imported users are unaffected.
+
+### UO.4 Tests, docs, and exit gate — Complete (2026-08-23)
+
+- **UO-TEST-01 — Complete:** Unit tests cover domain matching (case, subdomain, empty list) and OTP hashing, expiry, attempt/consume, and resend throttle.
+- **UO-TEST-02 — Complete:** Feature tests cover import template download, CSV dry-run + commit (duplicates, unknown department, manager link), XLSX parse/commit, policy gate, activation modes, blocked sign-in pre-confirmation, wrong-code rejection, 72-hour pruning, settings save/validation, and domain allow-list on the real `/register` route.
+- **UO-TEST-03 — Deferred:** Dusk wizard walkthrough is not in this delivery; Livewire feature tests cover the same contract.
+- **UO-DOC-01 — Complete:** `docs/kb/users-and-roles.md`, `docs/kb/organization-settings.md`, `docs/kb/definitions.md`, Help catalogue summaries, and `CHANGELOG.md`.
+
+**Phase UO demo:** an administrator downloads the template, uploads a spreadsheet, reviews the dry-run, and commits; a new hire self-registers with an allowed organization domain, enters the 6-digit email code, and signs in — while a `@gmail.com` attempt is refused when the allow-list is set.
+
+**Professional recommendation (recorded for scope discipline):**
+- **Shipped in this order:** UO.2 → UO.3 → UO.1, as recommended.
+- **Deliberately excluded (later phases):** SSO/SAML/OIDC (Phase 15 territory), SCIM directory sync, per-domain default role/department mapping, invitation-link bulk onboarding, SMS OTP, and a queued importer for multi-thousand-row files.
+- **Why OTP over magic-link here:** a short numeric code on the waiting screen is simpler for non-technical staff than hunting a link in a second tab. Fortify’s signed-link flow stays for admin-initiated verification.
+- **Security posture:** OTP at rest is hashed; domain checks are an onboarding convenience, **not** an authentication boundary — anyone can type any domain, so real assurance still comes from passwords/2FA/passkeys.
 
 ---
 

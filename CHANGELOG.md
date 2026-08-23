@@ -8,6 +8,7 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Added
 
+- User onboarding (Phase UO): CSV/XLSX user import with template, dry-run preview, skip/update duplicate modes, and a problem-report download; self-registration activation mode (email OTP confirmation by default, or immediate access); hashed 6-digit confirmation codes with expiry, attempt limits, and resend throttle; a domain allow-list on Branding so only organization addresses may self-register; daily prune of unconfirmed registrations older than 72 hours.
 - Form builder refinements (Phase 6B): date and date-time fields now enforce their configured minimum and maximum as inclusive bounds, publishing rejects a choice default outside its option list or an inverted date range, the builder preview renders real controls and honors visibility/required rules against sample values, an advisory draft-checks panel lists schema problems before saving (choice fields without options, inverted ranges, defaults missing from options, conditions pointing at missing earlier fields, calculated fields with no sources), conditional-rule value pickers offer the referenced choice field's options, and the builder autosaves per browser with restore/discard so a lost tab does not lose unsaved edits.
 
 ### Changed

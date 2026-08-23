@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\EnsureAppConfigured;
 use App\Http\Middleware\EnsureUserIsActive;
+use App\Http\Middleware\RedirectUnconfirmedRegistration;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -18,6 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web([
             EnsureAppConfigured::class,
             EnsureUserIsActive::class,
+            RedirectUnconfirmedRegistration::class,
         ]);
         $middleware->validateCsrfTokens(except: [
             'integrations/telegram/webhook',

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AnalyticsExportController;
+use App\Http\Controllers\Auth\RegistrationConfirmationController;
 use App\Http\Controllers\BrandingAssetController;
 use App\Http\Controllers\EmailApprovalController;
 use App\Http\Controllers\HelpController;
@@ -55,6 +56,20 @@ Route::middleware('guest')->prefix('auth')->name('oauth.')->group(function (): v
     Route::get('{provider}/callback', [OAuthController::class, 'callback'])->name('callback');
 });
 
+/*
+ | Self-registration email OTP confirmation (Phase UO.2). Deliberately
+ | unauthenticated: the account exists but cannot hold a session yet.
+ */
+Route::middleware('guest')->prefix('registration/confirm')->name('registration.confirm.')->group(function (): void {
+    Route::get('/', [RegistrationConfirmationController::class, 'show'])->name('show');
+    Route::post('/verify', [RegistrationConfirmationController::class, 'verify'])
+        ->middleware('throttle:registration-otp')
+        ->name('verify');
+    Route::post('/resend', [RegistrationConfirmationController::class, 'resend'])
+        ->middleware('throttle:registration-resend')
+        ->name('resend');
+});
+
 Route::middleware(['signed', 'throttle:approval-links'])->prefix('email-approvals')->name('approvals.email.')->group(function (): void {
     Route::get('{instance}/{step}/{approver}', [EmailApprovalController::class, 'show'])->name('confirm');
     Route::post('{instance}/{step}/{approver}', [EmailApprovalController::class, 'approve'])->name('approve');
@@ -85,6 +100,15 @@ Route::middleware(['auth', 'verified', 'can:settings.manage'])->group(function (
 
 Route::middleware(['auth', 'verified', 'can:viewAny,App\Models\User'])->group(function (): void {
     Route::livewire('admin/users', 'pages::admin.users')->name('admin.users.index');
+    Route::livewire('admin/users/import', 'pages::admin.users-import')->name('admin.users.import');
+    Route::get('admin/users/import/template', function () {
+        $csv = "name,email,department,manager_email,phone,roles\nAmina Bello,amina@bluechipanalytical.com,Operations,ceo@bluechipanalytical.com,+2348012345678,submitter\n";
+
+        return response()->make($csv, 200, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="users-import-template.csv"',
+        ]);
+    })->name('admin.users.import.template');
 });
 
 Route::middleware(['auth', 'verified', 'can:viewAny,App\Models\Department'])->group(function (): void {

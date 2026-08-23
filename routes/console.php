@@ -25,3 +25,4 @@ Schedule::job(new ProcessEscalation)->everyFifteenMinutes()->withoutOverlapping(
 Schedule::job(new ApplyOutOfOfficeFallbacksJob)->everyFifteenMinutes()->withoutOverlapping();
 Schedule::job(new RetryNotificationDeliveries)->everyFifteenMinutes()->withoutOverlapping();
 Schedule::command('approvedesk:fetch-whatsapp-templates')->dailyAt('03:15')->withoutOverlapping();
+Schedule::command('users:prune-unconfirmed')->dailyAt('03:45');

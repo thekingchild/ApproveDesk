@@ -78,7 +78,7 @@ final class HelpCatalogue
             new HelpArticle(
                 slug: 'users-and-roles',
                 title: 'Users and roles',
-                summary: 'Grant access, assign roles, and deactivate accounts without locking out the last super admin.',
+                summary: 'Grant access, assign roles, import users from a spreadsheet, and deactivate accounts without locking out the last super admin.',
                 icon: 'users',
                 group: 'Administration',
                 audience: 'admin',
@@ -132,7 +132,7 @@ final class HelpCatalogue
             new HelpArticle(
                 slug: 'organization-settings',
                 title: 'Organization settings',
-                summary: 'Login branding, application logo and favicon, browser title and description, registration, email approval link lifetime, the business calendar, and optional notification channels.',
+                summary: 'Login branding, application logo and favicon, browser title and description, self-registration (activation mode and domain allow-list), email approval link lifetime, the business calendar, and optional notification channels.',
                 icon: 'cog-6-tooth',
                 group: 'Administration',
                 audience: 'admin',

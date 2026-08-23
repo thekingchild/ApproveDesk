@@ -26,6 +26,10 @@ new #[Title('Branding settings')] class extends Component {
 
     public string $meta_description = '';
 
+    public string $registration_mode = 'otp';
+
+    public string $allowed_registration_domains = '';
+
     /** @var \Livewire\Features\SupportFileUploads\TemporaryUploadedFile|null */
     public $background = null;
 
@@ -57,6 +61,8 @@ new #[Title('Branding settings')] class extends Component {
         $this->allow_registration = Setting::get('auth.allow_registration', 'true') !== 'false';
         $this->meta_title = (string) Setting::get('brand.meta_title', '');
         $this->meta_description = (string) Setting::get('brand.meta_description', '');
+        $this->registration_mode = (string) Setting::get('auth.registration_mode', 'otp');
+        $this->allowed_registration_domains = (string) Setting::get('auth.allowed_registration_domains', '');
         $this->current_background = Setting::get('brand.login_background');
         $this->current_logo = Setting::get('brand.logo');
         $this->current_favicon = Setting::get('brand.favicon');
@@ -103,10 +109,23 @@ new #[Title('Branding settings')] class extends Component {
             'custom_css' => ['nullable', 'string', 'max:5000'],
             'meta_title' => ['nullable', 'string', 'max:80'],
             'meta_description' => ['nullable', 'string', 'max:180'],
+            'registration_mode' => ['required', \Illuminate\Validation\Rule::in(['immediate', 'otp'])],
+            'allowed_registration_domains' => ['nullable', 'string', 'max:5000', 'regex:/^[a-z0-9\.\-\s\r\n,]*$/i'],
             'background' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
             'logo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:1024'],
             'favicon' => ['nullable', 'mimes:ico,png,jpg,jpeg,webp', 'max:512'],
         ]);
+
+        // Each allow-list entry must look like a hostname.
+        foreach (preg_split('/[\r\n,]+/', $this->allowed_registration_domains) ?: [] as $domain) {
+            $domain = trim((string) $domain);
+
+            if ($domain !== '' && preg_match('/^(?!-)[a-z0-9-]+(\.[a-z0-9-]+)+$/', mb_strtolower($domain)) !== 1) {
+                $this->addError('allowed_registration_domains', __('":domain" does not look like a domain name. One per line, e.g. example.com.', ['domain' => $domain]));
+
+                return;
+            }
+        }
 
         $updateBranding->execute(new BrandingSettingsData(
             tagline: $this->tagline,
@@ -114,6 +133,8 @@ new #[Title('Branding settings')] class extends Component {
             overlay: $this->overlay,
             customCss: $this->custom_css === '' ? null : $this->custom_css,
             allowRegistration: $this->allow_registration,
+            registrationMode: $this->registration_mode,
+            allowedRegistrationDomains: $this->allowed_registration_domains,
             metaTitle: $this->meta_title,
             metaDescription: $this->meta_description,
             background: $this->background,
@@ -244,6 +265,29 @@ new #[Title('Branding settings')] class extends Component {
                         </div>
 
                         <flux:checkbox wire:model="allow_registration" :label="__('Allow self-registration')" />
+
+                        @if ($allow_registration)
+                            <div class="space-y-3 rounded-xl border border-zinc-200 p-4 dark:border-zinc-700" data-test="registration-controls">
+                                <flux:select wire:model="registration_mode" :label="__('After someone registers')">
+                                    <flux:select.option value="otp">{{ __('Require email confirmation (recommended)') }}</flux:select.option>
+                                    <flux:select.option value="immediate">{{ __('Grant immediate access') }}</flux:select.option>
+                                </flux:select>
+                                <p class="text-xs text-zinc-500 dark:text-zinc-400">
+                                    {{ __('With email confirmation, the account cannot sign in until the person enters the 6-digit code sent to their address. Codes expire after 10 minutes.') }}
+                                </p>
+
+                                <flux:textarea
+                                    wire:model="allowed_registration_domains"
+                                    :label="__('Registration domains')"
+                                    rows="3"
+                                    placeholder="{{ __('example.com') }}&#10;{{ __('mail.example.com') }}"
+                                />
+                                <flux:error name="allowed_registration_domains" />
+                                <p class="text-xs text-zinc-500 dark:text-zinc-400">
+                                    {{ __('One domain per line. Only people with an email at these domains may register — useful when only organization addresses should sign up. Leave empty to allow any email provider.') }}
+                                </p>
+                            </div>
+                        @endif
                     </div>
                 </flux:card>
 

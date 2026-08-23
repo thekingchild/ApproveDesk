@@ -133,3 +133,21 @@ The clock for the current step’s timeout, using elapsed hours or the business 
 The append-only list of workflow actions on a request. ApproveDesk does not edit or delete those rows.
 
 See [Audit trail](audit-trail.md).
+
+## Confirmation code (OTP)
+
+A 6-digit number emailed to someone who self-registers when **Require email confirmation** is on. It expires in 10 minutes and can be used once. Sign-in is blocked until they enter it.
+
+See [Organization settings](organization-settings.md).
+
+## Domain allow-list
+
+The list of email domains permitted to self-register, set on Branding. Empty means any provider. It does not apply to accounts an administrator creates or imports.
+
+See [Organization settings](organization-settings.md).
+
+## User import
+
+A spreadsheet upload on **Administration → Users** that creates many accounts at once after a dry-run preview. Passwords are generated, not imported.
+
+See [Users and roles](users-and-roles.md).

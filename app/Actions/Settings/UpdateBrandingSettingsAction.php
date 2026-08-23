@@ -17,6 +17,16 @@ final class UpdateBrandingSettingsAction
         Setting::put('brand.login_background_overlay', (string) $data->overlay);
         Setting::put('brand.custom_css', $data->customCss === '' ? null : $data->customCss);
         Setting::put('auth.allow_registration', $data->allowRegistration ? 'true' : 'false');
+        Setting::put('auth.registration_mode', in_array($data->registrationMode, ['immediate', 'otp'], true) ? $data->registrationMode : 'otp');
+
+        // Normalise the allow-list: lowercase, one per line, no blanks/dupes.
+        $domains = collect(preg_split('/[\r\n,]+/', $data->allowedRegistrationDomains) ?: [])
+            ->map(fn (string $domain): string => mb_strtolower(trim($domain)))
+            ->filter()
+            ->unique()
+            ->implode("\n");
+        Setting::put('auth.allowed_registration_domains', $domains === '' ? null : $domains);
+
         Setting::put('brand.meta_title', $data->metaTitle === '' ? null : $data->metaTitle);
         Setting::put('brand.meta_description', $data->metaDescription === '' ? null : $data->metaDescription);
 

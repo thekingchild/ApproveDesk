@@ -224,9 +224,14 @@ new #[Title('User management')] class extends Component {
             <flux:subheading>{{ __('Manage access, roles, departments, and account status.') }}</flux:subheading>
         </div>
 
-        <flux:button variant="primary" icon="user-plus" wire:click="createUser" data-test="create-user">
-            {{ __('Add user') }}
-        </flux:button>
+        <div class="flex items-center gap-2">
+            <flux:button icon="arrow-down-tray" :href="route('admin.users.import')" data-test="import-users">
+                {{ __('Import users') }}
+            </flux:button>
+            <flux:button variant="primary" icon="user-plus" wire:click="createUser" data-test="create-user">
+                {{ __('Add user') }}
+            </flux:button>
+        </div>
     </div>
 
     <div class="max-w-sm">

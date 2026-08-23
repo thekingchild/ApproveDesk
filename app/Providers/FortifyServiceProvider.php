@@ -11,6 +11,8 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
+use Laravel\Fortify\Contracts\LoginResponse;
+use Laravel\Fortify\Contracts\RegisterResponse;
 use Laravel\Fortify\Fortify;
 
 class FortifyServiceProvider extends ServiceProvider
@@ -41,6 +43,11 @@ class FortifyServiceProvider extends ServiceProvider
     {
         Fortify::resetUserPasswordsUsing(ResetUserPassword::class);
         Fortify::createUsersUsing(CreateNewUser::class);
+
+        // Phase UO.2: route self-registrations through the OTP gate when the
+        // activation mode requires email confirmation.
+        app()->singleton(RegisterResponse::class, \App\Http\Responses\RegisterResponse::class);
+        app()->singleton(LoginResponse::class, \App\Http\Responses\LoginResponse::class);
     }
 
     /**
@@ -92,5 +99,10 @@ class FortifyServiceProvider extends ServiceProvider
                 ($credentialId ?: $request->session()->getId()).'|'.$request->ip(),
             );
         });
+
+        // Phase UO.2: OTP verification attempts and resend requests.
+        RateLimiter::for('registration-otp', fn (Request $request) => Limit::perMinute(10)->by(Str::transliterate(Str::lower((string) $request->session()->get('registration.confirm.email'))).'|'.$request->ip()));
+
+        RateLimiter::for('registration-resend', fn (Request $request) => Limit::perMinute(3)->by(Str::transliterate(Str::lower((string) $request->session()->get('registration.confirm.email'))).'|'.$request->ip()));
     }
 }

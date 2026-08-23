@@ -33,9 +33,11 @@ class RegistrationTest extends TestCase
             'password_confirmation' => 'password',
         ]);
 
+        // Default activation is email OTP: no session until the code is confirmed.
         $response->assertSessionHasNoErrors()
-            ->assertRedirect(route('dashboard', absolute: false));
+            ->assertRedirect(route('registration.confirm.show'));
 
-        $this->assertAuthenticated();
+        $this->assertGuest();
+        $this->assertDatabaseHas('users', ['email' => 'test@example.com']);
     }
 }
