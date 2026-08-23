@@ -31,7 +31,7 @@ Open **Administration → Workflow templates** and add a template.
 - Open **Builder** for the canvas and list views of the same chain. Start and End are implied nodes.
 - Add Approval, Condition, Automatic, or Notification nodes. Duplicate, delete, reorder, undo, and redo stay in this editing session.
 - Run a read-only simulation with sample request data to see the route. It does not record decisions.
-- Compare versions by hash and step names. Restore an older version as a new draft, then publish if it should apply to new work.
+- Compare versions by their steps and names. Restore an older version as a new draft, then publish if it should apply to new work.
 - Save records a draft if the chain changed. **Publish version** asks for confirmation, then freezes that graph for new requests and retires the previous published version.
 - Write a short change summary so later administrators can see why the chain changed.
 
@@ -44,11 +44,11 @@ You do not have to pick a submission type. The old Document / Note / Memo / Requ
 - Quorum: N of M assignees must act.
 - Conditional: route using request data and allow-listed comparisons.
 - Automatic: the system records an approval when the rule matches.
-- Notification: the system records that a notice would be sent and continues. Actual delivery channels stay in a later phase.
+- Notification: the request records that a notice is due and continues. Delivery uses the channels you have configured.
 
-Assignees can be named users, a role, department members, the requester's line manager, the department manager, a user selected on the form, or an external resolver key. Manager and form-field assignees are resolved when the request starts.
+Assignees can be named people, a role, department members, the requester's line manager, the department manager, a person selected on the form, or another connected system. Manager and form-field assignees are resolved when the request starts.
 
-For named users, roles, and departments, type at least two characters to search. Chosen records appear as chips. The page does not list the whole directory. The stored step still holds only IDs.
+For named people, roles, and departments, type at least two characters to search. Chosen records appear as chips. The page does not list everyone.
 
 Group completion is first response, all assignees, or quorum N-of-M. Sequential, parallel, and quorum step types still set that default.
 
@@ -71,7 +71,7 @@ A template is the name of the process. A **version** is one frozen chain.
 | Retired | Frozen. It was published before a later version took over. In-flight requests on it continue. |
 | Archived | Frozen and hidden from new work. |
 
-Each published version stores who published it, when, a change summary, and a schema hash of the ordered steps.
+Each published version records who published it, when, and a short change summary.
 
 ## What not to do
 
@@ -85,4 +85,4 @@ Keep one default active so General Request and any unassigned form can still sta
 
 ## What stays true after an upgrade
 
-Requests that already started keep the **version** they started on, including the original step IDs. Publishing a later version, restoring an older draft, or changing selection rules does not rewrite that history. Simulation and Explain routing never write audit rows. Graph validation runs before publish so unreachable steps, missing assignees, and unsafe timeouts are refused.
+Requests that already started keep the **version** they started on. Publishing a later version, restoring an older draft, or changing selection rules does not rewrite that history. Simulation and Explain routing never add history rows. Checks run before publish so unreachable steps, missing assignees, and unsafe timeouts are refused.

@@ -15,7 +15,7 @@ Publish a request type when a process needs its own questions. Assign a workflow
 1. Create a request type and add fields in a draft.
 2. Choose the workflow template this form should use, or leave it on the default.
 3. Preview, reorder, and duplicate fields. Import choice options from a one-column CSV if needed.
-4. Publish. Publishing freezes that field version and records a schema hash.
+4. Publish. Publishing freezes that field version so later edits do not change requests already submitted.
 5. Later field edits create a new draft version. Publishing that draft does not change old requests.
 
 Archive a type to stop new submissions. Existing drafts and submitted requests keep working on the version they already have.
@@ -46,7 +46,7 @@ Short text, long text, rich text, number, currency, date, date-time, choice, che
 
 Each field can have a section, instructions, placeholder, default, required flag, limits, allowed file types, and help text.
 
-The builder asks for a label, not a machine name. ApproveDesk generates a hidden field key from that label (`Leave reason` becomes `leave_reason`) and keeps it unique in the version. Existing fields keep their key if you later change the label, so visibility rules you already set stay attached. Conditional and calculated-field pickers show labels; the stored rules still use keys.
+Type a label for each field. If you later rename the field, visibility rules and reports that already use it stay attached. Conditional and calculated-field pickers show those labels.
 
 Visibility and required-when rules may only reference an earlier field, and only with equals, not equals, in, and not empty.
 

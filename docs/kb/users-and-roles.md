@@ -13,7 +13,7 @@ Open **Administration → Users** to create accounts, change roles, attach a dep
 | Submitter | Create, edit own drafts, and withdraw own requests. |
 | Viewer | Read requests they are allowed to see. |
 
-A person can hold more than one role. Permission checks use abilities, not the role name, so mixed roles add up.
+A person can hold more than one role. Mixed roles add up — they receive every ability those roles include.
 
 Only a super admin can assign the super-admin role. The last remaining super admin cannot be removed or deactivated. That prevents a lockout.
 

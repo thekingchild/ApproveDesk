@@ -20,7 +20,7 @@ Pick a notification kind, edit subject and body, preview, save, or restore the d
 
 ### Chat channels
 
-Enable a channel, paste credentials (secrets are not Livewire fields), and test. Disable leaves credentials in place. Slack needs an interactivity URL. Telegram needs a webhook URL. WhatsApp fetch loads Meta templates; map each kind to an **approved** template. Unmapped or paused templates skip WhatsApp. ApproveDesk never sends free-form WhatsApp text.
+Enable a channel, paste credentials on the save form (secrets are not shown again), and test. Disable leaves credentials in place. Slack needs an interactivity URL. Telegram needs the webhook URL ApproveDesk shows on that card. WhatsApp fetch loads Meta templates; map each kind to an **approved** template. Unmapped or paused templates skip WhatsApp. ApproveDesk never sends free-form WhatsApp text.
 
 Teams and Slack action-required messages can include an **Approve** button. That button uses a signed token with the same stale-step rules as email. Opening the message does not approve.
 

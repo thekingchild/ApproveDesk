@@ -46,7 +46,9 @@ class HelpCentreTest extends TestCase
             ->assertSee('Users and roles')
             ->assertSee('Request types')
             ->assertSee('Feature definitions')
-            ->assertSee('Keeping this guide current');
+            ->assertSee('Looking for a screen?')
+            ->assertDontSee('docs/kb')
+            ->assertDontSee('implementation phase');
     }
 
     public function test_requester_does_not_see_administration_guides(): void
@@ -60,7 +62,8 @@ class HelpCentreTest extends TestCase
             ->assertSee('Create a request')
             ->assertSee('Requests')
             ->assertDontSee('Users and roles')
-            ->assertDontSee('Keeping this guide current');
+            ->assertDontSee('Looking for a screen?')
+            ->assertDontSee('docs/kb');
 
         $this->actingAs($submitter)
             ->get(route('help.show', 'users-and-roles'))
@@ -76,10 +79,11 @@ class HelpCentreTest extends TestCase
             ->assertOk()
             ->assertSee('Request types')
             ->assertSee('Open this screen')
-            ->assertSee('schema hash')
             ->assertSee('Workflow assignment')
             ->assertSee('Document, Note, Memo, and Request are not')
-            ->assertSee('The builder asks for a label, not a machine name')
+            ->assertSee('Type a label for each field')
+            ->assertDontSee('schema hash')
+            ->assertDontSee('leave_reason')
             ->assertSee('data-test="help-article-body"', false);
     }
 
@@ -192,6 +196,44 @@ class HelpCentreTest extends TestCase
         foreach ($catalogue->articles() as $article) {
             $this->assertFileExists($article->path(), $article->slug.' is missing its Markdown source');
             $this->assertNotSame('', trim($article->html()));
+        }
+    }
+
+    public function test_help_markdown_links_open_in_app_articles(): void
+    {
+        $admin = User::factory()->create()->assignRole('admin');
+
+        $html = $this->actingAs($admin)
+            ->get(route('help.show', 'definitions'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString(route('help.show', 'getting-around'), $html);
+        $this->assertStringContainsString(route('help.show', 'requests'), $html);
+        $this->assertStringNotContainsString('getting-around.md', $html);
+        $this->assertStringNotContainsString('href="requests.md"', $html);
+    }
+
+    public function test_published_help_does_not_expose_architecture(): void
+    {
+        $catalogue = app(HelpCatalogue::class);
+
+        foreach ($catalogue->articles() as $article) {
+            $html = $article->html();
+
+            $this->assertDoesNotMatchRegularExpression(
+                '/href="[^"]+\.md"/',
+                $html,
+                $article->slug.' still links to a raw .md file',
+            );
+
+            foreach (['Livewire', 'docs/kb', 'IMPLEMENTATION_PLAN', 'schema hash', 'long-polling', 'Phase 6A', 'leave_reason'] as $leak) {
+                $this->assertStringNotContainsStringIgnoringCase(
+                    $leak,
+                    $html,
+                    $article->slug.' exposes "'.$leak.'"',
+                );
+            }
         }
     }
 }

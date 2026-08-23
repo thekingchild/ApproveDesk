@@ -77,8 +77,8 @@
         @endforeach
 
         @if ($isAdministrator)
-            <x-ui.alert variant="info" :title="__('Keeping this guide current')">
-                {{ __('After each completed implementation phase, update the articles in docs/kb and publish them here.') }}
+            <x-ui.alert variant="info" :title="__('Looking for a screen?')">
+                {{ __('Start with Feature definitions for the words used in ApproveDesk, then open the guide that matches the screen you are on.') }}
             </x-ui.alert>
         @else
             <x-ui.alert variant="info" :title="__('Need administrator assistance?')">

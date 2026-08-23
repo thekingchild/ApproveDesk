@@ -4,7 +4,7 @@ Short meanings for the words used on ApproveDesk screens. Open the linked guide 
 
 ## Public website
 
-The marketing page at `/`. It is a folder of static files, not a Livewire screen. Guests see Log in and Sign up; signed-in people see Dashboard.
+The marketing page visitors see at the site address before they sign in. Guests see **Log in** and, when self-registration is allowed, **Sign up**. If you are already signed in, that button becomes **Dashboard**.
 
 See [Getting around](getting-around.md).
 
@@ -16,7 +16,7 @@ See [Requests](requests.md).
 
 ## Request type
 
-A named form, such as Leave Request or Purchase Request. The request type is what a requester chooses. It owns the fields people fill in and, from Phase 6A, the workflow that starts when they submit.
+A named form, such as Leave Request or Purchase Request. The request type is what a requester chooses. It owns the fields people fill in and the approval chain that starts when they submit.
 
 See [Request types](request-types.md).
 
@@ -28,7 +28,7 @@ See [Workflow templates](workflow-templates.md).
 
 ## Workflow builder
 
-The canvas and list editor for a workflow template. Start and End are shown for orientation. The stored chain is still the ordered steps.
+The canvas and list editor for a workflow template. Start and End are shown for orientation.
 
 ## Workflow version
 
@@ -52,11 +52,11 @@ An ordered rule on a request type that chooses a workflow from form values. Prio
 
 ## Assignee picker
 
-The search field on a workflow step that finds users, roles, or departments without listing the whole directory. Selected records show as chips. The stored step still uses IDs.
+The search field on a workflow step that finds users, roles, or departments without listing everyone. Selected people appear as chips.
 
 ## Assignee resolver
 
-How a step decides who acts: named users, a role, department members, the requester's manager, the department manager, a user picked on the form, or an external resolver.
+How a step decides who acts: named people, a role, department members, the requester's manager, the department manager, a person picked on the form, or another connected system.
 
 ## Group completion
 
@@ -78,7 +78,7 @@ A link from an ApproveDesk notification kind to an approved WhatsApp Business te
 
 ## Telegram bot
 
-An optional outbound bot. People link their Telegram account; ApproveDesk sends text and a review URL. It does not approve from chat. The bot uses a webhook, not long-polling.
+An optional chat bot. People link their Telegram account; ApproveDesk sends a message and a review link. Approvals still happen in ApproveDesk, not inside the chat.
 
 ## Branding
 
@@ -104,9 +104,9 @@ The current state of a request: Draft, Pending, In review, Awaiting information,
 
 See [Request statuses](statuses.md).
 
-## Field key
+## Field label
 
-The hidden machine name for a form field, generated from the label. Administrators do not type it. Search, analytics, and conditional rules use it internally.
+The name you type for a form field. ApproveDesk keeps that name attached to visibility rules and reports even if you later rename the field. You do not invent a technical name.
 
 ## Follower
 
@@ -136,7 +136,7 @@ The clock for the current step’s timeout, using elapsed hours or the business 
 
 ## Audit trail
 
-The append-only list of workflow actions on a request. ApproveDesk does not edit or delete those rows.
+The history of decisions on a request. ApproveDesk does not change or remove those entries.
 
 See [Audit trail](audit-trail.md).
 

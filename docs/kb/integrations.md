@@ -24,11 +24,11 @@ An action runs when a workflow completes (the request is approved). Choose:
 
 You can limit an action to one request type, or leave it for every type. Failed deliveries retry, then sit in a dead-letter list. Replay sends them again.
 
-Generic HTTP and signed webhooks use the same HMAC as **Administration → Webhooks**: `HMAC_SHA256(secret, timestamp + "." + body)`.
+Generic HTTP and signed webhooks use the same signing method as **Administration → Webhooks**.
 
 ## What not to do
 
-Do not put a personal bot token in a Livewire field screenshot or a ticket. Credentials go through the save form and stay encrypted.
+Do not paste a personal bot token into a screenshot or a support ticket. Credentials go through the save form and stay hidden.
 
 A domain or URL allow-list on registration is unrelated — this hub is for outbound work after approval.
 
