@@ -428,9 +428,21 @@ This is additive. It does not reopen Phases 0–8. No new table. Values stay in 
 - **BRAND-02 — Complete:** Branding settings include application name (`brand.meta_title`), meta description (`brand.meta_description`), application logo (`brand.logo`), and favicon (`brand.favicon`), in addition to the existing tagline, accent colour, background, overlay, custom CSS, and registration toggle. The logo replaces the default mark on login and in the signed-in sidebar/header. Favicon and meta tags apply on every page that uses `partials.head` and on the welcome page.
 - **BRAND-03 — Complete:** Saving branding goes through `UpdateBrandingSettingsAction` and `BrandingSettingsData`. Replacing or removing a file deletes the previous object. Missing stored files fall back to the product defaults instead of emitting a broken URL.
 - **BRAND-TEST-01 — Complete:** Feature tests cover default and custom identity on login, background and identity uploads through the settings page, the asset route (success, missing file, path traversal, disallowed extension), and restoration of defaults when logo/favicon are removed.
+- **BRAND-TEST-02 — Complete:** Feature tests also cover the redesigned settings layout: grouped Application identity and Login page sections with context subtitles, inline current-asset thumbnails on upload cards, plain-language constraint copy (types and size limits next to each picker), Advanced custom-CSS disclosure, and a live preview with Login and Browser tabs.
 - **BRAND-DOC-01 — Complete:** Help for organization settings and the Branding definition, `CHANGELOG.md`, `docs/DEVELOPMENT.md` (storage link plus route fallback), installer/post-deploy `storage:link` best-effort, and this plan, per section 3.4.
 
 **Branding identity demo:** an administrator uploads a login background, logo, and favicon, sets the application name and meta description, saves, signs out, and sees the background, logo, tab title, and description on `/login` without running `storage:link`.
+
+### Branding settings page redesign — Complete (2026-08-23)
+
+Follow-up UX pass over the same page. No new settings, no schema change; this only reorganizes how the existing controls are presented.
+
+- **BRAND-UX-01 — Complete:** The page is organized into two titled cards — **Application identity** ("Appears on login and throughout the app") and **Login page** ("What requesters see before they sign in") — replacing a single long form.
+- **BRAND-UX-02 — Complete:** Logo, favicon, and background uploads render as visual cards with inline thumbnails of the current or freshly chosen asset, plain-language constraint copy (file types and size limits beside each picker), a "Keep current … instead" undo link after choosing a replacement, and an explicit "will be removed when you save / Keep it" state instead of a bare checkbox alone.
+- **BRAND-UX-03 — Complete:** Custom CSS moves under an "Advanced" disclosure so it cannot be mistaken for a required field, self-registration sits with identity settings, and the save button stays visible at the end of the form column.
+- **BRAND-UX-04 — Complete:** The live preview becomes a sticky side panel with two tabs: **Login** (background, overlay, tagline, logo/name) and **Browser** (favicon + title/description in a mock browser tab, plus the signed-in header mark), so both branding surfaces are verifiable before saving.
+
+**Redesign demo:** an administrator opens Branding, sees current logo/favicon/background thumbnails at a glance, replaces the logo (thumbnail updates instantly, one click to undo), checks both preview tabs, and saves with confidence about what changed.
 
 **Out of scope:** restyling the signed-in application chrome beyond logo and name; email template logos (Phase 8.2 editable email); per-tenant branding (P10-TEN-01); SVG uploads (XSS risk on a public asset route).
 

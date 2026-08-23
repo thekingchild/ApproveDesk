@@ -4,22 +4,26 @@ These screens sit under Settings and are limited to administrators.
 
 ## Branding
 
-Set the organisation identity and the public login screen.
+Set the organisation identity and the public login screen. The page is organised into two cards — **Application identity** and **Login page** — with a **Live preview** panel beside them so you can check both branding surfaces before saving.
 
 **Application identity** is used after people sign in as well as on login:
 
 - Application name appears next to the logo and in the browser tab. Leave it blank to keep the installed product name.
 - Meta description is the short text search engines and link previews can show. It is optional.
-- Application logo replaces the default mark in the sidebar, header, and login screen. PNG, JPG, or WebP, up to 1 MB.
-- Favicon replaces the browser-tab icon. ICO, PNG, JPG, or WebP, up to 512 KB.
+- Application logo replaces the default mark in the sidebar, header, and login screen. PNG, JPG, or WebP, up to 1 MB. The card shows the current logo (or your new choice) as a thumbnail the moment you pick a file, with a *Keep current logo instead* link if you change your mind.
+- Favicon replaces the browser-tab icon. ICO, PNG, JPG, or WebP, up to 512 KB, with the same preview-and-undo behaviour.
+- Allow self-registration sits here because it controls who can create an account.
 
-**Login page** settings are the public login screen:
+**Login page** settings are the public login screen — what requesters see before they sign in:
 
-- Tagline, accent colour, background image, overlay, and optional CSS.
-- The background image is shown on large screens in the left panel and on smaller screens behind the sign-in form.
+- Tagline, accent colour, background image, overlay slider, and optional CSS.
+- The background image is shown on large screens in the left panel and on smaller screens behind the sign-in form; its upload card previews the current or chosen image.
+- Custom CSS lives under **Advanced: custom CSS** — it is for fine-grained tweaks only and is never required.
 - You can allow or block self-registration. If registration is off, only administrators create accounts.
 
-Removing a logo, favicon, or background restores the product default. Uploaded files replace the previous file. Identity artwork is public; do not upload confidential images here.
+The **Live preview** panel has two tabs. **Login** shows the background, overlay darkness, tagline, and logo/name as requesters will see them. **Browser** shows how your favicon, application name, and description appear in a browser tab and next to the signed-in header.
+
+Removing a logo, favicon, or background restores the product default; the page states plainly when a removal will happen on save, with a *Keep it* link to cancel. Uploaded files replace the previous file. Identity artwork is public; do not upload confidential images here.
 
 ## Approval email links
 

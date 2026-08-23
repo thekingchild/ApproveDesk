@@ -118,6 +118,35 @@ class BrandingTest extends TestCase
             ->assertSee('Meta description');
     }
 
+    public function test_branding_page_groups_identity_and_login_sections_with_live_preview(): void
+    {
+        $admin = User::factory()->create()->assignRole('admin');
+        Storage::disk('public')->put('branding/logo.png', 'logo');
+        Storage::disk('public')->put('branding/bg.jpg', 'bg');
+        Setting::put('brand.logo', 'branding/logo.png');
+        Setting::put('brand.login_background', 'branding/bg.jpg');
+
+        $this->actingAs($admin)
+            ->get(route('settings.branding'))
+            ->assertOk()
+            // Two clear sections with context subtitles.
+            ->assertSee('Application identity')
+            ->assertSee('Appears on login and throughout the app', false)
+            ->assertSee('Login page')
+            ->assertSee('What requesters see before they sign in', false)
+            // Upload cards show the current assets inline.
+            ->assertSee('/branding/assets/logo.png', false)
+            ->assertSee('/branding/assets/bg.jpg', false)
+            // Plain-language constraint copy next to each upload.
+            ->assertSee('PNG, JPG or WebP · max 1 MB', false)
+            ->assertSee('JPG, PNG or WebP · max 2 MB · shown at every screen width', false)
+            // Advanced CSS is tucked away, preview has login + browser tabs, save is prominent.
+            ->assertSee('Advanced: custom CSS', false)
+            ->assertSee('Live preview', false)
+            ->assertSee('preview-tab-browser', false)
+            ->assertSee('data-test="save-branding"', false);
+    }
+
     public function test_branding_can_be_saved_through_the_settings_page(): void
     {
         $admin = User::factory()->create()->assignRole('admin');

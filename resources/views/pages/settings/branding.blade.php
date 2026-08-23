@@ -83,6 +83,15 @@ new #[Title('Branding settings')] class extends Component {
         ]);
     }
 
+    /** Clear a pending replacement so the stored asset stays in place. */
+    public function keepCurrent(string $what): void
+    {
+        if (in_array($what, ['background', 'logo', 'favicon'], true)) {
+            $this->{$what} = null;
+            $this->resetValidation($what);
+        }
+    }
+
     public function save(UpdateBrandingSettingsAction $updateBranding): void
     {
         $this->authorize('settings.manage');
@@ -156,101 +165,209 @@ new #[Title('Branding settings')] class extends Component {
         <div class="mb-4 flex items-center gap-1">
             <x-ui.help-link article="organization-settings" />
         </div>
-        <div class="flex flex-col gap-6 lg:flex-row">
-        <div class="w-full max-w-lg space-y-6">
-            <flux:heading size="sm">{{ __('Application identity') }}</flux:heading>
 
-            <flux:input wire:model="meta_title" :label="__('Application name')" :description="__('Shown next to the logo and in the browser tab. Leave blank to use the installed application name.')" maxlength="80" />
-            <flux:error name="meta_title" />
+        <div class="flex flex-col gap-6 xl:flex-row xl:items-start">
+            <div class="w-full flex-1 space-y-6">
 
-            <flux:textarea wire:model="meta_description" :label="__('Meta description')" :description="__('Short description for search engines and link previews.')" rows="3" maxlength="180" />
-            <flux:error name="meta_description" />
-
-            <div>
-                <flux:input type="file" wire:model="logo" :label="__('Application logo')" accept="image/png,image/jpeg,image/webp" />
-                <p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{{ __('PNG, JPG, or WebP. Maximum 1 MB. Replaces the default mark on login and in the signed-in application.') }}</p>
-                <flux:error name="logo" />
-
-                @if ($current_logo)
-                    <div class="mt-2 flex items-center gap-3">
-                        <img src="{{ \App\Support\Branding::urlFor($current_logo) }}" alt="" class="h-10 w-10 rounded-md object-contain ring-1 ring-zinc-200 dark:ring-zinc-700" />
-                        <flux:checkbox wire:model="remove_logo" :label="__('Remove current logo')" />
+                {{-- Application identity --}}
+                <flux:card>
+                    <div class="flex items-center justify-between">
+                        <flux:heading size="md">{{ __('Application identity') }}</flux:heading>
+                        <p class="text-xs text-zinc-400">{{ __('Appears on login and throughout the app') }}</p>
                     </div>
-                @endif
-            </div>
 
-            <div>
-                <flux:input type="file" wire:model="favicon" :label="__('Favicon')" accept=".ico,image/png,image/jpeg,image/webp" />
-                <p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{{ __('ICO, PNG, JPG, or WebP. Maximum 512 KB. Shown in the browser tab.') }}</p>
-                <flux:error name="favicon" />
+                    <div class="mt-4 space-y-4">
+                        <flux:input wire:model="meta_title" :label="__('Application name')" :description="__('Shown next to the logo and in the browser tab. Leave blank to use the installed application name.')" maxlength="80" data-test="branding-name" />
+                        <flux:error name="meta_title" />
 
-                @if ($current_favicon)
-                    <div class="mt-2 flex items-center gap-3">
-                        <img src="{{ \App\Support\Branding::urlFor($current_favicon) }}" alt="" class="h-8 w-8 rounded-sm object-contain ring-1 ring-zinc-200 dark:ring-zinc-700" />
-                        <flux:checkbox wire:model="remove_favicon" :label="__('Remove current favicon')" />
+                        <flux:textarea wire:model="meta_description" :label="__('Meta description')" :description="__('Short description for search engines and link previews.')" rows="3" maxlength="180" />
+                        <flux:error name="meta_description" />
+
+                        <flux:separator />
+
+                        <div class="grid gap-5 sm:grid-cols-2">
+                            {{-- Logo --}}
+                            <div data-test="branding-logo-card">
+                                <p class="mb-2 text-sm font-medium">{{ __('Application logo') }}</p>
+                                <div class="flex items-center gap-4 rounded-xl border border-dashed border-zinc-300 p-3 dark:border-zinc-700">
+                                    <div class="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-800">
+                                        @if ($logo = $this->previewLogoUrl())
+                                            <img src="{{ $logo }}" alt="" class="h-full w-full object-contain p-1" />
+                                        @else
+                                            <span class="text-xs font-semibold text-zinc-400">{{ __('None') }}</span>
+                                        @endif
+                                    </div>
+                                    <div class="min-w-0 flex-1 space-y-1.5">
+                                        <flux:input type="file" wire:model="logo" accept="image/png,image/jpeg,image/webp" :placeholder="__('Choose image…')" />
+                                        <p class="text-xs text-zinc-500 dark:text-zinc-400">{{ __('PNG, JPG or WebP · max 1 MB') }}</p>
+                                        <flux:error name="logo" />
+                                    </div>
+                                </div>
+                                <div class="mt-2 space-y-1.5">
+                                    @if ($logo instanceof \Livewire\Features\SupportFileUploads\TemporaryUploadedFile)
+                                        <button type="button" wire:click="keepCurrent('logo')" class="text-xs text-zinc-500 underline decoration-dotted hover:text-zinc-700 dark:hover:text-zinc-300">{{ __('Keep current logo instead') }}</button>
+                                    @elseif ($current_logo && ! $remove_logo)
+                                        <flux:checkbox wire:model="remove_logo" :label="__('Remove current logo')" />
+                                    @elseif ($remove_logo)
+                                        <p class="text-xs text-amber-600 dark:text-amber-400">{{ __('The current logo will be removed when you save.') }} <button type="button" wire:click="$set('remove_logo', false)" class="underline">{{ __('Keep it') }}</button></p>
+                                    @endif
+                                </div>
+                            </div>
+
+                            {{-- Favicon --}}
+                            <div data-test="branding-favicon-card">
+                                <p class="mb-2 text-sm font-medium">{{ __('Favicon') }}</p>
+                                <div class="flex items-center gap-4 rounded-xl border border-dashed border-zinc-300 p-3 dark:border-zinc-700">
+                                    <div class="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-800">
+                                        @if ($faviconPreviewUrl = ($favicon?->temporaryUrl() ?? (($current_favicon && ! $remove_favicon) ? \App\Support\Branding::urlFor($current_favicon) : null)))
+                                            <img src="{{ $faviconPreviewUrl }}" alt="" class="h-full w-full object-contain p-1" />
+                                        @else
+                                            <span class="text-xs font-semibold text-zinc-400">{{ __('None') }}</span>
+                                        @endif
+                                    </div>
+                                    <div class="min-w-0 flex-1 space-y-1.5">
+                                        <flux:input type="file" wire:model="favicon" accept=".ico,image/png,image/jpeg,image/webp" :placeholder="__('Choose file…')" />
+                                        <p class="text-xs text-zinc-500 dark:text-zinc-400">{{ __('ICO, PNG, JPG or WebP · max 512 KB · browser tab icon') }}</p>
+                                        <flux:error name="favicon" />
+                                    </div>
+                                </div>
+                                <div class="mt-2 space-y-1.5">
+                                    @if ($favicon instanceof \Livewire\Features\SupportFileUploads\TemporaryUploadedFile)
+                                        <button type="button" wire:click="keepCurrent('favicon')" class="text-xs text-zinc-500 underline decoration-dotted hover:text-zinc-700 dark:hover:text-zinc-300">{{ __('Keep current favicon instead') }}</button>
+                                    @elseif ($current_favicon && ! $remove_favicon)
+                                        <flux:checkbox wire:model="remove_favicon" :label="__('Remove current favicon')" />
+                                    @elseif ($remove_favicon)
+                                        <p class="text-xs text-amber-600 dark:text-amber-400">{{ __('The current favicon will be removed when you save.') }} <button type="button" wire:click="$set('remove_favicon', false)" class="underline">{{ __('Keep it') }}</button></p>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+
+                        <flux:checkbox wire:model="allow_registration" :label="__('Allow self-registration')" />
                     </div>
-                @endif
-            </div>
+                </flux:card>
 
-            <flux:separator />
+                {{-- Login page appearance --}}
+                <flux:card>
+                    <div class="flex items-center justify-between">
+                        <flux:heading size="md">{{ __('Login page') }}</flux:heading>
+                        <p class="text-xs text-zinc-400">{{ __('What requesters see before they sign in') }}</p>
+                    </div>
 
-            <flux:heading size="sm">{{ __('Login page') }}</flux:heading>
+                    <div class="mt-4 space-y-4">
+                        <flux:input wire:model="tagline" :label="__('Tagline')" placeholder="Approvals, clearly tracked." />
 
-            <flux:input wire:model="tagline" :label="__('Tagline')" placeholder="Approvals, clearly tracked." />
+                        <flux:separator />
 
-            <div class="flex items-end gap-4">
-                <div class="w-16">
-                    <flux:input wire:model="accent_color" type="color" :label="__('Accent color')" class="h-10 p-1" />
+                        <div class="flex items-end gap-4">
+                            <div class="w-16">
+                                <flux:input wire:model="accent_color" type="color" :label="__('Accent color')" class="h-10 p-1" />
+                            </div>
+                            <flux:input wire:model="accent_color" :label="__('Hex value')" class="flex-1" />
+                        </div>
+
+                        <div>
+                            <flux:input wire:model.live="overlay" type="range" min="0" max="90" :label="__('Background dark overlay (%)')" />
+                            <p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{{ __('Only applies when a background image is set.') }}</p>
+                        </div>
+
+                        <div data-test="branding-background-card">
+                            <div class="flex items-center gap-4 rounded-xl border border-dashed border-zinc-300 p-3 dark:border-zinc-700">
+                                <div class="hidden h-16 w-24 shrink-0 overflow-hidden rounded-lg bg-zinc-100 sm:block dark:bg-zinc-800">
+                                    @if ($bgThumb = ($background?->temporaryUrl() ?? (($current_background && ! $remove_background) ? \App\Support\Branding::urlFor($current_background) : null)))
+                                        <img src="{{ $bgThumb }}" alt="" class="h-full w-full object-cover" />
+                                    @endif
+                                </div>
+                                <div class="min-w-0 flex-1 space-y-1.5">
+                                    <p class="text-sm font-medium">{{ __('Login background image') }}</p>
+                                    <flux:input type="file" wire:model="background" accept="image/*" :placeholder="__('Choose image…')" />
+                                    <p class="text-xs text-zinc-500 dark:text-zinc-400">{{ __('JPG, PNG or WebP · max 2 MB · shown at every screen width') }}</p>
+                                    <flux:error name="background" />
+                                </div>
+                            </div>
+                            <div class="mt-2 space-y-1.5">
+                                @if ($background instanceof \Livewire\Features\SupportFileUploads\TemporaryUploadedFile)
+                                    <button type="button" wire:click="keepCurrent('background')" class="text-xs text-zinc-500 underline decoration-dotted hover:text-zinc-700 dark:hover:text-zinc-300">{{ __('Keep current background instead') }}</button>
+                                @elseif ($current_background && ! $remove_background)
+                                    <flux:checkbox wire:model="remove_background" :label="__('Remove current background')" />
+                                @elseif ($remove_background)
+                                    <p class="text-xs text-amber-600 dark:text-amber-400">{{ __('The current background will be removed when you save.') }} <button type="button" wire:click="$set('remove_background', false)" class="underline">{{ __('Keep it') }}</button></p>
+                                @endif
+                            </div>
+                        </div>
+
+                        <details class="rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
+                            <summary class="cursor-pointer text-sm font-medium">{{ __('Advanced: custom CSS') }}</summary>
+                            <div class="mt-3 space-y-2">
+                                <flux:textarea wire:model="custom_css" rows="4" placeholder="/* e.g. .brand-mark { border-radius: 0; } */" />
+                                <flux:error name="custom_css" />
+                                <p class="text-xs text-zinc-500 dark:text-zinc-400">{{ __('For fine-grained adjustments only. Applied after standard styles; invalid CSS is ignored by browsers.') }}</p>
+                            </div>
+                        </details>
+                    </div>
+                </flux:card>
+
+                <div class="flex items-center justify-end gap-4">
+                    <flux:button variant="primary" wire:click="save" data-test="save-branding">{{ __('Save branding') }}</flux:button>
                 </div>
-                <flux:input wire:model="accent_color" :label="__('Hex value')" class="flex-1" />
             </div>
 
-            <div>
-                <flux:input wire:model.live="overlay" type="range" min="0" max="90" :label="__('Background dark overlay (%)')" />
-                <p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{{ __('Only applies when a background image is set.') }}</p>
-            </div>
-
-            <div>
-                <flux:input type="file" wire:model="background" :label="__('Login background image')" accept="image/*" />
-                <p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{{ __('JPG, PNG, or WebP. Maximum 2 MB. Shown on the login page at every screen width.') }}</p>
-                <flux:error name="background" />
-
-                @if ($current_background)
-                    <div class="mt-2 flex items-center gap-3">
-                        <flux:checkbox wire:model="remove_background" :label="__('Remove current background')" />
+            {{-- Sticky live preview --}}
+            <div class="w-full shrink-0 xl:w-96 xl:sticky xl:top-6" x-data="{ tab: 'login' }">
+                <flux:card>
+                    <div class="flex items-center justify-between">
+                        <flux:heading size="sm">{{ __('Live preview') }}</flux:heading>
+                        <nav class="flex rounded-lg bg-zinc-100 p-0.5 text-sm dark:bg-zinc-800" aria-label="{{ __('Preview target') }}">
+                            <button type="button" x-on:click="tab = 'login'" :class="tab === 'login' ? 'bg-white shadow dark:bg-zinc-900 text-zinc-900 dark:text-white' : 'text-zinc-500'" class="rounded-md px-3 py-1 font-medium transition" data-test="preview-tab-login">{{ __('Login') }}</button>
+                            <button type="button" x-on:click="tab = 'browser'" :class="tab === 'browser' ? 'bg-white shadow dark:bg-zinc-900 text-zinc-900 dark:text-white' : 'text-zinc-500'" class="rounded-md px-3 py-1 font-medium transition" data-test="preview-tab-browser">{{ __('Browser') }}</button>
+                        </nav>
                     </div>
-                @endif
-            </div>
 
-            <flux:textarea wire:model="custom_css" :label="__('Custom CSS (optional)')" rows="4" placeholder="/* e.g. .brand-mark { border-radius: 0; } */" />
-            <flux:error name="custom_css" />
-
-            <flux:checkbox wire:model="allow_registration" :label="__('Allow self-registration')" />
-
-            <div class="flex items-center gap-4">
-                <flux:button variant="primary" wire:click="save" data-test="save-branding">{{ __('Save branding') }}</flux:button>
-            </div>
-        </div>
-
-        <flux:card class="w-full max-w-sm self-start">
-            <flux:heading size="sm">{{ __('Live preview — login panel') }}</flux:heading>
-            <div class="relative mt-3 h-64 overflow-hidden rounded-lg" style="{{ $this->previewStyle() }}">
-                @if ($this->previewStyle() !== '' && str_contains($this->previewStyle(), 'background-image'))
-                    <div class="absolute inset-0" style="background-color: rgba(0,0,0, {{ $overlay / 100 }})"></div>
-                @endif
-                <div class="relative z-10 flex h-full flex-col justify-between p-4 text-white">
-                    <div class="flex items-center gap-2 text-sm font-medium">
-                        @if ($logo = $this->previewLogoUrl())
-                            <img src="{{ $logo }}" alt="" class="h-7 w-7 rounded-md object-contain" />
-                        @else
-                            <span class="flex h-7 w-7 items-center justify-center rounded-md" style="background: {{ $accent_color }}">AD</span>
+                    {{-- Login panel preview --}}
+                    <div x-show="tab === 'login'" class="relative mt-3 h-72 overflow-hidden rounded-lg" style="{{ $this->previewStyle() }}">
+                        @if (str_contains($this->previewStyle(), 'background-image'))
+                            <div class="absolute inset-0" style="background-color: rgba(0,0,0, {{ $overlay / 100 }})"></div>
                         @endif
-                        {{ $meta_title !== '' ? $meta_title : config('app.name') }}
+                        <div class="relative z-10 flex h-full flex-col justify-between p-4 text-white">
+                            <div class="flex items-center gap-2 text-sm font-medium">
+                                @if ($logo = $this->previewLogoUrl())
+                                    <img src="{{ $logo }}" alt="" class="h-7 w-7 rounded-md object-contain" />
+                                @else
+                                    <span class="flex h-7 w-7 items-center justify-center rounded-md" style="background: {{ $accent_color }}">AD</span>
+                                @endif
+                                {{ $meta_title !== '' ? $meta_title : config('app.name') }}
+                            </div>
+                            <div class="space-y-2">
+                                <flux:heading size="lg">{{ $tagline ?: 'Approvals, clearly tracked.' }}</flux:heading>
+                                <div class="rounded-lg bg-white/10 px-3 py-2 text-xs text-white/80 backdrop-blur-sm">sign in to continue</div>
+                            </div>
+                        </div>
                     </div>
-                    <flux:heading size="lg">{{ $tagline ?: 'Approvals, clearly tracked.' }}</flux:heading>
-                </div>
+
+                    {{-- Browser chrome preview --}}
+                    <div x-show="tab === 'browser'" x-cloak class="mt-3 space-y-3">
+                        <div class="rounded-lg border border-zinc-200 dark:border-zinc-700">
+                            <div class="flex items-center gap-2 border-b border-zinc-200 px-3 py-2 dark:border-zinc-700">
+                                @if ($favPrev = ($favicon?->temporaryUrl() ?? (($current_favicon && ! $remove_favicon) ? \App\Support\Branding::urlFor($current_favicon) : null)))
+                                    <img src="{{ $favPrev }}" alt="" class="h-4 w-4 rounded-sm object-contain" />
+                                @else
+                                    <span class="inline-block h-4 w-4 rounded-sm bg-zinc-300 dark:bg-zinc-600"></span>
+                                @endif
+                                <span class="truncate text-xs text-zinc-500">{{ $meta_description !== '' || $meta_title !== '' ? trim(($meta_title !== '' ? $meta_title.' — ' : '').$meta_description) : config('app.name') }}</span>
+                            </div>
+                            <div class="flex items-center gap-2 px-3 py-2.5">
+                                @if ($logo = $this->previewLogoUrl())
+                                    <img src="{{ $logo }}" alt="" class="h-6 w-6 rounded-md object-contain" />
+                                @else
+                                    <span class="flex h-6 w-6 items-center justify-center rounded-md text-[10px] font-bold text-white" style="background: {{ $accent_color }}">AD</span>
+                                @endif
+                                <span class="text-sm font-medium">{{ $meta_title !== '' ? $meta_title : config('app.name') }}</span>
+                            </div>
+                        </div>
+                        <p class="text-xs text-zinc-500 dark:text-zinc-400">{{ __('How your name, description, logo, and favicon appear in a browser tab and the signed-in header.') }}</p>
+                    </div>
+                </flux:card>
             </div>
-        </flux:card>
         </div>
     </div>
 </x-pages::settings.layout>
