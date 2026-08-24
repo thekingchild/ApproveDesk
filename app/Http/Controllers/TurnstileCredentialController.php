@@ -11,11 +11,15 @@ class TurnstileCredentialController extends Controller
     public function __invoke(Request $request, StoreTurnstileCredentialsAction $store): RedirectResponse
     {
         $validated = $request->validate([
+            'enabled' => ['sometimes', 'boolean'],
+            'site_key' => ['nullable', 'string', 'max:255'],
             'secret' => ['nullable', 'string', 'max:255'],
             'clear' => ['sometimes', 'boolean'],
         ]);
 
         $store->execute([
+            'enabled' => $request->boolean('enabled'),
+            'site_key' => $validated['site_key'] ?? '',
             'secret' => $validated['secret'] ?? null,
             'clear' => $request->boolean('clear'),
         ]);
@@ -24,6 +28,6 @@ class TurnstileCredentialController extends Controller
             ->route('settings.security-privacy')
             ->with('status', $request->boolean('clear')
                 ? __('Turnstile secret cleared.')
-                : __('Turnstile secret saved.'));
+                : __('Bot protection saved.'));
     }
 }

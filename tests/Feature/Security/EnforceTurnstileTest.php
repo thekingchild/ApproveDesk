@@ -14,7 +14,6 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
-use Livewire\Livewire;
 use Tests\TestCase;
 
 class EnforceTurnstileTest extends TestCase
@@ -147,7 +146,8 @@ class EnforceTurnstileTest extends TestCase
             ->get(route('settings.security-privacy'))
             ->assertOk()
             ->assertDontSee(self::SECRET, false)
-            ->assertSee('Require a Turnstile check');
+            ->assertSee('Require a Turnstile check')
+            ->assertDontSee('Turnstile secret');
 
         $this->post(route('logout'));
         $user = User::factory()->create();
@@ -183,11 +183,12 @@ class EnforceTurnstileTest extends TestCase
         $this->enableTurnstile();
         $admin = User::factory()->withTwoFactor()->create()->assignRole('admin');
 
-        Livewire::actingAs($admin)
-            ->test('pages::settings.security-privacy')
-            ->set('turnstileEnabled', false)
-            ->call('save')
-            ->assertHasNoErrors();
+        $this->actingAs($admin)
+            ->post(route('settings.turnstile.credentials'), [
+                'enabled' => '0',
+                'site_key' => '1x00000000000000000000AA',
+            ])
+            ->assertRedirect(route('settings.security-privacy'));
 
         $this->assertFalse(Turnstile::enabled());
 

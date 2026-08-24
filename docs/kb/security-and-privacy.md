@@ -32,7 +32,7 @@ Email approval links still work without a signed-in second factor. Existing API 
 
 ### Bot protection
 
-Turn on **Require a Turnstile check** when sign-in, registration, and password reset should pass a Cloudflare Turnstile challenge first. Save the site key on this screen and the secret in the separate secret form. The check stays off until both are saved and the box is on. You can turn it off again and the next sign-in works without a challenge.
+Turn on **Require a Turnstile check** when sign-in, registration, and password reset should pass a Cloudflare Turnstile challenge first. Save the site key and secret together on the **Bot protection** card. The check stays off until both are saved and the box is on. You can turn it off again and the next sign-in works without a challenge.
 
 Approval links, the API, and first-time setup are not covered.
 
