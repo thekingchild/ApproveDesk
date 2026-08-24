@@ -245,6 +245,19 @@ class HelpCentreTest extends TestCase
             ->assertSee('Sign out other devices');
     }
 
+    public function test_operations_article_explains_replay_and_backup_check(): void
+    {
+        $admin = User::factory()->create()->assignRole('admin');
+
+        $this->actingAs($admin)
+            ->get(route('help.show', 'operations'))
+            ->assertOk()
+            ->assertSee('Failed deliveries')
+            ->assertSee('Stuck requests')
+            ->assertSee('Backup check')
+            ->assertSee('Check this copy');
+    }
+
     public function test_catalogue_matches_markdown_files(): void
     {
         $catalogue = app(HelpCatalogue::class);

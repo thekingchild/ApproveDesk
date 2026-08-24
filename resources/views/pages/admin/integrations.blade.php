@@ -127,7 +127,15 @@ new #[Title('Integration hub')] class extends Component {
     {
         $delivery = IntegrationDelivery::query()->findOrFail($id);
         $this->authorize('update', $delivery->action->connector);
-        $replay->execute($delivery);
+
+        try {
+            $replay->execute($delivery);
+        } catch (\InvalidArgumentException $exception) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'replay' => $exception->getMessage(),
+            ]);
+        }
+
         Flux::toast(__('Delivery queued again.'), variant: 'success');
     }
 };

@@ -142,9 +142,9 @@ The administrator screen for connectors and post-approval actions (upload a file
 
 One configured destination in the integration hub, such as Slack or generic HTTP. Credentials stay hidden after you save. A disabled connector is skipped.
 
-## [Replay](/help/integrations)
+## [Replay](/help/operations)
 
-Send a failed post-approval delivery again from the integration hub. Replay does not create a second record and does not change the approval.
+Send a failed webhook, integration action, notice, or queue job again. Replay does not create a second record and does not change the approval. Integration actions can also be replayed from the integration hub.
 
 ## [Offline draft](/help/requests)
 
@@ -201,3 +201,24 @@ A zip of your profile, requests, comments, and sign-in history from **Settings â
 ## [Account anonymization](/help/users-and-roles)
 
 An administrator action that removes a personâ€™s name and email, blocks sign-in, and keeps their request history.
+
+## [Operations](/help/operations)
+
+The administrator screen for scheduled-work health, failed deliveries, stuck requests, and a check that this copy still has its required records.
+
+## [Scheduler heartbeat](/help/operations)
+
+The last time the minute job that drains waiting work recorded that it ran. A stale heartbeat means waiting notices and deliveries may be sitting.
+
+## [Failed delivery](/help/operations)
+
+A webhook, integration action, notice, or queue job that stopped after retries. **Replay** sends the same item again without creating a second record or changing the approval.
+
+## [Stuck request](/help/operations)
+
+An active request with no current step, or a step that has waited more than a day. Opening it does not decide or escalate.
+
+## [Backup check](/help/operations)
+
+A confirmation that this copy still has the required records. It does not take a host backup and it does not overwrite anything.
+

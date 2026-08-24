@@ -161,8 +161,9 @@ Laravel's health route `/up` (enable in `bootstrap/app.php`) plus an authenticat
 ## 9. Rollback
 
 1. Run **Deploy Production** manually and provide the previous immutable release tag as `release_ref`.
-2. Database rollbacks are **forward-only**: write a corrective migration; never `migrate:rollback` in production (audit integrity).
-3. Verify `/up`, login, and one approval round-trip after any rollback.
+2. Database rollbacks are **forward-only**: write a corrective migration; never `migrate:rollback` in production (audit integrity). `php artisan migrate:preflight` rejects pending drop/rename migrations.
+3. Verify `/up`, login, and one approval round-trip after any rollback. Then run `php artisan ops:heartbeat` and confirm **Administration → Operations** shows a fresh scheduler run.
+4. Full restore and rollback steps: [OPERATIONS.md](OPERATIONS.md) §3 and §8.
 
 ## 10. Definition of done (per release)
 

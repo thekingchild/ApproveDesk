@@ -38,16 +38,20 @@ use App\Services\Notifications\Channels\WebPushNotificationChannel;
 use App\Services\Notifications\Channels\WhatsAppNotificationChannel;
 use App\Services\Notifications\NotificationDeliveryRecorder;
 use App\Services\Workflow\AssigneeResolver;
+use App\Support\CorrelationId;
 use App\Support\RateLimitProfiles;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
@@ -147,6 +151,25 @@ class AppServiceProvider extends ServiceProvider
         }
 
         $this->registerWorkflowListeners();
+        $this->registerCorrelationContext();
+    }
+
+    private function registerCorrelationContext(): void
+    {
+        Queue::createPayloadUsing(function (): array {
+            return ['correlation_id' => CorrelationId::current()];
+        });
+
+        Queue::before(function (JobProcessing $event): void {
+            $payload = $event->job->payload();
+            $id = CorrelationId::accept(isset($payload['correlation_id']) ? (string) $payload['correlation_id'] : null);
+            CorrelationId::set($id);
+            Log::shareContext([
+                'correlation_id' => $id,
+                'job' => $event->job->resolveName(),
+                'job_uuid' => $event->job->uuid(),
+            ]);
+        });
     }
 
     /**

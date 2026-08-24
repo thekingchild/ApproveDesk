@@ -144,7 +144,9 @@ This makes the immutability of `workflow_actions` a database-level guarantee, pe
 
 ## 9. Routine releases & rollback
 
-Handled by CI — see [CI-CD.md §6–9](CI-CD.md). Short version: tags deploy to production after approval; `post-deploy.sh` runs migrations and rebuilds caches; rollback re-deploys the previous tag; database changes are forward-only.
+Handled by CI — see [CI-CD.md §6–9](CI-CD.md) and the full runbook in [OPERATIONS.md](OPERATIONS.md). Short version: tags deploy to production after approval; `migrate:preflight` is available before `migrate --force`; rollback re-deploys the previous tag; database changes are forward-only. After any restore, run `php artisan ops:restore-drill` against the scratch copy and `php artisan evidence:verify` on one pack.
+
+Performance budgets: [PERFORMANCE.md](PERFORMANCE.md).
 
 ## 10. Troubleshooting quick hits
 

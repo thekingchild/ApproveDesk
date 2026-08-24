@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\CorrelateRequests;
 use App\Http\Middleware\EnsureAppConfigured;
 use App\Http\Middleware\EnsureUserIsActive;
 use App\Http\Middleware\RedirectUnconfirmedRegistration;
@@ -18,6 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->append(SecurityHeaders::class);
+        $middleware->append(CorrelateRequests::class);
         $middleware->web([
             EnsureAppConfigured::class,
             EnsureUserIsActive::class,

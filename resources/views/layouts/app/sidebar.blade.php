@@ -78,6 +78,9 @@
                             <flux:sidebar.item icon="archive-box" :href="route('admin.records.index')" :current="request()->routeIs('admin.records.*')" wire:navigate>
                                 {{ __('Records') }}
                             </flux:sidebar.item>
+                            <flux:sidebar.item icon="signal" :href="route('admin.operations.index')" :current="request()->routeIs('admin.operations.*')" wire:navigate>
+                                {{ __('Operations') }}
+                            </flux:sidebar.item>
                         @endcan
                     </flux:sidebar.group>
                 @endif

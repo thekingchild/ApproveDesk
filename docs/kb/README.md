@@ -51,3 +51,4 @@ Administration:
 - [Audit trail](audit-trail.md)
 - [Records](records.md)
 - [Security and privacy](security-and-privacy.md)
+- [Operations](operations.md)

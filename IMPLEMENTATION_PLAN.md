@@ -105,7 +105,7 @@ After each completed phase:
 4. Confirm Help as an administrator and as a requester.
 5. Commit the Markdown, catalogue, Help UI, and this plan together.
 
-**Administrator knowledge base through Phase LP (2026-08-23):** feature definitions (including public website, workflow version, builder, graph validation, selection rule, assignee resolver, group completion, business calendar / office hours, custom outcome, assignee picker, follower, mention, reminder, out of office, expected next step, estimated due time, branding, and notification channel), getting around (including the public `/` marketing home versus signed-in Dashboard), requests, approvals, collaboration, statuses, account settings (including out of office and that in-app only does not mute optional channels), users and roles (including E.164 phone numbers), departments, workflow templates (including upgrade guarantees and the searchable assignee picker), request types (including workflow assignment and selection rules), analytics, webhooks, organization settings (including login branding, application logo, favicon, meta title and description, office hours, and reminder quiet hours), notification channels, and the audit trail.
+**Administrator knowledge base through Phase 9.3 (2026-08-24):** feature definitions (including public website, workflow version, builder, graph validation, selection rule, assignee resolver, group completion, business calendar / office hours, custom outcome, assignee picker, follower, mention, reminder, out of office, expected next step, estimated due time, branding, notification channel, evidence pack, auditor access, legal hold, retention, disposition, sensitive field, download stamp, device session, operations, scheduler heartbeat, failed delivery, stuck request, and backup check), getting around (including the public `/` marketing home versus signed-in Dashboard, and Administration → Operations), requests, approvals, collaboration, statuses, account settings (including out of office and that in-app only does not mute optional channels), users and roles (including E.164 phone numbers), departments, workflow templates (including upgrade guarantees and the searchable assignee picker), request types (including workflow assignment and selection rules), analytics, webhooks, organization settings (including login branding, application logo, favicon, meta title and description, office hours, and reminder quiet hours), notification channels, the audit trail, records, security and privacy, and operations.
 
 ### 3.5 Request types own workflows
 
@@ -147,7 +147,7 @@ Locked product decision for Phase 8.2. It does not reopen Phase 8.1. Design: [do
 | UO | v2.3.3 | User onboarding: CSV/Excel import, registration OTP, domain allow-list | Complete |
 | LP | v2.3.4 | Public static landing page | Complete |
 | 8 | v2.4.0 | Collaboration, notifications, and integration hub | Complete |
-| 9 | v2.5.0 | Governance, audit evidence, security, and reliability | In progress — 9.1 and 9.2 complete |
+| 9 | v2.5.0 | Governance, audit evidence, security, and reliability | Complete |
 | 10 | v3.0.0 | SaaS multi-tenancy foundation | Not started |
 | 11 | v3.1.0 | Paystack and Flutterwave subscriptions | Not started |
 | 12 | v3.2.0 | SaaS onboarding, entitlements, and commercial operations | Not started |
@@ -678,7 +678,7 @@ Administrator screen: **Administration → Integrations**. Help: `docs/kb/integr
 
 ---
 
-## Phase 9 — Governance, audit evidence, security, and reliability
+## Phase 9 — Governance, audit evidence, security, and reliability — Complete (2026-08-24)
 
 **Goal:** make the mature non-enterprise product defensible, recoverable, and operationally trustworthy before introducing multiple paying tenants.
 
@@ -698,15 +698,15 @@ Administrator screen: **Administration → Integrations**. Help: `docs/kb/integr
 - **P9-SEC-04 — Complete (2026-08-24):** Add rate-limit profiles for login, API, approval links, exports, webhooks, and integrations.
 - **P9-SEC-05 — Complete (2026-08-24):** Add self-service user data export and administrator-assisted deletion/anonymization that preserves required audit evidence.
 
-### 9.3 Reliability and operations
+### 9.3 Reliability and operations — Complete (2026-08-24)
 
-- **P9-OPS-01:** Add structured logs, correlation IDs, queue/job metrics, webhook/connector health, and scheduler heartbeat.
-- **P9-OPS-02:** Add backup/restore verification tooling and a documented restore drill.
-- **P9-OPS-03:** Add dead-letter management, safe replay, stuck-workflow diagnostics, and reconciliation commands.
-- **P9-OPS-04:** Establish performance budgets and load tests for 100k submissions, 1m actions, large attachments, and high approver fan-out.
-- **P9-OPS-05:** Add zero-downtime-compatible migrations and release rollback runbooks.
+- **P9-OPS-01 — Complete (2026-08-24):** Add structured logs, correlation IDs, queue/job metrics, webhook/connector health, and scheduler heartbeat.
+- **P9-OPS-02 — Complete (2026-08-24):** Add backup/restore verification tooling and a documented restore drill.
+- **P9-OPS-03 — Complete (2026-08-24):** Add dead-letter management, safe replay, stuck-workflow diagnostics, and reconciliation commands.
+- **P9-OPS-04 — Complete (2026-08-24):** Establish performance budgets and load tests for 100k submissions, 1m actions, large attachments, and high approver fan-out.
+- **P9-OPS-05 — Complete (2026-08-24):** Add zero-downtime-compatible migrations and release rollback runbooks.
 
-**Phase 9 exit:** security review findings are resolved or explicitly accepted; restore drill succeeds; evidence pack verification succeeds; load targets meet documented budgets; the application is declared ready for tenant isolation work.
+**Phase 9 exit — Complete (2026-08-24):** security review findings are resolved or explicitly accepted; restore drill succeeds; evidence pack verification succeeds; load targets meet documented budgets; the application is declared ready for tenant isolation work.
 
 ---
 

@@ -182,6 +182,15 @@ final class HelpCatalogue
                 audience: 'admin',
                 screenRoute: 'settings.security-privacy',
             ),
+            new HelpArticle(
+                slug: 'operations',
+                title: 'Operations',
+                summary: 'Scheduled work, failed deliveries, stuck requests, and backup checks.',
+                icon: 'signal',
+                group: 'Administration',
+                audience: 'admin',
+                screenRoute: 'admin.operations.index',
+            ),
         ]);
     }
 

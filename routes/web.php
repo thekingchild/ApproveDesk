@@ -95,6 +95,7 @@ Route::prefix('install')->name('install.')->group(function (): void {
 
 Route::middleware(['auth', 'verified', 'can:settings.manage'])->group(function (): void {
     Route::livewire('admin/records', 'pages::admin.records')->name('admin.records.index');
+    Route::livewire('admin/operations', 'pages::admin.operations')->name('admin.operations.index');
     Route::livewire('settings/branding', 'pages::settings.branding')->name('settings.branding');
     Route::livewire('settings/approvals', 'pages::settings.approvals')->name('settings.approvals');
     Route::livewire('settings/security-privacy', 'pages::settings.security-privacy')->name('settings.security-privacy');
