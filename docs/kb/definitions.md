@@ -246,6 +246,10 @@ A snapshot of uploaded request files and branding artwork. It does not include t
 
 Where a snapshot is stored: the local disk, an S3-compatible bucket, or Google Drive.
 
+## [Refresh token](/help/backups)
+
+A Google sign-in code that lets ApproveDesk copy snapshots to Drive on a schedule without opening a browser. Paste it on the Google Drive card.
+
 ## [Retain](/help/backups)
 
 How many days a snapshot is kept. The last successful copy of each kind is never removed.

@@ -45,6 +45,10 @@ final readonly class HelpArticle
                 $resolved = $this->resolveHelpHref($href);
 
                 if ($resolved === null) {
+                    if (preg_match('#^https?://#i', $href) === 1) {
+                        return $matches[0];
+                    }
+
                     return $label;
                 }
 

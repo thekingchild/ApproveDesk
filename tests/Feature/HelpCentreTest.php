@@ -270,7 +270,11 @@ class HelpCentreTest extends TestCase
             ->assertSee('Backup database')
             ->assertSee('Backup files')
             ->assertSee('Promote')
-            ->assertSee('Check this copy');
+            ->assertSee('Check this copy')
+            ->assertSee('Save Drive destination')
+            ->assertSee('Refresh token')
+            ->assertSee('https://console.cloud.google.com/', false)
+            ->assertSee('https://developers.google.com/oauthplayground', false);
     }
 
     public function test_updates_article_explains_apply_and_backup_reminder(): void
