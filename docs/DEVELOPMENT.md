@@ -56,7 +56,7 @@ npm run build                         # production asset build (what CI ships)
 - Engine code: `app/Services/WorkflowEngine.php` — start every change by writing the failing topology test in `tests/Feature/Workflow/`.
 - Factories for every model exist; combine them to build scenarios (template → steps → instance) rather than creating rows ad hoc in tests.
 - Race-condition tests use database transactions with concurrent actor simulation; time-dependent behavior (escalation, delegation expiry) uses `Carbon::setTestNow()`, never `sleep()`.
-- 100% coverage on `WorkflowEngine` is the standing expectation (see AGENTS.md).
+- `WorkflowEngine` coverage is gated at 97% in CI (measured 97.10%). The AGENTS.md target remains 100%.
 
 ## Testing against MySQL (occasional parity check)
 

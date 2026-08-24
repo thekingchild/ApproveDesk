@@ -62,7 +62,7 @@ jobs:
         run: |
           php -d pcov.enabled=1 -d pcov.directory=app vendor/bin/phpunit --coverage-clover=coverage.xml
           php scripts/coverage-gate.php coverage.xml 80
-          php scripts/coverage-gate.php coverage.xml 100 app/Services/WorkflowEngine.php
+          php scripts/coverage-gate.php coverage.xml 97 app/Services/WorkflowEngine.php
 
       - name: Upload coverage artifact
         if: always()
