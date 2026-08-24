@@ -1,0 +1,667 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Access to an undefined property object\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Actions/Backups/CreateDatabaseBackupAction.php
+
+		-
+			message: '#^Offset ''workflow_actions'' on non\-empty\-array\<string, int\<0, max\>\> on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Actions/Backups/CreateDatabaseBackupAction.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between string\|null and App\\Enums\\BackupDestinationKind\:\:Local will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Actions/Backups/DeleteLocalBackupCopyAction.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 1
+			path: app/Actions/Backups/DeleteLocalBackupCopyAction.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between string\|null and App\\Enums\\BackupDestinationKind\:\:Local will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Actions/Backups/MaterializeBackupSnapshotAction.php
+
+		-
+			message: '#^Comparison operation "\>\=" between \-1 and 0 is always false\.$#'
+			identifier: greaterOrEqual.alwaysFalse
+			count: 2
+			path: app/Actions/Backups/PromoteDatabaseBackupAction.php
+
+		-
+			message: '#^Method App\\Actions\\Backups\\PromoteDatabaseBackupAction\:\:promoteSqlDump\(\) is unused\.$#'
+			identifier: method.unused
+			count: 1
+			path: app/Actions/Backups/PromoteDatabaseBackupAction.php
+
+		-
+			message: '#^Method App\\Actions\\Backups\\PromoteDatabaseBackupAction\:\:promoteSqliteFile\(\) is unused\.$#'
+			identifier: method.unused
+			count: 1
+			path: app/Actions/Backups/PromoteDatabaseBackupAction.php
+
+		-
+			message: '#^Offset ''workflow_actions'' on string\|null on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 2
+			path: app/Actions/Backups/PromoteDatabaseBackupAction.php
+
+		-
+			message: '#^Parameter \#1 \$query of static method Illuminate\\Database\\Connection\:\:unprepared\(\) expects literal\-string, non\-empty\-string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Actions/Backups/PromoteDatabaseBackupAction.php
+
+		-
+			message: '#^Property App\\Actions\\Backups\\PromoteDatabaseBackupAction\:\:\$reconciler is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: app/Actions/Backups/PromoteDatabaseBackupAction.php
+
+		-
+			message: '#^Property App\\Actions\\Backups\\PromoteDatabaseBackupAction\:\:\$verify is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: app/Actions/Backups/PromoteDatabaseBackupAction.php
+
+		-
+			message: '#^Result of && is always false\.$#'
+			identifier: booleanAnd.alwaysFalse
+			count: 2
+			path: app/Actions/Backups/PromoteDatabaseBackupAction.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between int and \*NEVER\* will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 2
+			path: app/Actions/Backups/PromoteDatabaseBackupAction.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between string and App\\Enums\\BackupSnapshotKind\:\:Database will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Actions/Backups/PromoteDatabaseBackupAction.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 1
+			path: app/Actions/Backups/PromoteDatabaseBackupAction.php
+
+		-
+			message: '#^Property App\\Actions\\Backups\\PromoteFilesBackupAction\:\:\$verify is never read, only written\.$#'
+			identifier: property.onlyWritten
+			count: 1
+			path: app/Actions/Backups/PromoteFilesBackupAction.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between string and App\\Enums\\BackupSnapshotKind\:\:Files will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: app/Actions/Backups/PromoteFilesBackupAction.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 1
+			path: app/Actions/Backups/PromoteFilesBackupAction.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Actions/Backups/RetainBackupSnapshotsAction.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\BackupDestinationKind\:\:Local will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Actions/Backups/StoreBackupDestinationAction.php
+
+		-
+			message: '#^Parameter \#2 \$manifest of method App\\Actions\\Backups\\VerifyBackupSnapshotAction\:\:verifyZip\(\) expects array\<string, mixed\>, array\|string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Actions/Backups/VerifyBackupSnapshotAction.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\BackupSnapshotKind\:\:Files will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Actions/Backups/VerifyBackupSnapshotAction.php
+
+		-
+			message: '#^Call to function method_exists\(\) with App\\Models\\User and ''passkeys'' will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: app/Actions/Privacy/AnonymizeUserAction.php
+
+		-
+			message: '#^Call to function method_exists\(\) with App\\Models\\User and ''tokens'' will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: app/Actions/Privacy/AnonymizeUserAction.php
+
+		-
+			message: '#^Using nullsafe method call on non\-nullable type Illuminate\\Http\\Request\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Actions/Privacy/LogSensitiveFieldAccessAction.php
+
+		-
+			message: '#^Parameter \#1 \$path of method Illuminate\\Filesystem\\FilesystemAdapter\:\:get\(\) expects string, string\|false given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Actions/Submissions/AttachSubmissionFilesAction.php
+
+		-
+			message: '#^Parameter \$submissionTypes of class App\\DTOs\\WorkflowTemplateData constructor expects array\<int, string\>, array\<App\\Enums\\SubmissionType\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Actions/WorkflowTemplates/CloneWorkflowTemplateAction.php
+
+		-
+			message: '#^Parameter \$submissionTypes of class App\\DTOs\\WorkflowTemplateData constructor expects array\<int, string\>, array\<App\\Enums\\SubmissionType\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Actions/WorkflowTemplates/RestoreWorkflowTemplateVersionAction.php
+
+		-
+			message: '#^Parameter \#1 \$submission of static method App\\Services\\Notifications\\NotificationContext\:\:forSubmission\(\) expects App\\Models\\Submission, App\\Models\\Submission\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Submission\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/DTOs/OutboundNotification.php
+
+		-
+			message: '#^Parameter \#1 \$query of method App\\Services\\Workflow\\AssignedStepConstraint\:\:constrainInstances\(\) expects Illuminate\\Database\\Eloquent\\Builder\<App\\Models\\WorkflowInstance\>, Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Api/V1/SubmissionController.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Http/Controllers/DownloadBackupSnapshotController.php
+
+		-
+			message: '#^Using nullsafe method call on non\-nullable type Illuminate\\Contracts\\Session\\Session\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 2
+			path: app/Http/Responses/LoginResponse.php
+
+		-
+			message: '#^Using nullsafe method call on non\-nullable type Illuminate\\Contracts\\Session\\Session\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 2
+			path: app/Http/Responses/RegisterResponse.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:active\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: app/Jobs/ApplyRetentionJob.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between App\\Models\\Submission and null will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Listeners/DispatchIntegrationActions.php
+
+		-
+			message: '#^Using nullsafe method call on non\-nullable type Illuminate\\Http\\Request\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 2
+			path: app/Listeners/RecordLoginEvent.php
+
+		-
+			message: '#^Match arm comparison between string and App\\Enums\\BackupDestinationKind\:\:GoogleDrive is always false\.$#'
+			identifier: match.alwaysFalse
+			count: 1
+			path: app/Models/BackupDestination.php
+
+		-
+			message: '#^Match arm comparison between string and App\\Enums\\BackupDestinationKind\:\:Local is always false\.$#'
+			identifier: match.alwaysFalse
+			count: 1
+			path: app/Models/BackupDestination.php
+
+		-
+			message: '#^Match arm comparison between string and App\\Enums\\BackupDestinationKind\:\:S3 is always false\.$#'
+			identifier: match.alwaysFalse
+			count: 1
+			path: app/Models/BackupDestination.php
+
+		-
+			message: '#^Match expression does not handle remaining value\: string$#'
+			identifier: match.unhandled
+			count: 1
+			path: app/Models/BackupDestination.php
+
+		-
+			message: '#^Call to function in_array\(\) with arguments string, array\{App\\Enums\\BackupSnapshotStatus\:\:Success, App\\Enums\\BackupSnapshotStatus\:\:Verified, App\\Enums\\BackupSnapshotStatus\:\:Promoted\} and true will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Models/BackupSnapshot.php
+
+		-
+			message: '#^Call to function in_array\(\) with arguments string, array\{App\\Enums\\BackupSnapshotStatus\:\:Verified, App\\Enums\\BackupSnapshotStatus\:\:Promoted\} and true will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Models/BackupSnapshot.php
+
+		-
+			message: '#^Using nullsafe property access on non\-nullable type App\\Models\\RequestTypeVersion\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Models/IntegrationAction.php
+
+		-
+			message: '#^Call to function is_string\(\) with string will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: app/Models/IntegrationConnector.php
+
+		-
+			message: '#^Negated boolean expression is always true\.$#'
+			identifier: booleanNot.alwaysTrue
+			count: 1
+			path: app/Models/UserSession.php
+
+		-
+			message: '#^Method App\\Services\\AnalyticsService\:\:customFieldBreakdown\(\) should return list\<array\{key\: string, label\: string, values\: list\<array\{value\: string, count\: int\}\>\}\> but returns array\<int, array\{key\: string, label\: string, values\: array\<int, array\{value\: string, count\: int\}\>\}\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/AnalyticsService.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>steps" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 2
+			path: app/Services/AnalyticsService.php
+
+		-
+			message: '#^Using nullsafe method call on non\-nullable type Illuminate\\Support\\Carbon\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 2
+			path: app/Services/Audit/EvidencePackBuilder.php
+
+		-
+			message: '#^Using nullsafe property access on non\-nullable type App\\Models\\RequestType\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Services/Audit/EvidencePackBuilder.php
+
+		-
+			message: '#^Using nullsafe property access on non\-nullable type App\\Models\\RequestTypeVersion\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Services/Audit/EvidencePackBuilder.php
+
+		-
+			message: '#^Using nullsafe property access on non\-nullable type App\\Models\\User\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 5
+			path: app/Services/Audit/EvidencePackBuilder.php
+
+		-
+			message: '#^Using nullsafe property access on non\-nullable type App\\Models\\WorkflowTemplateStep\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 2
+			path: app/Services/Audit/EvidencePackBuilder.php
+
+		-
+			message: '#^Method App\\Services\\Audit\\EvidencePackSigner\:\:sign\(\) has parameter \$files with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/Audit/EvidencePackSigner.php
+
+		-
+			message: '#^Method App\\Services\\Audit\\EvidencePackSigner\:\:valid\(\) has parameter \$files with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/Audit/EvidencePackSigner.php
+
+		-
+			message: '#^Cannot call method isPast\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Services/Auth/RegistrationOtpService.php
+
+		-
+			message: '#^Method App\\Services\\Auth\\RegistrationOtpService\:\:resendThrottledUntil\(\) never returns Carbon\\Carbon so it can be removed from the return type\.$#'
+			identifier: return.unusedType
+			count: 1
+			path: app/Services/Auth/RegistrationOtpService.php
+
+		-
+			message: '#^Cannot access property \$value on string\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Services/Backups/BackupRecorder.php
+
+		-
+			message: '#^Match arm comparison between string and App\\Enums\\BackupDestinationKind\:\:GoogleDrive is always false\.$#'
+			identifier: match.alwaysFalse
+			count: 1
+			path: app/Services/Backups/BackupTransportFactory.php
+
+		-
+			message: '#^Match arm comparison between string and App\\Enums\\BackupDestinationKind\:\:Local is always false\.$#'
+			identifier: match.alwaysFalse
+			count: 1
+			path: app/Services/Backups/BackupTransportFactory.php
+
+		-
+			message: '#^Match arm comparison between string and App\\Enums\\BackupDestinationKind\:\:S3 is always false\.$#'
+			identifier: match.alwaysFalse
+			count: 1
+			path: app/Services/Backups/BackupTransportFactory.php
+
+		-
+			message: '#^Match expression does not handle remaining value\: string$#'
+			identifier: match.unhandled
+			count: 1
+			path: app/Services/Backups/BackupTransportFactory.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>steps" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Services/Collaboration/ExpectedProgress.php
+
+		-
+			message: '#^Method App\\Services\\Collaboration\\MentionParser\:\:userIds\(\) should return list\<int\> but returns array\<int\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/Collaboration/MentionParser.php
+
+		-
+			message: '#^Offset 1 on array\{list\<string\>, list\<numeric\-string\>\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Services/Collaboration/MentionParser.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between App\\Models\\User and null will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Services/Collaboration/OutOfOfficeFallback.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Submission\:\:\$reference\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Integrations/ConnectorHttpClient.php
+
+		-
+			message: '#^Using nullsafe property access on non\-nullable type App\\Models\\RequestType\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Services/Integrations/ConnectorHttpClient.php
+
+		-
+			message: '#^Using nullsafe property access on non\-nullable type App\\Models\\RequestTypeVersion\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Services/Integrations/ConnectorHttpClient.php
+
+		-
+			message: '#^Using nullsafe property access on non\-nullable type App\\Models\\User\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 3
+			path: app/Services/Integrations/ConnectorHttpClient.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Submission\:\:\$reference\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/Integrations/Connectors/MailConnector.php
+
+		-
+			message: '#^Expression on left side of \?\? is not nullable\.$#'
+			identifier: nullCoalesce.expr
+			count: 1
+			path: app/Services/Integrations/Connectors/MailConnector.php
+
+		-
+			message: '#^Using nullsafe property access on non\-nullable type App\\Models\\User\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Services/Notifications/NotificationContext.php
+
+		-
+			message: '#^Method App\\Services\\Notifications\\WebPushService\:\:vapidKeys\(\) should return array\{publicKey\: string, privateKey\: string\} but returns array\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/Notifications/WebPushService.php
+
+		-
+			message: '#^Expression on left side of \?\? is not nullable\.$#'
+			identifier: nullCoalesce.expr
+			count: 1
+			path: app/Services/Operations/DeadLetterInbox.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 2
+			path: app/Services/Operations/DeadLetterInbox.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>reference_number" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Services/Operations/DeadLetterInbox.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>reference_number" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Services/Operations/StuckWorkflowDiagnostics.php
+
+		-
+			message: '#^Parameter \#6 \$color of function imagefilledrectangle expects int, int\<0, max\>\|false given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Privacy/FileWatermarker.php
+
+		-
+			message: '#^Parameter \#6 \$color of function imagestring expects int, int\<0, max\>\|false given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Privacy/FileWatermarker.php
+
+		-
+			message: '#^Using nullsafe method call on non\-nullable type Illuminate\\Support\\Carbon\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 2
+			path: app/Services/Privacy/UserDataExporter.php
+
+		-
+			message: '#^Using nullsafe property access on non\-nullable type App\\Models\\Submission\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Services/Privacy/UserDataExporter.php
+
+		-
+			message: '#^Anonymous function should return string but returns string\|false\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/RequestFieldAccess.php
+
+		-
+			message: '#^Method App\\Services\\SubmissionSearchService\:\:matchingFieldValue\(\) has parameter \$query with generic class Illuminate\\Database\\Eloquent\\Builder but does not specify its types\: TModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: app/Services/SubmissionSearchService.php
+
+		-
+			message: '#^Method App\\Services\\Users\\UserImportService\:\:grantableRoles\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/Users/UserImportService.php
+
+		-
+			message: '#^Method App\\Services\\Users\\UserImportService\:\:sniffDelimiter\(\) has parameter \$handle with no type specified\.$#'
+			identifier: missingType.parameter
+			count: 1
+			path: app/Services/Users/UserImportService.php
+
+		-
+			message: '#^Method App\\Services\\Users\\UserImportService\:\:spreadsheetRows\(\) should return list\<array\<string, string\>\> but returns array\<array\<string, string\>\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/Users/UserImportService.php
+
+		-
+			message: '#^Parameter \#1 \$header of method App\\Services\\Users\\UserImportService\:\:combine\(\) expects list\<string\>, array\<string\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Users/UserImportService.php
+
+		-
+			message: '#^Parameter \#2 \$data of method App\\Services\\Users\\UserImportService\:\:combine\(\) expects list\<mixed\>, array given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Users/UserImportService.php
+
+		-
+			message: '#^Parameter \#2 \$offset of function fseek expects int, int\|false given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Users/UserImportService.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>id" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Services/Users/UserImportService.php
+
+		-
+			message: '#^Parameter \#2 \$operator of method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:whereColumn\(\) expects string\|null, Illuminate\\Contracts\\Database\\Query\\Expression given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/Workflow/AssignedStepConstraint.php
+
+		-
+			message: '#^Method App\\Services\\Workflow\\AssigneeDirectory\:\:search\(\) should return Illuminate\\Support\\Collection\<int, object\> but returns Illuminate\\Support\\Collection\<int, App\\Models\\Department\>\|Illuminate\\Support\\Collection\<int, App\\Models\\User\>\|Illuminate\\Support\\Collection\<int, Spatie\\Permission\\Models\\Role\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/Workflow/AssigneeDirectory.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>manager" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Services/Workflow/AssigneeResolver.php
+
+		-
+			message: '#^Using nullsafe property access on non\-nullable type App\\Models\\RequestFieldDefinition\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Services/Workflow/AssigneeResolver.php
+
+		-
+			message: '#^Method App\\Services\\Workflow\\BusinessCalendar\:\:encodeHoursPayload\(\) has parameter \$byDay with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/Workflow/BusinessCalendar.php
+
+		-
+			message: '#^Method App\\Services\\Workflow\\BusinessCalendar\:\:holidays\(\) should return list\<string\> but returns array\<int, non\-falsy\-string\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/Workflow/BusinessCalendar.php
+
+		-
+			message: '#^Method App\\Services\\Workflow\\BusinessCalendar\:\:parseHoursDocument\(\) should return array\{start\: string, end\: string, by_day\: array\<string, array\{start\: string, end\: string\}\>\}\|null but returns array\{start\: string, end\: string, by_day\: array\{\}\|array\{1\?\: array\{start\: string, end\: string\}, 2\?\: array\{start\: string, end\: string\}, 3\?\: array\{start\: string, end\: string\}, 4\?\: array\{start\: string, end\: string\}, 5\?\: array\{start\: string, end\: string\}, 6\?\: array\{start\: string, end\: string\}, 7\?\: array\{start\: string, end\: string\}\}\}\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/Workflow/BusinessCalendar.php
+
+		-
+			message: '#^Offset decimal\-int\-string on array\<string, array\{start\: string, end\: string\}\> on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Services/Workflow/BusinessCalendar.php
+
+		-
+			message: '#^Call to function is_array\(\) with array\<string, mixed\> will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: app/Services/Workflow/StepOutcomes.php
+
+		-
+			message: '#^Method App\\Services\\Workflow\\StepOutcomes\:\:actionType\(\) has parameter \$outcome with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Services/Workflow/StepOutcomes.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>outcomes" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Services/Workflow/StepOutcomes.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 2
+			path: app/Services/Workflow/WorkflowTemplateSelector.php
+
+		-
+			message: '#^Offset ''department_id'' on array\{title\?\: string, priority\?\: string, type\?\: string, metadata\?\: array\<string, mixed\>\} in isset\(\) does not exist\.$#'
+			identifier: isset.offset
+			count: 1
+			path: app/Services/WorkflowTemplates/WorkflowGraphSimulator.php
+
+		-
+			message: '#^Offset ''submitter_id'' on array\{title\?\: string, priority\?\: string, type\?\: string, metadata\?\: array\<string, mixed\>\} in isset\(\) does not exist\.$#'
+			identifier: isset.offset
+			count: 1
+			path: app/Services/WorkflowTemplates/WorkflowGraphSimulator.php
+
+		-
+			message: '#^Property App\\Models\\Submission\:\:\$submitter_id \(int\) does not accept null\.$#'
+			identifier: assign.propertyType
+			count: 1
+			path: app/Services/WorkflowTemplates/WorkflowGraphSimulator.php
+
+		-
+			message: '#^Cannot assign new offset to list\<\(array\|string\)\>\|string\.$#'
+			identifier: offsetAssign.dimType
+			count: 2
+			path: app/Services/WorkflowTemplates/WorkflowGraphValidator.php
+
+		-
+			message: '#^Method App\\Services\\WorkflowTemplates\\WorkflowGraphValidator\:\:stepErrors\(\) should return list\<string\> but returns array\<non\-falsy\-string, \(array\|string\)\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/WorkflowTemplates/WorkflowGraphValidator.php
+
+		-
+			message: '#^Parameter \#1 \.\.\.\$arg1 of function max expects non\-empty\-array, array\<mixed\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/WorkflowTemplates/WorkflowGraphValidator.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between int and null will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 1
+			path: app/Services/WorkflowTemplates/WorkflowGraphValidator.php
+
+		-
+			message: '#^Method App\\Support\\RegistrationSettings\:\:allowedDomains\(\) should return list\<string\> but returns array\<int, non\-falsy\-string\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Support/RegistrationSettings.php

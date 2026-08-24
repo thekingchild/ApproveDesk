@@ -172,8 +172,6 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      DB_CONNECTION: sqlite
-      DB_DATABASE: ":memory:"
       CACHE_STORE: array
 
     steps:
@@ -208,6 +206,7 @@ jobs:
           cp .env.dusk.example .env.dusk.local
           touch /tmp/approvedesk-dusk.sqlite
           php artisan dusk:chrome-driver --detect
+          APP_ENV=local APP_KEY="base64:Wm5nY3RxTStlNzhuN3ppMW9NUkFmZ2VrQkRQQnkrNUo=" CACHE_STORE=array DB_CONNECTION=sqlite DB_DATABASE=/tmp/approvedesk-dusk.sqlite php artisan migrate --force
 
       - name: Start application server
         run: APP_ENV=local APP_KEY="base64:Wm5nY3RxTStlNzhuN3ppMW9NUkFmZ2VrQkRQQnkrNUo=" APP_URL=http://127.0.0.1:8001 CACHE_STORE=array DB_CONNECTION=sqlite DB_DATABASE=/tmp/approvedesk-dusk.sqlite SESSION_DRIVER=file php artisan serve --host=127.0.0.1 --port=8001 > /tmp/approvedesk-dusk-server.log 2>&1 &
