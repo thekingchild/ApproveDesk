@@ -9,7 +9,7 @@ use Spatie\Permission\PermissionRegistrar;
 
 class RolesAndPermissionsSeeder extends Seeder
 {
-    public const ROLES = ['super-admin', 'admin', 'department-head', 'approver', 'submitter', 'viewer'];
+    public const ROLES = ['super-admin', 'admin', 'department-head', 'approver', 'submitter', 'viewer', 'auditor'];
 
     /**
      * Permission matrix — role => permissions granted. The super-admin role
@@ -21,11 +21,13 @@ class RolesAndPermissionsSeeder extends Seeder
             'departments.manage', 'settings.manage', 'reports.view', 'webhooks.manage',
             'integrations.manage',
             'submissions.fields.sensitive',
+            'audit.view',
         ],
         'department-head' => ['submissions.view.all', 'approvals.act', 'submissions.create', 'submissions.view.own'],
         'approver' => ['approvals.act'],
         'submitter' => ['submissions.create', 'submissions.view.own', 'submissions.withdraw'],
         'viewer' => ['submissions.view.own'],
+        'auditor' => ['audit.view'],
     ];
 
     public function run(): void

@@ -147,7 +147,7 @@ Locked product decision for Phase 8.2. It does not reopen Phase 8.1. Design: [do
 | UO | v2.3.3 | User onboarding: CSV/Excel import, registration OTP, domain allow-list | Complete |
 | LP | v2.3.4 | Public static landing page | Complete |
 | 8 | v2.4.0 | Collaboration, notifications, and integration hub | Complete |
-| 9 | v2.5.0 | Governance, audit evidence, security, and reliability | Not started |
+| 9 | v2.5.0 | Governance, audit evidence, security, and reliability | In progress — 9.1 complete |
 | 10 | v3.0.0 | SaaS multi-tenancy foundation | Not started |
 | 11 | v3.1.0 | Paystack and Flutterwave subscriptions | Not started |
 | 12 | v3.2.0 | SaaS onboarding, entitlements, and commercial operations | Not started |
@@ -682,13 +682,13 @@ Administrator screen: **Administration → Integrations**. Help: `docs/kb/integr
 
 **Goal:** make the mature non-enterprise product defensible, recoverable, and operationally trustworthy before introducing multiple paying tenants.
 
-### 9.1 Audit and records
+### 9.1 Audit and records — Complete (2026-08-24)
 
-- **P9-AUD-01:** Generate a per-request evidence pack containing request/version data, document hashes, workflow version, assignments, actions, comments, delegations, notifications, and timestamps.
-- **P9-AUD-02:** Sign evidence-pack manifests and add a verification command/page that detects altered files or records.
-- **P9-AUD-03:** Add auditor access with read-only, time-bounded scopes and export logs.
-- **P9-AUD-04:** Add configurable retention schedules, legal holds, disposition review, and storage lifecycle jobs.
-- **P9-AUD-05:** Add request and attachment version history with before/after summaries and immutable provenance.
+- **P9-AUD-01 — Complete (2026-08-24):** Generate a per-request evidence pack containing request/version data, document hashes, workflow version, assignments, actions, comments, delegations, notifications, and timestamps.
+- **P9-AUD-02 — Complete (2026-08-24):** Sign evidence-pack manifests and add a verification command/page that detects altered files or records.
+- **P9-AUD-03 — Complete (2026-08-24):** Add auditor access with read-only, time-bounded scopes and export logs.
+- **P9-AUD-04 — Complete (2026-08-24):** Add configurable retention schedules, legal holds, disposition review, and storage lifecycle jobs.
+- **P9-AUD-05 — Complete (2026-08-24):** Add request and attachment version history with before/after summaries and immutable provenance.
 
 ### 9.2 Security and privacy
 

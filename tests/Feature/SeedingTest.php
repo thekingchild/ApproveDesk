@@ -22,7 +22,7 @@ class SeedingTest extends TestCase
         Artisan::call('db:seed', ['--class' => RolesAndPermissionsSeeder::class]);
 
         $this->assertSame(
-            ['admin', 'approver', 'department-head', 'submitter', 'super-admin', 'viewer'],
+            ['admin', 'approver', 'auditor', 'department-head', 'submitter', 'super-admin', 'viewer'],
             Role::orderBy('name')->pluck('name')->values()->all(),
         );
 

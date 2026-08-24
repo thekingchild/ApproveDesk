@@ -16,6 +16,10 @@ class SubmissionPolicy
             return true;
         }
 
+        if ($user->can('audit.view') && $user->hasActiveAuditorAccess()) {
+            return true;
+        }
+
         if ($submission->isWatchedBy($user)) {
             return true;
         }
@@ -80,16 +84,19 @@ class SubmissionPolicy
 
     public function comment(User $user, Submission $submission): bool
     {
-        return $this->view($user, $submission);
+        return ! $user->isReadOnlyAuditor() && $this->view($user, $submission);
     }
 
     public function follow(User $user, Submission $submission): bool
     {
-        return $this->view($user, $submission);
+        return ! $user->isReadOnlyAuditor() && $this->view($user, $submission);
     }
 
     public function addWatcher(User $user, Submission $submission): bool
     {
+        if ($user->isReadOnlyAuditor()) {
+            return false;
+        }
         if ($submission->submitter_id === $user->id || $user->can('submissions.view.all')) {
             return true;
         }
@@ -103,12 +110,21 @@ class SubmissionPolicy
 
     public function nudge(User $user, Submission $submission): bool
     {
-        return $this->view($user, $submission);
+        return ! $user->isReadOnlyAuditor() && $this->view($user, $submission);
     }
 
     public function downloadFiles(User $user, Submission $submission): bool
     {
         return $this->view($user, $submission);
+    }
+
+    public function downloadEvidence(User $user, Submission $submission): bool
+    {
+        if ($user->can('settings.manage') || $user->can('submissions.view.all')) {
+            return $this->view($user, $submission);
+        }
+
+        return $user->can('audit.view') && $user->hasActiveAuditorAccess() && $this->view($user, $submission);
     }
 
     public function approveViaEmail(User $user, Submission $submission): bool

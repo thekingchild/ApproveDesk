@@ -1,6 +1,7 @@
 <?php
 
 use App\Jobs\ApplyOutOfOfficeFallbacksJob;
+use App\Jobs\ApplyRetentionJob;
 use App\Jobs\ProcessEscalation;
 use App\Jobs\PurgeExpiredDelegations;
 use App\Jobs\RetryNotificationDeliveries;
@@ -24,5 +25,6 @@ Schedule::job(new SendNotificationDigests)->dailyAt('08:00');
 Schedule::job(new ProcessEscalation)->everyFifteenMinutes()->withoutOverlapping();
 Schedule::job(new ApplyOutOfOfficeFallbacksJob)->everyFifteenMinutes()->withoutOverlapping();
 Schedule::job(new RetryNotificationDeliveries)->everyFifteenMinutes()->withoutOverlapping();
+Schedule::job(new ApplyRetentionJob)->dailyAt('04:15')->withoutOverlapping();
 Schedule::command('approvedesk:fetch-whatsapp-templates')->dailyAt('03:15')->withoutOverlapping();
 Schedule::command('users:prune-unconfirmed')->dailyAt('03:45');

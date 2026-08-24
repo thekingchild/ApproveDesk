@@ -78,6 +78,8 @@ new #[Title('Submission')] class extends Component {
             'workflowInstance.currentStep',
             'workflowInstance.actions.actor',
             'watchers.user',
+            'revisions.actor:id,name',
+            'fileRevisions',
             'submitter.manager',
             'submitter.department.manager',
             'department.manager',
@@ -662,6 +664,9 @@ new #[Title('Submission')] class extends Component {
 
         <div class="flex items-center gap-2">
             <x-ui.help-link article="collaboration" />
+            @can('downloadEvidence', $submission)
+                <flux:button :href="route('submissions.evidence.download', $submission)" variant="ghost" data-test="download-evidence">{{ __('Download evidence pack') }}</flux:button>
+            @endcan
             @can('update', $submission)
                 <flux:button :href="$submission->requestTypeVersion->requestType->is_system ? route('submissions.edit', $submission) : route('submissions.custom.edit', $submission)" variant="primary" wire:navigate>{{ __('Edit draft') }}</flux:button>
             @endcan
@@ -711,6 +716,30 @@ new #[Title('Submission')] class extends Component {
             <div><dt class="text-xs text-zinc-500">{{ __('Due date') }}</dt><dd class="font-medium">{{ $submission->due_date?->format('d M Y') ?? '—' }}</dd></div>
         </dl>
     </flux:card>
+
+    @if ($submission->revisions->isNotEmpty() || $submission->fileRevisions->isNotEmpty())
+        <flux:card data-test="request-history">
+            <flux:heading size="sm">{{ __('Request history') }}</flux:heading>
+            <ul class="mt-3 space-y-2 text-sm">
+                @foreach ($submission->revisions as $revision)
+                    <li>
+                        <span class="font-medium">{{ $revision->summary }}</span>
+                        <span class="text-zinc-500"> · {{ $revision->actor?->name ?? __('System') }} · {{ $revision->created_at?->format('d M Y H:i') }}</span>
+                        @if (is_array($revision->before))
+                            <div class="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
+                                @foreach ($revision->before as $field => $old)
+                                    <div>{{ str_replace('_', ' ', $field) }}: {{ $old }} → {{ $revision->after[$field] ?? '' }}</div>
+                                @endforeach
+                            </div>
+                        @endif
+                    </li>
+                @endforeach
+                @foreach ($submission->fileRevisions as $fileRevision)
+                    <li>{{ $fileRevision->action }} · {{ $fileRevision->original_name }}</li>
+                @endforeach
+            </ul>
+        </flux:card>
+    @endif
 
     @if (! $submission->requestTypeVersion->requestType->is_system)
         @php

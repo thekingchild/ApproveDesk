@@ -159,10 +159,19 @@ final class HelpCatalogue
             new HelpArticle(
                 slug: 'audit-trail',
                 title: 'Audit trail',
-                summary: 'What is immutable, what published forms lock, and how to read history.',
+                summary: 'What is immutable, how evidence packs work, and how to read history.',
                 icon: 'shield-check',
                 group: 'Administration',
                 audience: 'admin',
+            ),
+            new HelpArticle(
+                slug: 'records',
+                title: 'Records',
+                summary: 'Auditor access, legal holds, retention, disposition, and pack verification.',
+                icon: 'archive-box',
+                group: 'Administration',
+                audience: 'admin',
+                screenRoute: 'admin.records.index',
             ),
         ]);
     }
@@ -206,7 +215,7 @@ final class HelpCatalogue
         }
 
         try {
-            foreach (['users.manage', 'departments.manage', 'templates.manage', 'settings.manage', 'reports.view', 'webhooks.manage', 'integrations.manage'] as $permission) {
+            foreach (['users.manage', 'departments.manage', 'templates.manage', 'settings.manage', 'reports.view', 'webhooks.manage', 'integrations.manage', 'audit.view'] as $permission) {
                 if ($user->can($permission)) {
                     return true;
                 }

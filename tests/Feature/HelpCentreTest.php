@@ -128,7 +128,9 @@ class HelpCentreTest extends TestCase
             ->assertSee('A named person in a comment')
             ->assertSee('A dated absence on your account')
             ->assertSee('A copy of a draft kept on this device')
-            ->assertSee('The email link or Teams/Slack');
+            ->assertSee('The email link or Teams/Slack')
+            ->assertSee('A signed download of one request')
+            ->assertSee('A time-bounded, read-only grant');
     }
 
     public function test_collaboration_article_explains_followers_and_ooo(): void
@@ -213,6 +215,18 @@ class HelpCentreTest extends TestCase
             ->assertSee('{{approval_url}}')
             ->assertSee('approved template')
             ->assertSee('does not keep an always-on chat connection');
+    }
+
+    public function test_records_article_explains_auditor_access_and_holds(): void
+    {
+        $admin = User::factory()->create()->assignRole('admin');
+
+        $this->actingAs($admin)
+            ->get(route('help.show', 'records'))
+            ->assertOk()
+            ->assertSee('Auditor access')
+            ->assertSee('Legal holds')
+            ->assertSee('Retention and disposition');
     }
 
     public function test_catalogue_matches_markdown_files(): void

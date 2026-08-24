@@ -12,6 +12,7 @@ Open **Administration → Users** to create accounts, change roles, attach a dep
 | Approver | Act on assigned steps. |
 | Submitter | Create, edit own drafts, and withdraw own requests. |
 | Viewer | Read requests they are allowed to see. |
+| Auditor | Read-only, time-bounded access after a grant on **Records**. Cannot approve or change settings. |
 
 A person can hold more than one role. Mixed roles add up — they receive every ability those roles include.
 

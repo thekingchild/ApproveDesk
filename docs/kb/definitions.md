@@ -153,3 +153,23 @@ A copy of a draft kept on this device when the form cannot reach ApproveDesk. If
 ## [Signed approval action](/help/approvals)
 
 The email link or Teams/Slack **Approve** button for the current step. Tampered, expired, or stale actions are refused and do not change the request.
+
+## [Evidence pack](/help/audit-trail)
+
+A signed download of one request: the form, workflow version, actions, comments, delegations, notifications, file hashes, and timestamps. Verification detects a changed file.
+
+## [Auditor access](/help/records)
+
+A time-bounded, read-only grant. The person can open requests and download evidence packs until the grant ends or is revoked. They cannot approve or change settings.
+
+## [Legal hold](/help/records)
+
+A flag on a request that blocks automatic deletion until someone releases it.
+
+## [Retention](/help/records)
+
+How long drafts and finished requests are kept before they may be removed.
+
+## [Disposition](/help/records)
+
+A review that must be approved before a finished request past its retention window is removed.

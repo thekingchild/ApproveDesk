@@ -134,6 +134,26 @@ class User extends Authenticatable implements PasskeyUser
         return $this->hasMany(SubmissionWatcher::class);
     }
 
+    /** @return HasMany<AuditorAccess, $this> */
+    public function auditorAccesses(): HasMany
+    {
+        return $this->hasMany(AuditorAccess::class);
+    }
+
+    public function hasActiveAuditorAccess(?CarbonInterface $at = null): bool
+    {
+        $at ??= now();
+
+        return $this->auditorAccesses()->active($at)->exists();
+    }
+
+    public function isReadOnlyAuditor(): bool
+    {
+        return $this->hasRole('auditor')
+            && ! $this->can('settings.manage')
+            && ! $this->can('approvals.act');
+    }
+
     public function isOutOfOffice(?CarbonInterface $at = null): bool
     {
         $at ??= now();

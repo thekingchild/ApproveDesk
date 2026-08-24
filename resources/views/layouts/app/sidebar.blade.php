@@ -37,7 +37,7 @@
                     @endcan
                 </flux:sidebar.group>
 
-                @if (auth()->user()->can('viewAny', \App\Models\User::class) || auth()->user()->can('viewAny', \App\Models\Department::class) || auth()->user()->can('viewAny', \App\Models\WorkflowTemplate::class) || auth()->user()->can('viewAny', \App\Models\RequestType::class) || auth()->user()->can('reports.view') || auth()->user()->can('viewAny', \App\Models\WebhookEndpoint::class) || auth()->user()->can('viewAny', \App\Models\IntegrationConnector::class))
+                @if (auth()->user()->can('viewAny', \App\Models\User::class) || auth()->user()->can('viewAny', \App\Models\Department::class) || auth()->user()->can('viewAny', \App\Models\WorkflowTemplate::class) || auth()->user()->can('viewAny', \App\Models\RequestType::class) || auth()->user()->can('reports.view') || auth()->user()->can('viewAny', \App\Models\WebhookEndpoint::class) || auth()->user()->can('viewAny', \App\Models\IntegrationConnector::class) || auth()->user()->can('settings.manage'))
                     <flux:sidebar.group :heading="__('Administration')" class="grid">
                         @can('viewAny', \App\Models\User::class)
                             <flux:sidebar.item icon="users" :href="route('admin.users.index')" :current="request()->routeIs('admin.users.*')" wire:navigate>
@@ -72,6 +72,11 @@
                         @can('viewAny', \App\Models\IntegrationConnector::class)
                             <flux:sidebar.item icon="puzzle-piece" :href="route('admin.integrations.index')" :current="request()->routeIs('admin.integrations.*')" wire:navigate>
                                 {{ __('Integrations') }}
+                            </flux:sidebar.item>
+                        @endcan
+                        @can('settings.manage')
+                            <flux:sidebar.item icon="archive-box" :href="route('admin.records.index')" :current="request()->routeIs('admin.records.*')" wire:navigate>
+                                {{ __('Records') }}
                             </flux:sidebar.item>
                         @endcan
                     </flux:sidebar.group>

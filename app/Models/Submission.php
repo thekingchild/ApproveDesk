@@ -84,6 +84,35 @@ class Submission extends Model
                 $submission->reference_number = app(ReferenceNumberGenerator::class)->next();
             }
         });
+
+        static::updated(function (self $submission): void {
+            $tracked = ['title', 'body', 'status', 'priority', 'due_date'];
+            $before = [];
+            $after = [];
+
+            foreach ($tracked as $field) {
+                if (! $submission->wasChanged($field)) {
+                    continue;
+                }
+
+                $original = $submission->getOriginal($field);
+                $current = $submission->getAttribute($field);
+                $before[$field] = $original instanceof \BackedEnum ? $original->value : (string) ($original ?? '');
+                $after[$field] = $current instanceof \BackedEnum ? $current->value : (string) ($current ?? '');
+            }
+
+            if ($before === []) {
+                return;
+            }
+
+            SubmissionRevision::query()->create([
+                'submission_id' => $submission->id,
+                'actor_id' => auth()->id(),
+                'summary' => implode(', ', array_map(fn (string $field): string => str_replace('_', ' ', $field), array_keys($after))),
+                'before' => $before,
+                'after' => $after,
+            ]);
+        });
     }
 
     /**
@@ -156,6 +185,35 @@ class Submission extends Model
     public function nudges(): HasMany
     {
         return $this->hasMany(SubmissionNudge::class);
+    }
+
+    /** @return HasMany<LegalHold, $this> */
+    public function legalHolds(): HasMany
+    {
+        return $this->hasMany(LegalHold::class);
+    }
+
+    /** @return HasMany<DispositionReview, $this> */
+    public function dispositionReviews(): HasMany
+    {
+        return $this->hasMany(DispositionReview::class);
+    }
+
+    /** @return HasMany<SubmissionRevision, $this> */
+    public function revisions(): HasMany
+    {
+        return $this->hasMany(SubmissionRevision::class)->orderByDesc('id');
+    }
+
+    /** @return HasMany<SubmissionFileRevision, $this> */
+    public function fileRevisions(): HasMany
+    {
+        return $this->hasMany(SubmissionFileRevision::class)->orderByDesc('id');
+    }
+
+    public function isOnLegalHold(): bool
+    {
+        return $this->legalHolds()->active()->exists();
     }
 
     public function isWatchedBy(User $user): bool

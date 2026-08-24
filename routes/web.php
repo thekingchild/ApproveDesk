@@ -3,6 +3,7 @@
 use App\Http\Controllers\AnalyticsExportController;
 use App\Http\Controllers\Auth\RegistrationConfirmationController;
 use App\Http\Controllers\BrandingAssetController;
+use App\Http\Controllers\DownloadEvidencePackController;
 use App\Http\Controllers\EmailApprovalController;
 use App\Http\Controllers\HelpController;
 use App\Http\Controllers\InstallController;
@@ -93,6 +94,7 @@ Route::prefix('install')->name('install.')->group(function (): void {
 });
 
 Route::middleware(['auth', 'verified', 'can:settings.manage'])->group(function (): void {
+    Route::livewire('admin/records', 'pages::admin.records')->name('admin.records.index');
     Route::livewire('settings/branding', 'pages::settings.branding')->name('settings.branding');
     Route::livewire('settings/approvals', 'pages::settings.approvals')->name('settings.approvals');
     Route::livewire('settings/notification-channels', 'pages::settings.notification-channels')->name('settings.notification-channels');
@@ -170,6 +172,9 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('submissions/{submission}/files/{file}', SubmissionFileDownloadController::class)
         ->middleware('signed')
         ->name('submissions.files.download');
+
+    Route::get('submissions/{submission}/evidence', DownloadEvidencePackController::class)
+        ->name('submissions.evidence.download');
 
     Route::livewire('dashboard', 'pages::dashboard')->name('dashboard');
 });
