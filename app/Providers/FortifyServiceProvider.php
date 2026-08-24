@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
+use App\Actions\Security\VerifyTurnstileAction;
 use App\Models\User;
 use App\Support\RateLimitProfiles;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -68,6 +69,8 @@ class FortifyServiceProvider extends ServiceProvider
     private function configureAuthentication(): void
     {
         Fortify::authenticateUsing(function (Request $request): ?User {
+            app(VerifyTurnstileAction::class)->execute($request);
+
             $user = User::query()->where('email', $request->string(Fortify::username()))->first();
 
             return $user !== null

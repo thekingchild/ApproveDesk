@@ -4,6 +4,7 @@ use App\Actions\Security\UpdateSecuritySettingsAction;
 use App\Models\SensitiveFieldAccess;
 use App\Support\RateLimitProfiles;
 use App\Support\SecuritySettings;
+use App\Support\Turnstile;
 use Flux\Flux;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
@@ -13,6 +14,10 @@ new #[Title('Security and privacy')] class extends Component {
     public bool $watermarkDownloads = false;
 
     public bool $twoFactorRequired = false;
+
+    public bool $turnstileEnabled = false;
+
+    public string $turnstileSiteKey = '';
 
     public int $rate_limit_login = 5;
 
@@ -31,6 +36,8 @@ new #[Title('Security and privacy')] class extends Component {
         $this->authorize('settings.manage');
         $this->watermarkDownloads = SecuritySettings::watermarkDownloads();
         $this->twoFactorRequired = SecuritySettings::twoFactorRequired();
+        $this->turnstileEnabled = \App\Models\Setting::get('turnstile.enabled', '0') === '1';
+        $this->turnstileSiteKey = Turnstile::siteKey();
         $profiles = RateLimitProfiles::all();
         $this->rate_limit_login = $profiles['login'];
         $this->rate_limit_api = $profiles['api'];
@@ -47,6 +54,8 @@ new #[Title('Security and privacy')] class extends Component {
         $validated = $this->validate([
             'watermarkDownloads' => ['boolean'],
             'twoFactorRequired' => ['boolean'],
+            'turnstileEnabled' => ['boolean'],
+            'turnstileSiteKey' => ['nullable', 'string', 'max:255'],
             'rate_limit_login' => ['required', 'integer', 'min:1', 'max:1000'],
             'rate_limit_api' => ['required', 'integer', 'min:1', 'max:1000'],
             'rate_limit_approval_links' => ['required', 'integer', 'min:1', 'max:1000'],
@@ -59,6 +68,8 @@ new #[Title('Security and privacy')] class extends Component {
             $action->execute([
                 'watermark_downloads' => $validated['watermarkDownloads'],
                 'two_factor_required' => $validated['twoFactorRequired'],
+                'turnstile_enabled' => $validated['turnstileEnabled'],
+                'turnstile_site_key' => $validated['turnstileSiteKey'] ?? '',
                 ...$validated,
             ], \Illuminate\Support\Facades\Auth::user());
         } catch (\InvalidArgumentException $exception) {
@@ -101,6 +112,16 @@ new #[Title('Security and privacy')] class extends Component {
             <flux:error name="twoFactorRequired" />
 
             <div>
+                <flux:heading size="sm">{{ __('Bot protection') }}</flux:heading>
+                <flux:text class="mt-1">{{ __('Optional Cloudflare Turnstile check on sign-in, registration, and password reset. Off until you save a site key and secret and turn it on. Missing or failed checks are refused.') }}</flux:text>
+            </div>
+            <flux:checkbox wire:model="turnstileEnabled" :label="__('Require a Turnstile check')" data-test="turnstile-enabled" />
+            <flux:input wire:model="turnstileSiteKey" :label="__('Site key')" autocomplete="off" data-test="turnstile-site-key" />
+            @if ($turnstileEnabled && ! \App\Support\Turnstile::enabled())
+                <flux:text>{{ __('Not active until a site key and secret are both saved.') }}</flux:text>
+            @endif
+
+            <div>
                 <flux:heading size="sm">{{ __('Rate limits') }}</flux:heading>
                 <flux:text class="mt-1">{{ __('Attempts allowed per minute. Lower numbers stop guessing and bulk downloads sooner.') }}</flux:text>
             </div>
@@ -115,6 +136,29 @@ new #[Title('Security and privacy')] class extends Component {
             </div>
 
             <flux:button type="submit" variant="primary" data-test="save-security-privacy">{{ __('Save') }}</flux:button>
+        </form>
+
+        <form method="POST" action="{{ route('settings.turnstile.credentials') }}" class="mt-8 space-y-4">
+            @csrf
+            <flux:heading size="sm">{{ __('Turnstile secret') }}</flux:heading>
+            <flux:text>{{ Turnstile::hasSecret() ? __('A secret is stored. Leave the field blank to keep it.') : __('No secret yet.') }}</flux:text>
+            @if (session('status'))
+                <flux:text>{{ session('status') }}</flux:text>
+            @endif
+            @if (session('turnstile_test'))
+                <flux:callout :variant="session('turnstile_test_ok') ? 'success' : 'danger'" data-test="turnstile-test-result">
+                    {{ session('turnstile_test') }}
+                </flux:callout>
+            @endif
+            <flux:input name="secret" type="password" :label="__('Secret')" autocomplete="off" data-test="turnstile-secret" />
+            <div class="flex flex-wrap gap-3">
+                <flux:button type="submit" variant="primary" data-test="save-turnstile-secret">{{ __('Save secret') }}</flux:button>
+                <flux:button type="submit" name="clear" value="1" variant="danger" data-test="clear-turnstile-secret">{{ __('Clear secret') }}</flux:button>
+            </div>
+        </form>
+        <form method="POST" action="{{ route('settings.turnstile.test') }}" class="mt-3">
+            @csrf
+            <flux:button type="submit" data-test="test-turnstile">{{ __('Test connection') }}</flux:button>
         </form>
 
         <div class="mt-10">

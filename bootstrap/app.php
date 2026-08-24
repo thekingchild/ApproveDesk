@@ -6,6 +6,7 @@ use App\Http\Middleware\EnsureSecondFactorWhenRequired;
 use App\Http\Middleware\EnsureUserIsActive;
 use App\Http\Middleware\RedirectUnconfirmedRegistration;
 use App\Http\Middleware\SecurityHeaders;
+use App\Http\Middleware\VerifyTurnstileWhenEnabled;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -26,6 +27,7 @@ return Application::configure(basePath: dirname(__DIR__))
             EnsureUserIsActive::class,
             RedirectUnconfirmedRegistration::class,
             EnsureSecondFactorWhenRequired::class,
+            VerifyTurnstileWhenEnabled::class,
         ]);
         $middleware->validateCsrfTokens(except: [
             'integrations/telegram/webhook',

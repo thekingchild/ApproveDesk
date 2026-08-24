@@ -2,6 +2,7 @@
 
 namespace App\Actions\Fortify;
 
+use App\Actions\Security\VerifyTurnstileAction;
 use App\Concerns\PasswordValidationRules;
 use App\Models\User;
 use Illuminate\Support\Facades\Validator;
@@ -18,6 +19,8 @@ class ResetUserPassword implements ResetsUserPasswords
      */
     public function reset(User $user, array $input): void
     {
+        app(VerifyTurnstileAction::class)->execute();
+
         Validator::make($input, [
             'password' => $this->passwordRules(),
         ])->validate();

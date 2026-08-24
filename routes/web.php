@@ -16,6 +16,8 @@ use App\Http\Controllers\SlackInteractionsController;
 use App\Http\Controllers\SubmissionFileDownloadController;
 use App\Http\Controllers\TeamsActionsController;
 use App\Http\Controllers\TelegramWebhookController;
+use App\Http\Controllers\TestTurnstileController;
+use App\Http\Controllers\TurnstileCredentialController;
 use App\Support\Branding;
 use Illuminate\Support\Facades\Route;
 
@@ -100,6 +102,10 @@ Route::middleware(['auth', 'verified', 'can:settings.manage'])->group(function (
     Route::livewire('settings/branding', 'pages::settings.branding')->name('settings.branding');
     Route::livewire('settings/approvals', 'pages::settings.approvals')->name('settings.approvals');
     Route::livewire('settings/security-privacy', 'pages::settings.security-privacy')->name('settings.security-privacy');
+    Route::post('settings/security-privacy/turnstile', TurnstileCredentialController::class)
+        ->name('settings.turnstile.credentials');
+    Route::post('settings/security-privacy/turnstile/test', TestTurnstileController::class)
+        ->name('settings.turnstile.test');
     Route::livewire('settings/notification-channels', 'pages::settings.notification-channels')->name('settings.notification-channels');
     Route::post('settings/notification-channels/credentials', NotificationChannelCredentialController::class)
         ->name('settings.notification-channels.credentials');

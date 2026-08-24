@@ -30,6 +30,12 @@ Turn on **Require a second factor** when everyone should confirm an authenticato
 
 Email approval links still work without a signed-in second factor. Existing API tokens still work; creating a new token requires the person to be enrolled.
 
+### Bot protection
+
+Turn on **Require a Turnstile check** when sign-in, registration, and password reset should pass a Cloudflare Turnstile challenge first. Save the site key on this screen and the secret in the separate secret form. The check stays off until both are saved and the box is on. You can turn it off again and the next sign-in works without a challenge.
+
+Approval links, the API, and first-time setup are not covered.
+
 ### Rate limits
 
 Set how many attempts per minute are allowed for sign-in, the API, approval links, exports, incoming webhooks, and integrations. Lower numbers stop guessing and bulk downloads sooner.

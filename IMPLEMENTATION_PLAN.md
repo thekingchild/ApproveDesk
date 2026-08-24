@@ -150,7 +150,7 @@ Locked product decision for Phase 8.2. It does not reopen Phase 8.1. Design: [do
 | 9 | v2.5.0 | Governance, audit evidence, security, and reliability | Complete |
 | IN | v2.5.1 | Installer lock and in-app update | Complete |
 | MFA | v2.5.2 | Enforce two-factor authentication | Complete |
-| TS | v2.5.3 | Cloudflare Turnstile | Not started |
+| TS | v2.5.3 | Cloudflare Turnstile | Complete |
 | BK | v2.5.4 | In-app database and file backups | Not started |
 | 10 | v3.0.0 | SaaS multi-tenancy foundation | Not started |
 | 11 | v3.1.0 | Paystack and Flutterwave subscriptions | Not started |
@@ -789,7 +789,7 @@ This phase is additive. It does not reopen Phase 9.2, Fortify feature flags, pas
 
 ---
 
-## Phase TS — Cloudflare Turnstile
+## Phase TS — Cloudflare Turnstile — Complete (2026-08-24)
 
 **Goal:** give administrators an optional Cloudflare Turnstile check on public auth forms so scripted sign-up and password guessing have to pass a bot challenge, without making Turnstile a hard dependency.
 
@@ -803,23 +803,23 @@ This phase is additive. It does not reopen Fortify, Phase MFA, or installer rout
 - When enabled, missing/invalid tokens **fail closed**. When disabled or unconfigured, forms work as today.
 - Widget is the managed/invisible mode. Test keys from Cloudflare’s docs are used in CI (`Http::fake` the siteverify endpoint).
 
-### TS.1 Configuration
+### TS.1 Configuration — Complete (2026-08-24)
 
-- **TS-SET-01:** Settings keys `turnstile.enabled`, `turnstile.site_key`, encrypted `turnstile.secret`. **Settings → Security & privacy** (or a Bot protection card). Test action that calls siteverify with a dummy token and shows a redacted result.
-- **TS-SET-02:** `Turnstile` support class: enabled?, site key for views, `verify(string $token, ?string $ip): bool`. Timeouts, no secret in logs.
+- **TS-SET-01 — Complete (2026-08-24):** Settings keys `turnstile.enabled`, `turnstile.site_key`, encrypted `turnstile.secret`. **Settings → Security & privacy** (or a Bot protection card). Test action that calls siteverify with a dummy token and shows a redacted result.
+- **TS-SET-02 — Complete (2026-08-24):** `Turnstile` support class: enabled?, site key for views, `verify(string $token, ?string $ip): bool`. Timeouts, no secret in logs.
 
-### TS.2 Auth forms
+### TS.2 Auth forms — Complete (2026-08-24)
 
-- **TS-UI-01:** Blade partial for the widget + hidden token, included on the four Fortify views. Script from `challenges.cloudflare.com` only when enabled.
-- **TS-ENF-01:** Server verification in Fortify authenticate/create-user/reset pipelines (thin action, not business rules in the Livewire/controller). Failed verify: generic “Please try again” — do not reveal bot vs human.
+- **TS-UI-01 — Complete (2026-08-24):** Blade partial for the widget + hidden token, included on the four Fortify views. Script from `challenges.cloudflare.com` only when enabled.
+- **TS-ENF-01 — Complete (2026-08-24):** Server verification in Fortify authenticate/create-user/reset pipelines (thin action, not business rules in the Livewire/controller). Failed verify: generic “Please try again” — do not reveal bot vs human.
 
-### TS.3 Tests, docs, and exit gate
+### TS.3 Tests, docs, and exit gate — Complete (2026-08-24)
 
-- **TS-TEST-01:** Disabled: login/register succeed without a token. Enabled + `Http::fake` success: login succeeds. Enabled + missing token or siteverify failure: login/register/reset are refused. Secret never appears in HTML or logs.
-- **TS-TEST-02:** Submitter cannot change Turnstile settings. Admin can disable and the next login works without a token.
-- **TS-DOC-01:** `docs/kb/security-and-privacy.md`, `docs/kb/definitions.md`, `docs/DEVELOPMENT.md` (test keys), `CHANGELOG.md`, Help catalogue, and this plan.
+- **TS-TEST-01 — Complete (2026-08-24):** Disabled: login/register succeed without a token. Enabled + `Http::fake` success: login succeeds. Enabled + missing token or siteverify failure: login/register/reset are refused. Secret never appears in HTML or logs.
+- **TS-TEST-02 — Complete (2026-08-24):** Submitter cannot change Turnstile settings. Admin can disable and the next login works without a token.
+- **TS-DOC-01 — Complete (2026-08-24):** `docs/kb/security-and-privacy.md`, `docs/kb/definitions.md`, `docs/DEVELOPMENT.md` (test keys), `CHANGELOG.md`, Help catalogue, and this plan.
 
-**Phase TS demo:** administrator pastes site key and secret, enables Turnstile, opens `/login` in a private window, and cannot submit until the widget completes; disabling it restores the previous login.
+**Phase TS demo — Complete (2026-08-24):** administrator pastes site key and secret, enables Turnstile, opens `/login` in a private window, and cannot submit until the widget completes; disabling it restores the previous login.
 
 **Out of scope:** Turnstile on comment forms, API, email approval, installer, enterprise WAF, or replacing rate limits.
 

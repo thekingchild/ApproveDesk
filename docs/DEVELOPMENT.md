@@ -69,6 +69,16 @@ DB_USERNAME=root DB_PASSWORD=secret php artisan test
 
 CI stays on SQLite; MySQL parity is a pre-release manual step (or opt-in `--group=mysql` job later if drift appears).
 
+## Turnstile test keys
+
+Cloudflare publishes dummy keys that never call production. Use them in automated tests with `Http::fake` on `https://challenges.cloudflare.com/turnstile/v0/siteverify`:
+
+- Always-pass site key: `1x00000000000000000000AA`
+- Always-pass secret: `1x0000000000000000000000000000000AA`
+- Always-block site key: `2x00000000000000000000AB`
+
+Do not put a real secret in `.env` or fixtures. Organization settings store the secret encrypted.
+
 ## Conventions Checklist (before opening a PR)
 
 - [ ] Tests added/updated; `php artisan test --parallel` green

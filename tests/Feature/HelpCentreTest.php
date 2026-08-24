@@ -243,7 +243,8 @@ class HelpCentreTest extends TestCase
             ->assertSee('Download my data')
             ->assertSee('Anonymize an account')
             ->assertSee('Sign out other devices')
-            ->assertSee('Require a second factor');
+            ->assertSee('Require a second factor')
+            ->assertSee('Require a Turnstile check');
     }
 
     public function test_operations_article_explains_replay_and_backup_check(): void

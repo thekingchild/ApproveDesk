@@ -198,6 +198,10 @@ How many times sign-in, the API, approval links, exports, webhooks, or integrati
 
 An organization setting that sends people to **Settings → Security** until they confirm an authenticator or add a passkey. Off until an enrolled administrator turns it on.
 
+## [Turnstile check](/help/security-and-privacy)
+
+An optional challenge on sign-in, registration, and password reset that stops automated guessing. Off until an administrator saves a site key and secret and turns it on.
+
 ## [My data export](/help/account-settings)
 
 A zip of your profile, requests, comments, and sign-in history from **Settings → Privacy**. Secrets are not included.

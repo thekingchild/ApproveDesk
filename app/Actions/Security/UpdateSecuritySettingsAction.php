@@ -34,5 +34,13 @@ final class UpdateSecuritySettingsAction
 
             Setting::put('auth.two_factor_required', $required ? '1' : '0');
         }
+
+        if (array_key_exists('turnstile_enabled', $input)) {
+            Setting::put('turnstile.enabled', ! empty($input['turnstile_enabled']) ? '1' : '0');
+        }
+
+        if (array_key_exists('turnstile_site_key', $input)) {
+            Setting::put('turnstile.site_key', trim((string) $input['turnstile_site_key']));
+        }
     }
 }

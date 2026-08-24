@@ -2,6 +2,7 @@
 
 namespace App\Actions\Fortify;
 
+use App\Actions\Security\VerifyTurnstileAction;
 use App\Concerns\PasswordValidationRules;
 use App\Concerns\ProfileValidationRules;
 use App\Models\User;
@@ -22,6 +23,8 @@ class CreateNewUser implements CreatesNewUsers
      */
     public function create(array $input): User
     {
+        app(VerifyTurnstileAction::class)->execute();
+
         if (! Branding::registrationOpen()) {
             throw ValidationException::withMessages([
                 'email' => __('Registration is currently disabled.'),
