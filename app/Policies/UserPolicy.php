@@ -24,4 +24,9 @@ class UserPolicy
 
         return ! $target->hasRole('super-admin') || $user->hasRole('super-admin');
     }
+
+    public function anonymize(User $user, User $target): bool
+    {
+        return $this->update($user, $target) && ! $user->is($target);
+    }
 }

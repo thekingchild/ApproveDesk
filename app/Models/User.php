@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Actions\Privacy\AnonymizeUserAction;
 use App\Enums\NotificationFrequency;
 use Carbon\CarbonInterface;
 use Database\Factories\UserFactory;
@@ -138,6 +139,29 @@ class User extends Authenticatable implements PasskeyUser
     public function auditorAccesses(): HasMany
     {
         return $this->hasMany(AuditorAccess::class);
+    }
+
+    /** @return HasMany<LoginEvent, $this> */
+    public function loginEvents(): HasMany
+    {
+        return $this->hasMany(LoginEvent::class);
+    }
+
+    /** @return HasMany<UserSession, $this> */
+    public function sessions(): HasMany
+    {
+        return $this->hasMany(UserSession::class);
+    }
+
+    public function isAnonymized(): bool
+    {
+        return str_ends_with($this->email, '@invalid.local')
+            && str_starts_with($this->email, 'anonymized-');
+    }
+
+    public function hasPreservedAuditEvidence(): bool
+    {
+        return AnonymizeUserAction::hasPreservedAuditEvidence($this);
     }
 
     public function hasActiveAuditorAccess(?CarbonInterface $at = null): bool

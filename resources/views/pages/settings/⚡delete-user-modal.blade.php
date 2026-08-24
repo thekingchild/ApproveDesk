@@ -19,7 +19,15 @@ new class extends Component {
             'password' => $this->currentPasswordRules(),
         ]);
 
-        tap(Auth::user(), $logout(...))->delete();
+        $user = Auth::user();
+
+        if ($user->hasPreservedAuditEvidence()) {
+            $this->addError('password', __('This account has request history. Ask an administrator to anonymize it from Users.'));
+
+            return;
+        }
+
+        tap($user, $logout(...))->delete();
 
         $this->redirect('/', navigate: true);
     }

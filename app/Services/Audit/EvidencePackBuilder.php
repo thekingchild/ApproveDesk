@@ -7,6 +7,8 @@ use App\Models\Delegation;
 use App\Models\NotificationDelivery;
 use App\Models\Submission;
 use App\Models\SubmissionFile;
+use App\Models\User;
+use App\Services\Privacy\ExportRedactor;
 use Illuminate\Support\Facades\Storage;
 
 final class EvidencePackBuilder
@@ -14,7 +16,7 @@ final class EvidencePackBuilder
     /**
      * @return array<string, string> filename => contents
      */
-    public function files(Submission $submission): array
+    public function files(Submission $submission, ?User $actor = null): array
     {
         $submission->loadMissing([
             'submitter:id,name,email',
@@ -47,10 +49,18 @@ final class EvidencePackBuilder
             'department' => $submission->department?->name,
             'request_type' => $submission->requestTypeVersion?->requestType?->name,
             'request_type_version_id' => $submission->request_type_version_id,
-            'fields' => $submission->fieldValues->map(fn ($value): array => [
-                'label' => $value->field?->label,
-                'value' => $value->field ? $value->resolvedValue() : null,
-            ])->all(),
+            'fields' => $submission->fieldValues->map(function ($value) use ($submission, $actor): array {
+                $raw = $value->field ? $value->resolvedValue() : null;
+                $redacted = $actor !== null && $value->field !== null
+                    ? app(ExportRedactor::class)->value($actor, $value->field, $submission, $raw, 'evidence')
+                    : $raw;
+
+                return [
+                    'label' => $value->field?->label,
+                    'value' => $redacted,
+                    'redacted' => $value->field?->is_sensitive && $redacted === ExportRedactor::PLACEHOLDER,
+                ];
+            })->all(),
             'created_at' => $submission->created_at?->toIso8601String(),
             'updated_at' => $submission->updated_at?->toIso8601String(),
         ];

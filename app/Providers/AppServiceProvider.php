@@ -18,6 +18,7 @@ use App\Listeners\NotifyCurrentApprovers;
 use App\Listeners\NotifyDelegate;
 use App\Listeners\NotifySubmitterOfDecision;
 use App\Listeners\NotifyWatchersOfDecision;
+use App\Listeners\RecordLoginEvent;
 use App\Notifications\Channels\OptionalLaravelNotificationChannel;
 use App\Services\Integrations\ConnectorRegistry;
 use App\Services\Integrations\Connectors\GoogleDriveConnector;
@@ -37,7 +38,9 @@ use App\Services\Notifications\Channels\WebPushNotificationChannel;
 use App\Services\Notifications\Channels\WhatsAppNotificationChannel;
 use App\Services\Notifications\NotificationDeliveryRecorder;
 use App\Services\Workflow\AssigneeResolver;
+use App\Support\RateLimitProfiles;
 use Carbon\CarbonImmutable;
+use Illuminate\Auth\Events\Login;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
@@ -102,11 +105,31 @@ class AppServiceProvider extends ServiceProvider
         // super-admin holds every ability implicitly; no permission matrix entry.
         Gate::before(fn ($user, string $ability) => $user->hasRole('super-admin') ? true : null);
 
-        RateLimiter::for('api', fn (Request $request): Limit => Limit::perMinute(60)
-            ->by((string) ($request->user()?->getAuthIdentifier() ?? $request->ip())));
+        RateLimiter::for('api', fn (Request $request): Limit => RateLimitProfiles::limit(
+            'api',
+            (string) ($request->user()?->getAuthIdentifier() ?? $request->ip()),
+        ));
 
-        RateLimiter::for('approval-links', fn (Request $request): Limit => Limit::perMinute(10)->by($request->ip()));
-        RateLimiter::for('telegram-webhook', fn (Request $request): Limit => Limit::perMinute(60)->by($request->ip()));
+        RateLimiter::for('approval-links', fn (Request $request): Limit => RateLimitProfiles::limit(
+            'approval_links',
+            (string) $request->ip(),
+        ));
+        RateLimiter::for('exports', fn (Request $request): Limit => RateLimitProfiles::limit(
+            'exports',
+            (string) ($request->user()?->getAuthIdentifier() ?? $request->ip()),
+        ));
+        RateLimiter::for('webhooks', fn (Request $request): Limit => RateLimitProfiles::limit(
+            'webhooks',
+            (string) $request->ip(),
+        ));
+        RateLimiter::for('integrations', fn (Request $request): Limit => RateLimitProfiles::limit(
+            'integrations',
+            (string) $request->ip(),
+        ));
+        RateLimiter::for('telegram-webhook', fn (Request $request): Limit => RateLimitProfiles::limit(
+            'webhooks',
+            (string) $request->ip(),
+        ));
 
         foreach ([
             NotificationChannelKey::Teams,
@@ -156,6 +179,7 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(WorkflowInformationRequested::class, DispatchWebhookDeliveries::class);
         Event::listen(WorkflowDelegated::class, DispatchWebhookDeliveries::class);
         Event::listen(WorkflowCompleted::class, DispatchIntegrationActions::class);
+        Event::listen(Login::class, RecordLoginEvent::class);
     }
 
     /**

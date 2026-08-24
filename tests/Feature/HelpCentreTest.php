@@ -130,7 +130,9 @@ class HelpCentreTest extends TestCase
             ->assertSee('A copy of a draft kept on this device')
             ->assertSee('The email link or Teams/Slack')
             ->assertSee('A signed download of one request')
-            ->assertSee('A time-bounded, read-only grant');
+            ->assertSee('A time-bounded, read-only grant')
+            ->assertSee('A form answer hidden from people')
+            ->assertSee('A zip of your profile');
     }
 
     public function test_collaboration_article_explains_followers_and_ooo(): void
@@ -199,7 +201,8 @@ class HelpCentreTest extends TestCase
             ->assertSee('Application logo')
             ->assertSee('Favicon')
             ->assertSee('Meta description')
-            ->assertSee('Notification channels');
+            ->assertSee('Notification channels')
+            ->assertSee('Security & privacy');
     }
 
     public function test_notification_channels_article_explains_optional_delivery(): void
@@ -227,6 +230,19 @@ class HelpCentreTest extends TestCase
             ->assertSee('Auditor access')
             ->assertSee('Legal holds')
             ->assertSee('Retention and disposition');
+    }
+
+    public function test_security_and_privacy_article_explains_devices_and_anonymize(): void
+    {
+        $admin = User::factory()->create()->assignRole('admin');
+
+        $this->actingAs($admin)
+            ->get(route('help.show', 'security-and-privacy'))
+            ->assertOk()
+            ->assertSee('Sensitive fields')
+            ->assertSee('Download my data')
+            ->assertSee('Anonymize an account')
+            ->assertSee('Sign out other devices');
     }
 
     public function test_catalogue_matches_markdown_files(): void

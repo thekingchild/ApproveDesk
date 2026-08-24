@@ -49,3 +49,5 @@ Administration:
 - [Organization settings](organization-settings.md)
 - [Notification channels](notification-channels.md)
 - [Audit trail](audit-trail.md)
+- [Records](records.md)
+- [Security and privacy](security-and-privacy.md)

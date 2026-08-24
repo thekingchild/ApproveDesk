@@ -47,11 +47,11 @@ Route::post('integrations/telegram/webhook', TelegramWebhookController::class)
     ->name('integrations.telegram.webhook');
 
 Route::post('integrations/slack/interactions', SlackInteractionsController::class)
-    ->middleware('throttle:60,1')
+    ->middleware('throttle:webhooks')
     ->name('integrations.slack.interactions');
 
 Route::post('integrations/teams/actions', TeamsActionsController::class)
-    ->middleware('throttle:60,1')
+    ->middleware('throttle:webhooks')
     ->name('integrations.teams.actions');
 
 Route::middleware('guest')->prefix('auth')->name('oauth.')->group(function (): void {
@@ -97,6 +97,7 @@ Route::middleware(['auth', 'verified', 'can:settings.manage'])->group(function (
     Route::livewire('admin/records', 'pages::admin.records')->name('admin.records.index');
     Route::livewire('settings/branding', 'pages::settings.branding')->name('settings.branding');
     Route::livewire('settings/approvals', 'pages::settings.approvals')->name('settings.approvals');
+    Route::livewire('settings/security-privacy', 'pages::settings.security-privacy')->name('settings.security-privacy');
     Route::livewire('settings/notification-channels', 'pages::settings.notification-channels')->name('settings.notification-channels');
     Route::post('settings/notification-channels/credentials', NotificationChannelCredentialController::class)
         ->name('settings.notification-channels.credentials');
@@ -135,12 +136,15 @@ Route::middleware(['auth', 'verified', 'can:viewAny,App\Models\WebhookEndpoint']
 Route::middleware(['auth', 'verified', 'can:viewAny,App\Models\IntegrationConnector'])->group(function (): void {
     Route::livewire('admin/integrations', 'pages::admin.integrations')->name('admin.integrations.index');
     Route::post('admin/integrations/{connector}/credentials', IntegrationCredentialController::class)
+        ->middleware('throttle:integrations')
         ->name('admin.integrations.credentials');
 });
 
 Route::middleware(['auth', 'verified', 'can:reports.view'])->prefix('admin')->name('admin.')->group(function (): void {
     Route::livewire('analytics', 'pages::admin.analytics')->name('analytics.index');
-    Route::get('analytics/export', AnalyticsExportController::class)->name('analytics.export');
+    Route::get('analytics/export', AnalyticsExportController::class)
+        ->middleware('throttle:exports')
+        ->name('analytics.export');
 });
 
 Route::middleware(['auth', 'verified'])->group(function (): void {
@@ -174,6 +178,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         ->name('submissions.files.download');
 
     Route::get('submissions/{submission}/evidence', DownloadEvidencePackController::class)
+        ->middleware('throttle:exports')
         ->name('submissions.evidence.download');
 
     Route::livewire('dashboard', 'pages::dashboard')->name('dashboard');

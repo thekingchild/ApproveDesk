@@ -96,7 +96,12 @@ new #[Title('Submission')] class extends Component {
     public function visibleCustomFields(): \Illuminate\Support\Collection
     {
         return $this->submission->requestTypeVersion->fields
-            ->filter(fn ($field) => app(\App\Services\RequestFieldAccess::class)->canView(Auth::user(), $field, $this->submission));
+            ->filter(fn ($field) => app(\App\Services\RequestFieldAccess::class)->canView(Auth::user(), $field, $this->submission))
+            ->each(function ($field): void {
+                if ($field->is_sensitive) {
+                    app(\App\Services\RequestFieldAccess::class)->reveal(Auth::user(), $field, $this->submission, 'view');
+                }
+            });
     }
 
     /** Per-step timeline state: pending, active, done, rejected. */

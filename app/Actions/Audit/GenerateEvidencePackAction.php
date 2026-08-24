@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Services\Audit\EvidencePackBuilder;
 use App\Services\Audit\EvidencePackSigner;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use ZipArchive;
 
 final class GenerateEvidencePackAction
@@ -20,7 +21,7 @@ final class GenerateEvidencePackAction
 
     public function execute(Submission $submission, User $actor): EvidencePack
     {
-        $files = $this->builder->files($submission);
+        $files = $this->builder->files($submission, $actor);
         $hashes = [];
         foreach ($files as $name => $contents) {
             $hashes[$name] = hash('sha256', $contents);
@@ -34,7 +35,7 @@ final class GenerateEvidencePackAction
             'signature' => $signature,
         ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
 
-        $relative = 'evidence/'.$submission->id.'/'.now()->format('YmdHis').'-'.$submission->id.'.zip';
+        $relative = 'evidence/'.$submission->id.'/'.now()->format('YmdHis').'-'.$submission->id.'-'.Str::lower(Str::random(8)).'.zip';
         $absolute = Storage::disk('local')->path($relative);
         Storage::disk('local')->makeDirectory(dirname($relative));
 

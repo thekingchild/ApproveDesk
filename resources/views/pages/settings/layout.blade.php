@@ -11,11 +11,13 @@
             <flux:navlist.item :href="route('notifications.edit')" wire:navigate>{{ __('Notifications') }}</flux:navlist.item>
             <flux:navlist.item :href="route('out-of-office.edit')" wire:navigate>{{ __('Out of office') }}</flux:navlist.item>
             <flux:navlist.item :href="route('security.edit')" wire:navigate>{{ __('Security') }}</flux:navlist.item>
+            <flux:navlist.item :href="route('privacy.edit')" wire:navigate>{{ __('Privacy') }}</flux:navlist.item>
             <flux:navlist.item :href="route('api-tokens.edit')" wire:navigate>{{ __('API tokens') }}</flux:navlist.item>
             <flux:navlist.item :href="route('appearance.edit')" wire:navigate>{{ __('Appearance') }}</flux:navlist.item>
             @if (auth()->user()?->can('settings.manage'))
                 <flux:navlist.item :href="route('settings.branding')" wire:navigate>{{ __('Branding') }}</flux:navlist.item>
                 <flux:navlist.item :href="route('settings.approvals')" wire:navigate>{{ __('Approvals') }}</flux:navlist.item>
+                <flux:navlist.item :href="route('settings.security-privacy')" wire:navigate>{{ __('Security & privacy') }}</flux:navlist.item>
                 <flux:navlist.item :href="route('settings.notification-channels')" wire:navigate>{{ __('Notification channels') }}</flux:navlist.item>
             @endif
         </flux:navlist>

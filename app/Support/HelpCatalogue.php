@@ -173,6 +173,15 @@ final class HelpCatalogue
                 audience: 'admin',
                 screenRoute: 'admin.records.index',
             ),
+            new HelpArticle(
+                slug: 'security-and-privacy',
+                title: 'Security and privacy',
+                summary: 'Sensitive fields, download stamps, devices, rate limits, and account anonymization.',
+                icon: 'lock-closed',
+                group: 'Administration',
+                audience: 'admin',
+                screenRoute: 'settings.security-privacy',
+            ),
         ]);
     }
 

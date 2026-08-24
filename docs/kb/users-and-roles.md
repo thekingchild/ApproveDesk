@@ -45,3 +45,9 @@ For large onboarding, open **Administration → Users → Import users**.
 5. Confirm. New accounts get a generated password — ask people to use **Forgot password** on the login screen to set their own.
 
 Departments must already exist (the importer will not create them). A manager must be an existing user or appear earlier in the same file. Roles must be ones you are allowed to grant. Imported people are trusted immediately; they do not go through the self-registration email code. Passwords are never read from the spreadsheet.
+
+## Anonymize an account
+
+When someone leaves and they have request or decision history, edit the user and choose **Anonymize account**. Their name becomes “Former user”, they cannot sign in, and the history stays on those requests. You cannot anonymize yourself or the last active super administrator.
+
+People download their own data from **Settings → Privacy**. See [Security and privacy](security-and-privacy.md).

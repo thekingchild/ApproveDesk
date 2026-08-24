@@ -147,7 +147,7 @@ Locked product decision for Phase 8.2. It does not reopen Phase 8.1. Design: [do
 | UO | v2.3.3 | User onboarding: CSV/Excel import, registration OTP, domain allow-list | Complete |
 | LP | v2.3.4 | Public static landing page | Complete |
 | 8 | v2.4.0 | Collaboration, notifications, and integration hub | Complete |
-| 9 | v2.5.0 | Governance, audit evidence, security, and reliability | In progress — 9.1 complete |
+| 9 | v2.5.0 | Governance, audit evidence, security, and reliability | In progress — 9.1 and 9.2 complete |
 | 10 | v3.0.0 | SaaS multi-tenancy foundation | Not started |
 | 11 | v3.1.0 | Paystack and Flutterwave subscriptions | Not started |
 | 12 | v3.2.0 | SaaS onboarding, entitlements, and commercial operations | Not started |
@@ -690,13 +690,13 @@ Administrator screen: **Administration → Integrations**. Help: `docs/kb/integr
 - **P9-AUD-04 — Complete (2026-08-24):** Add configurable retention schedules, legal holds, disposition review, and storage lifecycle jobs.
 - **P9-AUD-05 — Complete (2026-08-24):** Add request and attachment version history with before/after summaries and immutable provenance.
 
-### 9.2 Security and privacy
+### 9.2 Security and privacy — Complete (2026-08-24)
 
-- **P9-SEC-01:** Perform formal threat models for authentication, files, integrations, workflow actions, exports, and upcoming SaaS tenancy.
-- **P9-SEC-02:** Add per-field sensitivity, export redaction, download watermarking option, and audit of sensitive-field access.
-- **P9-SEC-03:** Add secret rotation procedures, CSP, security headers, session/device management, and suspicious-login notifications.
-- **P9-SEC-04:** Add rate-limit profiles for login, API, approval links, exports, webhooks, and integrations.
-- **P9-SEC-05:** Add self-service user data export and administrator-assisted deletion/anonymization that preserves required audit evidence.
+- **P9-SEC-01 — Complete (2026-08-24):** Perform formal threat models for authentication, files, integrations, workflow actions, exports, and upcoming SaaS tenancy.
+- **P9-SEC-02 — Complete (2026-08-24):** Add per-field sensitivity, export redaction, download watermarking option, and audit of sensitive-field access.
+- **P9-SEC-03 — Complete (2026-08-24):** Add secret rotation procedures, CSP, security headers, session/device management, and suspicious-login notifications.
+- **P9-SEC-04 — Complete (2026-08-24):** Add rate-limit profiles for login, API, approval links, exports, webhooks, and integrations.
+- **P9-SEC-05 — Complete (2026-08-24):** Add self-service user data export and administrator-assisted deletion/anonymization that preserves required audit evidence.
 
 ### 9.3 Reliability and operations
 

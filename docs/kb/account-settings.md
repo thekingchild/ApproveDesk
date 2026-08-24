@@ -27,3 +27,13 @@ Open **Out of office** in Settings. Set a start, an end, and an optional fallbac
 ## API tokens
 
 Personal tokens call the REST API as you. Create a token, copy it once, and store it outside ApproveDesk. Revoke tokens you no longer use. Tokens inherit your permissions.
+
+## Devices
+
+Open **Security**. Signed-in browsers appear under **Devices**. Sign out one you do not recognise, or **Sign out other devices** to keep only this browser. A sign-in from a new device or location sends you an email and an in-app notice.
+
+## Privacy
+
+Open **Privacy** to **Download my data**. The zip is your profile, requests you submitted, comments, followers, out-of-office periods, sign-in history, and decisions recorded in your name. Passwords, recovery codes, API tokens, and connector secrets are not included.
+
+You can delete the account only when you have no request or decision history. If you do, ask an administrator to anonymize the account so your name comes off while the history stays. See [Security and privacy](security-and-privacy.md).

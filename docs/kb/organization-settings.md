@@ -51,6 +51,10 @@ Optional start and end times on Approval settings. Manual reminders sent inside 
 
 See [Notification channels](notification-channels.md).
 
+## Security and privacy
+
+**Settings → Security & privacy** is a separate administrator screen for download stamps, rate limits, and who opened sensitive fields. People manage their own devices and data export from **Settings → Security** and **Settings → Privacy**. See [Security and privacy](security-and-privacy.md).
+
 ## What stays out of these screens
 
 Queues, mail server, database, and installer options are hosting concerns. They are not in this knowledge base.

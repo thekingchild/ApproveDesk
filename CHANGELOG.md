@@ -8,6 +8,7 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Added
 
+- Phase 9.2 security and privacy: threat models for authentication, files, integrations, workflow actions, exports, and upcoming tenancy; export redaction and access logging for sensitive fields; optional download stamps; CSP and security headers; device session revoke; suspicious-login notices; configurable rate-limit profiles; self-service data export; administrator account anonymization that keeps request history.
 - Phase 9.1 audit and records: per-request signed evidence packs with verification, time-bounded auditor access and export logs, legal holds, retention windows, disposition review, and append-only request/file history.
 - Phase 8 exit tests: connector contracts with faked providers, webhook/action idempotency and replay, signed-action tamper/stale coverage for Teams/Slack/email, WhatsApp mapping and placeholder binding, email template restore with a still-valid signed confirmation URL, Telegram outbound on a faked Bot API (no long-poll), offline draft conflict plus online-only decisions, and database-queue retry/dead-letter. A new request form can notify Slack, accept a signed decision, and upload the approved file to Drive in one recorded flow.
 - Public static landing page (Phase LP): `/` serves drop-in files from the `website/` directory; the header injects **Log in** / **Sign up** for guests and **Dashboard** when already signed in. Replace `website/` to update the marketing site without changing PHP.

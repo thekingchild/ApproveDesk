@@ -26,8 +26,8 @@ If a form needs to change, publish a new version. Old requests keep the version 
 
 If a workflow needs to change, publish a new workflow version. In-flight requests finish on the version they already have. The original step names stay on the history.
 
-If a person leaves, deactivate the account. Their name stays on the actions they recorded.
+If a person leaves, anonymize the account from **Users**. Their name becomes “Former user”. The actions they recorded stay.
 
 Use analytics for trends. Use the request history or an evidence pack when you need evidence of a single case.
 
-See [Records](records.md) for auditor access, legal holds, and retention.
+See [Records](records.md) for auditor access, legal holds, and retention. See [Security and privacy](security-and-privacy.md) for sensitive fields and download stamps.

@@ -2,6 +2,7 @@
 
 use App\Actions\Users\CreateUserAction;
 use App\Actions\Users\UpdateUserAction;
+use App\Actions\Privacy\AnonymizeUserAction;
 use App\Concerns\PasswordValidationRules;
 use App\DTOs\UserData;
 use App\Models\Department;
@@ -201,6 +202,19 @@ new #[Title('User management')] class extends Component {
         Flux::toast($message, variant: 'success');
     }
 
+    public function anonymizeUser(int $userId): void
+    {
+        $target = User::query()->findOrFail($userId);
+        $this->authorize('anonymize', $target);
+
+        app(AnonymizeUserAction::class)->execute($target, Auth::user());
+
+        $this->resetForm();
+        unset($this->users);
+        $this->modal('user-form')->close();
+        Flux::toast(__('Account anonymized. Request history is still there.'), variant: 'success');
+    }
+
     private function resetForm(): void
     {
         $this->resetValidation();
@@ -342,6 +356,11 @@ new #[Title('User management')] class extends Component {
 
             <div class="flex justify-end gap-2">
                 <flux:modal.close><flux:button variant="ghost">{{ __('Cancel') }}</flux:button></flux:modal.close>
+                @if ($editingUserId && Auth::user()?->can('anonymize', User::query()->find($editingUserId)))
+                    <flux:button type="button" variant="danger" wire:click="anonymizeUser({{ $editingUserId }})" wire:confirm="{{ __('Remove this person’s name and email? Decisions they recorded stay on the requests.') }}" data-test="anonymize-user">
+                        {{ __('Anonymize account') }}
+                    </flux:button>
+                @endif
                 <flux:button type="submit" variant="primary" data-test="save-user">{{ __('Save user') }}</flux:button>
             </div>
         </form>

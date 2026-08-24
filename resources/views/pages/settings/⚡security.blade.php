@@ -1,8 +1,10 @@
 <?php
 
 use App\Concerns\PasswordValidationRules;
+use App\Services\Security\DeviceSessionManager;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\ValidationException;
 use Laravel\Fortify\Actions\DisableTwoFactorAuthentication;
 use Laravel\Fortify\Features;
@@ -164,6 +166,44 @@ new #[Title('Security settings')] class extends Component {
 
         $this->twoFactorEnabled = false;
     }
+
+    public function devices(): array
+    {
+        $currentId = Session::getId();
+
+        return app(DeviceSessionManager::class)
+            ->forUser(Auth::user())
+            ->map(fn ($session): array => [
+                'id' => $session->id,
+                'device' => $session->deviceLabel(),
+                'ip' => $session->ip_address ?: '—',
+                'last_activity' => $session->last_activity
+                    ? \Illuminate\Support\Carbon::createFromTimestamp($session->last_activity)->diffForHumans()
+                    : '—',
+                'is_current' => $session->id === $currentId,
+            ])
+            ->all();
+    }
+
+    public function revokeDevice(string $sessionId): void
+    {
+        app(DeviceSessionManager::class)->revoke(Auth::user(), $sessionId);
+
+        if (! Auth::check()) {
+            $this->redirect(route('login'));
+
+            return;
+        }
+
+        Flux::toast(variant: 'success', text: __('That device was signed out.'));
+    }
+
+    public function revokeOtherDevices(): void
+    {
+        $count = app(DeviceSessionManager::class)->revokeOthers(Auth::user(), Session::getId());
+
+        Flux::toast(variant: 'success', text: trans_choice(':count other device signed out.|:count other devices signed out.', $count, ['count' => $count]));
+    }
 }; ?>
 
 <section class="w-full">
@@ -206,6 +246,37 @@ new #[Title('Security settings')] class extends Component {
                 </flux:button>
             </div>
         </form>
+
+        <section class="mt-12" data-test="device-sessions">
+            <flux:heading>{{ __('Devices') }}</flux:heading>
+            <flux:subheading>{{ __('Sessions signed in as you. Sign out a device you do not recognise.') }}</flux:subheading>
+
+            <div class="mt-4 space-y-3">
+                @forelse ($this->devices() as $device)
+                    <div class="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
+                        <div>
+                            <p class="font-medium">{{ $device['device'] }}</p>
+                            <p class="text-xs text-zinc-500">{{ $device['ip'] }} · {{ $device['last_activity'] }}</p>
+                        </div>
+                        @if ($device['is_current'])
+                            <flux:badge color="lime">{{ __('This device') }}</flux:badge>
+                        @else
+                            <flux:button size="sm" variant="ghost" wire:click="revokeDevice('{{ $device['id'] }}')" data-test="revoke-device">
+                                {{ __('Sign out') }}
+                            </flux:button>
+                        @endif
+                    </div>
+                @empty
+                    <flux:text>{{ __('Only this browser is signed in, or device records are not stored on this server.') }}</flux:text>
+                @endforelse
+            </div>
+
+            <div class="mt-4">
+                <flux:button variant="ghost" wire:click="revokeOtherDevices" data-test="revoke-other-devices">
+                    {{ __('Sign out other devices') }}
+                </flux:button>
+            </div>
+        </section>
 
         @if ($canManageTwoFactor)
             <section class="mt-12">

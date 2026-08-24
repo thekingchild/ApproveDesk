@@ -173,3 +173,31 @@ How long drafts and finished requests are kept before they may be removed.
 ## [Disposition](/help/records)
 
 A review that must be approved before a finished request past its retention window is removed.
+
+## [Sensitive field](/help/request-types)
+
+A form answer hidden from people who do not have the sensitive-fields ability. The requester still sees their own answer. Opening it is recorded.
+
+## [Download stamp](/help/security-and-privacy)
+
+A mark on a downloaded file that names who took it and when. Images show the stamp; other files arrive with a notice.
+
+## [Device session](/help/account-settings)
+
+A signed-in browser listed on **Settings → Security**. You can sign one out or sign out every other device.
+
+## [Suspicious sign-in](/help/account-settings)
+
+A sign-in from a device or location not seen before. ApproveDesk emails you and writes an in-app notice.
+
+## [Rate limit](/help/security-and-privacy)
+
+How many times sign-in, the API, approval links, exports, webhooks, or integrations may be tried each minute.
+
+## [My data export](/help/account-settings)
+
+A zip of your profile, requests, comments, and sign-in history from **Settings → Privacy**. Secrets are not included.
+
+## [Account anonymization](/help/users-and-roles)
+
+An administrator action that removes a person’s name and email, blocks sign-in, and keeps their request history.
