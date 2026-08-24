@@ -16,7 +16,7 @@ Use this screen after a deploy, before a risky change, or when you need a copy o
 
 ### Destinations
 
-The local disk is always used. You can add an S3-compatible bucket or Google Drive. A remote destination that is missing its secret is skipped and does not fail the local copy. Secrets are saved on their own form and are not shown again.
+The local disk is always used. **S3-compatible** and **Google Drive** are separate cards. A remote destination that is missing its secret is skipped and does not fail the local copy. Secrets are not shown again.
 
 ### Schedule and retain
 

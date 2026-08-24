@@ -176,7 +176,14 @@ class BackupSnapshotsTest extends TestCase
     {
         $admin = User::factory()->create()->assignRole('admin');
 
-        $this->actingAs($admin)->get(route('admin.backups.index'))->assertOk()->assertSee('Backup database');
+        $this->actingAs($admin)->get(route('admin.backups.index'))
+            ->assertOk()
+            ->assertSee('Backup database')
+            ->assertSee('S3-compatible')
+            ->assertSee('Google Drive')
+            ->assertSee('Save S3 destination')
+            ->assertSee('Save Drive destination')
+            ->assertDontSee('Add a remote destination');
 
         Livewire::actingAs($admin)
             ->test('pages::admin.backups')
