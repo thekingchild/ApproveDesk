@@ -194,6 +194,10 @@ A sign-in from a device or location not seen before. ApproveDesk emails you and 
 
 How many times sign-in, the API, approval links, exports, webhooks, or integrations may be tried each minute.
 
+## [Second factor requirement](/help/security-and-privacy)
+
+An organization setting that sends people to **Settings → Security** until they confirm an authenticator or add a passkey. Off until an enrolled administrator turns it on.
+
 ## [My data export](/help/account-settings)
 
 A zip of your profile, requests, comments, and sign-in history from **Settings → Privacy**. Secrets are not included.

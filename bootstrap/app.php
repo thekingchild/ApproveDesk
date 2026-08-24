@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\CorrelateRequests;
 use App\Http\Middleware\EnsureAppConfigured;
+use App\Http\Middleware\EnsureSecondFactorWhenRequired;
 use App\Http\Middleware\EnsureUserIsActive;
 use App\Http\Middleware\RedirectUnconfirmedRegistration;
 use App\Http\Middleware\SecurityHeaders;
@@ -24,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
             EnsureAppConfigured::class,
             EnsureUserIsActive::class,
             RedirectUnconfirmedRegistration::class,
+            EnsureSecondFactorWhenRequired::class,
         ]);
         $middleware->validateCsrfTokens(except: [
             'integrations/telegram/webhook',

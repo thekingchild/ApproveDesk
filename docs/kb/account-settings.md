@@ -10,6 +10,8 @@ Update your name and email from Profile. Appearance switches light and dark them
 
 Change your password from Security. You can add passkeys and turn on two-factor authentication with recovery codes. Keep those codes offline. If you lose the device and the codes, an administrator has to restore access.
 
+If an administrator turns on **Require a second factor**, you must confirm an authenticator or add a passkey before you can open the rest of ApproveDesk. You will stay on **Settings → Security** until you do.
+
 ## Notifications
 
 Choose Immediate, Daily, Weekly, or In-app only. Immediate sends as events happen. Daily and weekly send a digest. In-app only keeps the bell and does not email you.

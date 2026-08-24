@@ -149,7 +149,7 @@ Locked product decision for Phase 8.2. It does not reopen Phase 8.1. Design: [do
 | 8 | v2.4.0 | Collaboration, notifications, and integration hub | Complete |
 | 9 | v2.5.0 | Governance, audit evidence, security, and reliability | Complete |
 | IN | v2.5.1 | Installer lock and in-app update | Complete |
-| MFA | v2.5.2 | Enforce two-factor authentication | Not started |
+| MFA | v2.5.2 | Enforce two-factor authentication | Complete |
 | TS | v2.5.3 | Cloudflare Turnstile | Not started |
 | BK | v2.5.4 | In-app database and file backups | Not started |
 | 10 | v3.0.0 | SaaS multi-tenancy foundation | Not started |
@@ -751,7 +751,7 @@ This phase is additive. It does not reopen Phases 0–9, UO, or LP. It does not 
 
 ---
 
-## Phase MFA — Enforce two-factor authentication
+## Phase MFA — Enforce two-factor authentication — Complete (2026-08-24)
 
 **Goal:** let an administrator require a second factor before anyone uses the signed-in product, and turn that requirement off again without rewriting Fortify.
 
@@ -766,24 +766,24 @@ This phase is additive. It does not reopen Phase 9.2, Fortify feature flags, pas
 - Signed email/Teams/Slack approval links stay token-based. API tokens already issued keep working; **creating** a new personal token requires the actor to satisfy the requirement.
 - No grace period in this phase.
 
-### MFA.1 Setting and policy
+### MFA.1 Setting and policy — Complete (2026-08-24)
 
-- **MFA-SET-01:** Persist `auth.two_factor_required` via `SecuritySettings` / `UpdateSecuritySettingsAction`. Checkbox on **Settings → Security & privacy**. Saving on without the actor enrolled is rejected.
-- **MFA-SET-02:** `User::hasSatisfiedSecondFactor(): bool` — confirmed 2FA or `passkeys()->exists()`. Put role checks in a policy/middleware, not `hasRole` in a controller.
+- **MFA-SET-01 — Complete (2026-08-24):** Persist `auth.two_factor_required` via `SecuritySettings` / `UpdateSecuritySettingsAction`. Checkbox on **Settings → Security & privacy**. Saving on without the actor enrolled is rejected.
+- **MFA-SET-02 — Complete (2026-08-24):** `User::hasSatisfiedSecondFactor(): bool` — confirmed 2FA or `passkeys()->exists()`. Put role checks in a policy/middleware, not `hasRole` in a controller.
 
-### MFA.2 Enforcement
+### MFA.2 Enforcement — Complete (2026-08-24)
 
-- **MFA-ENF-01:** Middleware `EnsureSecondFactorWhenRequired` on the authenticated web group. Exempt: logout, Settings → Security (and Fortify 2FA/passkey endpoints), Help, branded assets, `/up`.
-- **MFA-ENF-02:** Dashboard, submissions, approvals, administration, and Updates redirect to Security until enrolled. JSON/Livewire requests return 403 with a clear message.
-- **MFA-ENF-03:** Personal access token create path refuses when the requirement is on and the actor is not enrolled.
+- **MFA-ENF-01 — Complete (2026-08-24):** Middleware `EnsureSecondFactorWhenRequired` on the authenticated web group. Exempt: logout, Settings → Security (and Fortify 2FA/passkey endpoints), Help, branded assets, `/up`.
+- **MFA-ENF-02 — Complete (2026-08-24):** Dashboard, submissions, approvals, administration, and Updates redirect to Security until enrolled. JSON/Livewire requests return 403 with a clear message.
+- **MFA-ENF-03 — Complete (2026-08-24):** Personal access token create path refuses when the requirement is on and the actor is not enrolled.
 
-### MFA.3 Tests, docs, and exit gate
+### MFA.3 Tests, docs, and exit gate — Complete (2026-08-24)
 
-- **MFA-TEST-01:** Off: users without 2FA reach dashboard. On: they are redirected to Security; after confirming 2FA they reach dashboard. Passkey-only user is allowed. Actor cannot enable the setting without being enrolled. Submitter cannot change the org setting.
-- **MFA-TEST-02:** Email approval signed link still works without a session 2FA. Existing Sanctum token still authenticates; creating a token while required and unenrolled fails.
-- **MFA-DOC-01:** `docs/kb/security-and-privacy.md`, `docs/kb/account-settings.md`, `docs/kb/definitions.md`, Help catalogue summary, `CHANGELOG.md`, and this plan.
+- **MFA-TEST-01 — Complete (2026-08-24):** Off: users without 2FA reach dashboard. On: they are redirected to Security; after confirming 2FA they reach dashboard. Passkey-only user is allowed. Actor cannot enable the setting without being enrolled. Submitter cannot change the org setting.
+- **MFA-TEST-02 — Complete (2026-08-24):** Email approval signed link still works without a session 2FA. Existing Sanctum token still authenticates; creating a token while required and unenrolled fails.
+- **MFA-DOC-01 — Complete (2026-08-24):** `docs/kb/security-and-privacy.md`, `docs/kb/account-settings.md`, `docs/kb/definitions.md`, Help catalogue summary, `CHANGELOG.md`, and this plan.
 
-**Phase MFA demo:** administrator who already has 2FA turns on **Require a second factor**; a colleague who only has a password is sent to Security and cannot open Approvals until they confirm an authenticator or add a passkey; turning the setting off restores access.
+**Phase MFA demo — Complete (2026-08-24):** administrator who already has 2FA turns on **Require a second factor**; a colleague who only has a password is sent to Security and cannot open Approvals until they confirm an authenticator or add a passkey; turning the setting off restores access.
 
 **Out of scope:** SMS OTP, hardware-only policy, per-role exceptions, IdP/SAML (Phase 15), forcing 2FA on the installer admin at create time.
 

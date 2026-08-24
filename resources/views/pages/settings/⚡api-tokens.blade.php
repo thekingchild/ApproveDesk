@@ -48,6 +48,14 @@ new #[Title('API tokens')] class extends Component {
 
     public function create(): void
     {
+        $user = Auth::user();
+
+        if (\App\Support\SecuritySettings::twoFactorRequired() && ! $user->hasSatisfiedSecondFactor()) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'tokenName' => __('A second factor is required before you can create a token.'),
+            ]);
+        }
+
         $validated = $this->validate([
             'tokenName' => ['required', 'string', 'min:3', 'max:100'],
             'abilities' => ['required', 'array', 'min:1'],

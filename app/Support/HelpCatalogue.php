@@ -176,7 +176,7 @@ final class HelpCatalogue
             new HelpArticle(
                 slug: 'security-and-privacy',
                 title: 'Security and privacy',
-                summary: 'Sensitive fields, download stamps, devices, rate limits, and account anonymization.',
+                summary: 'Sensitive fields, download stamps, devices, required second factor, rate limits, and account anonymization.',
                 icon: 'lock-closed',
                 group: 'Administration',
                 audience: 'admin',

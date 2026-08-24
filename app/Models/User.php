@@ -178,6 +178,12 @@ class User extends Authenticatable implements PasskeyUser
             && ! $this->can('approvals.act');
     }
 
+    public function hasSatisfiedSecondFactor(): bool
+    {
+        return $this->hasEnabledTwoFactorAuthentication()
+            || $this->passkeys()->exists();
+    }
+
     public function isOutOfOffice(?CarbonInterface $at = null): bool
     {
         $at ??= now();

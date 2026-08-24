@@ -12,6 +12,8 @@ use Livewire\Component;
 new #[Title('Security and privacy')] class extends Component {
     public bool $watermarkDownloads = false;
 
+    public bool $twoFactorRequired = false;
+
     public int $rate_limit_login = 5;
 
     public int $rate_limit_api = 60;
@@ -28,6 +30,7 @@ new #[Title('Security and privacy')] class extends Component {
     {
         $this->authorize('settings.manage');
         $this->watermarkDownloads = SecuritySettings::watermarkDownloads();
+        $this->twoFactorRequired = SecuritySettings::twoFactorRequired();
         $profiles = RateLimitProfiles::all();
         $this->rate_limit_login = $profiles['login'];
         $this->rate_limit_api = $profiles['api'];
@@ -43,6 +46,7 @@ new #[Title('Security and privacy')] class extends Component {
 
         $validated = $this->validate([
             'watermarkDownloads' => ['boolean'],
+            'twoFactorRequired' => ['boolean'],
             'rate_limit_login' => ['required', 'integer', 'min:1', 'max:1000'],
             'rate_limit_api' => ['required', 'integer', 'min:1', 'max:1000'],
             'rate_limit_approval_links' => ['required', 'integer', 'min:1', 'max:1000'],
@@ -51,10 +55,17 @@ new #[Title('Security and privacy')] class extends Component {
             'rate_limit_integrations' => ['required', 'integer', 'min:1', 'max:1000'],
         ]);
 
-        $action->execute([
-            'watermark_downloads' => $validated['watermarkDownloads'],
-            ...$validated,
-        ]);
+        try {
+            $action->execute([
+                'watermark_downloads' => $validated['watermarkDownloads'],
+                'two_factor_required' => $validated['twoFactorRequired'],
+                ...$validated,
+            ], \Illuminate\Support\Facades\Auth::user());
+        } catch (\InvalidArgumentException $exception) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'twoFactorRequired' => $exception->getMessage(),
+            ]);
+        }
 
         Flux::toast(variant: 'success', text: __('Security and privacy settings saved.'));
     }
@@ -81,6 +92,13 @@ new #[Title('Security and privacy')] class extends Component {
             </div>
             <flux:checkbox wire:model="watermarkDownloads" :label="__('Stamp file downloads with who downloaded them')" data-test="watermark-downloads" />
             <flux:text>{{ __('Images get a visible stamp. Other files download as a zip with a notice. Previews are not stamped.') }}</flux:text>
+
+            <div>
+                <flux:heading size="sm">{{ __('Second factor') }}</flux:heading>
+                <flux:text class="mt-1">{{ __('When this is on, everyone must confirm an authenticator or add a passkey before they can use ApproveDesk. You must already have one of those on your account to turn it on.') }}</flux:text>
+            </div>
+            <flux:checkbox wire:model="twoFactorRequired" :label="__('Require a second factor')" data-test="two-factor-required" />
+            <flux:error name="twoFactorRequired" />
 
             <div>
                 <flux:heading size="sm">{{ __('Rate limits') }}</flux:heading>

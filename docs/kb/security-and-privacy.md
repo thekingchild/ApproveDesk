@@ -24,6 +24,12 @@ Turn on **Stamp file downloads**. Image downloads show who downloaded them. Othe
 
 **Settings → Security** lists devices signed in as you. **Sign out** ends one session. **Sign out other devices** keeps only this browser. A sign-in from a new device or location sends an email and an in-app notice.
 
+### Require a second factor
+
+Turn on **Require a second factor** when everyone should confirm an authenticator or add a passkey before they use ApproveDesk. You must already have one of those on your own account to turn it on. People who only have a password are sent to **Settings → Security** until they enroll. You can turn it off to restore access.
+
+Email approval links still work without a signed-in second factor. Existing API tokens still work; creating a new token requires the person to be enrolled.
+
 ### Rate limits
 
 Set how many attempts per minute are allowed for sign-in, the API, approval links, exports, incoming webhooks, and integrations. Lower numbers stop guessing and bulk downloads sooner.

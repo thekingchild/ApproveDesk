@@ -30,6 +30,7 @@ class InstallerTest extends TestCase
 
         config([
             'installer.enabled' => true,
+            'installer.installed' => false,
             'installer.env_path' => $this->envFile,
             'installer.lock_path' => $this->lockFile,
         ]);

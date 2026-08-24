@@ -209,6 +209,12 @@ new #[Title('Security settings')] class extends Component {
 <section class="w-full">
     @include('partials.settings-heading')
 
+    @if (session('second_factor_required') || (\App\Support\SecuritySettings::twoFactorRequired() && ! auth()->user()?->hasSatisfiedSecondFactor()))
+        <flux:callout variant="warning" icon="lock-closed" class="mb-6" data-test="second-factor-required">
+            {{ __('Your organization requires a second factor. Confirm an authenticator or add a passkey before you continue.') }}
+        </flux:callout>
+    @endif
+
     <flux:heading class="sr-only">{{ __('Security settings') }}</flux:heading>
 
     <x-pages::settings.layout :heading="__('Update password')" :subheading="__('Ensure your account is using a long, random password to stay secure')">

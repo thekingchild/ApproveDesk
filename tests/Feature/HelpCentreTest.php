@@ -242,7 +242,8 @@ class HelpCentreTest extends TestCase
             ->assertSee('Sensitive fields')
             ->assertSee('Download my data')
             ->assertSee('Anonymize an account')
-            ->assertSee('Sign out other devices');
+            ->assertSee('Sign out other devices')
+            ->assertSee('Require a second factor');
     }
 
     public function test_operations_article_explains_replay_and_backup_check(): void
