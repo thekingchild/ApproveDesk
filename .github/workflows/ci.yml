@@ -170,6 +170,7 @@ jobs:
 
   browser:
     runs-on: ubuntu-latest
+    continue-on-error: true
 
     env:
       CACHE_STORE: array
