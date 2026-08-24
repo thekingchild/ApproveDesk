@@ -158,4 +158,18 @@ class InstallerTest extends TestCase
         $this->assertTrue(app(Installer::class)->isInstalled());
         $this->get(route('install.welcome'))->assertNotFound();
     }
+
+    #[TestDox('an installed app hides the installer even when the wizard is inactive')]
+    public function test_installed_app_hides_installer_when_wizard_is_inactive(): void
+    {
+        config([
+            'installer.enabled' => false,
+            'installer.installed' => true,
+        ]);
+
+        $this->get(route('install.welcome'))->assertNotFound();
+        $this->get(route('install.done'))->assertNotFound();
+        $this->get('/install')->assertNotFound();
+        $this->get('/login')->assertOk();
+    }
 }

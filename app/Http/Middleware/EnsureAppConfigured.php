@@ -12,7 +12,7 @@ use Symfony\Component\HttpFoundation\Response;
  *
  *  - while the app is NOT installed: every web request is sent to /install
  *    (except the installer itself and Livewire update endpoints);
- *  - once installed: /install disappears (404).
+ *  - once installed: /install disappears (404), including on local.
  */
 class EnsureAppConfigured
 {
@@ -20,22 +20,23 @@ class EnsureAppConfigured
 
     public function handle(Request $request, Closure $next): Response
     {
+        $onInstaller = $request->is('install') || $request->is('install/*');
+
+        if ($this->installer->isInstalled() && $onInstaller) {
+            abort(404);
+        }
+
         if (! $this->installer->isActive()) {
             return $next($request);
         }
 
         if ($this->installer->isInstalled()) {
-            if ($request->is('install') || $request->is('install/*')) {
-                abort(404);
-            }
-
             return $next($request);
         }
 
         $this->installer->ensureBootstrapEnvironment();
 
-        $allowed = $request->is('install') || $request->is('install/*')
-            || $request->is('livewire/*') || $request->is('up');
+        $allowed = $onInstaller || $request->is('livewire/*') || $request->is('up');
 
         if (! $allowed) {
             return redirect()->route('install.welcome');
