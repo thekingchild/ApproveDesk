@@ -228,7 +228,31 @@ An active request with no current step, or a step that has waited more than a da
 
 ## [Backup check](/help/operations)
 
-A confirmation that this copy still has the required records. It does not take a host backup and it does not overwrite anything.
+A confirmation that this copy still has the required records. It does not take a snapshot or a host backup and it does not overwrite anything.
+
+## [Backup](/help/backups)
+
+A snapshot of either the database or the uploaded files. The two kinds stay in separate archives.
+
+## [Database backup](/help/backups)
+
+A snapshot of the records. It does not include uploaded files.
+
+## [Files backup](/help/backups)
+
+A snapshot of uploaded request files and branding artwork. It does not include the database.
+
+## [Backup destination](/help/backups)
+
+Where a snapshot is stored: the local disk, an S3-compatible bucket, or Google Drive.
+
+## [Retain](/help/backups)
+
+How many days a snapshot is kept. The last successful copy of each kind is never removed.
+
+## [Promote](/help/backups)
+
+Putting a verified snapshot back onto this copy. Type the snapshot number to confirm.
 
 ## [Updates](/help/updates)
 

@@ -6,6 +6,7 @@ use App\Jobs\ProcessEscalation;
 use App\Jobs\PurgeExpiredDelegations;
 use App\Jobs\RetryNotificationDeliveries;
 use App\Jobs\SendNotificationDigests;
+use App\Support\BackupSettings;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -30,3 +31,13 @@ Schedule::job(new RetryNotificationDeliveries)->everyFifteenMinutes()->withoutOv
 Schedule::job(new ApplyRetentionJob)->dailyAt('04:15')->withoutOverlapping();
 Schedule::command('approvedesk:fetch-whatsapp-templates')->dailyAt('03:15')->withoutOverlapping();
 Schedule::command('users:prune-unconfirmed')->dailyAt('03:45');
+
+Schedule::command('backups:database')
+    ->dailyAt(BackupSettings::databaseAt())
+    ->withoutOverlapping(120);
+
+Schedule::command('backups:files')
+    ->dailyAt(BackupSettings::filesAt())
+    ->withoutOverlapping(120);
+
+Schedule::command('backups:retain')->dailyAt('04:15')->withoutOverlapping();

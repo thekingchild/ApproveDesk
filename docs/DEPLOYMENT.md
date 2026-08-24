@@ -127,6 +127,7 @@ Do not enable multiple app replicas with the local file/session volume. A future
 - [ ] After a code deploy, **Administration → Updates** shows no unsafe pending migrations; apply only after a host backup
 - [ ] `.env` permissions tightened; `APP_DEBUG=false`
 - [ ] Backups scheduled (JetBackup / Plesk Backup Manager) **and a restore drill done**
+- [ ] **Administration → Backups** has a local database snapshot and a files snapshot after first use
 - [ ] Admin accounts have 2FA enabled
 
 ## 8. Hardening the database user (audit integrity)

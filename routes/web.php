@@ -2,7 +2,9 @@
 
 use App\Http\Controllers\AnalyticsExportController;
 use App\Http\Controllers\Auth\RegistrationConfirmationController;
+use App\Http\Controllers\BackupDestinationController;
 use App\Http\Controllers\BrandingAssetController;
+use App\Http\Controllers\DownloadBackupSnapshotController;
 use App\Http\Controllers\DownloadEvidencePackController;
 use App\Http\Controllers\EmailApprovalController;
 use App\Http\Controllers\HelpController;
@@ -98,6 +100,16 @@ Route::prefix('install')->name('install.')->group(function (): void {
 Route::middleware(['auth', 'verified', 'can:settings.manage'])->group(function (): void {
     Route::livewire('admin/records', 'pages::admin.records')->name('admin.records.index');
     Route::livewire('admin/operations', 'pages::admin.operations')->name('admin.operations.index');
+    Route::livewire('admin/backups', 'pages::admin.backups')->name('admin.backups.index');
+    Route::get('admin/backups/{snapshot}/download', DownloadBackupSnapshotController::class)
+        ->middleware('signed')
+        ->name('admin.backups.download');
+    Route::post('admin/backups/destinations', [BackupDestinationController::class, 'store'])
+        ->name('admin.backups.destinations.store');
+    Route::post('admin/backups/destinations/{destination}', [BackupDestinationController::class, 'update'])
+        ->name('admin.backups.destinations.update');
+    Route::post('admin/backups/destinations/{destination}/test', [BackupDestinationController::class, 'test'])
+        ->name('admin.backups.destinations.test');
     Route::livewire('admin/updates', 'pages::admin.updates')->name('admin.updates.index');
     Route::livewire('settings/branding', 'pages::settings.branding')->name('settings.branding');
     Route::livewire('settings/approvals', 'pages::settings.approvals')->name('settings.approvals');

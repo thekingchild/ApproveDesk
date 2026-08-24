@@ -192,6 +192,15 @@ final class HelpCatalogue
                 screenRoute: 'admin.operations.index',
             ),
             new HelpArticle(
+                slug: 'backups',
+                title: 'Backups',
+                summary: 'Separate database and file snapshots, destinations, and promote after a check.',
+                icon: 'circle-stack',
+                group: 'Administration',
+                audience: 'admin',
+                screenRoute: 'admin.backups.index',
+            ),
+            new HelpArticle(
                 slug: 'updates',
                 title: 'Updates',
                 summary: 'See this copy’s version and apply waiting database changes after a deploy.',

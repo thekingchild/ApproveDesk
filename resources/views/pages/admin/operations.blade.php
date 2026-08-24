@@ -130,6 +130,12 @@ new #[Title('Operations')] class extends Component
             <flux:heading size="sm">{{ __('Failed integrations') }}</flux:heading>
             <p class="mt-2 text-sm">{{ $this->health->deadLetterIntegrations }}</p>
         </flux:card>
+        <flux:card>
+            <flux:heading size="sm">{{ __('Failed snapshots') }}</flux:heading>
+            <p class="mt-2 text-sm" data-test="ops-failed-backups">
+                <a class="underline" href="{{ route('admin.backups.index') }}" wire:navigate>{{ trans_choice(':count failed backup|:count failed backups', \App\Models\BackupSnapshot::query()->where('status', 'failed')->count(), ['count' => \App\Models\BackupSnapshot::query()->where('status', 'failed')->count()]) }}</a>
+            </p>
+        </flux:card>
     </div>
 
     <div class="mt-8 grid gap-8 lg:grid-cols-2">
@@ -170,7 +176,7 @@ new #[Title('Operations')] class extends Component
 
         <flux:card>
             <flux:heading size="sm">{{ __('Backup check') }}</flux:heading>
-            <p class="mt-1 text-sm text-zinc-500">{{ __('Confirms this copy still has the required records. It does not replace a host backup.') }}</p>
+            <p class="mt-1 text-sm text-zinc-500">{{ __('Confirms this copy still has the required records. It does not take a snapshot and it does not replace a host backup. Snapshots live on Administration → Backups.') }}</p>
             <div class="mt-4">
                 <flux:button variant="primary" wire:click="verifyBackup">{{ __('Check this copy') }}</flux:button>
             </div>

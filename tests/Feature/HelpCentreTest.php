@@ -260,6 +260,19 @@ class HelpCentreTest extends TestCase
             ->assertSee('Check this copy');
     }
 
+    public function test_backups_article_explains_separate_kinds_and_promote(): void
+    {
+        $admin = User::factory()->create()->assignRole('admin');
+
+        $this->actingAs($admin)
+            ->get(route('help.show', 'backups'))
+            ->assertOk()
+            ->assertSee('Backup database')
+            ->assertSee('Backup files')
+            ->assertSee('Promote')
+            ->assertSee('Check this copy');
+    }
+
     public function test_updates_article_explains_apply_and_backup_reminder(): void
     {
         $admin = User::factory()->create()->assignRole('admin');

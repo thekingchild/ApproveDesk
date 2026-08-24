@@ -14,7 +14,7 @@ Dashboard content changes with your role.
 
 - Approvers see work that needs a decision first.
 - Requesters see drafts and returned requests first.
-- Administrators see organization shortcuts and operational health, including **Administration → Operations** and **Administration → Updates**.
+- Administrators see organization shortcuts and operational health, including **Administration → Operations**, **Administration → Backups**, and **Administration → Updates**.
 - People with more than one role see approvals first, then their own requests.
 
 ## Search

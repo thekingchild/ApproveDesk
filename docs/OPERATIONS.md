@@ -32,9 +32,12 @@ php artisan ops:budget-report
 
 ## 3. Backup verification and restore drill
 
-Host backups (JetBackup, Plesk Backup Manager, volume snapshots) remain the source of restore. ApproveDesk verifies a copy; it never writes a backup over the live database.
+Host backups (JetBackup, Plesk Backup Manager, volume snapshots) remain the source of restore. In-app snapshots on **Administration → Backups** complement them. `ops:restore-drill` still never writes a backup over the live database; **Promote** on the Backups screen is the only in-app path that replaces the live copy, and only after verify.
 
 ```
+php artisan backups:database
+php artisan backups:files
+php artisan backups:retain
 php artisan ops:backup-verify
 php artisan ops:backup-verify /path/to/backup.sqlite
 php artisan ops:backup-verify /path/to/dump.sql

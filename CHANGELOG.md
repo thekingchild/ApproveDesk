@@ -8,6 +8,7 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Added
 
+- In-app database and file backups (Phase BK): **Administration → Backups** takes separate database and file snapshots, stores them on the local disk and optional S3-compatible or Google Drive destinations, retains 14/7 days by default without pruning the last success, and promotes only after a check. Host backups stay recommended.
 - Optional Cloudflare Turnstile (Phase TS): administrators can require a bot check on sign-in, registration, and password reset. Off until a site key and secret are saved and the setting is on. Missing or failed checks are refused with a generic message. The secret is posted outside the settings form and never shown again.
 - Enforce two-factor authentication (Phase MFA): administrators can require a second factor (authenticator or passkey) before anyone uses the signed-in product. The person who turns it on must already be enrolled and can turn it off to recover a lockout. Email approval links and existing API tokens stay usable; creating a new token requires enrollment.
 - Installer lock and in-app updates (Phase IN): after first-run setup every `/install` address 404s, including the old completion page; login shows **ApproveDesk is ready** once. **Administration → Updates** shows this copy’s version, pending database changes, a safety check, and **Apply database updates** (type APPLY). File deploys stay on the host; this screen does not download a new copy or roll a change back.

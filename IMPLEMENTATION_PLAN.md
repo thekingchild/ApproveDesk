@@ -151,7 +151,7 @@ Locked product decision for Phase 8.2. It does not reopen Phase 8.1. Design: [do
 | IN | v2.5.1 | Installer lock and in-app update | Complete |
 | MFA | v2.5.2 | Enforce two-factor authentication | Complete |
 | TS | v2.5.3 | Cloudflare Turnstile | Complete |
-| BK | v2.5.4 | In-app database and file backups | Not started |
+| BK | v2.5.4 | In-app database and file backups | Complete |
 | 10 | v3.0.0 | SaaS multi-tenancy foundation | Not started |
 | 11 | v3.1.0 | Paystack and Flutterwave subscriptions | Not started |
 | 12 | v3.2.0 | SaaS onboarding, entitlements, and commercial operations | Not started |
@@ -825,7 +825,7 @@ This phase is additive. It does not reopen Fortify, Phase MFA, or installer rout
 
 ---
 
-## Phase BK — In-app database and file backups
+## Phase BK — In-app database and file backups — Complete (2026-08-24)
 
 **Goal:** let administrators schedule, download, retain, and quickly restore **separate** database and file snapshots, to local disk and/or a remote S3-compatible bucket or Google Drive, without treating backups as a second workflow engine.
 
@@ -841,41 +841,41 @@ This phase is additive. It does not reopen Phase 9.3 verification, `workflow_act
 - Credentials encrypted, posted outside Livewire. Secrets redacted from logs and last-error text.
 - Shared hosting: no Redis; queue `database`; PHP table dump when `mysqldump` is absent; SQLite is a consistent file copy. Dump timeout and `withoutOverlapping` required.
 
-### BK.1 Domain and storage
+### BK.1 Domain and storage — Complete (2026-08-24)
 
-- **BK-DATA-01:** Tables `backup_destinations` (kind local|s3|gdrive, encrypted config, enabled) and `backup_snapshots` (kind database|files, destination, path/remote id, bytes, checksum, status, retained_until, verified_at). String status enum. No MySQL ENUM.
-- **BK-DATA-02:** Settings: `backup.database_retain_days` (default 14), `backup.files_retain_days` (default 7), `backup.database_hour` / `backup.files_hour`, enable flags.
-- **BK-SEC-01:** Local files are on the `local` disk under `backups/`. Download uses a signed temporary URL, same as attachments. Remote upload uses the destination adapter only.
+- **BK-DATA-01 — Complete (2026-08-24):** Tables `backup_destinations` (kind local|s3|gdrive, encrypted config, enabled) and `backup_snapshots` (kind database|files, destination, path/remote id, bytes, checksum, status, retained_until, verified_at). String status enum. No MySQL ENUM.
+- **BK-DATA-02 — Complete (2026-08-24):** Settings: `backup.database_retain_days` (default 14), `backup.files_retain_days` (default 7), `backup.database_hour` / `backup.files_hour`, enable flags.
+- **BK-SEC-01 — Complete (2026-08-24):** Local files are on the `local` disk under `backups/`. Download uses a signed temporary URL, same as attachments. Remote upload uses the destination adapter only.
 
-### BK.2 Create and schedule
+### BK.2 Create and schedule — Complete (2026-08-24)
 
-- **BK-RUN-01:** `CreateDatabaseBackupAction` — SQLite copy or chunked SQL dump of application tables; gzip; sha256; record snapshot; upload to each enabled destination; verify list/get of the remote object.
-- **BK-RUN-02:** `CreateFilesBackupAction` — zip of `storage/app/private/submissions` plus branding assets; exclude `backups/`, logs, cache, sessions; same upload/verify path.
-- **BK-RUN-03:** Scheduled jobs + **Backup now** on **Administration → Backups** (or Operations). Failures go to dead-letter style status and appear on Operations health. Unconfigured remote destinations skip and do not fail the local copy.
-- **BK-RUN-04:** Retention job deletes expired snapshots per kind, keeping at least one successful copy. Legal holds / disposition are not applied to backup files in this phase (live records stay authoritative).
+- **BK-RUN-01 — Complete (2026-08-24):** `CreateDatabaseBackupAction` — SQLite copy or chunked SQL dump of application tables; gzip; sha256; record snapshot; upload to each enabled destination; verify list/get of the remote object.
+- **BK-RUN-02 — Complete (2026-08-24):** `CreateFilesBackupAction` — zip of `storage/app/private/submissions` plus branding assets; exclude `backups/`, logs, cache, sessions; same upload/verify path.
+- **BK-RUN-03 — Complete (2026-08-24):** Scheduled jobs + **Backup now** on **Administration → Backups** (or Operations). Failures go to dead-letter style status and appear on Operations health. Unconfigured remote destinations skip and do not fail the local copy.
+- **BK-RUN-04 — Complete (2026-08-24):** Retention job deletes expired snapshots per kind, keeping at least one successful copy. Legal holds / disposition are not applied to backup files in this phase (live records stay authoritative).
 
-### BK.3 Destinations
+### BK.3 Destinations — Complete (2026-08-24)
 
-- **BK-DST-01:** Local always available when the disk is writable.
-- **BK-DST-02:** S3-compatible: key, secret, region, bucket, optional endpoint, path-style flag, prefix. Test connection lists the prefix.
-- **BK-DST-03:** Google Drive: service-account JSON or OAuth refresh token stored encrypted; folder id; unattended schedule must work without a browser. Test connection lists the folder. This is not the Phase 8.3 Drive connector.
+- **BK-DST-01 — Complete (2026-08-24):** Local always available when the disk is writable.
+- **BK-DST-02 — Complete (2026-08-24):** S3-compatible: key, secret, region, bucket, optional endpoint, path-style flag, prefix. Test connection lists the prefix.
+- **BK-DST-03 — Complete (2026-08-24):** Google Drive: service-account JSON or OAuth refresh token stored encrypted; folder id; unattended schedule must work without a browser. Test connection lists the folder. This is not the Phase 8.3 Drive connector.
 
-### BK.4 Quick restore
+### BK.4 Quick restore — Complete (2026-08-24)
 
-- **BK-RST-01:** Restore preview: download/copy snapshot to scratch, run `BackupVerifier` (database) or file-count/hash manifest (files). Persist `verified_at`.
-- **BK-RST-02:** **Promote database** only after verify. Maintenance flag / 503 for other users. Replace DB from the verified scratch copy. Confirm `workflow_actions` count matches the snapshot manifest. Then `ops:reconcile` (report only).
-- **BK-RST-03:** **Promote files** only after verify. Write to `restore-holding/` then swap directories. Do not delete the previous tree until the swap succeeds.
-- **BK-RST-04:** Promote is `settings.manage`, typed confirmation of the snapshot id, structured log with actor. No WorkflowEngine calls.
+- **BK-RST-01 — Complete (2026-08-24):** Restore preview: download/copy snapshot to scratch, run `BackupVerifier` (database) or file-count/hash manifest (files). Persist `verified_at`.
+- **BK-RST-02 — Complete (2026-08-24):** **Promote database** only after verify. Maintenance flag / 503 for other users. Replace DB from the verified scratch copy. Confirm `workflow_actions` count matches the snapshot manifest. Then `ops:reconcile` (report only).
+- **BK-RST-03 — Complete (2026-08-24):** **Promote files** only after verify. Write to `restore-holding/` then swap directories. Do not delete the previous tree until the swap succeeds.
+- **BK-RST-04 — Complete (2026-08-24):** Promote is `settings.manage`, typed confirmation of the snapshot id, structured log with actor. No WorkflowEngine calls.
 
-### BK.5 Tests, docs, and exit gate
+### BK.5 Tests, docs, and exit gate — Complete (2026-08-24)
 
-- **BK-TEST-01:** Database backup of a sqlite test DB produces a gzip whose required tables pass `BackupVerifier`. Files backup includes a fake submission file and excludes `backups/`.
-- **BK-TEST-02:** S3 and Drive adapters are faked (`Http::fake` / fake disk). Unconfigured remote skips. Failed remote does not delete the local snapshot.
-- **BK-TEST-03:** Retention keeps the last success. Promote without verify is refused. Promote of a tampered dump is refused. Restore drill does not change live `workflow_actions` until promote. Submitter cannot open Backups.
-- **BK-TEST-04:** Schedule registers both backup jobs; `withoutOverlapping` present.
-- **BK-DOC-01:** Help `docs/kb/backups.md` (new), definitions (backup, database backup, files backup, destination, retain, promote), Operations article updated so “Check this copy” is not confused with a snapshot, `docs/OPERATIONS.md`, `docs/DEPLOYMENT.md` post-install checklist, Help catalogue, `CHANGELOG.md`, and this plan.
+- **BK-TEST-01 — Complete (2026-08-24):** Database backup of a sqlite test DB produces a gzip whose required tables pass `BackupVerifier`. Files backup includes a fake submission file and excludes `backups/`.
+- **BK-TEST-02 — Complete (2026-08-24):** S3 and Drive adapters are faked (`Http::fake` / fake disk). Unconfigured remote skips. Failed remote does not delete the local snapshot.
+- **BK-TEST-03 — Complete (2026-08-24):** Retention keeps the last success. Promote without verify is refused. Promote of a tampered dump is refused. Restore drill does not change live `workflow_actions` until promote. Submitter cannot open Backups.
+- **BK-TEST-04 — Complete (2026-08-24):** Schedule registers both backup jobs; `withoutOverlapping` present.
+- **BK-DOC-01 — Complete (2026-08-24):** Help `docs/kb/backups.md` (new), definitions (backup, database backup, files backup, destination, retain, promote), Operations article updated so “Check this copy” is not confused with a snapshot, `docs/OPERATIONS.md`, `docs/DEPLOYMENT.md` post-install checklist, Help catalogue, `CHANGELOG.md`, and this plan.
 
-**Phase BK demo:** administrator enables local + an S3-compatible destination, runs **Backup database** and **Backup files**, sees two snapshots, verifies the database snapshot, promotes it onto a disposable copy that still opens `/login`; a 15-day-old files snapshot is pruned while yesterday’s remains.
+**Phase BK demo — Complete (2026-08-24):** administrator enables local + an S3-compatible destination, runs **Backup database** and **Backup files**, sees two snapshots, verifies the database snapshot, promotes it onto a disposable copy that still opens `/login`; a 15-day-old files snapshot is pruned while yesterday’s remains.
 
 **Out of scope:** continuous WAL shipping, point-in-time restore, tenant-scoped backups (P12-OPS-04), encrypting the zip with a customer-managed KMS, backing up `website/` marketing files, using Integration hub webhooks as the transport, rewriting Phase 9.3 commands.
 

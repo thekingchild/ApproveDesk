@@ -81,6 +81,9 @@
                             <flux:sidebar.item icon="signal" :href="route('admin.operations.index')" :current="request()->routeIs('admin.operations.*')" wire:navigate>
                                 {{ __('Operations') }}
                             </flux:sidebar.item>
+                            <flux:sidebar.item icon="circle-stack" :href="route('admin.backups.index')" :current="request()->routeIs('admin.backups.*')" wire:navigate>
+                                {{ __('Backups') }}
+                            </flux:sidebar.item>
                             <flux:sidebar.item icon="arrow-path" :href="route('admin.updates.index')" :current="request()->routeIs('admin.updates.*')" wire:navigate>
                                 {{ __('Updates') }}
                             </flux:sidebar.item>

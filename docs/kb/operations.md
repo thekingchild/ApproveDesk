@@ -28,7 +28,7 @@ A request is listed when it is still active and has no current step, or the curr
 
 ### Backup check
 
-**Check this copy** confirms the required records are still present. It does not take a host backup and it does not overwrite anything. A failed check means this copy is incomplete — restore from the host backup using your usual restore procedure, then check again.
+**Check this copy** confirms the required records are still present. It does not take a snapshot, it does not take a host backup, and it does not overwrite anything. Snapshots live on **Administration → Backups**. A failed check means this copy is incomplete — restore from a snapshot or the host backup, then check again.
 
 After a deploy, apply waiting database changes from **Administration → Updates**, not by reopening setup.
 
