@@ -875,6 +875,11 @@ This phase is additive. It does not reopen Phase 9.3 verification, `workflow_act
 - **BK-TEST-04 — Complete (2026-08-24):** Schedule registers both backup jobs; `withoutOverlapping` present.
 - **BK-DOC-01 — Complete (2026-08-24):** Help `docs/kb/backups.md` (new), definitions (backup, database backup, files backup, destination, retain, promote), Operations article updated so “Check this copy” is not confused with a snapshot, `docs/OPERATIONS.md`, `docs/DEPLOYMENT.md` post-install checklist, Help catalogue, `CHANGELOG.md`, and this plan.
 
+### BK.6 Local purge and sizes — Complete (2026-08-24)
+
+- **BK-UI-02 — Complete (2026-08-24):** Snapshot table shows Size. Totals for Database and Files count each archive once.
+- **BK-RUN-05 — Complete (2026-08-24):** Remove local copy when a successful remote replica exists. Verify, Download, and Promote fetch from the remote if the local file is gone. Refused when the local file is the only copy.
+
 **Phase BK demo — Complete (2026-08-24):** administrator enables local + an S3-compatible destination, runs **Backup database** and **Backup files**, sees two snapshots, verifies the database snapshot, promotes it onto a disposable copy that still opens `/login`; a 15-day-old files snapshot is pruned while yesterday’s remains.
 
 **Out of scope:** continuous WAL shipping, point-in-time restore, tenant-scoped backups (P12-OPS-04), encrypting the zip with a customer-managed KMS, backing up `website/` marketing files, using Integration hub webhooks as the transport, rewriting Phase 9.3 commands.

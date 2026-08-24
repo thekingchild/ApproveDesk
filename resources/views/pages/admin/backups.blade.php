@@ -2,6 +2,7 @@
 
 use App\Actions\Backups\CreateDatabaseBackupAction;
 use App\Actions\Backups\CreateFilesBackupAction;
+use App\Actions\Backups\DeleteLocalBackupCopyAction;
 use App\Actions\Backups\PromoteDatabaseBackupAction;
 use App\Actions\Backups\PromoteFilesBackupAction;
 use App\Actions\Backups\UpdateBackupSettingsAction;
@@ -124,6 +125,74 @@ new #[Title('Backups')] class extends Component
         return URL::temporarySignedRoute('admin.backups.download', now()->addMinutes(5), $snapshot);
     }
 
+    public function deleteLocal(int $id, DeleteLocalBackupCopyAction $action): void
+    {
+        $this->authorize('settings.manage');
+
+        try {
+            $action->execute(BackupSnapshot::query()->findOrFail($id));
+        } catch (\InvalidArgumentException $exception) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['promoteConfirmation' => $exception->getMessage()]);
+        }
+
+        unset($this->snapshots);
+        Flux::toast(__('Local copy removed. Remote copies were kept.'), variant: 'success');
+    }
+
+    public function deleteLocalCopies(DeleteLocalBackupCopyAction $action): void
+    {
+        $this->authorize('settings.manage');
+        $removed = $action->executeEligible();
+        unset($this->snapshots);
+        Flux::toast(
+            $removed === 0
+                ? __('No local copies had a remote replica.')
+                : trans_choice(':count local copy removed|:count local copies removed', $removed, ['count' => $removed]),
+            variant: 'success',
+        );
+    }
+
+    public function formattedSize(?int $bytes): string
+    {
+        return BackupSnapshot::formatBytes($bytes);
+    }
+
+    public function databaseBytes(): int
+    {
+        return (int) BackupSnapshot::query()
+            ->where('kind', BackupSnapshotKind::Database)
+            ->successful()
+            ->get(['path', 'bytes'])
+            ->unique('path')
+            ->sum('bytes');
+    }
+
+    public function filesBytes(): int
+    {
+        return (int) BackupSnapshot::query()
+            ->where('kind', BackupSnapshotKind::Files)
+            ->successful()
+            ->get(['path', 'bytes'])
+            ->unique('path')
+            ->sum('bytes');
+    }
+
+    public function canRemoveLocal(BackupSnapshot $snapshot): bool
+    {
+        $snapshot->loadMissing('destination');
+
+        if ($snapshot->destination?->kind->value !== 'local') {
+            return false;
+        }
+
+        return BackupSnapshot::query()
+            ->where('path', $snapshot->path)
+            ->where('id', '!=', $snapshot->id)
+            ->successful()
+            ->whereHas('destination', fn ($query) => $query->where('kind', '!=', 'local'))
+            ->exists();
+    }
+
     /** @return \Illuminate\Support\Collection<int, BackupSnapshot> */
     #[Computed]
     public function snapshots(): \Illuminate\Support\Collection
@@ -243,6 +312,16 @@ new #[Title('Backups')] class extends Component
     <div class="mt-8">
         <flux:heading size="sm">{{ __('Snapshots') }}</flux:heading>
         <flux:text class="mt-1">{{ __('Verify a snapshot before you promote it. Promoting a database snapshot replaces this copy’s database. Type the snapshot number to confirm.') }}</flux:text>
+        <flux:text class="mt-2" data-test="backup-size-summary">
+            {{ __('Database') }}: {{ $this->formattedSize($this->databaseBytes()) }}
+            ·
+            {{ __('Files') }}: {{ $this->formattedSize($this->filesBytes()) }}
+        </flux:text>
+        <div class="mt-3">
+            <flux:button size="sm" wire:click="deleteLocalCopies" wire:confirm="{{ __('Remove local copies that already have a remote replica? Remote copies stay.') }}" data-test="delete-local-copies">
+                {{ __('Remove local copies (keep remotes)') }}
+            </flux:button>
+        </div>
         <flux:input class="mt-4 max-w-xs" wire:model="promoteConfirmation" :label="__('Snapshot number')" data-test="promote-confirmation" />
         <flux:error name="promoteConfirmation" />
         <div class="mt-4 overflow-x-auto">
@@ -252,6 +331,7 @@ new #[Title('Backups')] class extends Component
                         <th class="py-2 pr-3">{{ __('Id') }}</th>
                         <th class="py-2 pr-3">{{ __('Kind') }}</th>
                         <th class="py-2 pr-3">{{ __('Where') }}</th>
+                        <th class="py-2 pr-3">{{ __('Size') }}</th>
                         <th class="py-2 pr-3">{{ __('Status') }}</th>
                         <th class="py-2">{{ __('Actions') }}</th>
                     </tr>
@@ -262,20 +342,22 @@ new #[Title('Backups')] class extends Component
                             <td class="py-2 pr-3 font-mono">{{ $snapshot->id }}</td>
                             <td class="py-2 pr-3">{{ $snapshot->kind->value }}</td>
                             <td class="py-2 pr-3">{{ $snapshot->destination?->name }}</td>
+                            <td class="py-2 pr-3" data-test="backup-snapshot-size">{{ $this->formattedSize($snapshot->bytes) }}</td>
                             <td class="py-2 pr-3">{{ $snapshot->status->value }}</td>
                             <td class="py-2">
                                 <div class="flex flex-wrap gap-2">
                                     <flux:button size="xs" wire:click="verify({{ $snapshot->id }})">{{ __('Verify') }}</flux:button>
-                                    @if ($snapshot->path)
-                                        <flux:button size="xs" :href="$this->downloadUrl($snapshot)">{{ __('Download') }}</flux:button>
-                                    @endif
+                                    <flux:button size="xs" :href="$this->downloadUrl($snapshot)">{{ __('Download') }}</flux:button>
                                     <flux:button size="xs" variant="danger" wire:click="promote({{ $snapshot->id }})" data-test="promote-snapshot-{{ $snapshot->id }}">{{ __('Promote') }}</flux:button>
+                                    @if ($this->canRemoveLocal($snapshot))
+                                        <flux:button size="xs" variant="ghost" wire:click="deleteLocal({{ $snapshot->id }})" wire:confirm="{{ __('Remove the local file? Remote copies stay.') }}" data-test="delete-local-{{ $snapshot->id }}">{{ __('Remove local') }}</flux:button>
+                                    @endif
                                 </div>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="py-4 text-zinc-500">{{ __('No snapshots yet.') }}</td>
+                            <td colspan="6" class="py-4 text-zinc-500">{{ __('No snapshots yet.') }}</td>
                         </tr>
                     @endforelse
                 </tbody>

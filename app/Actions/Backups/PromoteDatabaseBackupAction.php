@@ -11,7 +11,6 @@ use App\Services\Operations\BackupVerifier;
 use App\Services\Operations\OperationsReconciler;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
 use RuntimeException;
 
@@ -93,7 +92,7 @@ final class PromoteDatabaseBackupAction
 
     private function materializeSqlite(BackupSnapshot $snapshot, string $scratch): void
     {
-        $absolute = Storage::disk('local')->path((string) $snapshot->path);
+        $absolute = app(MaterializeBackupSnapshotAction::class)->execute($snapshot);
         $decoded = storage_path('app/private/backups/.decode-'.uniqid('', true).'.sql');
 
         try {

@@ -7,7 +7,6 @@ use App\Enums\BackupSnapshotStatus;
 use App\Models\BackupSnapshot;
 use App\Services\Backups\BackupRecorder;
 use App\Services\Operations\BackupVerifier;
-use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
 use ZipArchive;
 
@@ -20,7 +19,7 @@ final class VerifyBackupSnapshotAction
 
     public function execute(BackupSnapshot $snapshot): BackupSnapshot
     {
-        $absolute = $this->localPath($snapshot);
+        $absolute = app(MaterializeBackupSnapshotAction::class)->execute($snapshot);
         $scratch = storage_path('app/private/backups/.verify-'.uniqid('', true));
         @mkdir(dirname($scratch), 0775, true);
 
@@ -82,14 +81,5 @@ final class VerifyBackupSnapshotAction
         $zip->close();
 
         return true;
-    }
-
-    private function localPath(BackupSnapshot $snapshot): string
-    {
-        if (! is_string($snapshot->path) || ! Storage::disk('local')->exists($snapshot->path)) {
-            throw new InvalidArgumentException('The snapshot file is not on this copy.');
-        }
-
-        return Storage::disk('local')->path($snapshot->path);
     }
 }

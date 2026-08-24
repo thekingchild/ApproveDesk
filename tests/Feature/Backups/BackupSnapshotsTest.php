@@ -4,6 +4,7 @@ namespace Tests\Feature\Backups;
 
 use App\Actions\Backups\CreateDatabaseBackupAction;
 use App\Actions\Backups\CreateFilesBackupAction;
+use App\Actions\Backups\DeleteLocalBackupCopyAction;
 use App\Actions\Backups\PromoteDatabaseBackupAction;
 use App\Actions\Backups\RetainBackupSnapshotsAction;
 use App\Actions\Backups\VerifyBackupSnapshotAction;
@@ -221,5 +222,131 @@ class BackupSnapshotsTest extends TestCase
         ]);
 
         $this->assertTrue(app(BackupTransportFactory::class)->make($destination)->test());
+    }
+
+    public function test_local_copy_can_be_removed_when_a_remote_replica_exists(): void
+    {
+        $store = [];
+        $this->bindArrayRemote($store);
+
+        $remote = BackupDestination::factory()->s3()->create(['enabled' => true, 'name' => 'Offsite']);
+        $remote->putCredentials(['key' => 'id', 'secret' => 'secret', 'bucket' => 'bucket']);
+
+        $local = app(CreateDatabaseBackupAction::class)->execute();
+        $path = (string) $local->path;
+        $this->assertTrue(Storage::disk('local')->exists($path));
+        $this->assertTrue(BackupSnapshot::query()->where('destination_id', $remote->id)->successful()->exists());
+
+        app(DeleteLocalBackupCopyAction::class)->execute($local);
+
+        $this->assertNull($local->fresh());
+        $this->assertFalse(Storage::disk('local')->exists($path));
+        $this->assertTrue(BackupSnapshot::query()->where('destination_id', $remote->id)->successful()->exists());
+    }
+
+    public function test_local_copy_cannot_be_removed_without_a_remote_replica(): void
+    {
+        $local = app(CreateDatabaseBackupAction::class)->execute();
+
+        $this->expectException(\InvalidArgumentException::class);
+        app(DeleteLocalBackupCopyAction::class)->execute($local);
+        $this->assertTrue(Storage::disk('local')->exists((string) $local->path));
+    }
+
+    public function test_verify_fetches_a_remote_snapshot_after_local_copy_is_removed(): void
+    {
+        $store = [];
+        $this->bindArrayRemote($store);
+
+        $remote = BackupDestination::factory()->s3()->create(['enabled' => true, 'name' => 'Offsite']);
+        $remote->putCredentials(['key' => 'id', 'secret' => 'secret', 'bucket' => 'bucket']);
+
+        $local = app(CreateDatabaseBackupAction::class)->execute();
+        $replica = BackupSnapshot::query()->where('destination_id', $remote->id)->successful()->first();
+        $this->assertNotNull($replica);
+
+        app(DeleteLocalBackupCopyAction::class)->execute($local);
+
+        $verified = app(VerifyBackupSnapshotAction::class)->execute($replica);
+        $this->assertTrue($verified->isVerified());
+    }
+
+    public function test_backups_page_shows_database_and_file_sizes(): void
+    {
+        $admin = User::factory()->create()->assignRole('admin');
+        $destination = BackupDestination::factory()->create();
+        BackupSnapshot::factory()->create([
+            'destination_id' => $destination->id,
+            'kind' => BackupSnapshotKind::Database,
+            'path' => 'backups/database/size-db.sql.gz',
+            'bytes' => 2048,
+        ]);
+        BackupSnapshot::factory()->create([
+            'destination_id' => $destination->id,
+            'kind' => BackupSnapshotKind::Files,
+            'path' => 'backups/files/size-files.zip',
+            'bytes' => 4096,
+        ]);
+
+        $this->actingAs($admin)->get(route('admin.backups.index'))
+            ->assertOk()
+            ->assertSee('Size')
+            ->assertSee(__('Database'))
+            ->assertSee(BackupSnapshot::formatBytes(2048))
+            ->assertSee(BackupSnapshot::formatBytes(4096));
+    }
+
+    /**
+     * @param  array<string, string>  $store
+     */
+    private function bindArrayRemote(array &$store): void
+    {
+        $this->app->singleton(BackupTransportFactory::class, function () use (&$store) {
+            return new class($store) extends BackupTransportFactory
+            {
+                /** @param  array<string, string>  $store */
+                public function __construct(private array &$store) {}
+
+                public function make(BackupDestination $destination): BackupTransport
+                {
+                    if ($destination->kind === BackupDestinationKind::S3) {
+                        return new class($this->store) implements BackupTransport
+                        {
+                            /** @param  array<string, string>  $store */
+                            public function __construct(private array &$store) {}
+
+                            public function put(string $name, string $absolutePath): string
+                            {
+                                $this->store[$name] = (string) file_get_contents($absolutePath);
+
+                                return $name;
+                            }
+
+                            public function has(string $remoteId): bool
+                            {
+                                return isset($this->store[$remoteId]);
+                            }
+
+                            public function fetch(string $remoteId, string $destination): void
+                            {
+                                file_put_contents($destination, $this->store[$remoteId] ?? '');
+                            }
+
+                            public function delete(string $remoteId): void
+                            {
+                                unset($this->store[$remoteId]);
+                            }
+
+                            public function test(): bool
+                            {
+                                return true;
+                            }
+                        };
+                    }
+
+                    return parent::make($destination);
+                }
+            };
+        });
     }
 }

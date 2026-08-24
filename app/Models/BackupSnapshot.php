@@ -80,4 +80,25 @@ class BackupSnapshot extends Model
         return $this->verified_at !== null
             && in_array($this->status, [BackupSnapshotStatus::Verified, BackupSnapshotStatus::Promoted], true);
     }
+
+    public static function formatBytes(?int $bytes): string
+    {
+        $bytes = max(0, (int) $bytes);
+        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        $value = (float) $bytes;
+        $index = 0;
+
+        while ($value >= 1024 && $index < count($units) - 1) {
+            $value /= 1024;
+            $index++;
+        }
+
+        if ($index === 0) {
+            return $bytes.' B';
+        }
+
+        $formatted = rtrim(rtrim(sprintf('%.1f', $value), '0'), '.');
+
+        return $formatted.' '.$units[$index];
+    }
 }

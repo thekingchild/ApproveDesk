@@ -35,7 +35,7 @@ final class PromoteFilesBackupAction
         Storage::disk('local')->makeDirectory($holding);
 
         $zip = new ZipArchive;
-        $absolute = Storage::disk('local')->path((string) $snapshot->path);
+        $absolute = app(MaterializeBackupSnapshotAction::class)->execute($snapshot);
         if ($zip->open($absolute) !== true) {
             throw new InvalidArgumentException('The files snapshot could not be opened.');
         }
