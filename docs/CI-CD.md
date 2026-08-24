@@ -17,7 +17,7 @@ Platform: **GitHub Actions**. Target hosts: cPanel (SSH/rsync, FTP fallback), Pl
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| `ci.yml` — **Quality** | every push + PR | Pint lint → PHPStan → PHPUnit tests (SQLite, parallel, ≥80% coverage) → Vite asset build → upload build artifact |
+| `ci.yml` — **Quality** | every push + PR | Pint lint → PHPStan → PHPUnit tests (SQLite, parallel, ≥80% coverage) → PHPUnit on MySQL 8 → Vite asset build → upload build artifact |
 | `deploy-staging.yml` | push to `main` | Quality (re-run) → build release bundle → rsync/Git-deploy to staging → post-deploy script |
 | `deploy-production.yml` | push of `v*` tag | Quality → build release bundle → deploy to production (manual approval gate) → smoke check → tag release on GitHub |
 

@@ -114,7 +114,7 @@ Both platforms can build the checked-in `Dockerfile` directly.
 5. Add SMTP and optional Google/Microsoft variables from [AUTHENTICATION.md](AUTHENTICATION.md).
 6. Deploy, confirm `/up`, then visit `/install`. When the database is a separately managed service, enter that service's internal hostname rather than `database`.
 
-Do not enable multiple app replicas with the local file/session volume. A future high-availability profile would require shared object storage and shared session/cache services; it is roadmap work, not part of v2.0.0.
+Do not enable multiple app replicas with the local file/session volume. A future high-availability profile would require shared object storage and shared session/cache services; it is roadmap work, not part of the v2.5.4 single-company release.
 
 ## 7. Post-install checklist (per server, once)
 

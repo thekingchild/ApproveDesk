@@ -39,6 +39,7 @@ use App\Services\Notifications\Channels\WhatsAppNotificationChannel;
 use App\Services\Notifications\NotificationDeliveryRecorder;
 use App\Services\Workflow\AssigneeResolver;
 use App\Support\CorrelationId;
+use App\Support\PermissionCache;
 use App\Support\RateLimitProfiles;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Events\Login;
@@ -55,7 +56,6 @@ use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
-use Spatie\Permission\PermissionRegistrar;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -104,7 +104,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureDefaults();
 
-        $this->app->make(PermissionRegistrar::class)->forgetCachedPermissions();
+        PermissionCache::forgetIfReady();
 
         // super-admin holds every ability implicitly; no permission matrix entry.
         Gate::before(fn ($user, string $ability) => $user->hasRole('super-admin') ? true : null);

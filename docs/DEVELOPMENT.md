@@ -60,14 +60,15 @@ npm run build                         # production asset build (what CI ships)
 
 ## Testing against MySQL (occasional parity check)
 
-SQLite covers the daily loop. Before a release, run once against MySQL/MariaDB to catch driver drift:
+SQLite covers the daily loop. GitHub Actions also runs the suite against MySQL 8. You do not need MySQL on the development machine.
+
+To run the same MySQL job locally (optional Docker):
 
 ```bash
+docker run --name ad-mysql -e MYSQL_ROOT_PASSWORD=secret -e MYSQL_DATABASE=approvedesk_test -p 3306:3306 -d mysql:8.0
 DB_CONNECTION=mysql DB_HOST=127.0.0.1 DB_DATABASE=approvedesk_test \
-DB_USERNAME=root DB_PASSWORD=secret php artisan test
+DB_USERNAME=root DB_PASSWORD=secret php artisan test --parallel
 ```
-
-CI stays on SQLite; MySQL parity is a pre-release manual step (or opt-in `--group=mysql` job later if drift appears).
 
 ## Turnstile test keys
 

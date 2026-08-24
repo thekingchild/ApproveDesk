@@ -1,6 +1,6 @@
 # ApproveDesk Roadmap
 
-This roadmap describes possible work after v2.0.0. It is planning material only: none of these items is promised, scheduled, or implemented. Priorities should follow customer demand, security review, and shared-hosting compatibility.
+This roadmap describes possible work after the **v2.5.4** single-company product. It is planning material only: none of these items is promised, scheduled, or implemented in this repository. Multi-tenant SaaS belongs in a separate product. Priorities should follow customer demand, security review, and shared-hosting compatibility.
 
 ## Near-term candidates
 

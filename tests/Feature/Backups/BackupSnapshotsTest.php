@@ -23,6 +23,7 @@ use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -141,6 +142,23 @@ class BackupSnapshotsTest extends TestCase
 
         $this->expectException(\InvalidArgumentException::class);
         app(PromoteDatabaseBackupAction::class)->execute($snapshot, $admin, (string) $snapshot->id);
+    }
+
+    public function test_mysql_promote_restores_the_verified_snapshot(): void
+    {
+        if (! in_array(Schema::getConnection()->getDriverName(), ['mysql', 'mariadb'], true)) {
+            $this->markTestSkipped('Requires MySQL.');
+        }
+
+        $admin = User::factory()->create()->assignRole('admin');
+        $snapshot = app(CreateDatabaseBackupAction::class)->execute();
+        app(VerifyBackupSnapshotAction::class)->execute($snapshot);
+        $extra = User::factory()->create();
+
+        app(PromoteDatabaseBackupAction::class)->execute($snapshot, $admin, (string) $snapshot->id);
+
+        $this->assertNull($extra->fresh());
+        $this->assertSame(BackupSnapshotStatus::Promoted, $snapshot->fresh()?->status);
     }
 
     public function test_tampered_snapshot_fails_verify(): void
