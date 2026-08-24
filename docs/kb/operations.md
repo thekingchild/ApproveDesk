@@ -30,6 +30,8 @@ A request is listed when it is still active and has no current step, or the curr
 
 **Check this copy** confirms the required records are still present. It does not take a host backup and it does not overwrite anything. A failed check means this copy is incomplete — restore from the host backup using your usual restore procedure, then check again.
 
+After a deploy, apply waiting database changes from **Administration → Updates**, not by reopening setup.
+
 ### Consistency check
 
 **Run check** looks for submitted requests with no workflow, or deliveries marked sent that still have a retry time. The check only reports. It does not change records.

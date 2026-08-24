@@ -258,6 +258,18 @@ class HelpCentreTest extends TestCase
             ->assertSee('Check this copy');
     }
 
+    public function test_updates_article_explains_apply_and_backup_reminder(): void
+    {
+        $admin = User::factory()->create()->assignRole('admin');
+
+        $this->actingAs($admin)
+            ->get(route('help.show', 'updates'))
+            ->assertOk()
+            ->assertSee('Apply database updates')
+            ->assertSee('Check updates')
+            ->assertSee('Take a host backup first');
+    }
+
     public function test_catalogue_matches_markdown_files(): void
     {
         $catalogue = app(HelpCatalogue::class);

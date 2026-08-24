@@ -21,7 +21,7 @@ On a fresh deploy the app redirects to `/install`. No SSH or artisan knowledge n
 1. **Welcome & requirements check** — PHP version, extensions, writable `storage/` + `bootstrap/cache/`, DB drivers; green/red per item, blocks progress until greens.
 2. **Database** — enter host/database/user/password (created beforehand in cPanel/Plesk). Installer tests the connection, writes `.env`, generates `APP_KEY`, runs `migrate --force`, seeds roles/permissions/settings.
 3. **First admin** — create the super-admin account (name, email, password).
-4. **Finish** — lock file `storage/app/installed.lock` is written; `/install` 404s from then on. Redirect to the branded login page.
+4. **Finish** — lock file `storage/app/installed.lock` is written; **every** `/install` URL (including `/install/done`) 404s from then on. Redirect to the branded login page, which shows a one-time “ApproveDesk is ready” message.
 
 Security notes for operators:
 - The `.env` must be web-writable during install — after finishing, tighten: `chmod 644 .env` (or 400).
@@ -123,7 +123,8 @@ Do not enable multiple app replicas with the local file/session volume. A future
 - [ ] Queued emails delivering (send a test approval round-trip)
 - [ ] Uploads working and served via signed URLs (not direct paths)
 - [ ] `php artisan storage:link` run if using the public disk
-- [ ] Installer locked (`/install` → 404)
+- [ ] Installer locked (every `/install` URL → 404)
+- [ ] After a code deploy, **Administration → Updates** shows no unsafe pending migrations; apply only after a host backup
 - [ ] `.env` permissions tightened; `APP_DEBUG=false`
 - [ ] Backups scheduled (JetBackup / Plesk Backup Manager) **and a restore drill done**
 - [ ] Admin accounts have 2FA enabled

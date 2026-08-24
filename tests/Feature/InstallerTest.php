@@ -114,23 +114,40 @@ class InstallerTest extends TestCase
             'email' => 'admin@example.com',
             'password' => 'correct-horse-battery',
             'password_confirmation' => 'correct-horse-battery',
-        ])->assertRedirect(route('install.done'));
+        ])->assertRedirect(route('login'));
 
         $admin = User::query()->where('email', 'admin@example.com')->first();
         $this->assertNotNull($admin);
         $this->assertTrue($admin->hasRole('super-admin'));
         $this->assertNotNull($admin->email_verified_at);
 
-        // Finalize: lock file + hardened env.
         $this->assertFileExists($this->lockFile);
         $env = (string) file_get_contents($this->envFile);
         $this->assertStringContainsString('APP_INSTALLED=true', $env);
         $this->assertStringContainsString('APP_DEBUG=false', $env);
 
-        // Post-install behavior: installer gone, login reachable, done visible once.
-        $this->get(route('install.done'))->assertOk();
-        $this->get(route('install.welcome'))->assertNotFound();
-        $this->get('/login')->assertOk()->assertSee('Log in');
+        $this->get(route('login'))
+            ->assertOk()
+            ->assertSee('ApproveDesk is ready')
+            ->assertSee('data-test="install-complete"', false);
+
+        $this->get(route('login'))
+            ->assertOk()
+            ->assertDontSee('ApproveDesk is ready');
+
+        foreach ([
+            'install.welcome',
+            'install.database',
+            'install.migrate',
+            'install.admin',
+            'install.done',
+        ] as $route) {
+            $this->get(route($route))->assertNotFound();
+        }
+
+        $this->get('/install')->assertNotFound();
+        $this->actingAs($admin)->get(route('install.welcome'))->assertNotFound();
+        $this->actingAs($admin)->get(route('install.done'))->assertNotFound();
     }
 
     #[TestDox('the APP_INSTALLED env flag alone also counts as installed')]

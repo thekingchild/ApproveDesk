@@ -49,14 +49,25 @@ final class MigrationPreflight
     }
 
     /**
+     * @return list<string>
+     */
+    public function pendingNames(): array
+    {
+        $migrator = app('migrator');
+        $files = $migrator->getMigrationFiles(database_path('migrations'));
+        $ran = $migrator->repositoryExists() ? $migrator->getRepository()->getRan() : [];
+
+        return array_values(array_diff(array_keys($files), $ran));
+    }
+
+    /**
      * @return array<string, list<string>>
      */
     public function inspectPending(): array
     {
         $migrator = app('migrator');
         $files = $migrator->getMigrationFiles(database_path('migrations'));
-        $ran = $migrator->repositoryExists() ? $migrator->getRepository()->getRan() : [];
-        $pending = array_diff(array_keys($files), $ran);
+        $pending = $this->pendingNames();
 
         return $this->inspectFiles(array_map(
             fn (string $name): string => $files[$name],

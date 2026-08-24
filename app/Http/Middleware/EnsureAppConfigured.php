@@ -25,9 +25,7 @@ class EnsureAppConfigured
         }
 
         if ($this->installer->isInstalled()) {
-            // install/done stays reachable right after completion (session-guarded);
-            // every other installer route disappears once the lock exists.
-            if ($request->is('install') || ($request->is('install/*') && ! $request->is('install/done'))) {
+            if ($request->is('install') || $request->is('install/*')) {
                 abort(404);
             }
 

@@ -124,15 +124,15 @@ class InstallController extends Controller
         $request->session()->forget(['install.database_configured', 'install.migrated']);
         $request->session()->put('install.completed', true);
 
-        return redirect()->route('install.done');
+        return redirect()->route('login');
     }
 
     public function done(Request $request): RedirectResponse|View
     {
-        if (! $request->session()->get('install.completed')) {
-            return redirect()->route('install.welcome');
+        if ($this->installer->isInstalled()) {
+            abort(404);
         }
 
-        return view('install.done');
+        return redirect()->route('install.welcome');
     }
 }

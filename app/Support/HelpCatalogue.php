@@ -191,6 +191,15 @@ final class HelpCatalogue
                 audience: 'admin',
                 screenRoute: 'admin.operations.index',
             ),
+            new HelpArticle(
+                slug: 'updates',
+                title: 'Updates',
+                summary: 'See this copy’s version and apply waiting database changes after a deploy.',
+                icon: 'arrow-path',
+                group: 'Administration',
+                audience: 'admin',
+                screenRoute: 'admin.updates.index',
+            ),
         ]);
     }
 

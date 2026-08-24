@@ -5,6 +5,15 @@
         <!-- Session Status -->
         <x-auth-session-status class="text-center" :status="session('status')" />
 
+        @php
+            $justInstalled = (bool) session()->pull('install.completed');
+        @endphp
+        @if ($justInstalled)
+            <flux:callout variant="success" icon="check-circle" data-test="install-complete">
+                {{ __('ApproveDesk is ready. Sign in with the administrator account you just created.') }}
+            </flux:callout>
+        @endif
+
         <x-passkey-verify />
 
         @if ($providers = \App\Support\OAuthProviders::enabledProviders())

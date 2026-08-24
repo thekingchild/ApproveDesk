@@ -222,3 +222,7 @@ An active request with no current step, or a step that has waited more than a da
 
 A confirmation that this copy still has the required records. It does not take a host backup and it does not overwrite anything.
 
+## [Updates](/help/updates)
+
+The administrator screen for this copy’s version and for applying waiting database changes after a deploy. It is not the first-time setup wizard.
+

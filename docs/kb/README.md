@@ -52,3 +52,4 @@ Administration:
 - [Records](records.md)
 - [Security and privacy](security-and-privacy.md)
 - [Operations](operations.md)
+- [Updates](updates.md)

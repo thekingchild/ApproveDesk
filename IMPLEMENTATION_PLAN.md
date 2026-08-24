@@ -148,6 +148,10 @@ Locked product decision for Phase 8.2. It does not reopen Phase 8.1. Design: [do
 | LP | v2.3.4 | Public static landing page | Complete |
 | 8 | v2.4.0 | Collaboration, notifications, and integration hub | Complete |
 | 9 | v2.5.0 | Governance, audit evidence, security, and reliability | Complete |
+| IN | v2.5.1 | Installer lock and in-app update | Complete |
+| MFA | v2.5.2 | Enforce two-factor authentication | Not started |
+| TS | v2.5.3 | Cloudflare Turnstile | Not started |
+| BK | v2.5.4 | In-app database and file backups | Not started |
 | 10 | v3.0.0 | SaaS multi-tenancy foundation | Not started |
 | 11 | v3.1.0 | Paystack and Flutterwave subscriptions | Not started |
 | 12 | v3.2.0 | SaaS onboarding, entitlements, and commercial operations | Not started |
@@ -707,6 +711,173 @@ Administrator screen: **Administration → Integrations**. Help: `docs/kb/integr
 - **P9-OPS-05 — Complete (2026-08-24):** Add zero-downtime-compatible migrations and release rollback runbooks.
 
 **Phase 9 exit — Complete (2026-08-24):** security review findings are resolved or explicitly accepted; restore drill succeeds; evidence pack verification succeeds; load targets meet documented budgets; the application is declared ready for tenant isolation work.
+
+---
+
+## Phase IN — Installer lock and in-app update — Complete (2026-08-24)
+
+**Goal:** after first-run setup, `/install` is gone for every path, and later database updates happen from a signed-in administrator screen — never by reopening the installer.
+
+This phase is additive. It does not reopen Phases 0–9, UO, or LP. It does not change `WorkflowEngine`, branding, or the first-run wizard steps. File/code deploys stay CI/rsync/host — ApproveDesk does not download zip updates over itself.
+
+**Locked decisions**
+
+- Once `storage/app/installed.lock` exists or `APP_INSTALLED=true`, **every** `/install` and `/install/*` URL (including `/install/done`) returns 404. The completing session sees a flash on `/login`, not a leftover installer page.
+- Updates are not a second installer. **Administration → Updates** (settings.manage) shows the running version, pending migrations, `migrate:preflight` status, and an **Apply database updates** action that runs preflight then `migrate --force`. It reminds the administrator to take a backup first.
+- There is no in-app file self-updater. Overwriting PHP from the browser is unsafe on shared hosting and fights the rollback runbook in `docs/OPERATIONS.md`.
+
+### IN.1 Installer disappearance — Complete (2026-08-24)
+
+- **IN-LOCK-01 — Complete (2026-08-24):** `EnsureAppConfigured` 404s `install` and `install/*` with no exception for `install/done` once installed.
+- **IN-LOCK-02 — Complete (2026-08-24):** `InstallController::done` is unreachable after finalize. Completion copy is a one-time login flash (`install.completed` session key consumed on `/login`).
+- **IN-LOCK-03 — Complete (2026-08-24):** Visiting `/install`, `/install/welcome`, `/install/database`, `/install/migrate`, `/install/admin`, `/install/done` after install is 404 for guests and for signed-in admins.
+
+### IN.2 In-app update (database only) — Complete (2026-08-24)
+
+- **IN-UPD-01 — Complete (2026-08-24):** Add `Administration → Updates` (or an Updates card on Operations) gated by `settings.manage`. Show app version (from `config/app.php` or a `VERSION` file kept in sync with CHANGELOG), pending migration file names, and last apply time.
+- **IN-UPD-02 — Complete (2026-08-24):** **Check updates** runs `MigrationPreflight` on pending files. Destructive pending migrations are refused with the preflight flags — same contract as `php artisan migrate:preflight`.
+- **IN-UPD-03 — Complete (2026-08-24):** **Apply database updates** requires a typed confirmation, runs preflight then `migrate --force`, writes a structured log line with actor and correlation id, and never calls `migrate:rollback`.
+- **IN-UPD-04 — Complete (2026-08-24):** If Phase BK has shipped, the screen links to **Backup now** and refuses apply when no successful database backup exists in the last 24 hours (setting, default on). If BK has not shipped, show a plain reminder that a host backup must exist.
+
+### IN.3 Tests, docs, and exit gate — Complete (2026-08-24)
+
+- **IN-TEST-01 — Complete (2026-08-24):** Extend `InstallerTest`: after the sqlite flow, every installer URL is 404; `/login` is 200 and shows the completion flash once; a second `/login` does not repeat it.
+- **IN-TEST-02 — Complete (2026-08-24):** Feature tests: submitter cannot open Updates; admin sees pending migration names from a fake pending file or an empty list; apply with a clean preflight runs migrate; apply with a dropColumn pending file is refused; apply does not mutate `workflow_actions` except through normal migrations.
+- **IN-DOC-01 — Complete (2026-08-24):** `docs/DEPLOYMENT.md`, `docs/OPERATIONS.md`, Help (`docs/kb/getting-around.md` or a short Updates note in `docs/kb/operations.md`), `docs/kb/definitions.md`, Help catalogue if a new article is needed, `CHANGELOG.md`, and this plan.
+
+**Phase IN demo — Complete (2026-08-24):** finish `/install`; `/install` and `/install/done` 404; login shows “ApproveDesk is ready” once; an administrator opens Updates, sees “no pending migrations”, and cannot reopen the wizard.
+
+**Out of scope:** rewriting the first-run wizard, Docker/CI pipelines, zip self-update, Phase 10 tenancy, changing `/up`.
+
+---
+
+## Phase MFA — Enforce two-factor authentication
+
+**Goal:** let an administrator require a second factor before anyone uses the signed-in product, and turn that requirement off again without rewriting Fortify.
+
+This phase is additive. It does not reopen Phase 9.2, Fortify feature flags, passkeys, or email approval links. Existing optional 2FA and passkeys stay.
+
+**Locked decisions**
+
+- Setting `auth.two_factor_required` defaults to **off**.
+- When on, a signed-in user may use the product only if they have **confirmed TOTP** or **at least one passkey**. A passkey already is a strong factor; requiring TOTP as well would lock out passkey-only staff.
+- Enforcement is a middleware after `auth` + `verified`, redirecting to **Settings → Security** with a banner. It does not replace Fortify’s challenge on login.
+- The administrator who turns the requirement on must already satisfy it. They can turn it off to recover a lockout.
+- Signed email/Teams/Slack approval links stay token-based. API tokens already issued keep working; **creating** a new personal token requires the actor to satisfy the requirement.
+- No grace period in this phase.
+
+### MFA.1 Setting and policy
+
+- **MFA-SET-01:** Persist `auth.two_factor_required` via `SecuritySettings` / `UpdateSecuritySettingsAction`. Checkbox on **Settings → Security & privacy**. Saving on without the actor enrolled is rejected.
+- **MFA-SET-02:** `User::hasSatisfiedSecondFactor(): bool` — confirmed 2FA or `passkeys()->exists()`. Put role checks in a policy/middleware, not `hasRole` in a controller.
+
+### MFA.2 Enforcement
+
+- **MFA-ENF-01:** Middleware `EnsureSecondFactorWhenRequired` on the authenticated web group. Exempt: logout, Settings → Security (and Fortify 2FA/passkey endpoints), Help, branded assets, `/up`.
+- **MFA-ENF-02:** Dashboard, submissions, approvals, administration, and Updates redirect to Security until enrolled. JSON/Livewire requests return 403 with a clear message.
+- **MFA-ENF-03:** Personal access token create path refuses when the requirement is on and the actor is not enrolled.
+
+### MFA.3 Tests, docs, and exit gate
+
+- **MFA-TEST-01:** Off: users without 2FA reach dashboard. On: they are redirected to Security; after confirming 2FA they reach dashboard. Passkey-only user is allowed. Actor cannot enable the setting without being enrolled. Submitter cannot change the org setting.
+- **MFA-TEST-02:** Email approval signed link still works without a session 2FA. Existing Sanctum token still authenticates; creating a token while required and unenrolled fails.
+- **MFA-DOC-01:** `docs/kb/security-and-privacy.md`, `docs/kb/account-settings.md`, `docs/kb/definitions.md`, Help catalogue summary, `CHANGELOG.md`, and this plan.
+
+**Phase MFA demo:** administrator who already has 2FA turns on **Require a second factor**; a colleague who only has a password is sent to Security and cannot open Approvals until they confirm an authenticator or add a passkey; turning the setting off restores access.
+
+**Out of scope:** SMS OTP, hardware-only policy, per-role exceptions, IdP/SAML (Phase 15), forcing 2FA on the installer admin at create time.
+
+---
+
+## Phase TS — Cloudflare Turnstile
+
+**Goal:** give administrators an optional Cloudflare Turnstile check on public auth forms so scripted sign-up and password guessing have to pass a bot challenge, without making Turnstile a hard dependency.
+
+This phase is additive. It does not reopen Fortify, Phase MFA, or installer routes. Unconfigured or disabled Turnstile is a no-op.
+
+**Locked decisions**
+
+- Cloudflare Turnstile only (not reCAPTCHA, hCaptcha, or a custom puzzle).
+- Default **off**. Enable, site key, and secret live in organization settings. Secret is encrypted, posted outside Livewire public properties (same pattern as notification channel credentials).
+- Surfaces: login, register, forgot-password, reset-password. Not installer, not signed approval links, not API, not Turnstile on every authenticated page.
+- When enabled, missing/invalid tokens **fail closed**. When disabled or unconfigured, forms work as today.
+- Widget is the managed/invisible mode. Test keys from Cloudflare’s docs are used in CI (`Http::fake` the siteverify endpoint).
+
+### TS.1 Configuration
+
+- **TS-SET-01:** Settings keys `turnstile.enabled`, `turnstile.site_key`, encrypted `turnstile.secret`. **Settings → Security & privacy** (or a Bot protection card). Test action that calls siteverify with a dummy token and shows a redacted result.
+- **TS-SET-02:** `Turnstile` support class: enabled?, site key for views, `verify(string $token, ?string $ip): bool`. Timeouts, no secret in logs.
+
+### TS.2 Auth forms
+
+- **TS-UI-01:** Blade partial for the widget + hidden token, included on the four Fortify views. Script from `challenges.cloudflare.com` only when enabled.
+- **TS-ENF-01:** Server verification in Fortify authenticate/create-user/reset pipelines (thin action, not business rules in the Livewire/controller). Failed verify: generic “Please try again” — do not reveal bot vs human.
+
+### TS.3 Tests, docs, and exit gate
+
+- **TS-TEST-01:** Disabled: login/register succeed without a token. Enabled + `Http::fake` success: login succeeds. Enabled + missing token or siteverify failure: login/register/reset are refused. Secret never appears in HTML or logs.
+- **TS-TEST-02:** Submitter cannot change Turnstile settings. Admin can disable and the next login works without a token.
+- **TS-DOC-01:** `docs/kb/security-and-privacy.md`, `docs/kb/definitions.md`, `docs/DEVELOPMENT.md` (test keys), `CHANGELOG.md`, Help catalogue, and this plan.
+
+**Phase TS demo:** administrator pastes site key and secret, enables Turnstile, opens `/login` in a private window, and cannot submit until the widget completes; disabling it restores the previous login.
+
+**Out of scope:** Turnstile on comment forms, API, email approval, installer, enterprise WAF, or replacing rate limits.
+
+---
+
+## Phase BK — In-app database and file backups
+
+**Goal:** let administrators schedule, download, retain, and quickly restore **separate** database and file snapshots, to local disk and/or a remote S3-compatible bucket or Google Drive, without treating backups as a second workflow engine.
+
+This phase is additive. It does not reopen Phase 9.3 verification, `workflow_actions` immutability, or the Integration hub. Host backups (JetBackup / Plesk) remain recommended. In-app backups complement them.
+
+**Locked decisions**
+
+- **Two archive kinds, always separate:** a database snapshot and a files snapshot. One job never mixes them into a single blob. Restore can run one kind without the other.
+- **Destinations (any combination):** local private disk (`storage/app/private/backups/{database,files}/`, not web-served); S3-compatible (Laravel `s3` driver + custom endpoint — R2, Wasabi, MinIO, Spaces); Google Drive as a **backup destination** with its own encrypted credentials. Do not reuse Integration hub connectors (those fire on workflow completion).
+- **Retention (best default):** database 14 daily copies; files 7 daily copies (files are larger). Each kind has its own 3–90 day setting. Never delete the last successful snapshot of a kind. Monthly rollups are out of scope.
+- **Schedule:** existing one-minute cron. Default database backup daily at 02:30, files at 02:45 (before retention at 04:15 so a pre-purge copy exists). Each kind can be disabled. Manual **Backup now** per kind.
+- **Quick restore:** pick a snapshot → copy to a scratch path → run existing `BackupVerifier` / restore drill → only then **Promote** with typed confirmation. Promote of a database snapshot replaces the live schema in a maintenance window; it never UPDATE/DELETEs `workflow_actions` in place. Files promote writes into a new prefix then swaps. Failed verify refuses promote.
+- Credentials encrypted, posted outside Livewire. Secrets redacted from logs and last-error text.
+- Shared hosting: no Redis; queue `database`; PHP table dump when `mysqldump` is absent; SQLite is a consistent file copy. Dump timeout and `withoutOverlapping` required.
+
+### BK.1 Domain and storage
+
+- **BK-DATA-01:** Tables `backup_destinations` (kind local|s3|gdrive, encrypted config, enabled) and `backup_snapshots` (kind database|files, destination, path/remote id, bytes, checksum, status, retained_until, verified_at). String status enum. No MySQL ENUM.
+- **BK-DATA-02:** Settings: `backup.database_retain_days` (default 14), `backup.files_retain_days` (default 7), `backup.database_hour` / `backup.files_hour`, enable flags.
+- **BK-SEC-01:** Local files are on the `local` disk under `backups/`. Download uses a signed temporary URL, same as attachments. Remote upload uses the destination adapter only.
+
+### BK.2 Create and schedule
+
+- **BK-RUN-01:** `CreateDatabaseBackupAction` — SQLite copy or chunked SQL dump of application tables; gzip; sha256; record snapshot; upload to each enabled destination; verify list/get of the remote object.
+- **BK-RUN-02:** `CreateFilesBackupAction` — zip of `storage/app/private/submissions` plus branding assets; exclude `backups/`, logs, cache, sessions; same upload/verify path.
+- **BK-RUN-03:** Scheduled jobs + **Backup now** on **Administration → Backups** (or Operations). Failures go to dead-letter style status and appear on Operations health. Unconfigured remote destinations skip and do not fail the local copy.
+- **BK-RUN-04:** Retention job deletes expired snapshots per kind, keeping at least one successful copy. Legal holds / disposition are not applied to backup files in this phase (live records stay authoritative).
+
+### BK.3 Destinations
+
+- **BK-DST-01:** Local always available when the disk is writable.
+- **BK-DST-02:** S3-compatible: key, secret, region, bucket, optional endpoint, path-style flag, prefix. Test connection lists the prefix.
+- **BK-DST-03:** Google Drive: service-account JSON or OAuth refresh token stored encrypted; folder id; unattended schedule must work without a browser. Test connection lists the folder. This is not the Phase 8.3 Drive connector.
+
+### BK.4 Quick restore
+
+- **BK-RST-01:** Restore preview: download/copy snapshot to scratch, run `BackupVerifier` (database) or file-count/hash manifest (files). Persist `verified_at`.
+- **BK-RST-02:** **Promote database** only after verify. Maintenance flag / 503 for other users. Replace DB from the verified scratch copy. Confirm `workflow_actions` count matches the snapshot manifest. Then `ops:reconcile` (report only).
+- **BK-RST-03:** **Promote files** only after verify. Write to `restore-holding/` then swap directories. Do not delete the previous tree until the swap succeeds.
+- **BK-RST-04:** Promote is `settings.manage`, typed confirmation of the snapshot id, structured log with actor. No WorkflowEngine calls.
+
+### BK.5 Tests, docs, and exit gate
+
+- **BK-TEST-01:** Database backup of a sqlite test DB produces a gzip whose required tables pass `BackupVerifier`. Files backup includes a fake submission file and excludes `backups/`.
+- **BK-TEST-02:** S3 and Drive adapters are faked (`Http::fake` / fake disk). Unconfigured remote skips. Failed remote does not delete the local snapshot.
+- **BK-TEST-03:** Retention keeps the last success. Promote without verify is refused. Promote of a tampered dump is refused. Restore drill does not change live `workflow_actions` until promote. Submitter cannot open Backups.
+- **BK-TEST-04:** Schedule registers both backup jobs; `withoutOverlapping` present.
+- **BK-DOC-01:** Help `docs/kb/backups.md` (new), definitions (backup, database backup, files backup, destination, retain, promote), Operations article updated so “Check this copy” is not confused with a snapshot, `docs/OPERATIONS.md`, `docs/DEPLOYMENT.md` post-install checklist, Help catalogue, `CHANGELOG.md`, and this plan.
+
+**Phase BK demo:** administrator enables local + an S3-compatible destination, runs **Backup database** and **Backup files**, sees two snapshots, verifies the database snapshot, promotes it onto a disposable copy that still opens `/login`; a 15-day-old files snapshot is pruned while yesterday’s remains.
+
+**Out of scope:** continuous WAL shipping, point-in-time restore, tenant-scoped backups (P12-OPS-04), encrypting the zip with a customer-managed KMS, backing up `website/` marketing files, using Integration hub webhooks as the transport, rewriting Phase 9.3 commands.
 
 ---
 

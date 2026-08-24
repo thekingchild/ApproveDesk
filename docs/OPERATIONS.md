@@ -101,6 +101,8 @@ php artisan migrate:preflight
 
 The command fails if a **pending** migration drops or renames a column/table. Additive `CREATE TABLE` / nullable columns / indexes are allowed.
 
+Administrators can run the same check and apply from **Administration → Updates** (type APPLY). That screen does not replace files and never calls `migrate:rollback`.
+
 Do not run `php artisan migrate:rollback` in production. `workflow_actions` is append-only; rolling back a migration that touched history is unsafe.
 
 ## 8. Release rollback
