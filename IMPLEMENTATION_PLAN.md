@@ -81,7 +81,7 @@ A task is complete only when it has:
 
 ### 3.3 Safe delivery pattern
 
-- Use short-lived branches named `feature/<phase>-<task>`.
+- Use short-lived branches named `feature/<phase>-<task>`. Every ApproveDesk SaaS branch includes `saas` in its name, for example `feature/saas-p10-adr-01`.
 - One task ID or one tightly coupled task group per pull request.
 - Never edit a released migration; add a new migration and a tested backfill.
 - Put irreversible data transitions behind a preflight command and database backup instruction.
@@ -152,7 +152,7 @@ Locked product decision for Phase 8.2. It does not reopen Phase 8.1. Design: [do
 | MFA | v2.5.2 | Enforce two-factor authentication | Complete |
 | TS | v2.5.3 | Cloudflare Turnstile | Complete |
 | BK | v2.5.4 | In-app database and file backups | Complete |
-| 10 | v3.0.0 | SaaS multi-tenancy foundation | Not started |
+| 10 | v3.0.0 | SaaS multi-tenancy foundation | In progress |
 | 11 | v3.1.0 | Paystack and Flutterwave subscriptions | Not started |
 | 12 | v3.2.0 | SaaS onboarding, entitlements, and commercial operations | Not started |
 | 13 | v3.3.0 | Intelligence and process optimization | Not started |
@@ -886,13 +886,13 @@ This phase is additive. It does not reopen Phase 9.3 verification, `workflow_act
 
 ---
 
-## Phase 10 — SaaS multi-tenancy foundation
+## Phase 10 — SaaS multi-tenancy foundation — In progress (2026-08-25)
 
 **Goal:** convert the stable single-organization system into a shared-database SaaS while preserving a supported self-hosted mode.
 
 ### 10.1 Architecture decisions
 
-- **P10-ADR-01:** Record the shared-database tenancy decision, tenant-resolution rules, platform/tenant role separation, domain strategy, and self-hosted compatibility.
+- **P10-ADR-01 — Complete (2026-08-25):** Record the shared-database tenancy decision, tenant-resolution rules, platform/tenant role separation, domain strategy, and self-hosted compatibility in `docs/adr/0003-saas-shared-database-tenancy.md`. No schema, runtime, UI, or Help centre change is required for this decision-only task.
 - **P10-ADR-02:** Add `APP_MODE=self_hosted|saas`. Billing and platform administration remain disabled in self-hosted mode.
 - **P10-ADR-03:** Use explicit organization context and fail closed when context is absent. Queue jobs, notifications, commands, exports, and scheduled tasks must serialize organization identity.
 

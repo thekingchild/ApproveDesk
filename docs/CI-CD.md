@@ -10,6 +10,7 @@ Platform: **GitHub Actions**. Target hosts: cPanel (SSH/rsync, FTP fallback), Pl
 
 - **`main`** is always deployable and protected: PRs only, CI green required, no direct pushes.
 - Short-lived `feature/<slug>` branches (hours–days, not weeks). Conventional Commits (`feat:`, `fix:`, `chore:` …) — they drive the CHANGELOG.
+- ApproveDesk SaaS branches include `saas` in the slug, for example `feature/saas-p10-adr-01`.
 - **Tags `v*` mark releases** and are the *only* trigger for production deployment.
 - Versioning: `vMAJOR.MINOR.PATCH` per the milestone table in [IMPLEMENTATION_PLAN.md](../IMPLEMENTATION_PLAN.md). Every release updates `CHANGELOG.md` before tagging.
 

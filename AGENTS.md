@@ -116,6 +116,7 @@ Do not document installer, Docker, CI/CD, queues, or `.env` in Help. Those stay 
 ## CI/CD Contract
 
 - Branch off `main` (short-lived `feature/*` branches), open a PR. CI must be green before merge.
+- Every ApproveDesk SaaS work branch includes `saas` in its name (for example, `feature/saas-p10-adr-01`).
 - Deploys: `main` → staging automatically; production only from `v*` tags. See [docs/CI-CD.md](docs/CI-CD.md).
 - First run on a fresh server is done through the **web installer at `/install`** (requirements check → database → migrations → first admin). Never seed production credentials in code.
 

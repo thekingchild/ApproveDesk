@@ -8,6 +8,7 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Added
 
+- Accepted the ApproveDesk SaaS shared-database tenancy architecture: organizations are the tenant boundary, users may hold multiple memberships, canonical tenant URLs use organization slugs with verified custom domains as an option, platform roles do not inherit tenant access, and self-hosted mode remains supported.
 - MySQL promote for verified in-app database snapshots. Host panel backups stay recommended.
 - GitHub Actions MySQL 8 test job alongside the existing SQLite job.
 - Schema test that every index and foreign-key name is 64 characters or fewer so MySQL/MariaDB can migrate.
