@@ -39,4 +39,15 @@ class MysqlIdentifierLengthTest extends TestCase
 
         $this->assertSame([], $tooLong, 'MySQL identifier names must be 64 characters or fewer.');
     }
+
+    public function test_workflow_template_steps_keep_a_standalone_template_id_index(): void
+    {
+        $standalone = collect(Schema::getIndexes('workflow_template_steps'))
+            ->first(fn (array $index): bool => ($index['columns'] ?? []) === ['template_id']);
+
+        $this->assertNotNull(
+            $standalone,
+            'template_id needs its own index so MySQL can drop the old (template_id, step_order) unique without error 1553.',
+        );
+    }
 }

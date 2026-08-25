@@ -42,6 +42,12 @@ return new class extends Migration
 
         app(BackfillWorkflowTemplateVersions::class)->execute();
 
+        if (! Schema::hasIndex('workflow_template_steps', 'wts_template_id_index')) {
+            Schema::table('workflow_template_steps', function (Blueprint $table): void {
+                $table->index('template_id', 'wts_template_id_index');
+            });
+        }
+
         Schema::table('workflow_template_steps', function (Blueprint $table): void {
             $table->dropUnique(['template_id', 'step_order']);
             $table->unique(['template_version_id', 'step_order']);
@@ -55,6 +61,12 @@ return new class extends Migration
             $table->unique(['template_id', 'step_order']);
             $table->dropConstrainedForeignId('template_version_id');
         });
+
+        if (Schema::hasIndex('workflow_template_steps', 'wts_template_id_index')) {
+            Schema::table('workflow_template_steps', function (Blueprint $table): void {
+                $table->dropIndex('wts_template_id_index');
+            });
+        }
 
         Schema::table('workflow_instances', function (Blueprint $table): void {
             $table->dropConstrainedForeignId('template_version_id');
