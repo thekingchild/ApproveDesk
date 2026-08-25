@@ -53,6 +53,18 @@ class MysqlIdentifierLengthTest extends TestCase
         );
     }
 
+    public function test_workflow_template_steps_keep_a_standalone_template_version_id_index(): void
+    {
+        $standalone = collect(Schema::getIndexes('workflow_template_steps'))
+            ->first(fn (array $index): bool => ($index['columns'] ?? []) === ['template_version_id']
+                && ($index['unique'] ?? false) === false);
+
+        $this->assertNotNull(
+            $standalone,
+            'template_version_id needs its own index so MySQL can drop the (template_version_id, step_order) unique without error 1553.',
+        );
+    }
+
     public function test_push_subscriptions_do_not_unique_index_the_text_endpoint(): void
     {
         $uniques = collect(Schema::getIndexes('push_subscriptions'))

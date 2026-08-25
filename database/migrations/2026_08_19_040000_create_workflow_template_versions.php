@@ -52,14 +52,36 @@ return new class extends Migration
             $table->dropUnique(['template_id', 'step_order']);
             $table->unique(['template_version_id', 'step_order']);
         });
+
+        if (! Schema::hasIndex('workflow_template_steps', 'wts_template_version_id_index')) {
+            Schema::table('workflow_template_steps', function (Blueprint $table): void {
+                $table->index('template_version_id', 'wts_template_version_id_index');
+            });
+        }
     }
 
     public function down(): void
     {
+        if (! Schema::hasIndex('workflow_template_steps', 'wts_template_version_id_index')) {
+            Schema::table('workflow_template_steps', function (Blueprint $table): void {
+                $table->index('template_version_id', 'wts_template_version_id_index');
+            });
+        }
+
         Schema::table('workflow_template_steps', function (Blueprint $table): void {
             $table->dropUnique(['template_version_id', 'step_order']);
             $table->unique(['template_id', 'step_order']);
-            $table->dropConstrainedForeignId('template_version_id');
+            $table->dropForeign(['template_version_id']);
+        });
+
+        if (Schema::hasIndex('workflow_template_steps', 'wts_template_version_id_index')) {
+            Schema::table('workflow_template_steps', function (Blueprint $table): void {
+                $table->dropIndex('wts_template_version_id_index');
+            });
+        }
+
+        Schema::table('workflow_template_steps', function (Blueprint $table): void {
+            $table->dropColumn('template_version_id');
         });
 
         if (Schema::hasIndex('workflow_template_steps', 'wts_template_id_index')) {
