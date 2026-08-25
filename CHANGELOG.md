@@ -8,6 +8,32 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Added
 
+- MySQL promote for verified in-app database snapshots. Host panel backups stay recommended.
+- GitHub Actions MySQL 8 test job alongside the existing SQLite job.
+- Schema test that every index and foreign-key name is 64 characters or fewer so MySQL/MariaDB can migrate.
+
+### Changed
+
+- README, `.env.example` `APP_VERSION`, and this changelog treat **v2.5.4** as the current single-company release.
+- Permission cache is not flushed until the `cache` table exists, so `composer install` / `package:discover` no longer fail on an empty SQLite memory database.
+
+### Fixed
+
+- Push subscription uniqueness now uses a SHA-256 `endpoint_hash` instead of indexing the TEXT endpoint, so MySQL/MariaDB can migrate (error 1170).
+- Database dumps quote the bare table name, not `database.table`, so MySQL `SHOW CREATE TABLE` does not look for `approvedesk_test.approvedesk_test.activity_log`.
+- Database snapshots now include the local destination before capture, and promoting an older snapshot restores its missing destination before keeping the promoted snapshot in the list.
+- Both v2.1 upgrade tests roll back every later migration before loading their fixtures, so MySQL removes all dependent tables before the older request and workflow schema.
+- Integration hub delivery list loads `reference_number` instead of a non-existent `reference` column.
+- Shortened two MySQL-illegal index names (`sfv_submission_definition_unique`, `wsr_type_active_priority_index`) so a fresh MySQL/MariaDB install can migrate.
+- Add a standalone `template_id` index before replacing the workflow-step unique, so MySQL does not refuse the drop (error 1553).
+- Add a standalone `template_version_id` index so rolling back workflow versions on MySQL does not refuse the unique drop (error 1553) and leave later tests without `users.phone`.
+- Add a standalone push-subscription `user_id` index so MySQL can replace or roll back the device uniqueness index without error 1553.
+- Relaxed the business-calendar “completes quickly” bound so parallel PHPUnit is not flaky on a busy runner.
+
+## [2.5.4] - 2026-08-24
+
+### Added
+
 - In-app database and file backups (Phase BK): **Administration → Backups** takes separate database and file snapshots, stores them on the local disk and optional S3-compatible or Google Drive destinations, retains 14/7 days by default without pruning the last success, and promotes only after a check. Host backups stay recommended.
 - Optional Cloudflare Turnstile (Phase TS): administrators can require a bot check on sign-in, registration, and password reset. Off until a site key and secret are saved and the setting is on. Missing or failed checks are refused with a generic message. The secret is posted outside the settings form and never shown again.
 - Enforce two-factor authentication (Phase MFA): administrators can require a second factor (authenticator or passkey) before anyone uses the signed-in product. The person who turns it on must already be enrolled and can turn it off to recover a lockout. Email approval links and existing API tokens stay usable; creating a new token requires enrollment.

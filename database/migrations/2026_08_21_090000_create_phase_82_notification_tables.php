@@ -63,12 +63,13 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->text('endpoint');
+            $table->string('endpoint_hash', 64);
             $table->string('public_key', 255);
             $table->string('auth_token', 255);
             $table->string('content_encoding', 32)->default('aes128gcm');
             $table->timestamps();
 
-            $table->unique(['user_id', 'endpoint']);
+            $table->unique(['user_id', 'endpoint_hash'], 'push_sub_user_ep_hash_unique');
         });
     }
 

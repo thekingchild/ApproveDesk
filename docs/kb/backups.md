@@ -49,7 +49,7 @@ Database copies default to 14 days at 02:30. File copies default to 7 days at 02
 
 ### Verify and promote
 
-**Verify** checks a snapshot without changing this copy. **Promote** puts a verified snapshot back. Type the snapshot number to confirm. Promoting a database snapshot replaces this copy’s database. Promoting files writes into a holding folder, then swaps. A snapshot that fails the check cannot be promoted.
+**Verify** checks a snapshot without changing this copy. **Promote** puts a verified snapshot back. Type the snapshot number to confirm. Promoting a database snapshot replaces this copy’s database, including on MySQL. The promoted snapshot stays in the list with its destination so you can see which copy was used. Promoting files writes into a holding folder, then swaps. A snapshot that fails the check cannot be promoted. Host backups from your hosting panel stay recommended.
 
 **Check this copy** on Operations is not a snapshot. It only confirms the live records are still present.
 

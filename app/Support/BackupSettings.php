@@ -49,7 +49,11 @@ final class BackupSettings
 
     private static function value(string $key, string $default): string
     {
-        if (! Schema::hasTable('settings')) {
+        try {
+            if (! Schema::hasTable('settings')) {
+                return $default;
+            }
+        } catch (\Throwable) {
             return $default;
         }
 

@@ -71,7 +71,7 @@ return new class extends Migration
             $table->json('json_value')->nullable();
             $table->timestamps();
 
-            $table->unique(['submission_id', 'request_field_definition_id']);
+            $table->unique(['submission_id', 'request_field_definition_id'], 'sfv_submission_definition_unique');
             $table->index(['request_field_definition_id', 'string_value'], 'submission_field_string_index');
             $table->index(['request_field_definition_id', 'decimal_value'], 'submission_field_decimal_index');
             $table->index(['request_field_definition_id', 'date_value'], 'submission_field_date_index');

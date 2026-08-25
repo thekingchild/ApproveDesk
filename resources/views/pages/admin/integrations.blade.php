@@ -50,7 +50,7 @@ new #[Title('Integration hub')] class extends Component {
     public function deliveries()
     {
         return IntegrationDelivery::query()
-            ->with(['action.connector', 'submission:id,reference,title'])
+            ->with(['action.connector', 'submission:id,reference_number,title'])
             ->latest()
             ->paginate(15);
     }

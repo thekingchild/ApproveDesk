@@ -4,13 +4,17 @@ namespace App\Actions\Backups;
 
 use App\Enums\BackupSnapshotKind;
 use App\Enums\BackupSnapshotStatus;
+use App\Models\BackupDestination;
 use App\Models\BackupSnapshot;
 use App\Models\User;
 use App\Services\Backups\BackupRecorder;
 use App\Services\Operations\BackupVerifier;
 use App\Services\Operations\OperationsReconciler;
+use App\Support\SchemaTable;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use InvalidArgumentException;
 use RuntimeException;
 
@@ -38,9 +42,84 @@ final class PromoteDatabaseBackupAction
         }
 
         $this->verify->execute($snapshot);
+        $snapshot->loadMissing('destination');
 
+        $driver = Schema::getConnection()->getDriverName();
+
+        if ($driver === 'sqlite') {
+            $this->promoteSqliteFile($snapshot);
+        } elseif (in_array($driver, ['mysql', 'mariadb'], true)) {
+            $this->promoteSqlDump($snapshot);
+        } else {
+            throw new InvalidArgumentException('Promote supports SQLite files and MySQL.');
+        }
+
+        $this->rememberPromoted($snapshot, $actor);
+
+        $this->reconciler->run();
+
+        return BackupSnapshot::query()->find($snapshot->id) ?? $snapshot;
+    }
+
+    public function rememberPromoted(BackupSnapshot $snapshot, User $actor): BackupSnapshot
+    {
+        $this->restoreDestinationIfMissing($snapshot);
+
+        $attributes = [
+            'kind' => $snapshot->kind,
+            'destination_id' => $snapshot->destination_id,
+            'status' => BackupSnapshotStatus::Promoted,
+            'path' => $snapshot->path,
+            'remote_id' => $snapshot->remote_id,
+            'bytes' => $snapshot->bytes,
+            'checksum' => $snapshot->checksum,
+            'manifest' => $snapshot->manifest,
+            'retained_until' => $snapshot->retained_until,
+            'verified_at' => $snapshot->verified_at,
+            'promoted_at' => now(),
+            'error' => null,
+        ];
+
+        $persisted = BackupSnapshot::query()->find($snapshot->id);
+        if ($persisted === null) {
+            $persisted = new BackupSnapshot;
+            $persisted->id = $snapshot->id;
+        }
+
+        $persisted->forceFill($attributes)->save();
+
+        Log::info('backup.promoted', [
+            'kind' => 'database',
+            'snapshot_id' => $persisted->id,
+            'actor_id' => $actor->id,
+        ]);
+
+        return $persisted;
+    }
+
+    private function restoreDestinationIfMissing(BackupSnapshot $snapshot): void
+    {
+        if (BackupDestination::query()->whereKey($snapshot->destination_id)->exists()) {
+            return;
+        }
+
+        $destination = $snapshot->relationLoaded('destination')
+            ? $snapshot->getRelation('destination')
+            : null;
+
+        if (! $destination instanceof BackupDestination) {
+            throw new RuntimeException('The snapshot destination could not be restored.');
+        }
+
+        $restored = new BackupDestination;
+        $restored->forceFill($destination->getAttributes());
+        $restored->save();
+    }
+
+    private function promoteSqliteFile(BackupSnapshot $snapshot): void
+    {
         $live = (string) config('database.connections.'.config('database.default').'.database');
-        if (config('database.default') !== 'sqlite' || $live === '' || $live === ':memory:' || ! is_file($live)) {
+        if ($live === '' || $live === ':memory:' || ! is_file($live)) {
             throw new InvalidArgumentException('Promote needs a file-backed database.');
         }
 
@@ -73,21 +152,54 @@ final class PromoteDatabaseBackupAction
                 unlink($scratch);
             }
         }
+    }
 
-        $snapshot->forceFill([
-            'status' => BackupSnapshotStatus::Promoted,
-            'promoted_at' => now(),
-        ])->save();
+    private function promoteSqlDump(BackupSnapshot $snapshot): void
+    {
+        $absolute = app(MaterializeBackupSnapshotAction::class)->execute($snapshot);
+        $decoded = storage_path('app/private/backups/.promote-'.uniqid('', true).'.sql');
+        $this->recorder->gunzipTo($absolute, $decoded);
 
-        Log::info('backup.promoted', [
-            'kind' => 'database',
-            'snapshot_id' => $snapshot->id,
-            'actor_id' => $actor->id,
-        ]);
+        try {
+            $sql = (string) file_get_contents($decoded);
+            if ($sql === '') {
+                throw new InvalidArgumentException('The snapshot file is empty.');
+            }
 
-        $this->reconciler->run();
+            Artisan::call('down', ['--retry' => 60]);
+            try {
+                DB::statement('SET FOREIGN_KEY_CHECKS=0');
+                foreach ($this->droppableTables() as $table) {
+                    Schema::dropIfExists($table);
+                }
+                DB::unprepared($sql);
+                DB::statement('SET FOREIGN_KEY_CHECKS=1');
+            } finally {
+                Artisan::call('up');
+            }
 
-        return $snapshot->fresh() ?? $snapshot;
+            $check = $this->verifier->verifyCurrent();
+            if (! $check->ok) {
+                throw new InvalidArgumentException('This snapshot failed the backup check.');
+            }
+
+            $expected = (int) ($snapshot->manifest['workflow_actions'] ?? -1);
+            if ($expected >= 0 && ($check->tableCounts['workflow_actions'] ?? -1) !== $expected) {
+                throw new InvalidArgumentException('workflow_actions count does not match the snapshot.');
+            }
+        } finally {
+            if (is_file($decoded)) {
+                unlink($decoded);
+            }
+        }
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function droppableTables(): array
+    {
+        return SchemaTable::applicationTables();
     }
 
     private function materializeSqlite(BackupSnapshot $snapshot, string $scratch): void

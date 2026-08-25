@@ -56,18 +56,19 @@ npm run build                         # production asset build (what CI ships)
 - Engine code: `app/Services/WorkflowEngine.php` — start every change by writing the failing topology test in `tests/Feature/Workflow/`.
 - Factories for every model exist; combine them to build scenarios (template → steps → instance) rather than creating rows ad hoc in tests.
 - Race-condition tests use database transactions with concurrent actor simulation; time-dependent behavior (escalation, delegation expiry) uses `Carbon::setTestNow()`, never `sleep()`.
-- 100% coverage on `WorkflowEngine` is the standing expectation (see AGENTS.md).
+- `WorkflowEngine` coverage is gated at 97% in CI (measured 97.10%). The AGENTS.md target remains 100%.
 
 ## Testing against MySQL (occasional parity check)
 
-SQLite covers the daily loop. Before a release, run once against MySQL/MariaDB to catch driver drift:
+SQLite covers the daily loop. GitHub Actions also runs the suite against MySQL 8. You do not need MySQL on the development machine.
+
+To run the same MySQL job locally (optional Docker):
 
 ```bash
+docker run --name ad-mysql -e MYSQL_ROOT_PASSWORD=secret -e MYSQL_DATABASE=approvedesk_test -p 3306:3306 -d mysql:8.0
 DB_CONNECTION=mysql DB_HOST=127.0.0.1 DB_DATABASE=approvedesk_test \
 DB_USERNAME=root DB_PASSWORD=secret php artisan test
 ```
-
-CI stays on SQLite; MySQL parity is a pre-release manual step (or opt-in `--group=mysql` job later if drift appears).
 
 ## Turnstile test keys
 

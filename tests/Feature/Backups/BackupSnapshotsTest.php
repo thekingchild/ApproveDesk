@@ -22,7 +22,9 @@ use App\Services\Operations\RestoreDrill;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\RefreshDatabaseState;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -49,6 +51,7 @@ class BackupSnapshotsTest extends TestCase
         $result = app(BackupVerifier::class)->verifyPath($decoded);
         $this->assertTrue($result->ok, implode(' ', $result->issues));
         $this->assertSame(WorkflowAction::query()->count(), $snapshot->manifest['workflow_actions']);
+        $this->assertSame(1, $snapshot->manifest['tables']['backup_destinations']);
         unlink($decoded);
     }
 
@@ -141,6 +144,52 @@ class BackupSnapshotsTest extends TestCase
 
         $this->expectException(\InvalidArgumentException::class);
         app(PromoteDatabaseBackupAction::class)->execute($snapshot, $admin, (string) $snapshot->id);
+    }
+
+    public function test_promoted_snapshot_and_its_destination_are_reinserted_when_the_dump_does_not_contain_them(): void
+    {
+        $admin = User::factory()->create()->assignRole('admin');
+        $snapshot = app(CreateDatabaseBackupAction::class)->execute();
+        app(VerifyBackupSnapshotAction::class)->execute($snapshot);
+        $id = $snapshot->id;
+        $destinationId = $snapshot->destination_id;
+        $snapshot->load('destination');
+
+        BackupSnapshot::query()->whereKey($id)->delete();
+        BackupDestination::query()->whereKey($destinationId)->delete();
+
+        $remembered = app(PromoteDatabaseBackupAction::class)->rememberPromoted($snapshot, $admin);
+
+        $this->assertInstanceOf(BackupSnapshot::class, $remembered);
+        $this->assertSame($id, $remembered->id);
+        $this->assertDatabaseHas('backup_destinations', [
+            'id' => $destinationId,
+            'name' => 'Local disk',
+        ]);
+        $this->assertSame(BackupSnapshotStatus::Promoted, BackupSnapshot::query()->find($id)?->status);
+    }
+
+    public function test_mysql_promote_restores_the_verified_snapshot(): void
+    {
+        if (! in_array(Schema::getConnection()->getDriverName(), ['mysql', 'mariadb'], true)) {
+            $this->markTestSkipped('Requires MySQL.');
+        }
+
+        $admin = User::factory()->create()->assignRole('admin');
+        $snapshot = app(CreateDatabaseBackupAction::class)->execute();
+        app(VerifyBackupSnapshotAction::class)->execute($snapshot);
+        $extra = User::factory()->create();
+
+        try {
+            app(PromoteDatabaseBackupAction::class)->execute($snapshot, $admin, (string) $snapshot->id);
+
+            $this->assertNull($extra->fresh());
+            $this->assertSame(BackupSnapshotStatus::Promoted, BackupSnapshot::query()->find($snapshot->id)?->status);
+        } finally {
+            $this->artisan('migrate:fresh', ['--force' => true]);
+            RefreshDatabaseState::$migrated = true;
+            $this->seed(RolesAndPermissionsSeeder::class);
+        }
     }
 
     public function test_tampered_snapshot_fails_verify(): void
