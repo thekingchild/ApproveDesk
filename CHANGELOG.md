@@ -22,7 +22,7 @@ All notable changes to ApproveDesk are documented here. The project follows
 - Push subscription uniqueness now uses a SHA-256 `endpoint_hash` instead of indexing the TEXT endpoint, so MySQL/MariaDB can migrate (error 1170).
 - Database dumps quote the bare table name, not `database.table`, so MySQL `SHOW CREATE TABLE` does not look for `approvedesk_test.approvedesk_test.activity_log`.
 - Database snapshots now include the local destination before capture, and promoting an older snapshot restores its missing destination before keeping the promoted snapshot in the list.
-- The v2.1 upgrade tests remove dependent sensitive-field access records before loading their fixtures, so MySQL is not asked to drop `request_field_definitions` while another table still references it.
+- Both v2.1 upgrade tests roll back every later migration before loading their fixtures, so MySQL removes all dependent tables before the older request and workflow schema.
 - Integration hub delivery list loads `reference_number` instead of a non-existent `reference` column.
 - Shortened two MySQL-illegal index names (`sfv_submission_definition_unique`, `wsr_type_active_priority_index`) so a fresh MySQL/MariaDB install can migrate.
 - Add a standalone `template_id` index before replacing the workflow-step unique, so MySQL does not refuse the drop (error 1553).

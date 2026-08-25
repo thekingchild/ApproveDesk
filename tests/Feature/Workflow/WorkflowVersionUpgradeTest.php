@@ -12,6 +12,7 @@ use App\Services\WorkflowEngine;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -20,17 +21,18 @@ class WorkflowVersionUpgradeTest extends TestCase
 {
     use DatabaseMigrations;
 
+    private const FIRST_POST_V21_MIGRATION = '2026_08_19_010000_create_versioned_request_schema.php';
+
+    protected function tearDown(): void
+    {
+        $this->artisan('migrate:fresh', ['--force' => true]);
+
+        parent::tearDown();
+    }
+
     public function test_v21_in_flight_instance_completes_on_its_original_version(): void
     {
-        foreach ([
-            'database/migrations/2026_08_24_120000_create_sensitive_field_accesses_table.php',
-            'database/migrations/2026_08_20_060000_add_phone_to_users_table.php',
-            'database/migrations/2026_08_19_050000_add_dynamic_routing_and_assignment.php',
-            'database/migrations/2026_08_19_040000_create_workflow_template_versions.php',
-            'database/migrations/2026_08_19_030000_add_workflow_template_to_request_types.php',
-            'database/migrations/2026_08_19_020000_add_request_field_discovery_and_saved_views.php',
-            'database/migrations/2026_08_19_010000_create_versioned_request_schema.php',
-        ] as $path) {
+        foreach ($this->postV21MigrationPaths() as $path) {
             $this->artisan('migrate:rollback', ['--path' => $path, '--force' => true])->assertExitCode(0);
         }
 
@@ -38,17 +40,7 @@ class WorkflowVersionUpgradeTest extends TestCase
         DB::unprepared((string) file_get_contents(base_path('tests/Fixtures/approvedesk-v2.1-inflight.sql')));
         $this->assertDatabaseHas('workflow_instances', ['id' => 9501, 'status' => 'active', 'current_step_id' => 9301]);
 
-        foreach ([
-            'database/migrations/2026_08_19_010000_create_versioned_request_schema.php',
-            'database/migrations/2026_08_19_020000_add_request_field_discovery_and_saved_views.php',
-            'database/migrations/2026_08_19_030000_add_workflow_template_to_request_types.php',
-            'database/migrations/2026_08_19_040000_create_workflow_template_versions.php',
-            'database/migrations/2026_08_19_050000_add_dynamic_routing_and_assignment.php',
-            'database/migrations/2026_08_20_060000_add_phone_to_users_table.php',
-            'database/migrations/2026_08_24_120000_create_sensitive_field_accesses_table.php',
-        ] as $path) {
-            $this->artisan('migrate', ['--path' => $path, '--force' => true])->assertExitCode(0);
-        }
+        $this->artisan('migrate', ['--force' => true])->assertExitCode(0);
 
         $this->seed(RolesAndPermissionsSeeder::class);
 
@@ -101,5 +93,24 @@ class WorkflowVersionUpgradeTest extends TestCase
         $next = $engine->initialize(Submission::factory()->create());
         $this->assertSame($template->fresh()->publishedVersion?->id, $next->template_version_id);
         $this->assertNotSame($originalVersionId, $next->template_version_id);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function postV21MigrationPaths(): array
+    {
+        $paths = collect(File::files(database_path('migrations')))
+            ->map(fn (\SplFileInfo $file): string => $file->getFilename())
+            ->filter(fn (string $name): bool => $name >= self::FIRST_POST_V21_MIGRATION)
+            ->sort()
+            ->reverse()
+            ->values()
+            ->map(fn (string $name): string => 'database/migrations/'.$name)
+            ->all();
+
+        $this->assertNotEmpty($paths);
+
+        return $paths;
     }
 }
