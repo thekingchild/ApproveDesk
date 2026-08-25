@@ -22,6 +22,7 @@ use App\Services\Operations\RestoreDrill;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\RefreshDatabaseState;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -144,6 +145,22 @@ class BackupSnapshotsTest extends TestCase
         app(PromoteDatabaseBackupAction::class)->execute($snapshot, $admin, (string) $snapshot->id);
     }
 
+    public function test_promoted_snapshot_is_reinserted_when_the_dump_does_not_contain_it(): void
+    {
+        $admin = User::factory()->create()->assignRole('admin');
+        $snapshot = app(CreateDatabaseBackupAction::class)->execute();
+        app(VerifyBackupSnapshotAction::class)->execute($snapshot);
+        $id = $snapshot->id;
+
+        BackupSnapshot::query()->whereKey($id)->delete();
+
+        $remembered = app(PromoteDatabaseBackupAction::class)->rememberPromoted($snapshot, $admin);
+
+        $this->assertInstanceOf(BackupSnapshot::class, $remembered);
+        $this->assertSame($id, $remembered->id);
+        $this->assertSame(BackupSnapshotStatus::Promoted, BackupSnapshot::query()->find($id)?->status);
+    }
+
     public function test_mysql_promote_restores_the_verified_snapshot(): void
     {
         if (! in_array(Schema::getConnection()->getDriverName(), ['mysql', 'mariadb'], true)) {
@@ -155,10 +172,16 @@ class BackupSnapshotsTest extends TestCase
         app(VerifyBackupSnapshotAction::class)->execute($snapshot);
         $extra = User::factory()->create();
 
-        app(PromoteDatabaseBackupAction::class)->execute($snapshot, $admin, (string) $snapshot->id);
+        try {
+            app(PromoteDatabaseBackupAction::class)->execute($snapshot, $admin, (string) $snapshot->id);
 
-        $this->assertNull($extra->fresh());
-        $this->assertSame(BackupSnapshotStatus::Promoted, $snapshot->fresh()?->status);
+            $this->assertNull($extra->fresh());
+            $this->assertSame(BackupSnapshotStatus::Promoted, BackupSnapshot::query()->find($snapshot->id)?->status);
+        } finally {
+            $this->artisan('migrate:fresh', ['--force' => true]);
+            RefreshDatabaseState::$migrated = true;
+            $this->seed(RolesAndPermissionsSeeder::class);
+        }
     }
 
     public function test_tampered_snapshot_fails_verify(): void

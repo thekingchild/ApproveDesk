@@ -52,20 +52,45 @@ final class PromoteDatabaseBackupAction
             throw new InvalidArgumentException('Promote supports SQLite files and MySQL.');
         }
 
-        $snapshot->forceFill([
-            'status' => BackupSnapshotStatus::Promoted,
-            'promoted_at' => now(),
-        ])->save();
-
-        Log::info('backup.promoted', [
-            'kind' => 'database',
-            'snapshot_id' => $snapshot->id,
-            'actor_id' => $actor->id,
-        ]);
+        $this->rememberPromoted($snapshot, $actor);
 
         $this->reconciler->run();
 
-        return $snapshot->fresh() ?? $snapshot;
+        return BackupSnapshot::query()->find($snapshot->id) ?? $snapshot;
+    }
+
+    public function rememberPromoted(BackupSnapshot $snapshot, User $actor): BackupSnapshot
+    {
+        $attributes = [
+            'kind' => $snapshot->kind,
+            'destination_id' => $snapshot->destination_id,
+            'status' => BackupSnapshotStatus::Promoted,
+            'path' => $snapshot->path,
+            'remote_id' => $snapshot->remote_id,
+            'bytes' => $snapshot->bytes,
+            'checksum' => $snapshot->checksum,
+            'manifest' => $snapshot->manifest,
+            'retained_until' => $snapshot->retained_until,
+            'verified_at' => $snapshot->verified_at,
+            'promoted_at' => now(),
+            'error' => null,
+        ];
+
+        $persisted = BackupSnapshot::query()->find($snapshot->id);
+        if ($persisted === null) {
+            $persisted = new BackupSnapshot;
+            $persisted->id = $snapshot->id;
+        }
+
+        $persisted->forceFill($attributes)->save();
+
+        Log::info('backup.promoted', [
+            'kind' => 'database',
+            'snapshot_id' => $persisted->id,
+            'actor_id' => $actor->id,
+        ]);
+
+        return $persisted;
     }
 
     private function promoteSqliteFile(BackupSnapshot $snapshot): void
