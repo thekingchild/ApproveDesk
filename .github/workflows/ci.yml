@@ -121,8 +121,8 @@ jobs:
           cp .env.example .env
           php artisan key:generate
 
-      - name: Parallel tests on MySQL
-        run: php artisan test --parallel
+      - name: Tests on MySQL
+        run: php artisan test
 
   assets:
     runs-on: ubuntu-latest

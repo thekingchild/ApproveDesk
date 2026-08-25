@@ -67,7 +67,7 @@ To run the same MySQL job locally (optional Docker):
 ```bash
 docker run --name ad-mysql -e MYSQL_ROOT_PASSWORD=secret -e MYSQL_DATABASE=approvedesk_test -p 3306:3306 -d mysql:8.0
 DB_CONNECTION=mysql DB_HOST=127.0.0.1 DB_DATABASE=approvedesk_test \
-DB_USERNAME=root DB_PASSWORD=secret php artisan test --parallel
+DB_USERNAME=root DB_PASSWORD=secret php artisan test
 ```
 
 ## Turnstile test keys
