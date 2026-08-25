@@ -9,6 +9,8 @@ return new class extends Migration
 {
     public function up(): void
     {
+        $this->ensureStandaloneUserIndex();
+
         $legacy = collect(Schema::getIndexes('push_subscriptions'))->first(
             fn (array $index): bool => ($index['unique'] ?? false)
                 && ($index['columns'] ?? []) === ['user_id', 'endpoint'],
@@ -48,6 +50,8 @@ return new class extends Migration
 
     public function down(): void
     {
+        $this->ensureStandaloneUserIndex();
+
         $hashUnique = collect(Schema::getIndexes('push_subscriptions'))->first(
             fn (array $index): bool => ($index['unique'] ?? false)
                 && ($index['columns'] ?? []) === ['user_id', 'endpoint_hash'],
@@ -62,6 +66,15 @@ return new class extends Migration
         if (Schema::hasColumn('push_subscriptions', 'endpoint_hash')) {
             Schema::table('push_subscriptions', function (Blueprint $table): void {
                 $table->dropColumn('endpoint_hash');
+            });
+        }
+    }
+
+    private function ensureStandaloneUserIndex(): void
+    {
+        if (! Schema::hasIndex('push_subscriptions', 'push_sub_user_id_index')) {
+            Schema::table('push_subscriptions', function (Blueprint $table): void {
+                $table->index('user_id', 'push_sub_user_id_index');
             });
         }
     }

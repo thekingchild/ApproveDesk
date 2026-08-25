@@ -23,6 +23,7 @@ class WorkflowVersionUpgradeTest extends TestCase
     public function test_v21_in_flight_instance_completes_on_its_original_version(): void
     {
         foreach ([
+            'database/migrations/2026_08_24_120000_create_sensitive_field_accesses_table.php',
             'database/migrations/2026_08_20_060000_add_phone_to_users_table.php',
             'database/migrations/2026_08_19_050000_add_dynamic_routing_and_assignment.php',
             'database/migrations/2026_08_19_040000_create_workflow_template_versions.php',
@@ -44,6 +45,7 @@ class WorkflowVersionUpgradeTest extends TestCase
             'database/migrations/2026_08_19_040000_create_workflow_template_versions.php',
             'database/migrations/2026_08_19_050000_add_dynamic_routing_and_assignment.php',
             'database/migrations/2026_08_20_060000_add_phone_to_users_table.php',
+            'database/migrations/2026_08_24_120000_create_sensitive_field_accesses_table.php',
         ] as $path) {
             $this->artisan('migrate', ['--path' => $path, '--force' => true])->assertExitCode(0);
         }

@@ -51,6 +51,7 @@ class BackupSnapshotsTest extends TestCase
         $result = app(BackupVerifier::class)->verifyPath($decoded);
         $this->assertTrue($result->ok, implode(' ', $result->issues));
         $this->assertSame(WorkflowAction::query()->count(), $snapshot->manifest['workflow_actions']);
+        $this->assertSame(1, $snapshot->manifest['tables']['backup_destinations']);
         unlink($decoded);
     }
 
@@ -145,19 +146,26 @@ class BackupSnapshotsTest extends TestCase
         app(PromoteDatabaseBackupAction::class)->execute($snapshot, $admin, (string) $snapshot->id);
     }
 
-    public function test_promoted_snapshot_is_reinserted_when_the_dump_does_not_contain_it(): void
+    public function test_promoted_snapshot_and_its_destination_are_reinserted_when_the_dump_does_not_contain_them(): void
     {
         $admin = User::factory()->create()->assignRole('admin');
         $snapshot = app(CreateDatabaseBackupAction::class)->execute();
         app(VerifyBackupSnapshotAction::class)->execute($snapshot);
         $id = $snapshot->id;
+        $destinationId = $snapshot->destination_id;
+        $snapshot->load('destination');
 
         BackupSnapshot::query()->whereKey($id)->delete();
+        BackupDestination::query()->whereKey($destinationId)->delete();
 
         $remembered = app(PromoteDatabaseBackupAction::class)->rememberPromoted($snapshot, $admin);
 
         $this->assertInstanceOf(BackupSnapshot::class, $remembered);
         $this->assertSame($id, $remembered->id);
+        $this->assertDatabaseHas('backup_destinations', [
+            'id' => $destinationId,
+            'name' => 'Local disk',
+        ]);
         $this->assertSame(BackupSnapshotStatus::Promoted, BackupSnapshot::query()->find($id)?->status);
     }
 

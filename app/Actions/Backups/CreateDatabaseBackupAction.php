@@ -23,6 +23,7 @@ final class CreateDatabaseBackupAction
         @mkdir(dirname($dump), 0775, true);
 
         try {
+            $this->recorder->localDestination();
             $manifest = $this->writeSqlDump($dump);
             $this->recorder->gzipFile($dump, $gzip);
 

@@ -88,4 +88,16 @@ class MysqlIdentifierLengthTest extends TestCase
         );
         $this->assertLessThanOrEqual(64, strlen((string) ($hashUnique['name'] ?? '')));
     }
+
+    public function test_push_subscriptions_keep_a_standalone_user_id_index(): void
+    {
+        $standalone = collect(Schema::getIndexes('push_subscriptions'))
+            ->first(fn (array $index): bool => ($index['columns'] ?? []) === ['user_id']
+                && ($index['unique'] ?? false) === false);
+
+        $this->assertNotNull(
+            $standalone,
+            'user_id needs its own index so MySQL can drop the (user_id, endpoint_hash) unique without error 1553.',
+        );
+    }
 }

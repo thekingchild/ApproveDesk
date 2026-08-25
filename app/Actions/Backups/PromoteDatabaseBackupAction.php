@@ -4,6 +4,7 @@ namespace App\Actions\Backups;
 
 use App\Enums\BackupSnapshotKind;
 use App\Enums\BackupSnapshotStatus;
+use App\Models\BackupDestination;
 use App\Models\BackupSnapshot;
 use App\Models\User;
 use App\Services\Backups\BackupRecorder;
@@ -41,6 +42,7 @@ final class PromoteDatabaseBackupAction
         }
 
         $this->verify->execute($snapshot);
+        $snapshot->loadMissing('destination');
 
         $driver = Schema::getConnection()->getDriverName();
 
@@ -61,6 +63,8 @@ final class PromoteDatabaseBackupAction
 
     public function rememberPromoted(BackupSnapshot $snapshot, User $actor): BackupSnapshot
     {
+        $this->restoreDestinationIfMissing($snapshot);
+
         $attributes = [
             'kind' => $snapshot->kind,
             'destination_id' => $snapshot->destination_id,
@@ -91,6 +95,25 @@ final class PromoteDatabaseBackupAction
         ]);
 
         return $persisted;
+    }
+
+    private function restoreDestinationIfMissing(BackupSnapshot $snapshot): void
+    {
+        if (BackupDestination::query()->whereKey($snapshot->destination_id)->exists()) {
+            return;
+        }
+
+        $destination = $snapshot->relationLoaded('destination')
+            ? $snapshot->getRelation('destination')
+            : null;
+
+        if (! $destination instanceof BackupDestination) {
+            throw new RuntimeException('The snapshot destination could not be restored.');
+        }
+
+        $restored = new BackupDestination;
+        $restored->forceFill($destination->getAttributes());
+        $restored->save();
     }
 
     private function promoteSqliteFile(BackupSnapshot $snapshot): void
