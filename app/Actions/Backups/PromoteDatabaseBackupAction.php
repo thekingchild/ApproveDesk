@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Services\Backups\BackupRecorder;
 use App\Services\Operations\BackupVerifier;
 use App\Services\Operations\OperationsReconciler;
+use App\Support\SchemaTable;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -150,12 +151,7 @@ final class PromoteDatabaseBackupAction
      */
     private function droppableTables(): array
     {
-        $tables = Schema::getTableListing();
-
-        return array_values(array_filter(
-            $tables,
-            fn (string $table): bool => $table !== 'migrations',
-        ));
+        return SchemaTable::applicationTables();
     }
 
     private function materializeSqlite(BackupSnapshot $snapshot, string $scratch): void

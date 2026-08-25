@@ -7,6 +7,7 @@ use App\Models\BackupSnapshot;
 use App\Services\Backups\BackupRecorder;
 use App\Services\Operations\BackupVerifier;
 use App\Support\BackupSettings;
+use App\Support\SchemaTable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use RuntimeException;
@@ -83,31 +84,20 @@ final class CreateDatabaseBackupAction
      */
     private function tableNames(): array
     {
-        $connection = Schema::getConnection();
-        $tables = $connection->getDriverName() === 'sqlite'
-            ? array_map(
-                fn (object $row): string => (string) $row->name,
-                DB::select("select name from sqlite_master where type = 'table'"),
-            )
-            : Schema::getTableListing();
-
-        sort($tables);
-
-        return array_values(array_filter(
-            $tables,
-            fn (string $table): bool => ! in_array($table, ['migrations', 'sqlite_sequence'], true),
-        ));
+        return SchemaTable::applicationTables();
     }
 
     private function createStatement(string $table): string
     {
+        $table = SchemaTable::bareName($table);
+
         if (Schema::getConnection()->getDriverName() === 'sqlite') {
             $row = DB::selectOne('select sql from sqlite_master where type = ? and name = ?', ['table', $table]);
 
             return rtrim((string) ($row->sql ?? 'CREATE TABLE '.$table.' (id INTEGER)'), ';').';';
         }
 
-        $row = DB::selectOne('show create table `'.$table.'`');
+        $row = DB::selectOne('show create table '.SchemaTable::quoted($table));
 
         return rtrim((string) ($row->{'Create Table'} ?? ''), ';').';';
     }
@@ -117,10 +107,11 @@ final class CreateDatabaseBackupAction
      */
     private function insertStatement(string $table, array $row): string
     {
+        $table = SchemaTable::quoted($table);
         $columns = implode(', ', array_map(fn (string $column): string => '`'.$column.'`', array_keys($row)));
         $values = implode(', ', array_map(fn (mixed $value): string => $this->quote($value), array_values($row)));
 
-        return 'INSERT INTO `'.$table.'` ('.$columns.') VALUES ('.$values.');';
+        return 'INSERT INTO '.$table.' ('.$columns.') VALUES ('.$values.');';
     }
 
     private function quote(mixed $value): string

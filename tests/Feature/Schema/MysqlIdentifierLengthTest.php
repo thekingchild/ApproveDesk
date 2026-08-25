@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Schema;
 
+use App\Support\SchemaTable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
@@ -15,8 +16,9 @@ class MysqlIdentifierLengthTest extends TestCase
         $limit = 64;
         $tooLong = [];
 
-        foreach (Schema::getTableListing() as $table) {
-            if (str_starts_with((string) $table, 'sqlite_')) {
+        foreach (Schema::getTableListing(schemaQualified: false) as $table) {
+            $table = SchemaTable::bareName((string) $table);
+            if (str_starts_with($table, 'sqlite_')) {
                 continue;
             }
 
