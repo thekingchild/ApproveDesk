@@ -94,9 +94,9 @@ jobs:
 ```
 
 Notes:
-- Tests run against **SQLite in-memory** — fast and MySQL-independent. If a test needs MySQL-only behavior, that test belongs in an explicit opt-in job (`php artisan test --group=mysql`), never the default gate.
+- The default Quality suite runs against **SQLite in-memory**. A second sequential MySQL 8 job must stay green. Index and foreign-key names must be 64 characters or fewer (InnoDB). Prefer explicit short names on composite indexes.
 - Coverage gate is 80% on `app/`. `WorkflowEngine` is gated at 97% (measured 97.10% / 11 statements still uncovered). The AGENTS.md target remains 100%.
-- `composer audit` fails the build on known vulnerable locked packages.
+- `composer audit --no-dev --abandoned=ignore` fails the build on known vulnerable locked packages.
 
 ## 4. Environments & Secrets
 

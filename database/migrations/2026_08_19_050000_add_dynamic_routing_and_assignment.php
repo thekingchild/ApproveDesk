@@ -43,7 +43,7 @@ return new class extends Migration
             $table->json('conditions');
             $table->timestamps();
 
-            $table->index(['request_type_id', 'is_active', 'priority']);
+            $table->index(['request_type_id', 'is_active', 'priority'], 'wsr_type_active_priority_index');
         });
 
         $this->backfillCompletionRules();

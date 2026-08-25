@@ -10,11 +10,17 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 - MySQL promote for verified in-app database snapshots. Host panel backups stay recommended.
 - GitHub Actions MySQL 8 test job alongside the existing SQLite job.
+- Schema test that every index and foreign-key name is 64 characters or fewer so MySQL/MariaDB can migrate.
 
 ### Changed
 
 - README, `.env.example` `APP_VERSION`, and this changelog treat **v2.5.4** as the current single-company release.
 - Permission cache is not flushed until the `cache` table exists, so `composer install` / `package:discover` no longer fail on an empty SQLite memory database.
+
+### Fixed
+
+- Shortened two MySQL-illegal index names (`sfv_submission_definition_unique`, `wsr_type_active_priority_index`) so a fresh MySQL/MariaDB install can migrate.
+- Relaxed the business-calendar “completes quickly” bound so parallel PHPUnit is not flaky on a busy runner.
 
 ## [2.5.4] - 2026-08-24
 
