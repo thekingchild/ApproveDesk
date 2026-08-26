@@ -52,6 +52,8 @@ class BackupSnapshotsTest extends TestCase
         $this->assertTrue($result->ok, implode(' ', $result->issues));
         $this->assertSame(WorkflowAction::query()->count(), $snapshot->manifest['workflow_actions']);
         $this->assertSame(1, $snapshot->manifest['tables']['backup_destinations']);
+        $this->assertStringContainsString('PRAGMA foreign_keys=OFF', (string) file_get_contents($decoded));
+        $this->assertStringNotContainsString('SET FOREIGN_KEY_CHECKS', (string) file_get_contents($decoded));
         unlink($decoded);
     }
 

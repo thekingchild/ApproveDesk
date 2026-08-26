@@ -19,6 +19,7 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Fixed
 
+- Promoting a database snapshot on SQLite no longer fails on older dumps that start with `SET FOREIGN_KEY_CHECKS`.
 - Push subscription uniqueness now uses a SHA-256 `endpoint_hash` instead of indexing the TEXT endpoint, so MySQL/MariaDB can migrate (error 1170).
 - Database dumps quote the bare table name, not `database.table`, so MySQL `SHOW CREATE TABLE` does not look for `approvedesk_test.approvedesk_test.activity_log`.
 - Database snapshots now include the local destination before capture, and promoting an older snapshot restores its missing destination before keeping the promoted snapshot in the list.

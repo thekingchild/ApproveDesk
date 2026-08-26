@@ -9,6 +9,7 @@ use App\Models\BackupSnapshot;
 use App\Models\User;
 use App\Services\Backups\BackupRecorder;
 use App\Services\Backups\BackupRestoreTrail;
+use App\Services\Backups\SqliteSnapshotLoader;
 use App\Services\Operations\BackupVerifier;
 use App\Services\Operations\OperationsReconciler;
 use App\Support\SchemaTable;
@@ -25,6 +26,7 @@ final class PromoteDatabaseBackupAction
         private readonly VerifyBackupSnapshotAction $verify,
         private readonly BackupRecorder $recorder,
         private readonly BackupRestoreTrail $restores,
+        private readonly SqliteSnapshotLoader $sqliteLoader,
         private readonly BackupVerifier $verifier,
         private readonly OperationsReconciler $reconciler,
     ) {}
@@ -225,9 +227,7 @@ final class PromoteDatabaseBackupAction
                 return;
             }
 
-            $pdo = new \PDO('sqlite:'.$scratch);
-            $pdo->exec('PRAGMA foreign_keys = OFF');
-            $pdo->exec((string) file_get_contents($decoded));
+            $this->sqliteLoader->loadSqlDump((string) file_get_contents($decoded), $scratch);
         } finally {
             if (is_file($decoded)) {
                 unlink($decoded);
