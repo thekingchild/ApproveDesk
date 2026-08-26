@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\BackupSnapshotKind;
 use App\Enums\BackupSnapshotStatus;
+use Carbon\CarbonInterface;
 use Database\Factories\BackupSnapshotFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -28,6 +29,8 @@ class BackupSnapshot extends Model
         'retained_until',
         'verified_at',
         'promoted_at',
+        'promoted_by_id',
+        'taken_at',
     ];
 
     /**
@@ -42,6 +45,7 @@ class BackupSnapshot extends Model
             'retained_until' => 'datetime',
             'verified_at' => 'datetime',
             'promoted_at' => 'datetime',
+            'taken_at' => 'datetime',
         ];
     }
 
@@ -51,6 +55,34 @@ class BackupSnapshot extends Model
     public function destination(): BelongsTo
     {
         return $this->belongsTo(BackupDestination::class);
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function promoter(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'promoted_by_id');
+    }
+
+    public function takenAt(): CarbonInterface
+    {
+        return $this->taken_at ?? $this->created_at ?? now();
+    }
+
+    public function displayName(): string
+    {
+        return $this->takenAt()
+            ->timezone((string) config('app.timezone', 'UTC'))
+            ->format('Y-m-d H:i:s');
+    }
+
+    public function downloadName(): string
+    {
+        $stamp = $this->takenAt()
+            ->timezone((string) config('app.timezone', 'UTC'))
+            ->format('Y-m-d-His');
+        $extension = pathinfo((string) $this->path, PATHINFO_EXTENSION) ?: 'bin';
+
+        return $this->kind->value.'-'.$stamp.'.'.$extension;
     }
 
     /**

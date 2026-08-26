@@ -8,6 +8,7 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Added
 
+- Backup snapshots are named with the date and time they were taken, listed newest first, and shown in a Date and time column. Restore history records who promoted which snapshot.
 - MySQL promote for verified in-app database snapshots. Host panel backups stay recommended.
 - GitHub Actions MySQL 8 test job alongside the existing SQLite job.
 - Schema test that every index and foreign-key name is 64 characters or fewer so MySQL/MariaDB can migrate.

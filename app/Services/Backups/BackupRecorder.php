@@ -43,7 +43,15 @@ final class BackupRecorder
         array $manifest,
         int $retainDays,
     ): BackupSnapshot {
-        $name = sprintf('%s/%s-%s.%s', $kind->value, now()->format('YmdHis'), substr(hash('sha256', $absolutePath), 0, 8), pathinfo($absolutePath, PATHINFO_EXTENSION) ?: 'bin');
+        $takenAt = now();
+        $extension = pathinfo($absolutePath, PATHINFO_EXTENSION) ?: 'bin';
+        $stamp = $takenAt->timezone((string) config('app.timezone', 'UTC'))->format('Y-m-d-His');
+        $name = $kind->value.'/'.$stamp.'.'.$extension;
+        $suffix = 2;
+        while (Storage::disk('local')->exists('backups/'.$name)) {
+            $name = $kind->value.'/'.$stamp.'-'.$suffix.'.'.$extension;
+            $suffix++;
+        }
         Storage::disk('local')->makeDirectory('backups/'.$kind->value);
         $relative = 'backups/'.$name;
         Storage::disk('local')->put($relative, (string) file_get_contents($absolutePath));
@@ -62,6 +70,7 @@ final class BackupRecorder
             'checksum' => $checksum,
             'manifest' => $manifest,
             'retained_until' => now()->addDays(BackupSettings::clampDays($retainDays)),
+            'taken_at' => $takenAt,
         ]);
 
         $this->replicate($snapshot, $absolutePath);
@@ -123,6 +132,7 @@ final class BackupRecorder
                     'checksum' => $local->checksum,
                     'manifest' => $local->manifest,
                     'retained_until' => $local->retained_until,
+                    'taken_at' => $local->taken_at,
                 ]);
                 $destination->rememberError(null);
             } catch (Throwable $exception) {
@@ -141,6 +151,7 @@ final class BackupRecorder
                     'manifest' => $local->manifest,
                     'error' => 'Remote copy failed.',
                     'retained_until' => $local->retained_until,
+                    'taken_at' => $local->taken_at,
                 ]);
             }
         }
