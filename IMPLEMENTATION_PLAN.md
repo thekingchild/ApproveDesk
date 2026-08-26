@@ -156,6 +156,7 @@ Locked product decision for Phase 8.2. It does not reopen Phase 8.1. Design: [do
 | SH-OWN/REC/CAP | v2.6.0 | Self-hosted system owner, account recovery, and active-user capacity | Complete |
 | SH-RBAC/BTIME/CRON | v2.7.0 | Custom roles, backup time pickers, and scheduler diagnostics | Complete |
 | SH-BK271 | v2.7.1 | Backup date-time names, restore history, SQLite promote | Complete |
+| SH-SEC272 | v2.7.2 | Security hardening: OAuth domain gate, owner-only custom code, backup digests, outbound URL checks, APP_TIMEZONE | Not started |
 | 10 | v3.0.0 | SaaS multi-tenancy foundation | Not started |
 | 11 | v3.1.0 | Paystack and Flutterwave subscriptions | Not started |
 | 12 | v3.2.0 | SaaS onboarding, entitlements, and commercial operations | Not started |
@@ -997,6 +998,127 @@ This supplement is self-hosted v2.7.1 work. It does not implement or change Appr
 
 - **SH-BK271-01 — Complete (2026-08-26):** Name snapshots with date and time, show a Date and time column, sort newest first, and record restore history on promote.
 - **SH-BK271-02 — Complete (2026-08-26):** Load SQLite dumps that contain MySQL `SET FOREIGN_KEY_CHECKS` so existing snapshots can be promoted.
+
+---
+
+## Self-hosted supplement — Security hardening and application timezone
+
+**Goal:** close the v2.7.1 static security findings that are in product scope, and stop hardcoding the application timezone so operators set `APP_TIMEZONE` in `.env`. Target release is **v2.7.2** after every sub-phase below lands. Do not bump `APP_VERSION` / README / `.env.example` until the CI release push.
+
+This supplement is self-hosted v2.7.2 work on `feature/sh-sec272-security-hardening`. It does not implement or change ApproveDesk SaaS Phase 10–15. It does not reopen WorkflowEngine, append-only `workflow_actions`, installer lock design, custom-role ceilings, or backup date-time naming.
+
+**Source:** repository security review of revision `47c823596713fad0c634e9cece1c95ed65fa995e` (v2.7.1). Finding numbers below match that report.
+
+**Explicitly out of scope (Finding 1):** Unauthenticated first-run installer permits deployment takeover. Leave `/install` as the documented public first-run wizard until the lock exists. Do not add an installer secret, CLI enablement gate, or source-network restriction in v2.7.2.
+
+**Also residual (do not “fix” here):** Livewire 4 / Alpine / Flux still need CSP `'unsafe-inline'` / `'unsafe-eval'`. Do not attempt nonce/hash CSP in this release. Structured analytics-provider settings (measurement IDs instead of paste-JS) are not required if custom code is owner-only. HMAC-signing backup manifests is not required if stored SHA-256 + byte size are enforced. Per-user or per-organization timezones remain Phase 10 `P10-TEN-01`.
+
+**Working contract**
+
+- Help stays end-user facing: in-app `/help/{slug}` only, no `.env`, framework, source-folder, or internal-key language.
+- Operator facts (timezone env key, private S3 opt-in, digest checks) live in `docs/DEPLOYMENT.md` / `docs/DEVELOPMENT.md`.
+- Each sub-phase is independently demoable and must ship its tests, Pint, and Help/changelog notes in the same change.
+- Implement in this order: timezone, OAuth, branding custom code, backup integrity, outbound URLs, then docs/exit.
+- Default remains UTC when `APP_TIMEZONE` is absent, so existing installs do not change clock behavior until an operator sets the variable.
+
+### SH-TZ — Application timezone from the environment
+
+**Objective:** `config('app.timezone')` reads `APP_TIMEZONE` instead of a hardcoded `'UTC'`.
+
+- **SH-TZ-01:** In `config/app.php` set `'timezone' => env('APP_TIMEZONE', 'UTC')`. Add `APP_TIMEZONE=UTC` to `.env.example` next to the other `APP_*` keys. Do not change `APP_VERSION`.
+- **SH-TZ-02:** If the installer writes `.env` and `APP_TIMEZONE` is missing, write `APP_TIMEZONE=UTC`. Do not add a timezone picker to `/install`.
+- **SH-TZ-03:** Operator docs (`docs/DEPLOYMENT.md`, `docs/DEVELOPMENT.md`) state that office hours, backup clocks, snapshot names, and scheduler display use `APP_TIMEZONE` (IANA name, default `UTC`). Note DST: use `setTime`, never `addHours(24)`, matching ADR 0001.
+- **SH-TZ-04:** Help copy that currently says “application timezone (UTC)” must say the installation timezone and show the live name already used in the UI (`config('app.timezone')`). Do not mention `.env` in Help.
+- **SH-TZ-05:** Tests: missing env stays UTC; `APP_TIMEZONE=Africa/Lagos` makes `config('app.timezone')` `Africa/Lagos`; backup next-run / office-hours labels use that value. Existing UTC tests must keep passing with the default.
+
+**Demo:** set `APP_TIMEZONE=Africa/Lagos`, reload Approval settings and Backups; labels and next-run times show `Africa/Lagos`. Remove the variable and the app is UTC again.
+
+**Out of scope:** in-app timezone editor, per-user timezone, tenant timezone, installer UI.
+
+### SH-SEC-OAUTH — OAuth registration respects the domain allow-list (Finding 2)
+
+**Objective:** Google/Microsoft new-user creation uses the same `RegistrationSettings::domainAllowed()` gate as password registration. Linking an existing account is unchanged.
+
+- **SH-SEC-OAUTH-01:** In `app/Actions/Auth/ResolveOAuthUserAction.php`, before `User::create` when registration is open, call `RegistrationSettings::domainAllowed($data->email)`. On denial throw `ValidationException` with the same user-facing message as `CreateNewUser` (`Please register with your organization email address.`). Do not enumerate allowed domains. Do not apply the list to existing-user linking or returning OAuth identities.
+- **SH-SEC-OAUTH-02:** Keep the global registration switch, active-user cap, and `email_verified_at` / `is_active` behavior for allowed new OAuth users.
+- **SH-SEC-OAUTH-03:** Tests in `tests/Feature/Auth/OAuthAuthenticationTest.php`:
+  - allow-list `example.com`; Google new user `someone@gmail.com` is rejected; no user row.
+  - allow-list `example.com`; Microsoft new user `person@example.com` is created as submitter.
+  - empty allow-list still creates a new OAuth user (current behavior).
+  - existing user `person@gmail.com` can still link Google when the allow-list is `example.com`.
+  - registration closed still rejects unknown emails.
+
+**Demo:** registration open, allow-list `bluechipanalytical.com`; Google account `attacker@gmail.com` cannot join; `femi@bluechipanalytical.com` can; an existing staff Gmail can still link.
+
+**Out of scope:** treating the allow-list as an authentication boundary; changing OTP/password registration.
+
+### SH-SEC-BRAND — Owner-only custom code (Finding 3)
+
+**Objective:** `branding.manage` can no longer persist organization-wide JavaScript. Custom code remains possible only for the System owner after recent strong authentication.
+
+- **SH-SEC-BRAND-01:** Add catalogue permission `branding.custom_code.manage`: label “Manage custom code”, group Configuration, risk elevated, **`delegable` => false**, depends on `branding.manage`. Do not grant it to built-in Administrator or any custom role. System owner continues to pass via `Gate::before`.
+- **SH-SEC-BRAND-02:** `UpdateBrandingSettingsAction` writes `brand.custom_code` only when the actor is authorized for `branding.custom_code.manage`. A `branding.manage` save must not create, change, or clear custom code (ignore the request field).
+- **SH-SEC-BRAND-03:** Branding page (`resources/views/pages/settings/branding.blade.php`): hide the Advanced analytics/custom-code editor unless the current user can `branding.custom_code.manage`. Saving a code change requires password confirmation and the same second-factor session assurance used for owner recovery (`password.confirm` + `SecondFactorAssurance`). Visual branding (logo, colors, CSS, registration) stays on `branding.manage`.
+- **SH-SEC-BRAND-04:** Existing stored snippets keep rendering through `Branding::customCodeHtml()` and the shared head. Do not strip `'unsafe-inline'` from CSP in this phase.
+- **SH-SEC-BRAND-05:** Tests in `tests/Feature/BrandingTest.php` (and catalogue/role tests as needed):
+  - a custom role with only `branding.manage` can save tagline/logo and cannot persist or clear `brand.custom_code`.
+  - System owner with password confirmation + second-factor assurance can save custom code; without assurance, save is rejected.
+  - owner-saved snippet still appears on login and in-app.
+  - custom roles UI cannot assign `branding.custom_code.manage`.
+
+**Demo:** a branding manager changes the logo; pasted `<script>` is ignored. The System owner reauthenticates and saves a tracking snippet; it appears on login.
+
+**Out of scope:** removing custom code entirely; nonce CSP; Google Analytics / Plausible structured fields.
+
+### SH-SEC-BKINT — Backup digest and files-hash verification (Findings 4 and 5)
+
+**Objective:** every materialize / verify / download / promote path rejects bytes that do not match the snapshot’s recorded SHA-256 and size, and files ZIPs must match the per-entry manifest exactly.
+
+- **SH-SEC-BKINT-01:** Shared helper (e.g. `App\Services\Backups\BackupIntegrity`): given a local file and `BackupSnapshot`, require `is_file`, `filesize === snapshot.bytes`, and `hash_equals(snapshot.checksum, hash_file('sha256', ...))`. Empty checksum or size mismatch fails closed. Use this before verify, download, and promote, including local copies.
+- **SH-SEC-BKINT-02:** `MaterializeBackupSnapshotAction`: fetch remote objects into a unique private temp file under `storage/app/private/backups/.materialize-*`, run the integrity helper, then move onto the recorded path only on success. Never accept a non-empty fetch as sufficient. Clean up temp files on failure.
+- **SH-SEC-BKINT-03:** Keep `BackupVerifier` table-string checks as a second pass only after digest success. Do not treat CREATE TABLE presence as integrity.
+- **SH-SEC-BKINT-04:** `VerifyBackupSnapshotAction::verifyZip`: after archive-level digest, require an exact entry set (`manifest.files` paths plus the stored `manifest.json`), reject duplicates, extra names, directories, symlinks, absolute/`..`/`\\`/`\0` names; cap entry count and uncompressed size; stream each expected file through SHA-256 and `hash_equals` the manifest hash.
+- **SH-SEC-BKINT-05:** `PromoteFilesBackupAction`: extract only verified entries into a fresh private directory, then atomically replace `submissions`. Do not `extractTo` the whole archive. This also closes the deferred ZIP path-traversal follow-up for supported PHP/libzip by never trusting entry names blindly.
+- **SH-SEC-BKINT-06:** Tests (`tests/Feature/Backups/`):
+  - remote (or swapped) database dump with valid CREATE TABLE text but wrong SHA-256 fails verify and cannot promote.
+  - matching digest + tables still verifies and promotes.
+  - files ZIP that keeps pathnames but changes bytes fails.
+  - files ZIP with extra or `../` entries fails.
+  - exact manifest + hashes still verifies and promotes.
+
+**Demo:** replace a remote object with a well-formed dump that would have passed today’s regex; Verify and Promote refuse it. An untouched snapshot still restores.
+
+**Out of scope:** new backup format, HMAC-signed manifests, changing destination credentials, installer.
+
+### SH-SEC-SSRF — Outbound destination validation (Findings 6–9)
+
+**Objective:** one outbound-destination policy used at save and at request time: HTTPS, no userinfo, no unusual ports unless explicitly allowed, resolve A/AAAA, reject private/reserved/loopback/link-local/IPv6 unique-local, pin the connection to the validated address while keeping TLS SNI on the original hostname. Do not expose raw response bodies as a diagnostic oracle.
+
+- **SH-SEC-SSRF-01:** Add `App\Support\OutboundDestination` (rule + resolver + pin). Unit-test literal private IPs, `localhost`, `.local`, public hostname whose lookup is private, DNS rebinding (public at save, private at send), and a public HTTPS host that is allowed. Skip real network in tests by injecting a resolver stub.
+- **SH-SEC-SSRF-02:** Webhooks (Finding 8): `ValidWebhookUrl` uses the helper (not only literal IPs). `DeliverWebhook` revalidates and pins before POST. Keep HTTPS-only, no redirects, timeout.
+- **SH-SEC-SSRF-03:** Integration connectors (Finding 6): validate `url` / `webhook_url` (and other HTTP URL credential fields) in `IntegrationCredentialController` at save. `ConnectorHttpClient` revalidates/pins before GET/POST. Store a generic `last_error` (status class only); do not persist or render response bodies.
+- **SH-SEC-SSRF-04:** Web Push (Finding 7): store and send only HTTPS endpoints that pass the helper. Reject userinfo and non-443 ports. Revalidate at send in `WebPushService`; drop the subscription on failure as today. Do not hard-code vendor push origins (they vary).
+- **SH-SEC-SSRF-05:** Custom S3 endpoints (Finding 9): if `endpoint` is set, require HTTPS URL and public resolution unless operator opt-in `BACKUP_ALLOW_PRIVATE_S3_ENDPOINT=true` (documented in `docs/DEPLOYMENT.md` for private MinIO). Revalidate on test and on every transport operation. Bound/redact SDK exception text shown in the UI.
+- **SH-SEC-SSRF-06:** Tests for each sink: private hostname rejected at save; rebinding hostname rejected at send; legitimate public HTTPS still delivers; connector failure message has no response body; S3 private endpoint rejected unless the opt-in env is true.
+
+**Demo:** a webhook manager cannot save `https://127.0.0.1/`; a hostname that resolves to `10.0.0.1` is refused at delivery; Slack-style public HTTPS still works.
+
+**Out of scope:** blocking all custom S3 endpoints; changing webhook signing; adding a UI host allow-list (env opt-in is enough for MinIO).
+
+### SH-SEC-DOC — Help, changelog, and release isolation
+
+- **SH-SEC-DOC-01:** Update Help in the same delivery as each sub-phase:
+  - `docs/kb/organization-settings.md` — domain list applies to Google/Microsoft sign-up; custom code is System-owner only; times use the installation timezone.
+  - `docs/kb/users-and-roles.md` — custom code is not a delegable branding permission.
+  - `docs/kb/backups.md` — copies are checked against the fingerprint taken at backup time before restore; extra or altered files are refused.
+  - `docs/kb/webhooks.md` and `docs/kb/integrations.md` — destinations must be public HTTPS.
+  - Refresh `docs/kb/definitions.md` and `HelpCatalogue` summaries only if terms change. End-user language only.
+- **SH-SEC-DOC-02:** `CHANGELOG.md` `[Unreleased]` entries for each shipped control. Do not retitle as `[2.7.2]` or set `APP_VERSION` until the CI release push after this supplement is complete.
+- **SH-SEC-DOC-03:** Mark every task and this supplement Complete (date) in this plan and set the release-map row to Complete only when tests (`php artisan test --parallel`) and `./vendor/bin/pint --dirty` are green. Keep SaaS Phase 10–15 untouched.
+
+**Phase SH-SEC272 demo:** outside-domain OAuth cannot join; branding managers cannot plant JavaScript; a replaced remote backup cannot verify; private/rebinding destinations cannot be called; backup and office-hour clocks follow `APP_TIMEZONE`. Installer first-run remains as in v2.7.1.
+
+**Out of scope:** Finding 1 installer takeover; SaaS tenancy; CSP nonce migration; changing WorkflowEngine.
 
 ---
 
