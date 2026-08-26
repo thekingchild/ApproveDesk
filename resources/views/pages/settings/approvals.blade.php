@@ -1,6 +1,7 @@
 <?php
 
 use App\Actions\Settings\UpdateApprovalSettingsAction;
+use App\Actions\Settings\UpdateEmailApprovalSecurityAction;
 use App\Actions\Settings\UpdateNudgeSettingsAction;
 use App\Services\Collaboration\QuietHours;
 use App\Services\Workflow\BusinessCalendar;
@@ -11,6 +12,8 @@ use Livewire\Component;
 
 new #[Title('Approval settings')] class extends Component {
     public int $emailLinkExpirationHours = EmailApprovalLinks::DEFAULT_EXPIRATION_HOURS;
+
+    public bool $emailApprovalSecondFactorRequired = false;
 
     /** @var array<int, int> */
     public array $workingDays = [1, 2, 3, 4, 5];
@@ -29,6 +32,7 @@ new #[Title('Approval settings')] class extends Component {
     {
         $this->authorize('settings.manage');
         $this->emailLinkExpirationHours = EmailApprovalLinks::expirationHours();
+        $this->emailApprovalSecondFactorRequired = EmailApprovalLinks::requiresSecondFactor();
         $calendar = app(BusinessCalendar::class);
         $this->workingDays = $calendar->workingDays();
         $this->holidays = implode("\n", $calendar->holidays());
@@ -40,7 +44,11 @@ new #[Title('Approval settings')] class extends Component {
         $this->quietHoursEnd = $quiet['end'] ?? '';
     }
 
-    public function save(UpdateApprovalSettingsAction $updateSettings, UpdateNudgeSettingsAction $updateNudges): void
+    public function save(
+        UpdateApprovalSettingsAction $updateSettings,
+        UpdateNudgeSettingsAction $updateNudges,
+        UpdateEmailApprovalSecurityAction $updateEmailSecurity,
+    ): void
     {
         $this->authorize('settings.manage');
         $this->workingHoursStart = $this->normalizePostedTime($this->workingHoursStart);
@@ -50,6 +58,7 @@ new #[Title('Approval settings')] class extends Component {
 
         $validated = $this->validate([
             'emailLinkExpirationHours' => ['required', 'integer', 'min:1', 'max:'.EmailApprovalLinks::MAX_EXPIRATION_HOURS],
+            'emailApprovalSecondFactorRequired' => ['boolean'],
             'workingDays' => ['required', 'array', 'min:1'],
             'workingDays.*' => ['integer', 'min:1', 'max:7'],
             'holidays' => ['nullable', 'string', 'max:5000'],
@@ -67,14 +76,6 @@ new #[Title('Approval settings')] class extends Component {
             return;
         }
 
-        $updateSettings->execute(
-            $validated['emailLinkExpirationHours'],
-            array_map('intval', $validated['workingDays']),
-            $validated['holidays'] ?? '',
-            $start,
-            $end,
-        );
-
         $quietStart = $validated['quietHoursStart'] ?? '';
         $quietEnd = $validated['quietHoursEnd'] ?? '';
         if ($quietStart !== '' && $quietEnd !== '' && $quietStart === $quietEnd) {
@@ -82,6 +83,26 @@ new #[Title('Approval settings')] class extends Component {
 
             return;
         }
+
+        try {
+            $updateEmailSecurity->execute(
+                $validated['emailApprovalSecondFactorRequired'],
+                \Illuminate\Support\Facades\Auth::user(),
+                request(),
+            );
+        } catch (\InvalidArgumentException $exception) {
+            $this->addError('emailApprovalSecondFactorRequired', $exception->getMessage());
+
+            return;
+        }
+
+        $updateSettings->execute(
+            $validated['emailLinkExpirationHours'],
+            array_map('intval', $validated['workingDays']),
+            $validated['holidays'] ?? '',
+            $start,
+            $end,
+        );
 
         try {
             $updateNudges->execute($quietStart, $quietEnd);
@@ -116,6 +137,24 @@ new #[Title('Approval settings')] class extends Component {
             :description="__('Signed links stop working after this period. Choose between 1 and 720 hours.')"
             required
         />
+
+        <flux:card class="space-y-3" data-test="approval-link-second-factor-card">
+            <div>
+                <flux:heading size="sm">{{ __('Approval link identity') }}</flux:heading>
+                <flux:text class="mt-1">
+                    {{ __('Keep the signed link and its expiry, but require the named approver to sign in and verify an authenticator, recovery code, or passkey in this browser session.') }}
+                </flux:text>
+            </div>
+            <flux:checkbox
+                wire:model="emailApprovalSecondFactorRequired"
+                :label="__('Require sign-in and a second factor for approval links')"
+                data-test="email-approval-second-factor-required"
+            />
+            <flux:error name="emailApprovalSecondFactorRequired" />
+            <flux:callout variant="warning" icon="exclamation-triangle">
+                {{ __('This applies immediately to valid links already sent. Turning it off makes those links usable without sign-in again. Direct Teams and Slack Approve buttons are separate and are not covered by this option.') }}
+            </flux:callout>
+        </flux:card>
 
         <flux:checkbox.group wire:model="workingDays" :label="__('Working days')" class="grid gap-2 sm:grid-cols-4">
             @foreach ([1 => 'Monday', 2 => 'Tuesday', 3 => 'Wednesday', 4 => 'Thursday', 5 => 'Friday', 6 => 'Saturday', 7 => 'Sunday'] as $day => $label)

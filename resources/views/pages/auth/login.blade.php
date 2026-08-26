@@ -5,6 +5,12 @@
         <!-- Session Status -->
         <x-auth-session-status class="text-center" :status="session('status')" />
 
+        @if (session('approval_second_factor_required'))
+            <flux:callout variant="info" icon="shield-check" data-test="approval-second-factor-required">
+                {{ __('This approval link requires the named approver to sign in and verify a second factor.') }}
+            </flux:callout>
+        @endif
+
         @php
             $justInstalled = (bool) session()->pull('install.completed');
         @endphp

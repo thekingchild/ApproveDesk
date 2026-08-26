@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Support;
 
+use App\Models\Setting;
 use App\Models\User;
 use App\Support\PublicWebsite;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -132,5 +133,19 @@ HTML);
         $this->assertMatchesRegularExpression('/<body[^>]*>\s*<nav data-approvedesk-auth/i', $html);
         $this->assertStringContainsString('Log in', $html);
         $this->assertStringContainsString('Plain site', $html);
+    }
+
+    public function test_custom_code_is_injected_before_head_close(): void
+    {
+        Setting::put('brand.custom_code', '<script src="https://plausible.test/js/script.js"></script>');
+
+        $html = $this->website->inject(
+            '<html><head><title>Home</title></head><body><h1>Plain site</h1></body></html>',
+            user: null,
+            registrationOpen: true,
+        );
+
+        $this->assertStringContainsString('https://plausible.test/js/script.js', $html);
+        $this->assertTrue(str_contains($html, '</script>') && strpos($html, '</script>') < strpos($html, '</head>'));
     }
 }

@@ -77,7 +77,7 @@ Route::middleware('guest')->prefix('registration/confirm')->name('registration.c
         ->name('resend');
 });
 
-Route::middleware(['signed', 'throttle:approval-links'])->prefix('email-approvals')->name('approvals.email.')->group(function (): void {
+Route::middleware(['signed', 'throttle:approval-links', 'email-approval.second-factor'])->prefix('email-approvals')->name('approvals.email.')->group(function (): void {
     Route::get('{instance}/{step}/{approver}', [EmailApprovalController::class, 'show'])->name('confirm');
     Route::post('{instance}/{step}/{approver}', [EmailApprovalController::class, 'approve'])->name('approve');
 });

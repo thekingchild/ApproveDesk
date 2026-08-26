@@ -28,7 +28,9 @@ Turn on **Stamp file downloads**. Image downloads show who downloaded them. Othe
 
 Turn on **Require a second factor** when everyone should confirm an authenticator or add a passkey before they use ApproveDesk. You must already have one of those on your own account to turn it on. People who only have a password are sent to **Settings → Security** until they enroll. You can turn it off to restore access.
 
-Email approval links still work without a signed-in second factor. Existing API tokens still work; creating a new token requires the person to be enrolled.
+Approval links work without a signed-in second factor unless an administrator turns on **Require sign-in and a second factor for approval links** under **Settings → Approval settings**. When that option is on, the link remains signed and time-limited, and only its named approver can continue after proving an authenticator, recovery code, or passkey in the current browser session. Existing API tokens still work; creating a new token requires the person to be enrolled.
+
+The approval-link option applies to messages that open the ApproveDesk approval page. Direct Teams and Slack approval buttons are separate signed actions and are not covered by this option.
 
 ### Bot protection
 
@@ -54,5 +56,6 @@ People can delete their own account only when they have no request or decision h
 
 - Do not mark everyday fields sensitive unless the answer should stay hidden from ordinary approvers.
 - Do not treat a download stamp as a substitute for signed links. Anyone who already has the file can still copy it.
+- Do not treat a short link lifetime as proof of who used a forwarded message. Require sign-in and a second factor when signer identity matters more than one-click convenience.
 - Do not raise rate limits to hide a compromised account — sign that person out and change their password.
 - Do not delete a person who has approved or submitted work. Anonymize them so the history still names a former user.

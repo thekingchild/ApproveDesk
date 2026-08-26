@@ -198,6 +198,10 @@ How many times sign-in, the API, approval links, exports, webhooks, or integrati
 
 An organization setting that sends people to **Settings → Security** until they confirm an authenticator or add a passkey. Off until an enrolled administrator turns it on.
 
+## [Approval-link second factor](/help/organization-settings)
+
+An optional approval setting that keeps the signed, expiring link but requires its named approver to sign in and verify an authenticator, recovery code, or passkey in the current browser session.
+
 ## [Turnstile check](/help/security-and-privacy)
 
 An optional challenge on sign-in, registration, and password reset that stops automated guessing. Off until an administrator saves a site key and secret and turns it on.

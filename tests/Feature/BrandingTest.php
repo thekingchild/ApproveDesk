@@ -93,6 +93,49 @@ class BrandingTest extends TestCase
         $this->assertStringNotContainsString('<script>alert(1)</script>', $response->getContent());
     }
 
+    public function test_login_has_no_custom_code_by_default(): void
+    {
+        $this->get('/login')
+            ->assertOk()
+            ->assertDontSee('approvedesk-custom-code', false);
+    }
+
+    public function test_custom_code_is_injected_on_login_and_in_the_app(): void
+    {
+        Setting::put('brand.custom_code', '<script src="https://www.example-analytics.test/tracker.js"></script>');
+
+        $this->get('/login')
+            ->assertOk()
+            ->assertSee('approvedesk-custom-code', false)
+            ->assertSee('https://www.example-analytics.test/tracker.js', false);
+
+        $admin = User::factory()->create()->assignRole('admin');
+
+        $this->actingAs($admin)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('https://www.example-analytics.test/tracker.js', false);
+    }
+
+    public function test_plain_javascript_custom_code_is_wrapped_in_a_script_tag(): void
+    {
+        Setting::put('brand.custom_code', 'window.APPROVEDESK_MARK = 1;');
+
+        $html = $this->get('/login')->assertOk()->getContent();
+
+        $this->assertStringContainsString('<script>window.APPROVEDESK_MARK = 1;</script>', $html);
+    }
+
+    public function test_javascript_protocol_sources_are_stripped_from_custom_code(): void
+    {
+        Setting::put('brand.custom_code', '<script src="javascript:alert(1)"></script><script src="https://plausible.test/js/script.js"></script>');
+
+        $html = $this->get('/login')->assertOk()->getContent();
+
+        $this->assertStringNotContainsString('javascript:alert(1)', $html);
+        $this->assertStringContainsString('https://plausible.test/js/script.js', $html);
+    }
+
     public function test_registration_can_be_closed(): void
     {
         Setting::put('auth.allow_registration', 'false');
@@ -142,6 +185,7 @@ class BrandingTest extends TestCase
             ->assertSee('JPG, PNG or WebP · max 2 MB · shown at every screen width', false)
             // Advanced CSS is tucked away, preview has login + browser tabs, save is prominent.
             ->assertSee('Advanced: custom CSS', false)
+            ->assertSee('Advanced: analytics and custom code', false)
             ->assertSee('Live preview', false)
             ->assertSee('preview-tab-browser', false)
             ->assertSee('data-test="save-branding"', false);
@@ -157,6 +201,7 @@ class BrandingTest extends TestCase
             ->set('accent_color', '#00aa55')
             ->set('overlay', 55)
             ->set('custom_css', '.brand-mark { border-radius: 0; }')
+            ->set('custom_code', '<script src="https://plausible.test/js/script.js" defer></script>')
             ->set('allow_registration', false)
             ->set('meta_title', 'Desk of Approvals')
             ->set('meta_description', 'Internal request desk.')
@@ -166,6 +211,8 @@ class BrandingTest extends TestCase
         $this->assertSame('Approve everything.', Setting::get('brand.tagline'));
         $this->assertSame('#00aa55', Setting::get('brand.accent_color'));
         $this->assertSame('55', Setting::get('brand.login_background_overlay'));
+        $this->assertSame('.brand-mark { border-radius: 0; }', Setting::get('brand.custom_css'));
+        $this->assertSame('<script src="https://plausible.test/js/script.js" defer></script>', Setting::get('brand.custom_code'));
         $this->assertSame('false', Setting::get('auth.allow_registration'));
         $this->assertSame('Desk of Approvals', Setting::get('brand.meta_title'));
         $this->assertSame('Internal request desk.', Setting::get('brand.meta_description'));

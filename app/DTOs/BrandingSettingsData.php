@@ -22,5 +22,6 @@ final readonly class BrandingSettingsData
         public bool $removeLogo = false,
         public ?UploadedFile $favicon = null,
         public bool $removeFavicon = false,
+        public ?string $customCode = null,
     ) {}
 }

@@ -23,6 +23,11 @@ final class EmailApprovalLinks
         ));
     }
 
+    public static function requiresSecondFactor(): bool
+    {
+        return Setting::get('approvals.email_require_second_factor', '0') === '1';
+    }
+
     public static function confirmationUrl(
         WorkflowInstance $instance,
         WorkflowTemplateStep $step,

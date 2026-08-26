@@ -1,9 +1,10 @@
 # ApproveDesk Roadmap
 
-This roadmap describes possible work after the **v2.5.4** single-company product. It is planning material only: none of these items is promised, scheduled, or implemented in this repository. Multi-tenant SaaS belongs in a separate product. Priorities should follow customer demand, security review, and shared-hosting compatibility.
+This roadmap describes possible work after the **v2.5.5** single-company product. It is planning material only: none of these items is promised, scheduled, or implemented in this repository. Multi-tenant SaaS belongs in a separate product. Priorities should follow customer demand, security review, and shared-hosting compatibility.
 
 ## Near-term candidates
 
+- **v2.5.5 approval-link assurance — In progress:** an optional administrator setting requires the named approver to sign in and prove an authenticator/recovery code or passkey in the current session before a valid signed approval URL can be used. This is self-hosted maintenance, not SaaS tenancy.
 - **Enterprise provisioning:** LDAP/Active Directory synchronization and SCIM 2.0 user/group provisioning, with dry-run reconciliation and auditable changes.
 - **Additional federation:** configurable SAML 2.0 identity providers and organization-level login policies.
 - **Digital signatures:** signer identity evidence, document hashes, signature certificates, and exportable verification records.

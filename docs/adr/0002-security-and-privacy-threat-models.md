@@ -50,6 +50,7 @@ tenant isolation is accepted until Phase 10.
 | Forged approval | Engine lock + current-step check; signed email/chat actions |
 | Audit rewrite | `workflow_actions` append-only |
 | Stale / tampered link | Existing signed-action tests |
+| Forwarded approval URL | Optional named-account login plus current-session second-factor assurance; link expiry remains |
 | Actor identity loss | Anonymize keeps `actor_id`; name becomes “Former user” |
 
 ### Exports

@@ -109,6 +109,7 @@ final class PublicWebsite
 
     public function inject(string $html, ?User $user, bool $registrationOpen): string
     {
+        $html = $this->injectCustomCode($html);
         $nav = $this->authNav($user, $registrationOpen);
 
         $replaced = preg_replace(
@@ -172,5 +173,28 @@ final class PublicWebsite
         }
 
         return '<nav data-approvedesk-auth data-state="guest">'.$links.'</nav>';
+    }
+
+    private function injectCustomCode(string $html): string
+    {
+        $code = Branding::customCodeHtml();
+
+        if ($code === null) {
+            return $html;
+        }
+
+        $snippet = "<!-- approvedesk-custom-code -->\n".$code."\n";
+
+        if (stripos($html, '</head>') !== false) {
+            return (string) preg_replace('/<\/head>/i', $snippet.'</head>', $html, 1);
+        }
+
+        if (preg_match('/<body[^>]*>/i', $html, $match, PREG_OFFSET_CAPTURE) === 1) {
+            $offset = (int) $match[0][1];
+
+            return substr($html, 0, $offset).$snippet.substr($html, $offset);
+        }
+
+        return $snippet.$html;
     }
 }
