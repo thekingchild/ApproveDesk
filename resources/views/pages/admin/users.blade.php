@@ -7,6 +7,7 @@ use App\Actions\Settings\UpdateActiveUserLimitAction;
 use App\Concerns\PasswordValidationRules;
 use App\DTOs\UserData;
 use App\Models\Department;
+use App\Models\Role;
 use App\Models\User;
 use App\Services\Users\ActiveUserLimitService;
 use App\Services\Users\GrantableRoleService;
@@ -20,7 +21,6 @@ use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithPagination;
-use Spatie\Permission\Models\Role;
 
 new #[Title('User management')] class extends Component {
     use PasswordValidationRules;
@@ -68,7 +68,7 @@ new #[Title('User management')] class extends Component {
     {
         return User::query()
             ->visibleTo(Auth::user())
-            ->with(['department', 'roles'])
+            ->with(['department', 'roles.profile'])
             ->when($this->search !== '', function (Builder $query): void {
                 $query->where(function (Builder $search): void {
                     $search->where('name', 'like', '%'.$this->search.'%')
@@ -120,6 +120,7 @@ new #[Title('User management')] class extends Component {
     {
         return Role::query()
             ->whereIn('name', app(GrantableRoleService::class)->for(Auth::user()))
+            ->with('profile')
             ->orderBy('name')
             ->get();
     }
@@ -288,12 +289,16 @@ new #[Title('User management')] class extends Component {
         </div>
 
         <div class="flex items-center gap-2">
-            <flux:button icon="arrow-down-tray" :href="route('admin.users.import')" data-test="import-users">
-                {{ __('Import users') }}
-            </flux:button>
-            <flux:button variant="primary" icon="user-plus" wire:click="createUser" data-test="create-user">
-                {{ __('Add user') }}
-            </flux:button>
+            @can('users.import')
+                <flux:button icon="arrow-down-tray" :href="route('admin.users.import')" data-test="import-users">
+                    {{ __('Import users') }}
+                </flux:button>
+            @endcan
+            @can('create', User::class)
+                <flux:button variant="primary" icon="user-plus" wire:click="createUser" data-test="create-user">
+                    {{ __('Add user') }}
+                </flux:button>
+            @endcan
         </div>
     </div>
 
@@ -352,7 +357,7 @@ new #[Title('User management')] class extends Component {
                     <flux:table.cell>
                         <div class="flex flex-wrap gap-1">
                             @foreach ($user->roles as $role)
-                                <flux:badge color="zinc">{{ $role->name }}</flux:badge>
+                                <flux:badge color="zinc">{{ $role->profile?->label ?? str($role->name)->replace('-', ' ')->title() }}</flux:badge>
                             @endforeach
                         </div>
                     </flux:table.cell>
@@ -416,7 +421,7 @@ new #[Title('User management')] class extends Component {
                 <div class="sm:col-span-2">
                     <flux:checkbox.group wire:model="roles" :label="__('Roles')" class="grid gap-2 sm:grid-cols-2">
                         @foreach ($this->availableRoles as $role)
-                            <flux:checkbox :value="$role->name" :label="str($role->name)->replace('-', ' ')->title()" />
+                            <flux:checkbox :value="$role->name" :label="$role->profile?->label ?? str($role->name)->replace('-', ' ')->title()" />
                         @endforeach
                     </flux:checkbox.group>
                     <flux:error name="roles" />

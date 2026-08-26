@@ -29,7 +29,7 @@ new #[Title('Security and privacy')] class extends Component {
 
     public function mount(): void
     {
-        $this->authorize('settings.manage');
+        $this->authorize('security_settings.manage');
         $this->watermarkDownloads = SecuritySettings::watermarkDownloads();
         $this->twoFactorRequired = SecuritySettings::twoFactorRequired();
         $profiles = RateLimitProfiles::all();
@@ -43,7 +43,7 @@ new #[Title('Security and privacy')] class extends Component {
 
     public function save(UpdateSecuritySettingsAction $action): void
     {
-        $this->authorize('settings.manage');
+        $this->authorize('security_settings.manage');
 
         $validated = $this->validate([
             'watermarkDownloads' => ['boolean'],

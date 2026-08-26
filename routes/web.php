@@ -101,25 +101,45 @@ Route::prefix('install')->name('install.')->group(function (): void {
 
 Route::middleware(['auth', 'verified', 'can:settings.manage'])->group(function (): void {
     Route::livewire('admin/records', 'pages::admin.records')->name('admin.records.index');
+});
+
+Route::middleware(['auth', 'verified', 'can:operations.view'])->group(function (): void {
     Route::livewire('admin/operations', 'pages::admin.operations')->name('admin.operations.index');
+});
+
+Route::middleware(['auth', 'verified', 'can:backups.view'])->group(function (): void {
     Route::livewire('admin/backups', 'pages::admin.backups')->name('admin.backups.index');
-    Route::get('admin/backups/{snapshot}/download', DownloadBackupSnapshotController::class)
-        ->middleware('signed')
-        ->name('admin.backups.download');
-    Route::post('admin/backups/destinations', [BackupDestinationController::class, 'store'])
-        ->name('admin.backups.destinations.store');
-    Route::post('admin/backups/destinations/{destination}', [BackupDestinationController::class, 'update'])
-        ->name('admin.backups.destinations.update');
-    Route::post('admin/backups/destinations/{destination}/test', [BackupDestinationController::class, 'test'])
-        ->name('admin.backups.destinations.test');
+});
+Route::get('admin/backups/{snapshot}/download', DownloadBackupSnapshotController::class)
+    ->middleware(['auth', 'verified', 'signed', 'can:backups.download'])
+    ->name('admin.backups.download');
+Route::post('admin/backups/destinations', [BackupDestinationController::class, 'store'])
+    ->middleware(['auth', 'verified', 'can:backups.destinations.manage'])
+    ->name('admin.backups.destinations.store');
+Route::post('admin/backups/destinations/{destination}', [BackupDestinationController::class, 'update'])
+    ->middleware(['auth', 'verified', 'can:backups.destinations.manage'])
+    ->name('admin.backups.destinations.update');
+Route::post('admin/backups/destinations/{destination}/test', [BackupDestinationController::class, 'test'])
+    ->middleware(['auth', 'verified', 'can:backups.destinations.manage'])
+    ->name('admin.backups.destinations.test');
+
+Route::middleware(['auth', 'verified', 'can:updates.view'])->group(function (): void {
     Route::livewire('admin/updates', 'pages::admin.updates')->name('admin.updates.index');
+});
+Route::middleware(['auth', 'verified', 'can:branding.manage'])->group(function (): void {
     Route::livewire('settings/branding', 'pages::settings.branding')->name('settings.branding');
+});
+Route::middleware(['auth', 'verified', 'can:approval_settings.manage'])->group(function (): void {
     Route::livewire('settings/approvals', 'pages::settings.approvals')->name('settings.approvals');
+});
+Route::middleware(['auth', 'verified', 'can:security_settings.manage'])->group(function (): void {
     Route::livewire('settings/security-privacy', 'pages::settings.security-privacy')->name('settings.security-privacy');
     Route::post('settings/security-privacy/turnstile', TurnstileCredentialController::class)
         ->name('settings.turnstile.credentials');
     Route::post('settings/security-privacy/turnstile/test', TestTurnstileController::class)
         ->name('settings.turnstile.test');
+});
+Route::middleware(['auth', 'verified', 'can:notification_channels.manage'])->group(function (): void {
     Route::livewire('settings/notification-channels', 'pages::settings.notification-channels')->name('settings.notification-channels');
     Route::post('settings/notification-channels/credentials', NotificationChannelCredentialController::class)
         ->name('settings.notification-channels.credentials');
@@ -142,6 +162,10 @@ Route::middleware(['auth', 'verified', 'can:viewAny,App\Models\User'])->group(fu
             'Content-Disposition' => 'attachment; filename="users-import-template.csv"',
         ]);
     })->name('admin.users.import.template');
+});
+
+Route::middleware(['auth', 'verified', 'can:viewAny,App\Models\Role'])->group(function (): void {
+    Route::livewire('admin/roles', 'pages::admin.roles')->name('admin.roles.index');
 });
 
 Route::middleware(['auth', 'verified', 'can:viewAny,App\Models\Department'])->group(function (): void {

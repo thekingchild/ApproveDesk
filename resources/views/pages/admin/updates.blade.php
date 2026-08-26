@@ -20,13 +20,13 @@ new #[Title('Updates')] class extends Component
 
     public function mount(): void
     {
-        $this->authorize('settings.manage');
+        $this->authorize('updates.view');
     }
 
     #[Computed]
     public function version(): string
     {
-        return (string) config('app.version', '2.5.1');
+        return (string) config('app.version', '2.7.0');
     }
 
     /**
@@ -54,7 +54,7 @@ new #[Title('Updates')] class extends Component
 
     public function checkUpdates(): void
     {
-        $this->authorize('settings.manage');
+        $this->authorize('updates.view');
         unset($this->pending, $this->preflight);
 
         $flagged = $this->preflight;
@@ -68,7 +68,7 @@ new #[Title('Updates')] class extends Component
 
     public function apply(ApplyDatabaseUpdatesAction $apply): void
     {
-        $this->authorize('settings.manage');
+        $this->authorize('updates.apply');
 
         try {
             $this->applyResult = $apply->execute(Auth::user(), $this->confirmation);

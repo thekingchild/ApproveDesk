@@ -4,6 +4,8 @@ namespace App\Services\Users;
 
 use App\Models\Department;
 use App\Models\User;
+use App\Services\Roles\RoleAssignmentService;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -25,6 +27,7 @@ final class UserImportService
 
     public function __construct(
         private readonly GrantableRoleService $roles,
+        private readonly RoleAssignmentService $assignments,
         private readonly ActiveUserLimitService $limits,
     ) {}
 
@@ -56,6 +59,8 @@ final class UserImportService
      */
     public function analyze(array $rows, User $actor): array
     {
+        Gate::forUser($actor)->authorize('users.import');
+
         $existingEmails = User::query()->pluck('email')->map(fn (string $email): string => mb_strtolower($email))->all();
         $departmentNames = Department::query()->pluck('name')->map(fn (string $name): string => mb_strtolower(trim($name)))->all();
         $pendingManagerEmails = [];
@@ -177,6 +182,8 @@ final class UserImportService
      */
     public function commit(array $analyzed, User $actor, string $duplicateMode = 'skip'): array
     {
+        Gate::forUser($actor)->authorize('users.import');
+
         $counts = ['created' => 0, 'skipped' => 0, 'updated' => 0];
         $departments = Department::query()->pluck('id', 'name')->mapWithKeys(fn ($id, $name): array => [mb_strtolower(trim($name)) => $id]);
 
@@ -228,7 +235,7 @@ final class UserImportService
                             ])->save();
 
                             if ($roles !== []) {
-                                $existing->syncRoles($roles);
+                                $this->assignments->sync($actor, $existing, $roles);
                             }
 
                             $counts['updated']++;
@@ -253,7 +260,8 @@ final class UserImportService
                     ]);
 
                     if ($roles !== []) {
-                        $user->syncRoles($roles);
+                        $this->roles->assertCanAssign($actor, $roles);
+                        $this->assignments->sync($actor, $user, $roles);
                     }
 
                     $counts['created']++;

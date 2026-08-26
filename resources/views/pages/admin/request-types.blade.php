@@ -276,6 +276,9 @@ new #[Title('Request types')] class extends Component {
 
     public function save(bool $publish = false): void
     {
+        if ($publish) {
+            $this->authorize('publish', RequestType::class);
+        }
         $this->authorize($this->editingTypeId ? 'update' : 'create', $this->editingTypeId ? RequestType::findOrFail($this->editingTypeId) : RequestType::class);
         $this->ensureFieldKeys();
         $this->validate([

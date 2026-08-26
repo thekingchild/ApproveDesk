@@ -25,7 +25,7 @@ new #[Title('Import users')] class extends Component {
 
     public function mount(): void
     {
-        $this->authorize('create', User::class);
+        $this->authorize('users.import');
     }
 
     public function updatedFile(): void
@@ -40,7 +40,7 @@ new #[Title('Import users')] class extends Component {
      */
     public function analyze(): void
     {
-        $this->authorize('create', User::class);
+        $this->authorize('users.import');
         $this->validate(['file' => ['required', 'file', 'mimes:csv,txt,xlsx,xls', 'max:10240']]);
 
         try {
@@ -68,7 +68,7 @@ new #[Title('Import users')] class extends Component {
      */
     public function commit(): void
     {
-        $this->authorize('create', User::class);
+        $this->authorize('users.import');
 
         if (! $this->analyzed || $this->preview === []) {
             $this->addError('file', __('Analyze the file first.'));

@@ -30,7 +30,7 @@ new #[Title('Approval settings')] class extends Component {
 
     public function mount(): void
     {
-        $this->authorize('settings.manage');
+        $this->authorize('approval_settings.manage');
         $this->emailLinkExpirationHours = EmailApprovalLinks::expirationHours();
         $this->emailApprovalSecondFactorRequired = EmailApprovalLinks::requiresSecondFactor();
         $calendar = app(BusinessCalendar::class);
@@ -50,7 +50,7 @@ new #[Title('Approval settings')] class extends Component {
         UpdateEmailApprovalSecurityAction $updateEmailSecurity,
     ): void
     {
-        $this->authorize('settings.manage');
+        $this->authorize('approval_settings.manage');
         $this->workingHoursStart = $this->normalizePostedTime($this->workingHoursStart);
         $this->workingHoursEnd = $this->normalizePostedTime($this->workingHoursEnd);
         $this->quietHoursStart = $this->normalizePostedTime($this->quietHoursStart);

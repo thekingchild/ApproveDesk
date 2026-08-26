@@ -251,7 +251,7 @@ final class HelpCatalogue
         }
 
         try {
-            foreach (['users.manage', 'departments.manage', 'templates.manage', 'settings.manage', 'reports.view', 'webhooks.manage', 'integrations.manage', 'audit.view'] as $permission) {
+            foreach (['users.manage', 'users.view', 'roles.view', 'departments.manage', 'templates.manage', 'settings.manage', 'reports.view', 'webhooks.manage', 'integrations.manage', 'audit.view', 'backups.view', 'operations.view'] as $permission) {
                 if ($user->can($permission)) {
                     return true;
                 }

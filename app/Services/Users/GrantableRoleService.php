@@ -2,31 +2,48 @@
 
 namespace App\Services\Users;
 
+use App\Models\Role;
 use App\Models\User;
+use App\Services\Roles\RolePermissionService;
 use Illuminate\Validation\ValidationException;
-use Spatie\Permission\Models\Role;
 
 final class GrantableRoleService
 {
+    public function __construct(private readonly RolePermissionService $permissions) {}
+
     /** @return list<string> */
     public function for(User $actor): array
     {
-        $query = Role::query()->where('name', '!=', 'super-admin');
+        $roles = Role::query()
+            ->where('name', '!=', 'super-admin')
+            ->whereHas('profile', fn ($query) => $query->where('is_archived', false))
+            ->with(['permissions', 'profile'])
+            ->orderBy('name')
+            ->get();
 
-        if (! $actor->isSystemOwner()) {
-            $query->where('name', '!=', 'admin');
-        }
+        return $roles->filter(function (Role $role) use ($actor): bool {
+            if ($role->name === 'admin') {
+                return $actor->isSystemOwner();
+            }
+            if ($actor->isSystemOwner()) {
+                return true;
+            }
+            if ($role->profile?->is_builtin) {
+                return $actor->can('users.manage') || $actor->can('users.update');
+            }
+            if (! $actor->can('roles.assign.custom')) {
+                return false;
+            }
 
-        return $query->orderBy('name')->pluck('name')->all();
+            return array_diff($role->permissions->pluck('name')->all(), $this->permissions->ceiling($actor)) === [];
+        })->pluck('name')->values()->all();
     }
 
     /** @param list<string> $roles */
     public function assertCanAssign(User $actor, array $roles): void
     {
         if (array_diff($roles, $this->for($actor)) !== []) {
-            throw ValidationException::withMessages([
-                'roles' => __('You cannot grant one or more of the selected roles.'),
-            ]);
+            throw ValidationException::withMessages(['roles' => __('You cannot grant one or more of the selected roles.')]);
         }
     }
 
@@ -34,11 +51,8 @@ final class GrantableRoleService
     public function assertCanSync(User $actor, User $target, array $roles): void
     {
         $this->assertCanAssign($actor, $roles);
-
         if (! $actor->isSystemOwner() && $target->hasRole('admin')) {
-            throw ValidationException::withMessages([
-                'roles' => __('Only the System owner may change the administrator role.'),
-            ]);
+            throw ValidationException::withMessages(['roles' => __('Only the System owner may change the administrator role.')]);
         }
     }
 }

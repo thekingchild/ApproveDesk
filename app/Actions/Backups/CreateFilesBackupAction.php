@@ -4,6 +4,7 @@ namespace App\Actions\Backups;
 
 use App\Enums\BackupSnapshotKind;
 use App\Models\BackupSnapshot;
+use App\Services\Backups\BackupExecutionGuard;
 use App\Services\Backups\BackupRecorder;
 use App\Support\BackupSettings;
 use Illuminate\Support\Facades\Storage;
@@ -12,9 +13,17 @@ use ZipArchive;
 
 final class CreateFilesBackupAction
 {
-    public function __construct(private readonly BackupRecorder $recorder) {}
+    public function __construct(
+        private readonly BackupRecorder $recorder,
+        private readonly BackupExecutionGuard $execution,
+    ) {}
 
     public function execute(): BackupSnapshot
+    {
+        return $this->execution->run(fn (): BackupSnapshot => $this->create());
+    }
+
+    private function create(): BackupSnapshot
     {
         $zipPath = storage_path('app/private/backups/.tmp-files-'.uniqid('', true).'.zip');
         @mkdir(dirname($zipPath), 0775, true);

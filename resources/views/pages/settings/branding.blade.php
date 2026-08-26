@@ -55,7 +55,7 @@ new #[Title('Branding settings')] class extends Component {
 
     public function mount(): void
     {
-        $this->authorize('settings.manage');
+        $this->authorize('branding.manage');
         $this->tagline = (string) Setting::get('brand.tagline', 'Approvals, clearly tracked.');
         $this->accent_color = (string) Setting::get('brand.accent_color', '#4f46e5');
         $this->overlay = (int) Setting::get('brand.login_background_overlay', '40');
@@ -103,7 +103,7 @@ new #[Title('Branding settings')] class extends Component {
 
     public function save(UpdateBrandingSettingsAction $updateBranding): void
     {
-        $this->authorize('settings.manage');
+        $this->authorize('branding.manage');
 
         $this->validate([
             'tagline' => ['required', 'string', 'max:120'],

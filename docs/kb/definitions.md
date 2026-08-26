@@ -278,3 +278,15 @@ Owner-only actions on a person that invalidate a password and email a reset link
 
 The optional maximum number of accounts that can sign in. Inactive accounts do not count. The System owner is included. Off (unlimited) until the System owner sets a number.
 
+## [Custom role](/help/users-and-roles)
+
+A feature-based set of permissions created from Administration → Roles & permissions. Built-in roles stay protected. Custom roles can be cloned, edited, archived, restored, and assigned within the manager’s permission ceiling.
+
+## [Role manager](/help/users-and-roles)
+
+A person explicitly trusted by the System owner to manage custom roles. They cannot grant permissions above their own access, appoint another role manager, grant Administrator, or obtain System-owner powers.
+
+## [Scheduler heartbeat](/help/operations)
+
+The once-per-minute sign that scheduled work is running. Fresh means the last heartbeat is no more than five minutes old. Backup now is manual and does not create this proof.
+

@@ -29,6 +29,19 @@ All notable changes to ApproveDesk are documented here. The project follows
 - Add a standalone push-subscription `user_id` index so MySQL can replace or roll back the device uniqueness index without error 1553.
 - Relaxed the business-calendar “completes quickly” bound so parallel PHPUnit is not flaky on a busy runner.
 
+## [2.7.0] - 2026-08-26
+
+### Added
+
+- Custom feature-oriented roles on **Administration → Roles & permissions**, with protected built-in roles, owner-delegated role managers, a strict permission ceiling, cloning, archive/restore, and append-only role-change history.
+- Pickable daily database and files backup times, with the application timezone, next-run times, and separate proof of the last scheduled backup.
+- Read-only `php artisan ops:scheduler-check`, exact scheduler heartbeat time on Operations, and a shared lock so database and files backups cannot overlap.
+
+### Changed
+
+- README, `.env.example` `APP_VERSION`, and this changelog treat **v2.7.0** as the current single-company release.
+- Backup, operations, updates, branding, and related settings screens use feature permissions. Existing Administrator access stays effective.
+
 ## [2.6.0] - 2026-08-26
 
 ### Added
