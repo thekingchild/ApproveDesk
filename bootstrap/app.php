@@ -4,6 +4,7 @@ use App\Http\Middleware\CorrelateRequests;
 use App\Http\Middleware\EnsureAppConfigured;
 use App\Http\Middleware\EnsureEmailApprovalSecondFactor;
 use App\Http\Middleware\EnsureSecondFactorWhenRequired;
+use App\Http\Middleware\EnsureSystemOwnerReauthenticated;
 use App\Http\Middleware\EnsureUserIsActive;
 use App\Http\Middleware\RedirectUnconfirmedRegistration;
 use App\Http\Middleware\SecurityHeaders;
@@ -32,6 +33,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
         $middleware->alias([
             'email-approval.second-factor' => EnsureEmailApprovalSecondFactor::class,
+            'owner.reauthenticated' => EnsureSystemOwnerReauthenticated::class,
         ]);
         $middleware->validateCsrfTokens(except: [
             'integrations/telegram/webhook',

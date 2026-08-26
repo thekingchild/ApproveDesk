@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\Setting;
+use App\Models\SiteLimit;
+use App\Models\SystemOwner;
 use App\Models\User;
 use App\Support\Installer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -106,6 +108,8 @@ class InstallerTest extends TestCase
         $this->post(route('install.migrate.run'))
             ->assertRedirect(route('install.admin'));
 
+        $this->get(route('install.admin'))->assertOk()->assertSee('System owner');
+
         $this->assertDatabaseHas('roles', ['name' => 'super-admin']);
         $this->assertSame('#4f46e5', Setting::get('brand.accent_color'));
 
@@ -120,6 +124,9 @@ class InstallerTest extends TestCase
         $admin = User::query()->where('email', 'admin@example.com')->first();
         $this->assertNotNull($admin);
         $this->assertTrue($admin->hasRole('super-admin'));
+        $this->assertTrue($admin->isSystemOwner());
+        $this->assertDatabaseHas('system_owners', ['id' => SystemOwner::SINGLETON_ID, 'user_id' => $admin->id]);
+        $this->assertDatabaseHas('site_limits', ['id' => SiteLimit::SINGLETON_ID, 'max_active_users' => null]);
         $this->assertNotNull($admin->email_verified_at);
 
         $this->assertFileExists($this->lockFile);

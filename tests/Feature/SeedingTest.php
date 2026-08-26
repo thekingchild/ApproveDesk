@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Setting;
+use App\Models\SystemOwner;
 use App\Models\User;
 use App\Models\WorkflowTemplate;
 use Database\Seeders\RolesAndPermissionsSeeder;
@@ -35,7 +36,13 @@ class SeedingTest extends TestCase
         $this->assertTrue($admin->can('templates.manage'));
 
         $superAdmin = User::factory()->create()->assignRole('super-admin');
-        $this->assertTrue($superAdmin->can('anything.at.all'), 'super-admin bypasses all gates');
+        $this->assertFalse($superAdmin->can('anything.at.all'), 'role-only super-admin does not bypass gates');
+
+        SystemOwner::query()->create([
+            'id' => SystemOwner::SINGLETON_ID,
+            'user_id' => $superAdmin->id,
+        ]);
+        $this->assertTrue($superAdmin->fresh()->can('anything.at.all'), 'system owner bypasses all gates');
     }
 
     public function test_settings_seeder_creates_defaults_without_overriding(): void

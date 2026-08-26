@@ -2,12 +2,13 @@
 
 Open **Administration → Users** to create accounts, change roles, attach a department, and deactivate people who should no longer sign in.
 
+The account created during first-time setup is the **System owner**. That person is hidden from other people on this screen and cannot be edited, deactivated, or anonymized. Only the System owner can grant the Administrator role or recover another person’s password or second factor.
+
 ## Roles
 
 | Role | What it is for |
 |---|---|
-| Super admin | Every ability. Use for a small set of owners. |
-| Admin | Users, departments, workflows, request types, branding, analytics, webhooks, and sensitive fields. |
+| Administrator | Users, departments, workflows, request types, branding, analytics, webhooks, and sensitive fields. Cannot grant another Administrator or recover passwords. |
 | Department head | Department work, plus create and view submissions. |
 | Approver | Act on assigned steps. |
 | Submitter | Create, edit own drafts, and withdraw own requests. |
@@ -16,7 +17,20 @@ Open **Administration → Users** to create accounts, change roles, attach a dep
 
 A person can hold more than one role. Mixed roles add up — they receive every ability those roles include.
 
-Only a super admin can assign the super-admin role. The last remaining super admin cannot be removed or deactivated. That prevents a lockout.
+Only the System owner can grant or remove the Administrator role.
+
+## Account recovery
+
+If someone loses their authenticator, passkeys, and recovery codes, the System owner opens that person and uses **Account recovery**.
+
+- **Invalidate password and email reset link** signs them out everywhere and sends a one-use reset email. The owner never sees their new password.
+- **Remove authenticator, recovery codes, and passkeys** signs them out everywhere and lets them sign in with their password to add a new second factor.
+
+These actions do not change roles, request history, or whether the account is active.
+
+## Active-user capacity
+
+The System owner can set a maximum number of **active** accounts on this same screen, or leave it unlimited. The System owner counts as one active user. Inactive accounts do not count. Existing people can still sign in when the limit is full; new active accounts are refused until someone is deactivated.
 
 ## Inactive accounts
 
@@ -48,6 +62,6 @@ Departments must already exist (the importer will not create them). A manager mu
 
 ## Anonymize an account
 
-When someone leaves and they have request or decision history, edit the user and choose **Anonymize account**. Their name becomes “Former user”, they cannot sign in, and the history stays on those requests. You cannot anonymize yourself or the last active super administrator.
+When someone leaves and they have request or decision history, edit the user and choose **Anonymize account**. Their name becomes “Former user”, they cannot sign in, and the history stays on those requests. You cannot anonymize yourself or the System owner.
 
 People download their own data from **Settings → Privacy**. See [Security and privacy](security-and-privacy.md).

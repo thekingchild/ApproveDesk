@@ -9,10 +9,13 @@ use App\Enums\WorkflowTemplateVersionStatus;
 use App\Models\User;
 use App\Models\WorkflowTemplate;
 use App\Models\WorkflowTemplateVersion;
+use App\Services\Workflow\WorkflowAssigneeGuard;
 use Illuminate\Support\Facades\DB;
 
 final class UpdateWorkflowTemplateAction
 {
+    public function __construct(private readonly WorkflowAssigneeGuard $assignees) {}
+
     public function execute(WorkflowTemplate $template, WorkflowTemplateData $data, User $editor): WorkflowTemplate
     {
         return DB::transaction(function () use ($template, $data, $editor): WorkflowTemplate {
@@ -41,6 +44,7 @@ final class UpdateWorkflowTemplateAction
             $baseline = $template->draftVersion ?? $template->publishedVersion;
 
             if ($baseline === null || $this->structureChanged($baseline, $data)) {
+                $this->assignees->assertAssignable($data->steps);
                 $draft = $this->editableDraft($template, $editor, $data->changeSummary);
                 $draft->forceFill(['outcomes' => $data->outcomes !== [] ? $data->outcomes : null])->save();
                 $draft->steps()->delete();

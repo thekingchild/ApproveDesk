@@ -15,6 +15,12 @@ final class AnonymizeUserAction
 
     public function execute(User $target, User $actor): User
     {
+        if ($target->isSystemOwner()) {
+            throw ValidationException::withMessages([
+                'user' => __('The System owner cannot be anonymized.'),
+            ]);
+        }
+
         if ($target->is($actor)) {
             throw ValidationException::withMessages([
                 'user' => __('You cannot anonymize your own account.'),

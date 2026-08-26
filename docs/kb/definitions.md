@@ -266,3 +266,15 @@ Putting a verified snapshot back onto this copy. Type the snapshot number to con
 
 The administrator screen for this copy’s version and for applying waiting database changes after a deploy. It is not the first-time setup wizard.
 
+## [System owner](/help/users-and-roles)
+
+The first account created during setup. That person can grant administrators, recover another account, and set the active-user limit. Other people do not see this account in user lists or new assignment pickers. Decisions they already recorded stay visible on those requests.
+
+## [Account recovery](/help/users-and-roles)
+
+Owner-only actions on a person that invalidate a password and email a reset link, or remove that person’s authenticator, recovery codes, and passkeys. Both sign the person out everywhere.
+
+## [Active-user limit](/help/users-and-roles)
+
+The optional maximum number of accounts that can sign in. Inactive accounts do not count. The System owner is included. Off (unlimited) until the System owner sets a number.
+

@@ -87,7 +87,7 @@ new #[Title('Notification channels')] class extends Component {
         ]);
         try {
             $save->execute(
-                User::query()->findOrFail($validated['mapping_user_id']),
+                User::query()->assignable()->findOrFail($validated['mapping_user_id']),
                 NotificationChannelKey::from($validated['mapping_channel']),
                 $validated['mapping_external_id'] === '' ? null : $validated['mapping_external_id'],
             );
@@ -103,7 +103,7 @@ new #[Title('Notification channels')] class extends Component {
     public function unlink(int $userId, string $channel, SaveUserChannelIdentityAction $save): void
     {
         $this->authorize('settings.manage');
-        $save->execute(User::query()->findOrFail($userId), NotificationChannelKey::from($channel), null);
+        $save->execute(User::query()->assignable()->findOrFail($userId), NotificationChannelKey::from($channel), null);
         Flux::toast('Mapping removed.', variant: 'success');
     }
 
@@ -180,6 +180,7 @@ new #[Title('Notification channels')] class extends Component {
         'delivery' => __('Delivery'),
     ];
     $people = \App\Models\User::query()
+        ->assignable()
         ->when($peopleSearch !== '', fn ($query) => $query->where('name', 'like', '%'.$peopleSearch.'%')->orWhere('email', 'like', '%'.$peopleSearch.'%'))
         ->orderBy('name')
         ->limit(50)

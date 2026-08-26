@@ -31,7 +31,7 @@ final class SaveOutOfOfficeAction
 
         $fallback = null;
         if ($fallbackUserId !== null) {
-            $fallback = User::query()->whereKey($fallbackUserId)->where('is_active', true)->first();
+            $fallback = User::query()->assignable()->whereKey($fallbackUserId)->where('is_active', true)->first();
             if ($fallback === null || $fallback->is($user)) {
                 throw CollaborationException::outOfOfficeConflict('choose a different active fallback approver');
             }

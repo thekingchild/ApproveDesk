@@ -83,7 +83,7 @@ new #[Title('Records')] class extends Component
     #[Computed]
     public function auditors(): \Illuminate\Database\Eloquent\Collection
     {
-        return User::query()->role('auditor')->orderBy('name')->get(['id', 'name', 'email']);
+        return User::query()->assignable()->role('auditor')->orderBy('name')->get(['id', 'name', 'email']);
     }
 
     public function grantAccess(GrantAuditorAccessAction $grant): void
@@ -99,7 +99,7 @@ new #[Title('Records')] class extends Component
         try {
             $grant->execute(
                 Auth::user(),
-                User::query()->findOrFail($this->auditorUserId),
+                User::query()->assignable()->findOrFail($this->auditorUserId),
                 Carbon::parse($this->accessStartsAt),
                 Carbon::parse($this->accessEndsAt),
                 $this->accessReason,

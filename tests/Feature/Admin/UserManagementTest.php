@@ -3,6 +3,7 @@
 namespace Tests\Feature\Admin;
 
 use App\Models\Department;
+use App\Models\SystemOwner;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -129,16 +130,35 @@ class UserManagementTest extends TestCase
     public function test_final_super_admin_cannot_remove_their_own_access(): void
     {
         $superAdmin = User::factory()->create()->assignRole('super-admin');
+        SystemOwner::query()->create([
+            'id' => SystemOwner::SINGLETON_ID,
+            'user_id' => $superAdmin->id,
+        ]);
 
         Livewire::actingAs($superAdmin)
             ->test('pages::admin.users')
             ->call('editUser', $superAdmin->id)
-            ->set('roles', ['admin'])
-            ->call('save')
-            ->assertHasErrors(['roles']);
+            ->assertForbidden();
 
         $this->assertTrue($superAdmin->fresh()->hasRole('super-admin'));
         $this->assertTrue($superAdmin->fresh()->is_active);
+    }
+
+    public function test_admin_cannot_change_an_existing_password_through_user_edit(): void
+    {
+        $admin = User::factory()->create()->assignRole('admin');
+        $user = User::factory()->create(['password' => 'original-password'])->assignRole('approver');
+
+        Livewire::actingAs($admin)
+            ->test('pages::admin.users')
+            ->call('editUser', $user->id)
+            ->set('password', 'forged-new-password')
+            ->set('password_confirmation', 'forged-new-password')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertTrue(Hash::check('original-password', $user->fresh()->password));
+        $this->assertFalse(Hash::check('forged-new-password', $user->fresh()->password));
     }
 
     public function test_inactive_user_cannot_log_in_or_keep_an_existing_session(): void

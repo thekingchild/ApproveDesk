@@ -19,6 +19,7 @@ use App\Listeners\NotifyDelegate;
 use App\Listeners\NotifySubmitterOfDecision;
 use App\Listeners\NotifyWatchersOfDecision;
 use App\Listeners\RecordLoginEvent;
+use App\Models\User;
 use App\Notifications\Channels\OptionalLaravelNotificationChannel;
 use App\Services\Integrations\ConnectorRegistry;
 use App\Services\Integrations\Connectors\GoogleDriveConnector;
@@ -37,6 +38,7 @@ use App\Services\Notifications\Channels\TelegramNotificationChannel;
 use App\Services\Notifications\Channels\WebPushNotificationChannel;
 use App\Services\Notifications\Channels\WhatsAppNotificationChannel;
 use App\Services\Notifications\NotificationDeliveryRecorder;
+use App\Services\Users\SystemOwnerService;
 use App\Services\Workflow\AssigneeResolver;
 use App\Support\CorrelationId;
 use App\Support\PermissionCache;
@@ -95,6 +97,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(ConnectorRegistry::class, function ($app): ConnectorRegistry {
             return new ConnectorRegistry($app->tagged('integration.connectors'));
         });
+
+        $this->app->singleton(SystemOwnerService::class);
     }
 
     /**
@@ -106,8 +110,17 @@ class AppServiceProvider extends ServiceProvider
 
         PermissionCache::forgetIfReady();
 
-        // super-admin holds every ability implicitly; no permission matrix entry.
-        Gate::before(fn ($user, string $ability) => $user->hasRole('super-admin') ? true : null);
+        // Only the singleton System owner holds every ability implicitly.
+        Gate::before(function (User $user, string $ability, array $arguments): ?bool {
+            $target = $arguments[0] ?? null;
+            if (in_array($ability, ['update', 'anonymize', 'recover'], true)
+                && $target instanceof User
+                && $target->isSystemOwner()) {
+                return false;
+            }
+
+            return $user->isSystemOwner() ? true : null;
+        });
 
         RateLimiter::for('api', fn (Request $request): Limit => RateLimitProfiles::limit(
             'api',

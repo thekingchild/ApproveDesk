@@ -153,7 +153,7 @@ Locked product decision for Phase 8.2. It does not reopen Phase 8.1. Design: [do
 | TS | v2.5.3 | Cloudflare Turnstile | Complete |
 | BK | v2.5.4 | In-app database and file backups | Complete |
 | E2FA | v2.5.5 | Optional second-factor assurance for signed approval URLs | Complete |
-| SH-OWN/REC/CAP | v2.6.0 | Self-hosted system owner, account recovery, and active-user capacity | In progress |
+| SH-OWN/REC/CAP | v2.6.0 | Self-hosted system owner, account recovery, and active-user capacity | Complete |
 | 10 | v3.0.0 | SaaS multi-tenancy foundation | Not started |
 | 11 | v3.1.0 | Paystack and Flutterwave subscriptions | Not started |
 | 12 | v3.2.0 | SaaS onboarding, entitlements, and commercial operations | Not started |
@@ -926,32 +926,32 @@ This is a self-hosted maintenance phase based on immutable tag `v2.5.4` and rele
 
 ---
 
-## Self-hosted supplement — System owner, account recovery, and active-user capacity — In progress
+## Self-hosted supplement — System owner, account recovery, and active-user capacity — Complete (2026-08-26)
 
 **Goal:** give the installer-created first account protected system-owner authority, let that owner delegate existing non-owner roles and safely recover other users, and enforce a configurable total active-user limit without changing workflow or audit history.
 
 The detailed execution contract is [SELF_HOSTED_SUPPLEMENTARY_IMPLEMENTATION_PLAN.md](SELF_HOSTED_SUPPLEMENTARY_IMPLEMENTATION_PLAN.md). This supplement targets the single-company self-hosted product and does not reopen or implement Phase 10–15. **ApproveDesk SaaS maintains its own roadmap in its own repository or a `saas`-named branch.**
 
-### SH-OWN — System-owner identity, protection, delegation, and bounded visibility — In progress
+### SH-OWN — System-owner identity, protection, delegation, and bounded visibility — Complete (2026-08-26)
 
-- **SH-OWN-01:** Persist one installer-created system owner and provide an explicit server-admin repair command.
-- **SH-OWN-02:** Reserve universal authority and the internal super-admin role for that owner; prevent delegated-admin privilege escalation.
-- **SH-OWN-03:** Hide the owner from ordinary management and new-assignment directories while preserving historical attribution and existing in-flight assignments.
+- **SH-OWN-01 — Complete (2026-08-26):** Persist one installer-created system owner and provide an explicit server-admin repair command.
+- **SH-OWN-02 — Complete (2026-08-26):** Reserve universal authority and the internal super-admin role for that owner; prevent delegated-admin privilege escalation.
+- **SH-OWN-03 — Complete (2026-08-26):** Hide the owner from ordinary management and new-assignment directories while preserving historical attribution and existing in-flight assignments.
 
-### SH-REC — Owner-only account recovery — In progress
+### SH-REC — Owner-only account recovery — Complete (2026-08-26)
 
-- **SH-REC-01:** Remove existing-user password changes from general user editing.
-- **SH-REC-02:** Add recently reauthenticated owner-only password reset and second-factor/passkey reset with session/token revocation, target notification, and immutable security records.
+- **SH-REC-01 — Complete (2026-08-26):** Remove existing-user password changes from general user editing.
+- **SH-REC-02 — Complete (2026-08-26):** Add recently reauthenticated owner-only password reset and second-factor/passkey reset with session/token revocation, target notification, and immutable security records.
 
-### SH-CAP — Active-user capacity — In progress
+### SH-CAP — Active-user capacity — Complete (2026-08-26)
 
-- **SH-CAP-01:** Add an unlimited-by-default, singleton active-user limit and exact usage meter.
-- **SH-CAP-02:** Enforce the limit transactionally across manual creation/reactivation, registration, first-time OAuth creation, and import.
-- **SH-CAP-03:** Add the owner-only capacity control and boundary/concurrency tests.
+- **SH-CAP-01 — Complete (2026-08-26):** Add an unlimited-by-default, singleton active-user limit and exact usage meter.
+- **SH-CAP-02 — Complete (2026-08-26):** Enforce the limit transactionally across manual creation/reactivation, registration, first-time OAuth creation, and import.
+- **SH-CAP-03 — Complete (2026-08-26):** Add the owner-only capacity control and boundary/concurrency tests.
 
-### SH-DOC — Help, operations, and release isolation — In progress
+### SH-DOC — Help, operations, and release isolation — Complete (2026-08-26)
 
-- **SH-DOC-01:** Update in-app Help, operator recovery documentation, changelog, release metadata, and quality evidence without changing the SaaS roadmap.
+- **SH-DOC-01 — Complete (2026-08-26):** Update in-app Help, operator recovery documentation, changelog, release metadata, and quality evidence without changing the SaaS roadmap.
 
 **Out of scope:** SaaS tenancy, organizations, platform administration, billing, entitlements, custom role design, automatic deactivation, storage/request-volume limits, and rewriting historical workflow actions.
 

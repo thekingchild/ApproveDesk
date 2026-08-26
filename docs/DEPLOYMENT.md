@@ -129,6 +129,7 @@ Do not enable multiple app replicas with the local file/session volume. A future
 - [ ] Backups scheduled (JetBackup / Plesk Backup Manager) **and a restore drill done**
 - [ ] **Administration → Backups** has a local database snapshot and a files snapshot after first use
 - [ ] Admin accounts have 2FA enabled
+- [ ] The installer-created System owner exists (`php artisan tinker` → `App\Models\SystemOwner::query()->first()`). If ownership is missing after an upgrade, run `php artisan owner:assign {email}` once. This command will not overwrite an existing owner.
 
 ## 8. Hardening the database user (audit integrity)
 

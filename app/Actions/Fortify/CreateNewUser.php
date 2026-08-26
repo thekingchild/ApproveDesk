@@ -6,6 +6,7 @@ use App\Actions\Security\VerifyTurnstileAction;
 use App\Concerns\PasswordValidationRules;
 use App\Concerns\ProfileValidationRules;
 use App\Models\User;
+use App\Services\Users\ActiveUserLimitService;
 use App\Support\Branding;
 use App\Support\RegistrationSettings;
 use Illuminate\Support\Facades\Validator;
@@ -44,16 +45,16 @@ class CreateNewUser implements CreatesNewUsers
             ]);
         }
 
-        $user = User::create([
-            'name' => $input['name'],
-            'email' => $input['email'],
-            'password' => $input['password'],
-            'is_active' => true,
-            // OTP mode (UO.2) leaves the address unverified; the confirmation
-            // screen gates sign-in. Immediate mode verifies at creation.
-            'email_verified_at' => RegistrationSettings::requiresOtp() ? null : now(),
-        ]);
-
-        return $user;
+        return app(ActiveUserLimitService::class)->runActivation(1, function () use ($input): User {
+            return User::create([
+                'name' => $input['name'],
+                'email' => $input['email'],
+                'password' => $input['password'],
+                'is_active' => true,
+                // OTP mode (UO.2) leaves the address unverified; the confirmation
+                // screen gates sign-in. Immediate mode verifies at creation.
+                'email_verified_at' => RegistrationSettings::requiresOtp() ? null : now(),
+            ]);
+        });
     }
 }

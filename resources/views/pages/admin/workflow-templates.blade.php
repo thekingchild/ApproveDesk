@@ -451,8 +451,8 @@ new #[Title('Workflow templates')] class extends Component {
     private function guardAssigneesExist(AssigneeType $type, array $ids, int $index): void
     {
         $count = match ($type) {
-            AssigneeType::User => User::query()->where('is_active', true)->whereKey($ids)->count(),
-            AssigneeType::Role => Role::query()->whereKey($ids)->count(),
+            AssigneeType::User => User::query()->assignable()->where('is_active', true)->whereKey($ids)->count(),
+            AssigneeType::Role => Role::query()->where('name', '!=', 'super-admin')->whereKey($ids)->count(),
             AssigneeType::Department => Department::query()->whereKey($ids)->count(),
             default => 0,
         };
@@ -477,12 +477,14 @@ new #[Title('Workflow templates')] class extends Component {
     private function resolvedAssigneeCount(AssigneeType $type, array $ids): int
     {
         return match ($type) {
-            AssigneeType::User => User::query()->where('is_active', true)->whereKey($ids)->count(),
+            AssigneeType::User => User::query()->assignable()->where('is_active', true)->whereKey($ids)->count(),
             AssigneeType::Role => User::query()
+                ->assignable()
                 ->where('is_active', true)
                 ->role(Role::query()->whereKey($ids)->pluck('name')->all())
                 ->count(),
             AssigneeType::Department => User::query()
+                ->assignable()
                 ->where('is_active', true)
                 ->whereIn('department_id', $ids)
                 ->count(),

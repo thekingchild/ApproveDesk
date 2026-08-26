@@ -5,6 +5,7 @@ namespace App\Actions\Auth;
 use App\DTOs\OAuthUserData;
 use App\Models\OAuthIdentity;
 use App\Models\User;
+use App\Services\Users\ActiveUserLimitService;
 use App\Support\Branding;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -37,15 +38,19 @@ final class ResolveOAuthUserAction
                     ]);
                 }
 
-                $user = User::create([
-                    'name' => $data->name,
-                    'email' => $data->email,
-                    'email_verified_at' => now(),
-                    'password' => Str::password(48),
-                    'avatar' => $data->avatar,
-                    'is_active' => true,
-                ]);
-                $user->syncRoles(['submitter']);
+                $user = app(ActiveUserLimitService::class)->runActivation(1, function () use ($data): User {
+                    $created = User::create([
+                        'name' => $data->name,
+                        'email' => $data->email,
+                        'email_verified_at' => now(),
+                        'password' => Str::password(48),
+                        'avatar' => $data->avatar,
+                        'is_active' => true,
+                    ]);
+                    $created->syncRoles(['submitter']);
+
+                    return $created;
+                });
             }
 
             $this->ensureActive($user);

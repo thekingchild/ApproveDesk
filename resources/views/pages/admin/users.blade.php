@@ -3,10 +3,13 @@
 use App\Actions\Users\CreateUserAction;
 use App\Actions\Users\UpdateUserAction;
 use App\Actions\Privacy\AnonymizeUserAction;
+use App\Actions\Settings\UpdateActiveUserLimitAction;
 use App\Concerns\PasswordValidationRules;
 use App\DTOs\UserData;
 use App\Models\Department;
 use App\Models\User;
+use App\Services\Users\ActiveUserLimitService;
+use App\Services\Users\GrantableRoleService;
 use App\Services\Workflow\AssigneeDirectory;
 use App\Support\E164Phone;
 use Flux\Flux;
@@ -48,15 +51,23 @@ new #[Title('User management')] class extends Component {
 
     public string $password_confirmation = '';
 
+    public bool $unlimitedUsers = true;
+
+    public string $maxActiveUsers = '';
+
     public function mount(): void
     {
         $this->authorize('viewAny', User::class);
+        $maximum = app(ActiveUserLimitService::class)->maximum();
+        $this->unlimitedUsers = $maximum === null;
+        $this->maxActiveUsers = $maximum === null ? '' : (string) $maximum;
     }
 
     #[Computed]
     public function users(): \Illuminate\Contracts\Pagination\LengthAwarePaginator
     {
         return User::query()
+            ->visibleTo(Auth::user())
             ->with(['department', 'roles'])
             ->when($this->search !== '', function (Builder $query): void {
                 $query->where(function (Builder $search): void {
@@ -108,7 +119,7 @@ new #[Title('User management')] class extends Component {
     public function availableRoles(): \Illuminate\Database\Eloquent\Collection
     {
         return Role::query()
-            ->when(! Auth::user()->hasRole('super-admin'), fn (Builder $query) => $query->where('name', '!=', 'super-admin'))
+            ->whereIn('name', app(GrantableRoleService::class)->for(Auth::user()))
             ->orderBy('name')
             ->get();
     }
@@ -154,11 +165,7 @@ new #[Title('User management')] class extends Component {
 
         $this->authorize($target ? 'update' : 'create', $target ?? User::class);
 
-        $passwordRules = $target
-            ? ['nullable', 'string', \Illuminate\Validation\Rules\Password::default(), 'confirmed']
-            : $this->passwordRules();
-
-        $validated = $this->validate([
+        $rules = [
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', Rule::unique(User::class)->ignore($target)],
             'phone' => ['nullable', 'string', 'max:20', Rule::unique(User::class, 'phone')->ignore($target)],
@@ -167,8 +174,19 @@ new #[Title('User management')] class extends Component {
             'roles' => ['required', 'array', 'min:1'],
             'roles.*' => ['required', 'string', Rule::exists(Role::class, 'name')],
             'isActive' => ['required', 'boolean'],
-            'password' => $passwordRules,
-        ]);
+        ];
+        if ($target === null) {
+            $rules['password'] = $this->passwordRules();
+        }
+
+        $validated = $this->validate($rules);
+
+        if (($validated['managerId'] ?? '') !== ''
+            && ! User::query()->assignable()->whereKey((int) $validated['managerId'])->exists()) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'managerId' => __('Choose an available line manager.'),
+            ]);
+        }
 
         $phone = E164Phone::normalize($validated['phone'] ?? null);
         if (($validated['phone'] ?? '') !== '' && $validated['phone'] !== null && ! E164Phone::isValid($phone)) {
@@ -184,7 +202,7 @@ new #[Title('User management')] class extends Component {
             departmentId: $validated['departmentId'] === '' ? null : (int) $validated['departmentId'],
             roles: $validated['roles'],
             isActive: $validated['isActive'],
-            password: $validated['password'] !== '' ? $validated['password'] : null,
+            password: $target === null ? $validated['password'] : null,
             managerId: ($validated['managerId'] ?? '') === '' ? null : (int) $validated['managerId'],
         );
 
@@ -224,6 +242,37 @@ new #[Title('User management')] class extends Component {
         ]);
         $this->isActive = true;
     }
+
+    #[Computed]
+    public function capacity(): array
+    {
+        $limits = app(ActiveUserLimitService::class);
+
+        return [
+            'active' => $limits->activeCount(),
+            'maximum' => $limits->maximum(),
+            'remaining' => $limits->remaining(),
+            'inactive' => User::query()->where('is_active', false)->count(),
+        ];
+    }
+
+    public function saveCapacity(): void
+    {
+        $this->authorize('updateActiveUserLimit', User::class);
+
+        $validated = $this->validate([
+            'unlimitedUsers' => ['boolean'],
+            'maxActiveUsers' => [$this->unlimitedUsers ? 'nullable' : 'required', 'integer', 'min:1'],
+        ]);
+
+        app(UpdateActiveUserLimitAction::class)->execute(
+            ! empty($validated['unlimitedUsers']) ? null : (int) $validated['maxActiveUsers'],
+            Auth::user(),
+        );
+
+        unset($this->capacity);
+        Flux::toast(__('Active-user capacity saved.'), variant: 'success');
+    }
 } ?>
 
 <div class="space-y-6">
@@ -247,6 +296,34 @@ new #[Title('User management')] class extends Component {
             </flux:button>
         </div>
     </div>
+
+    @if (session('recovery-status'))
+        <p class="text-sm text-emerald-700 dark:text-emerald-400" data-test="recovery-status">{{ session('recovery-status') }}</p>
+    @endif
+
+    @if (Auth::user()?->isSystemOwner())
+        <flux:card class="space-y-4" data-test="active-user-capacity">
+            <div>
+                <flux:heading size="sm">{{ __('Active-user capacity') }}</flux:heading>
+                <flux:text class="mt-1">
+                    {{ __('Active users: :active. Maximum: :maximum. Remaining: :remaining. Inactive accounts: :inactive. The System owner is included in the active count.', [
+                        'active' => $this->capacity['active'],
+                        'maximum' => $this->capacity['maximum'] ?? __('Unlimited'),
+                        'remaining' => $this->capacity['remaining'] ?? __('Unlimited'),
+                        'inactive' => $this->capacity['inactive'],
+                    ]) }}
+                </flux:text>
+            </div>
+            <form wire:submit="saveCapacity" class="grid gap-3 md:grid-cols-3">
+                <flux:checkbox wire:model.live="unlimitedUsers" :label="__('Leave unlimited')" />
+                <flux:input wire:model="maxActiveUsers" type="number" min="1" :label="__('Maximum active users')" :disabled="$unlimitedUsers" />
+                <div class="flex items-end">
+                    <flux:button type="submit" data-test="save-capacity">{{ __('Save capacity') }}</flux:button>
+                </div>
+            </form>
+            <flux:error name="maxActiveUsers" />
+        </flux:card>
+    @endif
 
     <div class="max-w-sm">
         <flux:input wire:model.live.debounce.300ms="search" icon="magnifying-glass" :placeholder="__('Search name or email…')" />
@@ -345,8 +422,10 @@ new #[Title('User management')] class extends Component {
                     <flux:error name="roles" />
                 </div>
 
-                <flux:input wire:model="password" type="password" :label="$editingUserId ? __('New password (optional)') : __('Password')" :required="! $editingUserId" viewable />
-                <flux:input wire:model="password_confirmation" type="password" :label="__('Confirm password')" :required="! $editingUserId" viewable />
+                @if (! $editingUserId)
+                    <flux:input wire:model="password" type="password" :label="__('Password')" required viewable />
+                    <flux:input wire:model="password_confirmation" type="password" :label="__('Confirm password')" required viewable />
+                @endif
 
                 <div class="sm:col-span-2">
                     <flux:checkbox wire:model="isActive" :label="__('Account is active')" />
@@ -364,5 +443,25 @@ new #[Title('User management')] class extends Component {
                 <flux:button type="submit" variant="primary" data-test="save-user">{{ __('Save user') }}</flux:button>
             </div>
         </form>
+        @if ($editingUserId && Auth::user()?->can('recover', User::query()->find($editingUserId)))
+            <div class="mt-6 space-y-3 border-t border-zinc-200 pt-4 dark:border-zinc-700" data-test="account-recovery">
+                <flux:heading size="sm">{{ __('Account recovery') }}</flux:heading>
+                <flux:text>{{ __('These actions sign the person out everywhere. They do not change roles or request history.') }}</flux:text>
+                <div class="flex flex-wrap gap-2">
+                    <form method="POST" action="{{ route('admin.users.recovery.password', $editingUserId) }}">
+                        @csrf
+                        <flux:button type="submit" variant="danger" data-test="recover-password" onclick="return confirm({{ json_encode(__('Invalidate this password and email a reset link?')) }})">
+                            {{ __('Invalidate password and email reset link') }}
+                        </flux:button>
+                    </form>
+                    <form method="POST" action="{{ route('admin.users.recovery.second-factor', $editingUserId) }}">
+                        @csrf
+                        <flux:button type="submit" variant="danger" data-test="recover-second-factor" onclick="return confirm({{ json_encode(__('Remove the authenticator, recovery codes, and passkeys?')) }})">
+                            {{ __('Remove authenticator, recovery codes, and passkeys') }}
+                        </flux:button>
+                    </form>
+                </div>
+            </div>
+        @endif
     </flux:modal>
 </div>

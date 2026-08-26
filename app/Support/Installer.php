@@ -3,8 +3,11 @@
 namespace App\Support;
 
 use App\Exceptions\InstallerException;
+use App\Models\SiteLimit;
+use App\Models\SystemOwner;
 use App\Models\User;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use PDO;
 use RuntimeException;
@@ -265,18 +268,25 @@ class Installer
      */
     public function createAdministrator(array $input): User
     {
-        $admin = User::create([
-            'name' => $input['name'],
-            'email' => $input['email'],
-            'password' => $input['password'],
-        ]);
+        return DB::transaction(function () use ($input): User {
+            $owner = User::create([
+                'name' => $input['name'],
+                'email' => $input['email'],
+                'password' => $input['password'],
+            ]);
 
-        // email_verified_at is intentionally not mass-assignable.
-        $admin->forceFill(['email_verified_at' => now()])->save();
+            // email_verified_at is intentionally not mass-assignable.
+            $owner->forceFill(['email_verified_at' => now()])->save();
+            $owner->assignRole('super-admin');
 
-        $admin->assignRole('super-admin');
+            SystemOwner::query()->create([
+                'id' => SystemOwner::SINGLETON_ID,
+                'user_id' => $owner->id,
+            ]);
+            SiteLimit::query()->firstOrCreate(['id' => SiteLimit::SINGLETON_ID], ['max_active_users' => null]);
 
-        return $admin;
+            return $owner;
+        });
     }
 
     /**

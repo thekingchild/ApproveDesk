@@ -9,12 +9,17 @@ use App\Enums\WorkflowTemplateVersionStatus;
 use App\Models\User;
 use App\Models\WorkflowTemplate;
 use App\Models\WorkflowTemplateVersion;
+use App\Services\Workflow\WorkflowAssigneeGuard;
 use Illuminate\Support\Facades\DB;
 
 final class CreateWorkflowTemplateAction
 {
+    public function __construct(private readonly WorkflowAssigneeGuard $assignees) {}
+
     public function execute(WorkflowTemplateData $data, User $creator): WorkflowTemplate
     {
+        $this->assignees->assertAssignable($data->steps);
+
         return DB::transaction(function () use ($data, $creator): WorkflowTemplate {
             if ($data->isDefault) {
                 WorkflowTemplate::query()->where('is_default', true)->update(['is_default' => false]);

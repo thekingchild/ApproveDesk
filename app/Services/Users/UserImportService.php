@@ -4,13 +4,11 @@ namespace App\Services\Users;
 
 use App\Models\Department;
 use App\Models\User;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use RuntimeException;
-use Spatie\Permission\Models\Role;
 
 /**
  * CSV/XLSX user import for large-organization onboarding (Phase UO.1).
@@ -24,6 +22,11 @@ final class UserImportService
     public const HEADER = ['name', 'email', 'department', 'manager_email', 'phone', 'roles'];
 
     private const CHUNK = 200;
+
+    public function __construct(
+        private readonly GrantableRoleService $roles,
+        private readonly ActiveUserLimitService $limits,
+    ) {}
 
     /**
      * Parse an uploaded file into normalized row arrays.
@@ -105,7 +108,7 @@ final class UserImportService
             }
 
             foreach ($roles as $role) {
-                if (! in_array($role, $this->grantableRoles($actor), true)) {
+                if (! in_array($role, $this->roles->for($actor), true)) {
                     $reports[] = [...$report, 'line' => $line, 'status' => 'error', 'message' => __('Role ":role" cannot be granted by you or does not exist.', ['role' => $role])];
 
                     continue 2;
@@ -133,10 +136,33 @@ final class UserImportService
             }
 
             if ($managerEmail !== '') {
+                $existingManager = User::query()->where('email', $managerEmail)->first();
+                if ($existingManager instanceof User && $existingManager->isSystemOwner()) {
+                    $reports[] = [...$report, 'line' => $line, 'status' => 'error', 'message' => __('That manager is not available for assignment.')];
+
+                    continue;
+                }
+
                 $pendingManagerEmails[] = $managerEmail;
             }
 
             $reports[] = [...$report, 'line' => $line, 'status' => 'ready', 'message' => ''];
+        }
+
+        $remaining = $this->limits->remaining();
+        if ($remaining !== null) {
+            $newReady = 0;
+            foreach ($reports as $index => $report) {
+                if (($report['status'] ?? '') !== 'ready') {
+                    continue;
+                }
+
+                $newReady++;
+                if ($newReady > $remaining) {
+                    $reports[$index]['status'] = 'error';
+                    $reports[$index]['message'] = __('The active-user limit has been reached.');
+                }
+            }
         }
 
         return $reports;
@@ -154,7 +180,15 @@ final class UserImportService
         $counts = ['created' => 0, 'skipped' => 0, 'updated' => 0];
         $departments = Department::query()->pluck('id', 'name')->mapWithKeys(fn ($id, $name): array => [mb_strtolower(trim($name)) => $id]);
 
-        DB::transaction(function () use ($analyzed, $duplicateMode, &$counts, $departments): void {
+        $this->limits->runActivation(0, function () use ($analyzed, $actor, $duplicateMode, &$counts, $departments): void {
+            $needed = collect($analyzed)
+                ->filter(fn (array $row): bool => ($row['status'] ?? '') === 'ready')
+                ->count();
+
+            if ($needed > 0) {
+                $this->limits->runActivation($needed, function (): void {});
+            }
+
             foreach (array_chunk($analyzed, self::CHUNK) as $chunk) {
                 foreach ($chunk as $row) {
                     $status = (string) ($row['status'] ?? '');
@@ -168,14 +202,24 @@ final class UserImportService
                         ? $departments->get(mb_strtolower(trim((string) $row['department'])))
                         : null;
                     $managerEmail = mb_strtolower(trim((string) ($row['manager_email'] ?? '')));
-                    $manager = $managerEmail === '' ? null : User::query()->where('email', $managerEmail)->first();
+                    $manager = $managerEmail === '' ? null : User::query()->assignable()->where('email', $managerEmail)->first();
                     $roles = collect(preg_split('/[;,]+/', (string) ($row['roles'] ?? '')) ?: [])
                         ->map(fn (string $role): string => trim($role))->filter()->values()->all();
 
                     $existing = User::query()->where('email', $email)->first();
 
                     if ($existing !== null) {
+                        if ($existing->isSystemOwner()) {
+                            $counts['skipped']++;
+
+                            continue;
+                        }
+
                         if ($duplicateMode === 'update') {
+                            if ($roles !== []) {
+                                $this->roles->assertCanSync($actor, $existing, $roles);
+                            }
+
                             $existing->forceFill([
                                 'name' => trim((string) $row['name']),
                                 'phone' => trim((string) ($row['phone'] ?? '')) ?: $existing->phone,
@@ -226,16 +270,6 @@ final class UserImportService
         ]);
 
         return $counts;
-    }
-
-    /** Roles the acting administrator may grant (mirrors manual creation guard). */
-    private function grantableRoles(User $actor): array
-    {
-        $all = Role::query()->where('name', '!=', 'super-admin')->pluck('name')->all();
-
-        return $actor->hasRole('super-admin')
-            ? [...$all, 'super-admin']
-            : $all;
     }
 
     /** @return list<array<string, string>> */

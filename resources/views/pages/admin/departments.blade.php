@@ -55,6 +55,7 @@ new #[Title('Department management')] class extends Component {
     public function managerOptions(): \Illuminate\Database\Eloquent\Collection
     {
         return User::query()
+            ->assignable()
             ->where('is_active', true)
             ->orderBy('name')
             ->get();
@@ -106,6 +107,13 @@ new #[Title('Department management')] class extends Component {
                 Rule::exists(User::class, 'id')->where('is_active', true),
             ],
         ]);
+
+        if (($validated['managerId'] ?? '') !== ''
+            && ! User::query()->assignable()->whereKey((int) $validated['managerId'])->exists()) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'managerId' => __('Choose an available department manager.'),
+            ]);
+        }
 
         $data = new DepartmentData(
             name: $validated['name'],

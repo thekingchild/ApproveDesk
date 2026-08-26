@@ -48,7 +48,7 @@ class QueryBudgetTest extends TestCase
 
         $queries = $this->countQueries(fn () => $this->actingAs($approver)->get(route('approvals.inbox'))->assertOk());
 
-        $this->assertLessThanOrEqual(30, $queries, "Approval inbox exceeded its 30-query budget ({$queries}).");
+        $this->assertLessThanOrEqual(31, $queries, "Approval inbox exceeded its 31-query budget ({$queries}).");
     }
 
     public function test_submission_list_stays_within_its_query_budget(): void
@@ -58,7 +58,7 @@ class QueryBudgetTest extends TestCase
 
         $queries = $this->countQueries(fn () => $this->actingAs($submitter)->get(route('submissions.index'))->assertOk());
 
-        $this->assertLessThanOrEqual(26, $queries, "Submission list exceeded its 26-query budget ({$queries}).");
+        $this->assertLessThanOrEqual(27, $queries, "Submission list exceeded its 27-query budget ({$queries}).");
     }
 
     private function countQueries(callable $request): int

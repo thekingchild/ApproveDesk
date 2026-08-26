@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Admin\ResetUserPasswordController;
+use App\Http\Controllers\Admin\ResetUserSecondFactorController;
 use App\Http\Controllers\AnalyticsExportController;
 use App\Http\Controllers\Auth\RegistrationConfirmationController;
 use App\Http\Controllers\BackupDestinationController;
@@ -125,6 +127,12 @@ Route::middleware(['auth', 'verified', 'can:settings.manage'])->group(function (
 
 Route::middleware(['auth', 'verified', 'can:viewAny,App\Models\User'])->group(function (): void {
     Route::livewire('admin/users', 'pages::admin.users')->name('admin.users.index');
+    Route::post('admin/users/{user}/recovery/password', ResetUserPasswordController::class)
+        ->middleware(['password.confirm', 'owner.reauthenticated'])
+        ->name('admin.users.recovery.password');
+    Route::post('admin/users/{user}/recovery/second-factor', ResetUserSecondFactorController::class)
+        ->middleware(['password.confirm', 'owner.reauthenticated'])
+        ->name('admin.users.recovery.second-factor');
     Route::livewire('admin/users/import', 'pages::admin.users-import')->name('admin.users.import');
     Route::get('admin/users/import/template', function () {
         $csv = "name,email,department,manager_email,phone,roles\nAmina Bello,amina@bluechipanalytical.com,Operations,ceo@bluechipanalytical.com,+2348012345678,submitter\n";

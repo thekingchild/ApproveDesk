@@ -55,7 +55,7 @@ new #[Title('Custom request')] class extends Component {
 
     #[Computed] public function users(): \Illuminate\Database\Eloquent\Collection
     {
-        return User::query()->where('is_active', true)->orderBy('name')->get(['id', 'name']);
+        return User::query()->assignable()->where('is_active', true)->orderBy('name')->get(['id', 'name']);
     }
 
     #[Computed] public function departments(): \Illuminate\Database\Eloquent\Collection

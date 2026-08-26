@@ -239,6 +239,7 @@ new #[Title('Submission')] class extends Component {
         $excluded = $step?->assignedUsers()->pluck('id')->all() ?? [];
 
         return User::query()
+            ->assignable()
             ->where('is_active', true)
             ->whereKeyNot(Auth::id())
             ->whereNotIn('id', $excluded)
@@ -265,11 +266,21 @@ new #[Title('Submission')] class extends Component {
             return;
         }
 
+        $delegate = User::query()
+            ->assignable()
+            ->where('is_active', true)
+            ->find((int) $validated['delegateUserId']);
+        if (! $delegate instanceof User) {
+            $this->addError('delegateUserId', __('Choose an available delegate.'));
+
+            return;
+        }
+
         try {
             app(WorkflowEngine::class)->delegate(
                 $this->submission->workflowInstance,
                 Auth::user(),
-                User::query()->findOrFail((int) $validated['delegateUserId']),
+                $delegate,
                 \Illuminate\Support\Carbon::parse($validated['delegationExpiresAt']),
                 $validated['delegationComment'] ?: null,
                 $startsAt,

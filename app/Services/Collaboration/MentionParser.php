@@ -26,6 +26,7 @@ final class MentionParser
         }
 
         return User::query()
+            ->assignable()
             ->where('is_active', true)
             ->whereIn('id', $ids)
             ->pluck('id')

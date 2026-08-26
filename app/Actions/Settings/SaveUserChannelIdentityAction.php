@@ -10,6 +10,10 @@ final class SaveUserChannelIdentityAction
 {
     public function execute(User $user, NotificationChannelKey $channel, ?string $externalId): void
     {
+        if ($user->isSystemOwner()) {
+            throw new InvalidArgumentException('The System owner cannot be mapped from user administration.');
+        }
+
         $column = match ($channel) {
             NotificationChannelKey::Teams => 'teams_user_id',
             NotificationChannelKey::Slack => 'slack_user_id',

@@ -1,6 +1,6 @@
 # ApproveDesk
 
-Approval Workflow Application — submit documents, notes, and memos; route them through configurable approval chains (single, sequential, parallel, quorum, conditional, auto-approve, delegation) with an immutable audit trail, notifications, and dashboards. **ApproveDesk v2.5.5** is the single-organization product: Laravel 13 (PHP 8.3+), Livewire 4, Alpine.js, Tailwind CSS, and Flux UI. It deploys to ordinary cPanel/Plesk shared hosting without Docker or Redis, and also ships a production container for EasyPanel, Coolify, Docker Compose, and compatible platforms.
+Approval Workflow Application — submit documents, notes, and memos; route them through configurable approval chains (single, sequential, parallel, quorum, conditional, auto-approve, delegation) with an immutable audit trail, notifications, and dashboards. **ApproveDesk v2.6.0** is the single-organization product: Laravel 13 (PHP 8.3+), Livewire 4, Alpine.js, Tailwind CSS, and Flux UI. It deploys to ordinary cPanel/Plesk shared hosting without Docker or Redis, and also ships a production container for EasyPanel, Coolify, Docker Compose, and compatible platforms.
 
 ## Documentation Index
 

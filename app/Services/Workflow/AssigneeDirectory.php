@@ -63,6 +63,7 @@ final class AssigneeDirectory
         $like = '%'.$this->escapeLike($term).'%';
 
         return User::query()
+            ->assignable()
             ->where('is_active', true)
             ->when($excludeIds !== [], fn ($query) => $query->whereNotIn('id', $excludeIds))
             ->where(function ($query) use ($like): void {
@@ -84,6 +85,7 @@ final class AssigneeDirectory
         $like = '%'.$this->escapeLike($term).'%';
 
         return Role::query()
+            ->where('name', '!=', 'super-admin')
             ->when($excludeIds !== [], fn ($query) => $query->whereNotIn('id', $excludeIds))
             ->where('name', 'like', $like)
             ->orderBy('name')

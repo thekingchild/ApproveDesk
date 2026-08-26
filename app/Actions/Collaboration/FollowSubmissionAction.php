@@ -20,6 +20,10 @@ final class FollowSubmissionAction
         array $preferences = [],
         bool $fromMention = false,
     ): SubmissionWatcher {
+        if ($target->isSystemOwner() && ! $actor->is($target)) {
+            throw CollaborationException::cannotWatch('that account is not available');
+        }
+
         if (! $target->is_active) {
             throw CollaborationException::cannotWatch('that account is inactive');
         }

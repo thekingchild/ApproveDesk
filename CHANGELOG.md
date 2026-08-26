@@ -8,14 +8,12 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Added
 
-- Planned self-hosted v2.6.0 controls for one protected system owner, owner-only account recovery, delegated administrative roles, and a configurable active-user limit. ApproveDesk SaaS remains separately roadmapped.
 - MySQL promote for verified in-app database snapshots. Host panel backups stay recommended.
 - GitHub Actions MySQL 8 test job alongside the existing SQLite job.
 - Schema test that every index and foreign-key name is 64 characters or fewer so MySQL/MariaDB can migrate.
 
 ### Changed
 
-- README, `.env.example` `APP_VERSION`, and this changelog treat **v2.5.4** as the current single-company release.
 - Permission cache is not flushed until the `cache` table exists, so `composer install` / `package:discover` no longer fail on an empty SQLite memory database.
 
 ### Fixed
@@ -30,6 +28,20 @@ All notable changes to ApproveDesk are documented here. The project follows
 - Add a standalone `template_version_id` index so rolling back workflow versions on MySQL does not refuse the unique drop (error 1553) and leave later tests without `users.phone`.
 - Add a standalone push-subscription `user_id` index so MySQL can replace or roll back the device uniqueness index without error 1553.
 - Relaxed the business-calendar “completes quickly” bound so parallel PHPUnit is not flaky on a busy runner.
+
+## [2.6.0] - 2026-08-26
+
+### Added
+
+- Protected System owner created by the installer. Other people cannot see, edit, deactivate, anonymize, or recover that account. Historical request attribution stays visible.
+- Owner-only account recovery: invalidate a password and email a reset link, or remove authenticator, recovery codes, and passkeys. Both sign the person out everywhere.
+- Optional active-user limit on Administration → Users. Unlimited until the System owner sets a number. Inactive accounts do not count.
+- Server-admin `owner:assign {email}` command to fill a missing owner after upgrade. It will not overwrite an existing owner.
+
+### Changed
+
+- Delegated administrators can no longer grant the Administrator role or set another person’s password from user edit.
+- README, `.env.example` `APP_VERSION`, and this changelog treat **v2.6.0** as the current single-company release.
 
 ## [2.5.5] - 2026-08-26
 

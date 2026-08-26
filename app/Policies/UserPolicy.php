@@ -22,11 +22,27 @@ class UserPolicy
             return false;
         }
 
-        return ! $target->hasRole('super-admin') || $user->hasRole('super-admin');
+        if ($target->isSystemOwner()) {
+            return false;
+        }
+
+        return true;
     }
 
     public function anonymize(User $user, User $target): bool
     {
         return $this->update($user, $target) && ! $user->is($target);
+    }
+
+    public function recover(User $user, User $target): bool
+    {
+        return $user->isSystemOwner()
+            && ! $target->isSystemOwner()
+            && ! $user->is($target);
+    }
+
+    public function updateActiveUserLimit(User $user): bool
+    {
+        return $user->isSystemOwner();
     }
 }

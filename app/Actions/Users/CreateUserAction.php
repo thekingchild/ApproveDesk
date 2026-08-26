@@ -4,16 +4,23 @@ namespace App\Actions\Users;
 
 use App\DTOs\UserData;
 use App\Models\User;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
+use App\Services\Users\ActiveUserLimitService;
+use App\Services\Users\GrantableRoleService;
+use Illuminate\Support\Facades\Gate;
 
 final class CreateUserAction
 {
+    public function __construct(
+        private readonly GrantableRoleService $roles,
+        private readonly ActiveUserLimitService $limits,
+    ) {}
+
     public function execute(UserData $data, User $actor): User
     {
-        $this->guardSuperAdminAssignment($data, $actor);
+        Gate::forUser($actor)->authorize('create', User::class);
+        $this->roles->assertCanAssign($actor, $data->roles);
 
-        return DB::transaction(function () use ($data): User {
+        return $this->limits->runActivation($data->isActive ? 1 : 0, function () use ($data): User {
             $user = User::create([
                 'name' => $data->name,
                 'email' => $data->email,
@@ -29,14 +36,5 @@ final class CreateUserAction
 
             return $user->load(['department', 'roles']);
         });
-    }
-
-    private function guardSuperAdminAssignment(UserData $data, User $actor): void
-    {
-        if (in_array('super-admin', $data->roles, true) && ! $actor->hasRole('super-admin')) {
-            throw ValidationException::withMessages([
-                'roles' => __('Only a super administrator may grant that role.'),
-            ]);
-        }
     }
 }

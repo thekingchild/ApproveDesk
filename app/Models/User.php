@@ -5,10 +5,12 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Actions\Privacy\AnonymizeUserAction;
 use App\Enums\NotificationFrequency;
+use App\Services\Users\SystemOwnerService;
 use Carbon\CarbonInterface;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -157,6 +159,29 @@ class User extends Authenticatable implements PasskeyUser
     {
         return str_ends_with($this->email, '@invalid.local')
             && str_starts_with($this->email, 'anonymized-');
+    }
+
+    public function isSystemOwner(): bool
+    {
+        $ownerId = app(SystemOwnerService::class)->ownerId();
+
+        return $this->exists && $ownerId !== null && (int) $this->getKey() === $ownerId;
+    }
+
+    /** @param Builder<User> $query */
+    public function scopeVisibleTo(Builder $query, User $viewer): Builder
+    {
+        if ($viewer->isSystemOwner()) {
+            return $query;
+        }
+
+        return $query->whereNotIn('id', SystemOwner::query()->select('user_id'));
+    }
+
+    /** @param Builder<User> $query */
+    public function scopeAssignable(Builder $query): Builder
+    {
+        return $query->whereNotIn('id', SystemOwner::query()->select('user_id'));
     }
 
     public function hasPreservedAuditEvidence(): bool

@@ -3,11 +3,10 @@
 @section('step', 4)
 
 @section('content')
-    <h1>Administrator account</h1>
+    <h1>System owner account</h1>
     <p class="lead">
-        This user receives the <strong>super-admin</strong> role — full access to
-        everything, including the admin settings where branding and users are managed.
-        Use a strong, unique password.
+        This protected System owner receives full access, including the settings where
+        branding and users are managed. Use a strong, unique password.
     </p>
 
     <form method="POST" action="{{ route('install.admin.store') }}">
