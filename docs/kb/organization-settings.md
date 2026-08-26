@@ -46,7 +46,7 @@ Set working days, optional office hours, and holiday dates (YYYY-MM-DD). A life-
 
 Workflow steps that use **Business hours** count time only on working days that are not holidays, and only inside the office-hour window when one is set. Leave both time fields empty to count every hour of a working day. That empty state is the 24-hour working day — do not enter 00:00–23:59 to mean “all day”; that window is 23 hours and 59 minutes.
 
-Times are in the application timezone (UTC). Changing working days, office hours, or holidays immediately changes in-flight **Business hours** deadlines, overdue badges, and automatic SLA actions. Steps that use **Elapsed hours** still count every hour on the clock and ignore this calendar. Approval link lifetime is a separate elapsed clock. Estimated due time on a request uses the same calendars.
+Times are in the installation timezone — the same name shown on Approval settings and Backups. Until that is changed, it is UTC. Changing working days, office hours, or holidays immediately changes in-flight **Business hours** deadlines, overdue badges, and automatic SLA actions. Steps that use **Elapsed hours** still count every hour on the clock and ignore this calendar. Approval link lifetime is a separate elapsed clock. Estimated due time on a request uses the same calendars.
 
 ## Reminder quiet hours
 

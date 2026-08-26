@@ -8,6 +8,7 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Added
 
+- Application timezone is read from `APP_TIMEZONE` (IANA name, default UTC) instead of a hardcoded UTC value.
 - MySQL promote for verified in-app database snapshots. Host panel backups stay recommended.
 - GitHub Actions MySQL 8 test job alongside the existing SQLite job.
 - Schema test that every index and foreign-key name is 64 characters or fewer so MySQL/MariaDB can migrate.

@@ -216,6 +216,11 @@ class Installer
             'DB_CONNECTION' => $input['connection'],
         ];
 
+        $timezone = trim((string) $this->readEnvValue('APP_TIMEZONE'));
+        if ($timezone === '') {
+            $values['APP_TIMEZONE'] = 'UTC';
+        }
+
         if ($input['connection'] === 'sqlite') {
             $values['DB_DATABASE'] = database_path((string) $input['path']);
         } else {

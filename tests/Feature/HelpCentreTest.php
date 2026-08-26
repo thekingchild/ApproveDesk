@@ -202,7 +202,11 @@ class HelpCentreTest extends TestCase
             ->assertSee('Favicon')
             ->assertSee('Meta description')
             ->assertSee('Notification channels')
-            ->assertSee('Security & privacy');
+            ->assertSee('Security & privacy')
+            ->assertSee('installation timezone')
+            ->assertDontSee('application timezone (UTC)')
+            ->assertDontSee('APP_TIMEZONE')
+            ->assertDontSee('.env');
     }
 
     public function test_notification_channels_article_explains_optional_delivery(): void
@@ -274,7 +278,8 @@ class HelpCentreTest extends TestCase
             ->assertSee('Save Drive destination')
             ->assertSee('Refresh token')
             ->assertSee('https://console.cloud.google.com/', false)
-            ->assertSee('https://developers.google.com/oauthplayground', false);
+            ->assertSee('https://developers.google.com/oauthplayground', false)
+            ->assertSee('installation timezone');
     }
 
     public function test_updates_article_explains_apply_and_backup_reminder(): void
@@ -327,7 +332,7 @@ class HelpCentreTest extends TestCase
                 $article->slug.' still links to a raw .md file',
             );
 
-            foreach (['Livewire', 'docs/kb', 'IMPLEMENTATION_PLAN', 'schema hash', 'long-polling', 'Phase 6A', 'leave_reason'] as $leak) {
+            foreach (['Livewire', 'docs/kb', 'IMPLEMENTATION_PLAN', 'schema hash', 'long-polling', 'Phase 6A', 'leave_reason', 'APP_TIMEZONE', '.env'] as $leak) {
                 $this->assertStringNotContainsStringIgnoringCase(
                     $leak,
                     $html,

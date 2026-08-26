@@ -38,6 +38,8 @@ php artisan serve                 # http://127.0.0.1:8000 (separate terminal)
 
 The seeder creates an admin user for local use only — credentials are printed by the seeder and rotate freely (never reused in staging/production; those environments create their first user via the `/install` wizard).
 
+Office hours, backup clocks, snapshot names, and scheduler display use `APP_TIMEZONE` (IANA name). Default is `UTC`. Set `APP_TIMEZONE=Africa/Lagos` in `.env` to use West Africa Time. Use `setTime` for calendar clocks, never `addHours(24)`, so a DST-missing midnight does not skip a day.
+
 ## Daily Commands
 
 ```bash

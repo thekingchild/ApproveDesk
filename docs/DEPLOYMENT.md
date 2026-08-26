@@ -28,6 +28,8 @@ Security notes for operators:
 - The installer middleware also honors `APP_INSTALLED=true` for environments where the lock file can't be written.
 - Re-running setup requires deliberately deleting the lock file (documented recovery path for broken installs only).
 
+Office hours, backup clocks, snapshot names, and scheduler display use `APP_TIMEZONE` (IANA name, default `UTC`). Example: `APP_TIMEZONE=Africa/Lagos`. The installer writes `UTC` when the key is missing and does not overwrite an existing value. Changing to a DST zone must keep calendar math on `setTime`, never `addHours(24)`.
+
 ## 3. cPanel Bring-Up (once per server)
 
 **Database:** cPanel → MySQL Databases → create DB + user, grant privileges. Restrict later per §6.

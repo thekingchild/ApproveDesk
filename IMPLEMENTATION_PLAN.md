@@ -156,7 +156,7 @@ Locked product decision for Phase 8.2. It does not reopen Phase 8.1. Design: [do
 | SH-OWN/REC/CAP | v2.6.0 | Self-hosted system owner, account recovery, and active-user capacity | Complete |
 | SH-RBAC/BTIME/CRON | v2.7.0 | Custom roles, backup time pickers, and scheduler diagnostics | Complete |
 | SH-BK271 | v2.7.1 | Backup date-time names, restore history, SQLite promote | Complete |
-| SH-SEC272 | v2.7.2 | Security hardening: OAuth domain gate, owner-only custom code, backup digests, outbound URL checks, APP_TIMEZONE | Not started |
+| SH-SEC272 | v2.7.2 | Security hardening: OAuth domain gate, owner-only custom code, backup digests, outbound URL checks, APP_TIMEZONE | In progress |
 | 10 | v3.0.0 | SaaS multi-tenancy foundation | Not started |
 | 11 | v3.1.0 | Paystack and Flutterwave subscriptions | Not started |
 | 12 | v3.2.0 | SaaS onboarding, entitlements, and commercial operations | Not started |
@@ -1001,7 +1001,7 @@ This supplement is self-hosted v2.7.1 work. It does not implement or change Appr
 
 ---
 
-## Self-hosted supplement — Security hardening and application timezone
+## Self-hosted supplement — Security hardening and application timezone — In progress
 
 **Goal:** close the v2.7.1 static security findings that are in product scope, and stop hardcoding the application timezone so operators set `APP_TIMEZONE` in `.env`. Target release is **v2.7.2** after every sub-phase below lands. Do not bump `APP_VERSION` / README / `.env.example` until the CI release push.
 
@@ -1021,15 +1021,15 @@ This supplement is self-hosted v2.7.2 work on `feature/sh-sec272-security-harden
 - Implement in this order: timezone, OAuth, branding custom code, backup integrity, outbound URLs, then docs/exit.
 - Default remains UTC when `APP_TIMEZONE` is absent, so existing installs do not change clock behavior until an operator sets the variable.
 
-### SH-TZ — Application timezone from the environment
+### SH-TZ — Application timezone from the environment — Complete (2026-08-26)
 
 **Objective:** `config('app.timezone')` reads `APP_TIMEZONE` instead of a hardcoded `'UTC'`.
 
-- **SH-TZ-01:** In `config/app.php` set `'timezone' => env('APP_TIMEZONE', 'UTC')`. Add `APP_TIMEZONE=UTC` to `.env.example` next to the other `APP_*` keys. Do not change `APP_VERSION`.
-- **SH-TZ-02:** If the installer writes `.env` and `APP_TIMEZONE` is missing, write `APP_TIMEZONE=UTC`. Do not add a timezone picker to `/install`.
-- **SH-TZ-03:** Operator docs (`docs/DEPLOYMENT.md`, `docs/DEVELOPMENT.md`) state that office hours, backup clocks, snapshot names, and scheduler display use `APP_TIMEZONE` (IANA name, default `UTC`). Note DST: use `setTime`, never `addHours(24)`, matching ADR 0001.
-- **SH-TZ-04:** Help copy that currently says “application timezone (UTC)” must say the installation timezone and show the live name already used in the UI (`config('app.timezone')`). Do not mention `.env` in Help.
-- **SH-TZ-05:** Tests: missing env stays UTC; `APP_TIMEZONE=Africa/Lagos` makes `config('app.timezone')` `Africa/Lagos`; backup next-run / office-hours labels use that value. Existing UTC tests must keep passing with the default.
+- **SH-TZ-01 — Complete (2026-08-26):** In `config/app.php` set `'timezone' => env('APP_TIMEZONE', 'UTC')`. Add `APP_TIMEZONE=UTC` to `.env.example` next to the other `APP_*` keys. Do not change `APP_VERSION`.
+- **SH-TZ-02 — Complete (2026-08-26):** If the installer writes `.env` and `APP_TIMEZONE` is missing, write `APP_TIMEZONE=UTC`. Do not add a timezone picker to `/install`.
+- **SH-TZ-03 — Complete (2026-08-26):** Operator docs (`docs/DEPLOYMENT.md`, `docs/DEVELOPMENT.md`) state that office hours, backup clocks, snapshot names, and scheduler display use `APP_TIMEZONE` (IANA name, default `UTC`). Note DST: use `setTime`, never `addHours(24)`, matching ADR 0001.
+- **SH-TZ-04 — Complete (2026-08-26):** Help copy that currently says “application timezone (UTC)” must say the installation timezone and show the live name already used in the UI (`config('app.timezone')`). Do not mention `.env` in Help.
+- **SH-TZ-05 — Complete (2026-08-26):** Tests: missing env stays UTC; `APP_TIMEZONE=Africa/Lagos` makes `config('app.timezone')` `Africa/Lagos`; backup next-run / office-hours labels use that value. Existing UTC tests must keep passing with the default.
 
 **Demo:** set `APP_TIMEZONE=Africa/Lagos`, reload Approval settings and Backups; labels and next-run times show `Africa/Lagos`. Remove the variable and the app is UTC again.
 
