@@ -13,6 +13,7 @@ use App\Models\BackupDestination;
 use App\Models\BackupSnapshot;
 use App\Services\Backups\BackupRecorder;
 use App\Support\BackupSettings;
+use App\Support\ScheduledBackupHealth;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\URL;
@@ -38,7 +39,7 @@ new #[Title('Backups')] class extends Component
 
     public function mount(): void
     {
-        $this->authorize('settings.manage');
+        $this->authorize('backups.view');
         app(BackupRecorder::class)->localDestination();
         $this->databaseEnabled = BackupSettings::databaseEnabled();
         $this->filesEnabled = BackupSettings::filesEnabled();
@@ -50,7 +51,7 @@ new #[Title('Backups')] class extends Component
 
     public function saveSettings(UpdateBackupSettingsAction $action): void
     {
-        $this->authorize('settings.manage');
+        $this->authorize('backups.configure');
         $validated = $this->validate([
             'databaseEnabled' => ['boolean'],
             'filesEnabled' => ['boolean'],
@@ -74,23 +75,35 @@ new #[Title('Backups')] class extends Component
 
     public function backupDatabase(CreateDatabaseBackupAction $action): void
     {
-        $this->authorize('settings.manage');
-        $action->execute();
+        $this->authorize('backups.create');
+
+        try {
+            $action->execute();
+        } catch (\InvalidArgumentException $exception) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['backup' => $exception->getMessage()]);
+        }
+
         unset($this->snapshots);
         Flux::toast(__('Database snapshot stored.'), variant: 'success');
     }
 
     public function backupFiles(CreateFilesBackupAction $action): void
     {
-        $this->authorize('settings.manage');
-        $action->execute();
+        $this->authorize('backups.create');
+
+        try {
+            $action->execute();
+        } catch (\InvalidArgumentException $exception) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['backup' => $exception->getMessage()]);
+        }
+
         unset($this->snapshots);
         Flux::toast(__('Files snapshot stored.'), variant: 'success');
     }
 
     public function verify(int $id, VerifyBackupSnapshotAction $action): void
     {
-        $this->authorize('settings.manage');
+        $this->authorize('backups.verify');
         try {
             $action->execute(BackupSnapshot::query()->findOrFail($id));
         } catch (\InvalidArgumentException $exception) {
@@ -102,7 +115,7 @@ new #[Title('Backups')] class extends Component
 
     public function promote(int $id, PromoteDatabaseBackupAction $database, PromoteFilesBackupAction $files): void
     {
-        $this->authorize('settings.manage');
+        $this->authorize('backups.promote');
         $snapshot = BackupSnapshot::query()->findOrFail($id);
 
         try {
@@ -122,12 +135,14 @@ new #[Title('Backups')] class extends Component
 
     public function downloadUrl(BackupSnapshot $snapshot): string
     {
+        $this->authorize('backups.download');
+
         return URL::temporarySignedRoute('admin.backups.download', now()->addMinutes(5), $snapshot);
     }
 
     public function deleteLocal(int $id, DeleteLocalBackupCopyAction $action): void
     {
-        $this->authorize('settings.manage');
+        $this->authorize('backups.local_copies.remove');
 
         try {
             $action->execute(BackupSnapshot::query()->findOrFail($id));
@@ -141,7 +156,7 @@ new #[Title('Backups')] class extends Component
 
     public function deleteLocalCopies(DeleteLocalBackupCopyAction $action): void
     {
-        $this->authorize('settings.manage');
+        $this->authorize('backups.local_copies.remove');
         $removed = $action->executeEligible();
         unset($this->snapshots);
         Flux::toast(
@@ -211,6 +226,19 @@ new #[Title('Backups')] class extends Component
     {
         return BackupSnapshot::query()->where('status', BackupSnapshotStatus::Failed)->count();
     }
+
+    public function scheduleSummary(): array
+    {
+        $health = app(ScheduledBackupHealth::class);
+
+        return [
+            'timezone' => (string) config('app.timezone', 'UTC'),
+            'database_next' => $health->nextRun($this->databaseHour),
+            'files_next' => $health->nextRun($this->filesHour),
+            'database_last' => $health->lastScheduledAt(BackupSnapshotKind::Database),
+            'files_last' => $health->lastScheduledAt(BackupSnapshotKind::Files),
+        ];
+    }
 }; ?>
 
 <div>
@@ -223,21 +251,39 @@ new #[Title('Backups')] class extends Component
     <form wire:submit="saveSettings" class="mt-8 space-y-5">
         <flux:heading size="sm">{{ __('Schedule and retain') }}</flux:heading>
         <flux:text>{{ __('Database defaults to 14 daily copies at 02:30. Files default to 7 daily copies at 02:45. Expired copies are removed at 04:15, but the last successful copy of each kind is kept.') }}</flux:text>
+        <flux:text data-test="backup-schedule-summary">
+            {{ __('Times use :timezone. Next database run: :database. Next files run: :files. Retention cleanup: 04:15.', [
+                'timezone' => $this->scheduleSummary()['timezone'],
+                'database' => $this->scheduleSummary()['database_next']->format('D j M, H:i'),
+                'files' => $this->scheduleSummary()['files_next']->format('D j M, H:i'),
+            ]) }}
+        </flux:text>
+        <flux:text>
+            {{ __('Last scheduled database backup: :database. Last scheduled files backup: :files. Backup now does not test the scheduler.', [
+                'database' => $this->scheduleSummary()['database_last']?->diffForHumans() ?? __('Never'),
+                'files' => $this->scheduleSummary()['files_last']?->diffForHumans() ?? __('Never'),
+            ]) }}
+        </flux:text>
         <div class="grid gap-4 sm:grid-cols-2">
             <flux:checkbox wire:model="databaseEnabled" :label="__('Backup the database on a schedule')" data-test="backup-database-enabled" />
             <flux:checkbox wire:model="filesEnabled" :label="__('Backup files on a schedule')" />
             <flux:input wire:model="databaseRetainDays" type="number" min="3" max="90" :label="__('Keep database copies (days)')" />
             <flux:input wire:model="filesRetainDays" type="number" min="3" max="90" :label="__('Keep file copies (days)')" />
-            <flux:input wire:model="databaseHour" :label="__('Database time')" />
-            <flux:input wire:model="filesHour" :label="__('Files time')" />
+            <flux:input wire:model="databaseHour" type="time" step="60" :label="__('Database backup time')" data-test="backup-database-time" />
+            <flux:input wire:model="filesHour" type="time" step="60" :label="__('Files backup time')" data-test="backup-files-time" />
         </div>
-        <flux:button type="submit" variant="primary" data-test="save-backup-settings">{{ __('Save schedule') }}</flux:button>
+        @can('backups.configure')
+            <flux:button type="submit" variant="primary" data-test="save-backup-settings">{{ __('Save schedule') }}</flux:button>
+        @endcan
     </form>
 
-    <div class="mt-8 flex flex-wrap gap-3">
-        <flux:button variant="primary" wire:click="backupDatabase" data-test="backup-database-now">{{ __('Backup database') }}</flux:button>
-        <flux:button wire:click="backupFiles" data-test="backup-files-now">{{ __('Backup files') }}</flux:button>
-    </div>
+    @can('backups.create')
+        <div class="mt-8 flex flex-wrap gap-3">
+            <flux:button variant="primary" wire:click="backupDatabase" data-test="backup-database-now">{{ __('Backup database') }}</flux:button>
+            <flux:button wire:click="backupFiles" data-test="backup-files-now">{{ __('Backup files') }}</flux:button>
+        </div>
+    @endcan
+    <flux:error name="backup" />
     @if ($this->failedCount() > 0)
         <flux:text class="mt-3" data-test="backup-failed-count">{{ trans_choice(':count snapshot failed|:count snapshots failed', $this->failedCount(), ['count' => $this->failedCount()]) }}</flux:text>
     @endif
@@ -267,7 +313,8 @@ new #[Title('Backups')] class extends Component
         </ul>
     </div>
 
-    <div class="mt-6 grid gap-6 lg:grid-cols-2">
+    @can('backups.destinations.manage')
+        <div class="mt-6 grid gap-6 lg:grid-cols-2">
         <flux:card data-test="backup-s3-card">
             <flux:heading size="sm">{{ __('S3-compatible') }}</flux:heading>
             <flux:text class="mt-1">{{ __('R2, Wasabi, MinIO, Spaces, or any S3-compatible bucket. Used only for snapshots, not for request integrations.') }}</flux:text>
@@ -308,22 +355,27 @@ new #[Title('Backups')] class extends Component
             </form>
         </flux:card>
     </div>
+    @endcan
 
     <div class="mt-8">
-        <flux:heading size="sm">{{ __('Snapshots') }}</flux:heading>
+    <flux:heading size="sm">{{ __('Snapshots') }}</flux:heading>
         <flux:text class="mt-1">{{ __('Verify a snapshot before you promote it. Promoting a database snapshot replaces this copy’s database. Type the snapshot number to confirm.') }}</flux:text>
         <flux:text class="mt-2" data-test="backup-size-summary">
             {{ __('Database') }}: {{ $this->formattedSize($this->databaseBytes()) }}
             ·
             {{ __('Files') }}: {{ $this->formattedSize($this->filesBytes()) }}
         </flux:text>
-        <div class="mt-3">
-            <flux:button size="sm" wire:click="deleteLocalCopies" wire:confirm="{{ __('Remove local copies that already have a remote replica? Remote copies stay.') }}" data-test="delete-local-copies">
-                {{ __('Remove local copies (keep remotes)') }}
-            </flux:button>
-        </div>
-        <flux:input class="mt-4 max-w-xs" wire:model="promoteConfirmation" :label="__('Snapshot number')" data-test="promote-confirmation" />
-        <flux:error name="promoteConfirmation" />
+        @can('backups.local_copies.remove')
+            <div class="mt-3">
+                <flux:button size="sm" wire:click="deleteLocalCopies" wire:confirm="{{ __('Remove local copies that already have a remote replica? Remote copies stay.') }}" data-test="delete-local-copies">
+                    {{ __('Remove local copies (keep remotes)') }}
+                </flux:button>
+            </div>
+        @endcan
+        @can('backups.promote')
+            <flux:input class="mt-4 max-w-xs" wire:model="promoteConfirmation" :label="__('Snapshot number')" data-test="promote-confirmation" />
+            <flux:error name="promoteConfirmation" />
+        @endcan
         <div class="mt-4 overflow-x-auto">
             <table class="w-full text-sm">
                 <thead>
@@ -346,12 +398,20 @@ new #[Title('Backups')] class extends Component
                             <td class="py-2 pr-3">{{ $snapshot->status->value }}</td>
                             <td class="py-2">
                                 <div class="flex flex-wrap gap-2">
-                                    <flux:button size="xs" wire:click="verify({{ $snapshot->id }})">{{ __('Verify') }}</flux:button>
-                                    <flux:button size="xs" :href="$this->downloadUrl($snapshot)">{{ __('Download') }}</flux:button>
-                                    <flux:button size="xs" variant="danger" wire:click="promote({{ $snapshot->id }})" data-test="promote-snapshot-{{ $snapshot->id }}">{{ __('Promote') }}</flux:button>
-                                    @if ($this->canRemoveLocal($snapshot))
-                                        <flux:button size="xs" variant="ghost" wire:click="deleteLocal({{ $snapshot->id }})" wire:confirm="{{ __('Remove the local file? Remote copies stay.') }}" data-test="delete-local-{{ $snapshot->id }}">{{ __('Remove local') }}</flux:button>
-                                    @endif
+                                    @can('backups.verify')
+                                        <flux:button size="xs" wire:click="verify({{ $snapshot->id }})">{{ __('Verify') }}</flux:button>
+                                    @endcan
+                                    @can('backups.download')
+                                        <flux:button size="xs" :href="$this->downloadUrl($snapshot)">{{ __('Download') }}</flux:button>
+                                    @endcan
+                                    @can('backups.promote')
+                                        <flux:button size="xs" variant="danger" wire:click="promote({{ $snapshot->id }})" data-test="promote-snapshot-{{ $snapshot->id }}">{{ __('Promote') }}</flux:button>
+                                    @endcan
+                                    @can('backups.local_copies.remove')
+                                        @if ($this->canRemoveLocal($snapshot))
+                                            <flux:button size="xs" variant="ghost" wire:click="deleteLocal({{ $snapshot->id }})" wire:confirm="{{ __('Remove the local file? Remote copies stay.') }}" data-test="delete-local-{{ $snapshot->id }}">{{ __('Remove local') }}</flux:button>
+                                        @endif
+                                    @endcan
                                 </div>
                             </td>
                         </tr>

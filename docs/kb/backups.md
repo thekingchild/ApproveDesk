@@ -47,6 +47,8 @@ Verify, Download, and Promote still work: ApproveDesk fetches the remote file wh
 
 Database copies default to 14 days at 02:30. File copies default to 7 days at 02:45. Each kind can be turned off. You can keep 3–90 days. The last successful copy of each kind is never removed.
 
+Choose both daily times with the time pickers. The page states the application timezone and shows each next run. Retention cleanup remains at 04:15. **Backup now** creates a snapshot immediately but does not prove that the scheduler is running; the page separately shows the last successful scheduled database and file backups.
+
 ### Verify and promote
 
 **Verify** checks a snapshot without changing this copy. **Promote** puts a verified snapshot back. Type the snapshot number to confirm. Promoting a database snapshot replaces this copy’s database, including on MySQL. The promoted snapshot stays in the list with its destination so you can see which copy was used. Promoting files writes into a holding folder, then swaps. A snapshot that fails the check cannot be promoted. Host backups from your hosting panel stay recommended.

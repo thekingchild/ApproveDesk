@@ -3,7 +3,9 @@
 namespace App\Console\Commands;
 
 use App\Actions\Backups\CreateFilesBackupAction;
+use App\Enums\BackupSnapshotKind;
 use App\Support\BackupSettings;
+use App\Support\ScheduledBackupHealth;
 use Illuminate\Console\Command;
 
 class CreateFilesBackupCommand extends Command
@@ -12,7 +14,7 @@ class CreateFilesBackupCommand extends Command
 
     protected $description = 'Create a files snapshot and copy it to enabled destinations';
 
-    public function handle(CreateFilesBackupAction $action): int
+    public function handle(CreateFilesBackupAction $action, ScheduledBackupHealth $health): int
     {
         if (! BackupSettings::filesEnabled()) {
             $this->info('File backups are disabled.');
@@ -20,7 +22,15 @@ class CreateFilesBackupCommand extends Command
             return self::SUCCESS;
         }
 
-        $snapshot = $action->execute();
+        try {
+            $snapshot = $action->execute();
+        } catch (\InvalidArgumentException $exception) {
+            $this->error($exception->getMessage());
+
+            return self::FAILURE;
+        }
+
+        $health->record(BackupSnapshotKind::Files, $snapshot);
         $this->info('Files snapshot '.$snapshot->id.' stored ('.$snapshot->bytes.' bytes).');
 
         return self::SUCCESS;

@@ -22,7 +22,7 @@ new #[Title('Operations')] class extends Component
 
     public function mount(): void
     {
-        $this->authorize('settings.manage');
+        $this->authorize('operations.view');
     }
 
     #[Computed]
@@ -51,7 +51,7 @@ new #[Title('Operations')] class extends Component
 
     public function replay(string $type, string $id, ReplayDeadLetterAction $replay): void
     {
-        $this->authorize('settings.manage');
+        $this->authorize('operations.replay');
 
         try {
             $replay->execute($type, $id);
@@ -65,7 +65,7 @@ new #[Title('Operations')] class extends Component
 
     public function verifyBackup(VerifyBackupAction $verify): void
     {
-        $this->authorize('settings.manage');
+        $this->authorize('operations.verify_copy');
         $result = $verify->execute(Auth::user());
         $this->backupResult = $result->ok
             ? __('This copy checks out.')
@@ -75,7 +75,7 @@ new #[Title('Operations')] class extends Component
 
     public function reconcile(OperationsReconciler $reconciler): void
     {
-        $this->authorize('settings.manage');
+        $this->authorize('operations.reconcile');
         $report = $reconciler->run();
         $this->reconcileResult = $report->ok()
             ? __('No inconsistencies found.')
@@ -95,11 +95,13 @@ new #[Title('Operations')] class extends Component
             <p class="mt-2 text-sm" data-test="ops-heartbeat">
                 @if ($this->health->schedulerFresh)
                     {{ __('Last run :time', ['time' => $this->health->schedulerHeartbeatAt?->diffForHumans()]) }}
+                    <span class="block text-xs text-zinc-500">{{ $this->health->schedulerHeartbeatAt?->setTimezone(config('app.timezone'))->format('Y-m-d H:i:s T') }}</span>
                 @elseif ($this->health->schedulerHeartbeatAt)
                     {{ __('Stale — last run :time', ['time' => $this->health->schedulerHeartbeatAt->diffForHumans()]) }}
                 @else
                     {{ __('No heartbeat yet') }}
                 @endif
+                <span class="mt-2 block text-xs text-zinc-500">{{ __('Check without running work: php artisan ops:scheduler-check') }}</span>
             </p>
         </flux:card>
         <flux:card>

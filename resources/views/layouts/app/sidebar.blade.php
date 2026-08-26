@@ -37,11 +37,16 @@
                     @endcan
                 </flux:sidebar.group>
 
-                @if (auth()->user()->can('viewAny', \App\Models\User::class) || auth()->user()->can('viewAny', \App\Models\Department::class) || auth()->user()->can('viewAny', \App\Models\WorkflowTemplate::class) || auth()->user()->can('viewAny', \App\Models\RequestType::class) || auth()->user()->can('reports.view') || auth()->user()->can('viewAny', \App\Models\WebhookEndpoint::class) || auth()->user()->can('viewAny', \App\Models\IntegrationConnector::class) || auth()->user()->can('settings.manage'))
+                @if (auth()->user()->can('viewAny', \App\Models\User::class) || auth()->user()->can('viewAny', \App\Models\Role::class) || auth()->user()->can('viewAny', \App\Models\Department::class) || auth()->user()->can('viewAny', \App\Models\WorkflowTemplate::class) || auth()->user()->can('viewAny', \App\Models\RequestType::class) || auth()->user()->can('reports.view') || auth()->user()->can('viewAny', \App\Models\WebhookEndpoint::class) || auth()->user()->can('viewAny', \App\Models\IntegrationConnector::class) || auth()->user()->can('settings.manage') || auth()->user()->can('operations.view') || auth()->user()->can('backups.view') || auth()->user()->can('updates.view'))
                     <flux:sidebar.group :heading="__('Administration')" class="grid">
                         @can('viewAny', \App\Models\User::class)
                             <flux:sidebar.item icon="users" :href="route('admin.users.index')" :current="request()->routeIs('admin.users.*')" wire:navigate>
                                 {{ __('Users') }}
+                            </flux:sidebar.item>
+                        @endcan
+                        @can('viewAny', \App\Models\Role::class)
+                            <flux:sidebar.item icon="key" :href="route('admin.roles.index')" :current="request()->routeIs('admin.roles.*')" wire:navigate>
+                                {{ __('Roles & permissions') }}
                             </flux:sidebar.item>
                         @endcan
                         @can('viewAny', \App\Models\Department::class)
@@ -78,12 +83,18 @@
                             <flux:sidebar.item icon="archive-box" :href="route('admin.records.index')" :current="request()->routeIs('admin.records.*')" wire:navigate>
                                 {{ __('Records') }}
                             </flux:sidebar.item>
+                        @endcan
+                        @can('operations.view')
                             <flux:sidebar.item icon="signal" :href="route('admin.operations.index')" :current="request()->routeIs('admin.operations.*')" wire:navigate>
                                 {{ __('Operations') }}
                             </flux:sidebar.item>
+                        @endcan
+                        @can('backups.view')
                             <flux:sidebar.item icon="circle-stack" :href="route('admin.backups.index')" :current="request()->routeIs('admin.backups.*')" wire:navigate>
                                 {{ __('Backups') }}
                             </flux:sidebar.item>
+                        @endcan
+                        @can('updates.view')
                             <flux:sidebar.item icon="arrow-path" :href="route('admin.updates.index')" :current="request()->routeIs('admin.updates.*')" wire:navigate>
                                 {{ __('Updates') }}
                             </flux:sidebar.item>

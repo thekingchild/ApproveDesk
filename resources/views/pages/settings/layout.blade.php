@@ -14,12 +14,18 @@
             <flux:navlist.item :href="route('privacy.edit')" wire:navigate>{{ __('Privacy') }}</flux:navlist.item>
             <flux:navlist.item :href="route('api-tokens.edit')" wire:navigate>{{ __('API tokens') }}</flux:navlist.item>
             <flux:navlist.item :href="route('appearance.edit')" wire:navigate>{{ __('Appearance') }}</flux:navlist.item>
-            @if (auth()->user()?->can('settings.manage'))
+            @can('branding.manage')
                 <flux:navlist.item :href="route('settings.branding')" wire:navigate>{{ __('Branding') }}</flux:navlist.item>
+            @endcan
+            @can('approval_settings.manage')
                 <flux:navlist.item :href="route('settings.approvals')" wire:navigate>{{ __('Approvals') }}</flux:navlist.item>
+            @endcan
+            @can('security_settings.manage')
                 <flux:navlist.item :href="route('settings.security-privacy')" wire:navigate>{{ __('Security & privacy') }}</flux:navlist.item>
+            @endcan
+            @can('notification_channels.manage')
                 <flux:navlist.item :href="route('settings.notification-channels')" wire:navigate>{{ __('Notification channels') }}</flux:navlist.item>
-            @endif
+            @endcan
         </flux:navlist>
     </div>
 

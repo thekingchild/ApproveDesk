@@ -49,7 +49,13 @@ Security notes for operators:
 * * * * * /usr/local/bin/php /home/<user>/approvedesk/artisan schedule:run >> /dev/null 2>&1
 ```
 
-Find the right PHP binary via MultiPHP Manager (e.g. `/opt/cpanel/ea-php83/root/usr/bin/php`). The scheduler itself launches the queue worker on shared hosting (`routes/console.php`):
+Find the right PHP binary via MultiPHP Manager (e.g. `/opt/cpanel/ea-php83/root/usr/bin/php`). The scheduler itself launches the queue worker on shared hosting (`routes/console.php`). Verify it without running scheduled work:
+
+```bash
+php artisan ops:scheduler-check
+```
+
+A healthy result means the heartbeat is no more than five minutes old. A stale/missing result means the one-minute cron or its PHP binary needs attention. **Backup now** does not test cron.
 
 ```php
 Schedule::command('queue:work --stop-when-empty --tries=3 --timeout=90')
@@ -93,6 +99,13 @@ The production image contains PHP-FPM, Nginx, and the Laravel scheduler under Su
 The image exposes `/up` as its health check. Set `AUTO_MIGRATE=true` only for an established installation whose deployment process has already handled backups and migration review. Fresh installations should use `/install` so roles, settings, the first administrator, and the installation lock are created together.
 
 Useful operations:
+
+```bash
+php artisan ops:scheduler-check       # read-only heartbeat/backup schedule check
+php artisan schedule:list             # expected scheduled commands and next due times
+```
+
+A local development copy may use `php artisan schedule:work`, but that foreground/background process must be restarted after reboot. Production/shared hosting should use the one-minute `schedule:run` cron above.
 
 ```bash
 docker compose logs -f app

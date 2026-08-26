@@ -9,22 +9,27 @@ class RequestTypePolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->can('templates.manage');
+        return $user->can('request_types.view');
     }
 
     public function create(User $user): bool
     {
-        return $user->can('templates.manage');
+        return $user->can('request_types.manage');
     }
 
     public function update(User $user, RequestType $requestType): bool
     {
-        return $user->can('templates.manage') && ! $requestType->is_system;
+        return $user->can('request_types.manage') && ! $requestType->is_system;
     }
 
     public function assignWorkflow(User $user, RequestType $requestType): bool
     {
-        return $user->can('templates.manage');
+        return $user->can('workflows.assign');
+    }
+
+    public function publish(User $user): bool
+    {
+        return $user->can('request_types.publish');
     }
 
     public function use(User $user, RequestType $requestType): bool

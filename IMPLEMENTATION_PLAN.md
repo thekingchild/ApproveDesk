@@ -154,6 +154,7 @@ Locked product decision for Phase 8.2. It does not reopen Phase 8.1. Design: [do
 | BK | v2.5.4 | In-app database and file backups | Complete |
 | E2FA | v2.5.5 | Optional second-factor assurance for signed approval URLs | Complete |
 | SH-OWN/REC/CAP | v2.6.0 | Self-hosted system owner, account recovery, and active-user capacity | Complete |
+| SH-RBAC/BTIME/CRON | v2.7.0 | Custom roles, backup time pickers, and scheduler diagnostics | Complete |
 | 10 | v3.0.0 | SaaS multi-tenancy foundation | Not started |
 | 11 | v3.1.0 | Paystack and Flutterwave subscriptions | Not started |
 | 12 | v3.2.0 | SaaS onboarding, entitlements, and commercial operations | Not started |
@@ -954,6 +955,34 @@ The detailed execution contract is [SELF_HOSTED_SUPPLEMENTARY_IMPLEMENTATION_PLA
 - **SH-DOC-01 — Complete (2026-08-26):** Update in-app Help, operator recovery documentation, changelog, release metadata, and quality evidence without changing the SaaS roadmap.
 
 **Out of scope:** SaaS tenancy, organizations, platform administration, billing, entitlements, custom role design, automatic deactivation, storage/request-volume limits, and rewriting historical workflow actions.
+
+---
+
+## Self-hosted supplement — Custom roles, backup time pickers, and scheduler diagnostics — Complete (2026-08-26)
+
+**Goal:** let the System owner and explicitly delegated role managers create safe feature-oriented custom roles, make daily database/file times pickable, and prove scheduler health and scheduled backup success without changing workflow history or owner protections.
+
+This supplement is self-hosted v2.7.0 work. It does not implement or change ApproveDesk SaaS Phase 10–15.
+
+### SH-RBAC — Custom roles and permission ceiling — Complete (2026-08-26)
+
+- **SH-RBAC-01 — Complete (2026-08-26):** Add a code-owned permission catalogue, protected built-in role profiles, and append-only role-change events.
+- **SH-RBAC-02 — Complete (2026-08-26):** Add owner/custom-role-manager role UI with cloning, editing, archive/restore, effective permission summaries, and strict permission ceiling.
+- **SH-RBAC-03 — Complete (2026-08-26):** Integrate custom role assignment into user management/import while preserving v2.6.0 built-in effective access and owner-only Administrator grants.
+
+### SH-BTIME — Pickable backup times — Complete (2026-08-26)
+
+- **SH-BTIME-01 — Complete (2026-08-26):** Render database/files schedule values as validated time pickers with application timezone and next-run display.
+- **SH-BTIME-02 — Complete (2026-08-26):** Record successful scheduler-command backup evidence separately from manual Backup now.
+
+### SH-CRON — Scheduler health — Complete (2026-08-26)
+
+- **SH-CRON-01 — Complete (2026-08-26):** Add read-only `ops:scheduler-check`, exact heartbeat display, and scheduled-backup health without creating a false heartbeat.
+- **SH-CRON-02 — Complete (2026-08-26):** Verify shared-hosting cron guidance, local `schedule:work`, backup scheduling, and full scheduler tests.
+
+### SH-DOC27 — Help and release — Complete (2026-08-26)
+
+- **SH-DOC27-01 — Complete (2026-08-26):** Update Help, deployment/operations docs, changelog, version metadata, and quality evidence; keep SaaS roadmap separate.
 
 ---
 

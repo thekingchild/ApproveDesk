@@ -11,7 +11,7 @@ class AnalyticsExportRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->can('reports.view') === true;
+        return $this->user()?->can('reports.export') === true;
     }
 
     /** @return array<string, list<mixed>> */

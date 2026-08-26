@@ -495,6 +495,9 @@ new #[Title('Workflow templates')] class extends Component {
     public function publish(): void
     {
         $templateId = $this->editingTemplateId;
+        if ($templateId !== null) {
+            $this->authorize('publish', WorkflowTemplate::findOrFail($templateId));
+        }
         $summary = $this->changeSummary !== '' ? $this->changeSummary : null;
         $this->save();
 
@@ -508,7 +511,7 @@ new #[Title('Workflow templates')] class extends Component {
             return;
         }
 
-        $this->authorize('update', $template);
+        $this->authorize('publish', $template);
         app(PublishWorkflowTemplateVersionAction::class)->execute($template->draftVersion, $summary);
         unset($this->templates);
         Flux::toast('Workflow version published.', variant: 'success');

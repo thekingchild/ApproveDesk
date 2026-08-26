@@ -19,8 +19,10 @@ use App\Listeners\NotifyDelegate;
 use App\Listeners\NotifySubmitterOfDecision;
 use App\Listeners\NotifyWatchersOfDecision;
 use App\Listeners\RecordLoginEvent;
+use App\Models\Role;
 use App\Models\User;
 use App\Notifications\Channels\OptionalLaravelNotificationChannel;
+use App\Policies\RolePolicy;
 use App\Services\Integrations\ConnectorRegistry;
 use App\Services\Integrations\Connectors\GoogleDriveConnector;
 use App\Services\Integrations\Connectors\HttpConnector;
@@ -41,7 +43,9 @@ use App\Services\Notifications\NotificationDeliveryRecorder;
 use App\Services\Users\SystemOwnerService;
 use App\Services\Workflow\AssigneeResolver;
 use App\Support\CorrelationId;
+use App\Support\FeaturePermission;
 use App\Support\PermissionCache;
+use App\Support\PermissionCatalogue;
 use App\Support\RateLimitProfiles;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Events\Login;
@@ -110,6 +114,8 @@ class AppServiceProvider extends ServiceProvider
 
         PermissionCache::forgetIfReady();
 
+        Gate::policy(Role::class, RolePolicy::class);
+
         // Only the singleton System owner holds every ability implicitly.
         Gate::before(function (User $user, string $ability, array $arguments): ?bool {
             $target = $arguments[0] ?? null;
@@ -117,6 +123,10 @@ class AppServiceProvider extends ServiceProvider
                 && $target instanceof User
                 && $target->isSystemOwner()) {
                 return false;
+            }
+
+            if (PermissionCatalogue::find($ability) !== null && FeaturePermission::allows($user, $ability)) {
+                return true;
             }
 
             return $user->isSystemOwner() ? true : null;

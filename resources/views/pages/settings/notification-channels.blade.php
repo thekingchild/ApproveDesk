@@ -45,7 +45,7 @@ new #[Title('Notification channels')] class extends Component {
 
     public function mount(ChannelSettings $settings, NotificationCopy $copy): void
     {
-        $this->authorize('settings.manage');
+        $this->authorize('notification_channels.manage');
         $this->teams_enabled = $settings->isEnabled(NotificationChannelKey::Teams);
         $this->slack_enabled = $settings->isEnabled(NotificationChannelKey::Slack);
         $this->whatsapp_enabled = $settings->isEnabled(NotificationChannelKey::WhatsApp);
@@ -60,7 +60,7 @@ new #[Title('Notification channels')] class extends Component {
 
     public function saveFlags(UpdateNotificationChannelFlagsAction $update): void
     {
-        $this->authorize('settings.manage');
+        $this->authorize('notification_channels.manage');
         $update->execute([
             'teams' => $this->teams_enabled,
             'slack' => $this->slack_enabled,
@@ -72,14 +72,14 @@ new #[Title('Notification channels')] class extends Component {
 
     public function test(string $channel, TestNotificationChannelAction $test): void
     {
-        $this->authorize('settings.manage');
+        $this->authorize('notification_channels.manage');
         $result = $test->execute(NotificationChannelKey::from($channel));
         Flux::toast($result->message, variant: $result->ok ? 'success' : 'danger');
     }
 
     public function saveMapping(SaveUserChannelIdentityAction $save): void
     {
-        $this->authorize('settings.manage');
+        $this->authorize('notification_channels.manage');
         $validated = $this->validate([
             'mapping_user_id' => ['required', 'integer', 'exists:users,id'],
             'mapping_channel' => ['required', 'in:teams,slack,telegram'],
@@ -102,14 +102,14 @@ new #[Title('Notification channels')] class extends Component {
 
     public function unlink(int $userId, string $channel, SaveUserChannelIdentityAction $save): void
     {
-        $this->authorize('settings.manage');
+        $this->authorize('notification_channels.manage');
         $save->execute(User::query()->assignable()->findOrFail($userId), NotificationChannelKey::from($channel), null);
         Flux::toast('Mapping removed.', variant: 'success');
     }
 
     public function saveTemplate(SaveNotificationEmailTemplateAction $save, NotificationCopy $copy): void
     {
-        $this->authorize('settings.manage');
+        $this->authorize('notification_channels.manage');
         try {
             $save->execute(NotificationKind::from($this->templateKind), $this->templateSubject, $this->templateBody, auth()->user());
         } catch (\InvalidArgumentException $exception) {
@@ -123,7 +123,7 @@ new #[Title('Notification channels')] class extends Component {
 
     public function restoreTemplate(SaveNotificationEmailTemplateAction $save, NotificationCopy $copy): void
     {
-        $this->authorize('settings.manage');
+        $this->authorize('notification_channels.manage');
         $save->restore(NotificationKind::from($this->templateKind));
         $this->loadTemplate($copy);
         Flux::toast('Default copy restored.', variant: 'success');
@@ -131,7 +131,7 @@ new #[Title('Notification channels')] class extends Component {
 
     public function fetchWhatsApp(FetchWhatsAppTemplatesAction $fetch): void
     {
-        $this->authorize('settings.manage');
+        $this->authorize('notification_channels.manage');
         try {
             $count = $fetch->execute();
             Flux::toast('Fetched '.$count.' WhatsApp templates.', variant: 'success');
@@ -142,7 +142,7 @@ new #[Title('Notification channels')] class extends Component {
 
     public function saveWhatsAppMap(SaveWhatsAppNotificationMapAction $save): void
     {
-        $this->authorize('settings.manage');
+        $this->authorize('notification_channels.manage');
         $bindings = [];
         foreach (preg_split('/\r\n|\r|\n/', $this->whatsappBindings) ?: [] as $line) {
             if (! str_contains($line, '=')) {

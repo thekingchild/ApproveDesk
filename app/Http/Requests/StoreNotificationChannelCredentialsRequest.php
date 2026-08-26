@@ -11,7 +11,7 @@ class StoreNotificationChannelCredentialsRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->can('settings.manage') === true;
+        return $this->user()?->can('notification_channels.manage') === true;
     }
 
     /**

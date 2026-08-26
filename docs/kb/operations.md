@@ -14,7 +14,7 @@ Use this screen when notices or integrations stop arriving, a request sits on a 
 
 The cards show the last scheduler run, how much work is waiting, failed queue jobs, stuck requests, webhook endpoints with a failed delivery, and enabled connectors that last reported an error.
 
-A fresh scheduler run means the minute job that drains waiting work is still firing. A stale or missing run means that job has not recorded a heartbeat recently.
+A fresh scheduler run means the minute job that drains waiting work is still firing. A stale or missing run means that job has not recorded a heartbeat recently. The card shows the exact last heartbeat as well as its age. **Backup now** does not test scheduled work; Administration → Backups separately shows the last successful scheduled database and file copies.
 
 ### Failed deliveries
 

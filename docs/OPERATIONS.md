@@ -23,12 +23,15 @@ JSON lines are written to `storage/logs/structured.log`.
 - `ops.scheduler_heartbeat_at` in settings
 - a row in `ops_snapshots` (pending jobs, failed jobs, dead letters, stuck workflows)
 
-The **Administration → Operations** screen reads the live counts plus the last heartbeat. A heartbeat older than five minutes is shown as stale.
+The **Administration → Operations** screen reads the live counts plus the last heartbeat. A heartbeat older than five minutes is shown as stale. Check it without creating a heartbeat or running scheduled work:
 
 ```
-php artisan ops:heartbeat
+php artisan ops:scheduler-check
+php artisan schedule:list
 php artisan ops:budget-report
 ```
+
+`ops:scheduler-check` returns failure for a missing/stale heartbeat and prints the configured database/files backup times. **Backup now** is manual and does not prove cron health. On shared hosting, one host cron must call `php artisan schedule:run` every minute. A local development process may use `php artisan schedule:work`, but it must be restarted after reboot unless a process manager owns it.
 
 ## 3. Backup verification and restore drill
 

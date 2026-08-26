@@ -6,6 +6,10 @@ The account created during first-time setup is the **System owner**. That person
 
 ## Roles
 
+Built-in roles are protected defaults. The System owner can open **Administration → Roles & permissions**, clone a built-in role, and create, edit, archive, or restore custom roles. A custom role combines the selected feature permissions; a person with several roles receives the union of all of them.
+
+The owner may appoint a role manager. A role manager can work only with custom roles and cannot grant permissions above their own access. They cannot grant Administrator, role-manager authority, account recovery, active-user capacity, or System-owner authority.
+
 | Role | What it is for |
 |---|---|
 | Administrator | Users, departments, workflows, request types, branding, analytics, webhooks, and sensitive fields. Cannot grant another Administrator or recover passwords. |
@@ -17,7 +21,7 @@ The account created during first-time setup is the **System owner**. That person
 
 A person can hold more than one role. Mixed roles add up — they receive every ability those roles include.
 
-Only the System owner can grant or remove the Administrator role.
+Only the System owner can grant or remove the Administrator role. Built-in roles can be cloned but not edited or deleted. Archive a custom role to stop new assignments without removing it from people who already hold it.
 
 ## Account recovery
 

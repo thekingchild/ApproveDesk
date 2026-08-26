@@ -100,6 +100,9 @@ class SubmissionPolicy
         if ($submission->submitter_id === $user->id || $user->can('submissions.view.all')) {
             return true;
         }
+        if ($user->can('followers.manage') && $this->view($user, $submission)) {
+            return true;
+        }
 
         $instance = $submission->workflowInstance()->first();
         $step = $instance?->currentStep;

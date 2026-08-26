@@ -4,6 +4,7 @@ namespace App\Actions\Backups;
 
 use App\Enums\BackupSnapshotKind;
 use App\Models\BackupSnapshot;
+use App\Services\Backups\BackupExecutionGuard;
 use App\Services\Backups\BackupRecorder;
 use App\Services\Operations\BackupVerifier;
 use App\Support\BackupSettings;
@@ -14,9 +15,17 @@ use RuntimeException;
 
 final class CreateDatabaseBackupAction
 {
-    public function __construct(private readonly BackupRecorder $recorder) {}
+    public function __construct(
+        private readonly BackupRecorder $recorder,
+        private readonly BackupExecutionGuard $execution,
+    ) {}
 
     public function execute(): BackupSnapshot
+    {
+        return $this->execution->run(fn (): BackupSnapshot => $this->create());
+    }
+
+    private function create(): BackupSnapshot
     {
         $dump = storage_path('app/private/backups/.tmp-'.uniqid('', true).'.sql');
         $gzip = $dump.'.gz';

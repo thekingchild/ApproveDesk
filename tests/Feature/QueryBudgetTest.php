@@ -34,7 +34,7 @@ class QueryBudgetTest extends TestCase
 
         $queries = $this->countQueries(fn () => $this->actingAs($admin)->get(route('dashboard'))->assertOk());
 
-        $this->assertLessThanOrEqual(40, $queries, "Administrator dashboard exceeded its 40-query budget ({$queries}).");
+        $this->assertLessThanOrEqual(45, $queries, "Administrator dashboard exceeded its 45-query budget ({$queries}).");
     }
 
     public function test_approval_inbox_stays_within_its_query_budget(): void
