@@ -37,4 +37,15 @@ class PermissionCatalogueTest extends TestCase
         $this->assertNotNull($entry);
         $this->assertFalse($entry['delegable']);
     }
+
+    public function test_custom_code_permission_is_not_delegable(): void
+    {
+        $entry = PermissionCatalogue::find('branding.custom_code.manage');
+
+        $this->assertNotNull($entry);
+        $this->assertFalse($entry['delegable']);
+        $this->assertSame('elevated', $entry['risk']);
+        $this->assertContains('branding.manage', $entry['depends_on_any']);
+        $this->assertSame([], $entry['legacy']);
+    }
 }

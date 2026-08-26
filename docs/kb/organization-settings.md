@@ -21,7 +21,7 @@ Set the organisation identity and the public login screen. The page is organised
 - Tagline, accent colour, background image, overlay slider, and optional CSS.
 - The background image is shown on large screens in the left panel and on smaller screens behind the sign-in form; its upload card previews the current or chosen image.
 - Custom CSS lives under **Advanced: custom CSS** — it is for fine-grained tweaks only and is never required.
-- Analytics and custom code lives under **Advanced: analytics and custom code**. Paste a tracking snippet or JavaScript from your analytics provider. ApproveDesk adds it to login, the signed-in application, and the public home page. Leave it empty to add nothing. Only administrators can change this, and it should not contain secrets.
+- Analytics and custom code lives under **Advanced: analytics and custom code**. Paste a tracking snippet or JavaScript from your analytics provider. ApproveDesk adds it to login, the signed-in application, and the public home page. Leave it empty to add nothing. Only the System owner can change this, after confirming their password and second factor. It should not contain secrets. People who only manage branding cannot add or remove this code.
 - You can allow or block self-registration. If registration is off, only administrators create accounts.
 
 The **Live preview** panel has two tabs. **Login** shows the background, overlay darkness, tagline, and logo/name as requesters will see them. **Browser** shows how your favicon, application name, and description appear in a browser tab and next to the signed-in header.

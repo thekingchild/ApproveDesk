@@ -205,6 +205,7 @@ class HelpCentreTest extends TestCase
             ->assertSee('Security & privacy')
             ->assertSee('installation timezone')
             ->assertSee('Google or Microsoft')
+            ->assertSee('Only the System owner can change this')
             ->assertDontSee('application timezone (UTC)')
             ->assertDontSee('APP_TIMEZONE')
             ->assertDontSee('.env');

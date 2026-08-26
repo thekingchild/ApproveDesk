@@ -1052,15 +1052,15 @@ This supplement is self-hosted v2.7.2 work on `feature/sh-sec272-security-harden
 
 **Out of scope:** treating the allow-list as an authentication boundary; changing OTP/password registration.
 
-### SH-SEC-BRAND — Owner-only custom code (Finding 3)
+### SH-SEC-BRAND — Owner-only custom code (Finding 3) — Complete (2026-08-26)
 
 **Objective:** `branding.manage` can no longer persist organization-wide JavaScript. Custom code remains possible only for the System owner after recent strong authentication.
 
-- **SH-SEC-BRAND-01:** Add catalogue permission `branding.custom_code.manage`: label “Manage custom code”, group Configuration, risk elevated, **`delegable` => false**, depends on `branding.manage`. Do not grant it to built-in Administrator or any custom role. System owner continues to pass via `Gate::before`.
-- **SH-SEC-BRAND-02:** `UpdateBrandingSettingsAction` writes `brand.custom_code` only when the actor is authorized for `branding.custom_code.manage`. A `branding.manage` save must not create, change, or clear custom code (ignore the request field).
-- **SH-SEC-BRAND-03:** Branding page (`resources/views/pages/settings/branding.blade.php`): hide the Advanced analytics/custom-code editor unless the current user can `branding.custom_code.manage`. Saving a code change requires password confirmation and the same second-factor session assurance used for owner recovery (`password.confirm` + `SecondFactorAssurance`). Visual branding (logo, colors, CSS, registration) stays on `branding.manage`.
-- **SH-SEC-BRAND-04:** Existing stored snippets keep rendering through `Branding::customCodeHtml()` and the shared head. Do not strip `'unsafe-inline'` from CSP in this phase.
-- **SH-SEC-BRAND-05:** Tests in `tests/Feature/BrandingTest.php` (and catalogue/role tests as needed):
+- **SH-SEC-BRAND-01 — Complete (2026-08-26):** Add catalogue permission `branding.custom_code.manage`: label “Manage custom code”, group Configuration, risk elevated, **`delegable` => false**, depends on `branding.manage`. Do not grant it to built-in Administrator or any custom role. System owner continues to pass via `Gate::before`.
+- **SH-SEC-BRAND-02 — Complete (2026-08-26):** `UpdateBrandingSettingsAction` writes `brand.custom_code` only when the actor is authorized for `branding.custom_code.manage`. A `branding.manage` save must not create, change, or clear custom code (ignore the request field).
+- **SH-SEC-BRAND-03 — Complete (2026-08-26):** Branding page (`resources/views/pages/settings/branding.blade.php`): hide the Advanced analytics/custom-code editor unless the current user can `branding.custom_code.manage`. Saving a code change requires password confirmation and the same second-factor session assurance used for owner recovery (`password.confirm` + `SecondFactorAssurance`). Visual branding (logo, colors, CSS, registration) stays on `branding.manage`.
+- **SH-SEC-BRAND-04 — Complete (2026-08-26):** Existing stored snippets keep rendering through `Branding::customCodeHtml()` and the shared head. Do not strip `'unsafe-inline'` from CSP in this phase.
+- **SH-SEC-BRAND-05 — Complete (2026-08-26):** Tests in `tests/Feature/BrandingTest.php` (and catalogue/role tests as needed):
   - a custom role with only `branding.manage` can save tagline/logo and cannot persist or clear `brand.custom_code`.
   - System owner with password confirmation + second-factor assurance can save custom code; without assurance, save is rejected.
   - owner-saved snippet still appears on login and in-app.
