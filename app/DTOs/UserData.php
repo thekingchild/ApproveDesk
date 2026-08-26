@@ -5,7 +5,7 @@ namespace App\DTOs;
 final readonly class UserData
 {
     /**
-     * @param  array<int, string>  $roles
+     * @param  list<string>  $roles
      */
     public function __construct(
         public string $name,

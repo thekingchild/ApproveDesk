@@ -155,6 +155,7 @@ Locked product decision for Phase 8.2. It does not reopen Phase 8.1. Design: [do
 | E2FA | v2.5.5 | Optional second-factor assurance for signed approval URLs | Complete |
 | SH-OWN/REC/CAP | v2.6.0 | Self-hosted system owner, account recovery, and active-user capacity | Complete |
 | SH-RBAC/BTIME/CRON | v2.7.0 | Custom roles, backup time pickers, and scheduler diagnostics | Complete |
+| SH-BK271 | v2.7.1 | Backup date-time names, restore history, SQLite promote | Complete |
 | 10 | v3.0.0 | SaaS multi-tenancy foundation | Not started |
 | 11 | v3.1.0 | Paystack and Flutterwave subscriptions | Not started |
 | 12 | v3.2.0 | SaaS onboarding, entitlements, and commercial operations | Not started |
@@ -983,6 +984,19 @@ This supplement is self-hosted v2.7.0 work. It does not implement or change Appr
 ### SH-DOC27 — Help and release — Complete (2026-08-26)
 
 - **SH-DOC27-01 — Complete (2026-08-26):** Update Help, deployment/operations docs, changelog, version metadata, and quality evidence; keep SaaS roadmap separate.
+
+---
+
+## Self-hosted supplement — Backup names, restore history, and SQLite promote — Complete (2026-08-26)
+
+**Goal:** name in-app snapshots by the time they were taken, list newest first, record who restored which copy, and let SQLite promote load existing dumps.
+
+This supplement is self-hosted v2.7.1 work. It does not implement or change ApproveDesk SaaS Phase 10–15.
+
+### SH-BK271 — Backup snapshot names and restore trail — Complete (2026-08-26)
+
+- **SH-BK271-01 — Complete (2026-08-26):** Name snapshots with date and time, show a Date and time column, sort newest first, and record restore history on promote.
+- **SH-BK271-02 — Complete (2026-08-26):** Load SQLite dumps that contain MySQL `SET FOREIGN_KEY_CHECKS` so existing snapshots can be promoted.
 
 ---
 

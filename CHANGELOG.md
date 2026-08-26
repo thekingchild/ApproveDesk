@@ -8,7 +8,6 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Added
 
-- Backup snapshots are named with the date and time they were taken, listed newest first, and shown in a Date and time column. Restore history records who promoted which snapshot.
 - MySQL promote for verified in-app database snapshots. Host panel backups stay recommended.
 - GitHub Actions MySQL 8 test job alongside the existing SQLite job.
 - Schema test that every index and foreign-key name is 64 characters or fewer so MySQL/MariaDB can migrate.
@@ -19,7 +18,6 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Fixed
 
-- Promoting a database snapshot on SQLite no longer fails on older dumps that start with `SET FOREIGN_KEY_CHECKS`.
 - Push subscription uniqueness now uses a SHA-256 `endpoint_hash` instead of indexing the TEXT endpoint, so MySQL/MariaDB can migrate (error 1170).
 - Database dumps quote the bare table name, not `database.table`, so MySQL `SHOW CREATE TABLE` does not look for `approvedesk_test.approvedesk_test.activity_log`.
 - Database snapshots now include the local destination before capture, and promoting an older snapshot restores its missing destination before keeping the promoted snapshot in the list.
@@ -30,6 +28,20 @@ All notable changes to ApproveDesk are documented here. The project follows
 - Add a standalone `template_version_id` index so rolling back workflow versions on MySQL does not refuse the unique drop (error 1553) and leave later tests without `users.phone`.
 - Add a standalone push-subscription `user_id` index so MySQL can replace or roll back the device uniqueness index without error 1553.
 - Relaxed the business-calendar “completes quickly” bound so parallel PHPUnit is not flaky on a busy runner.
+
+## [2.7.1] - 2026-08-26
+
+### Added
+
+- Backup snapshots are named with the date and time they were taken, listed newest first, and shown in a Date and time column. Restore history records who promoted which snapshot.
+
+### Changed
+
+- README, `.env.example` `APP_VERSION`, and this changelog treat **v2.7.1** as the current single-company release.
+
+### Fixed
+
+- Promoting a database snapshot on SQLite no longer fails on older dumps that start with `SET FOREIGN_KEY_CHECKS`.
 
 ## [2.7.0] - 2026-08-26
 

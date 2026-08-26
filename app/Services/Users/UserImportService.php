@@ -210,8 +210,13 @@ final class UserImportService
                         : null;
                     $managerEmail = mb_strtolower(trim((string) ($row['manager_email'] ?? '')));
                     $manager = $managerEmail === '' ? null : User::query()->assignable()->where('email', $managerEmail)->first();
-                    $roles = collect(preg_split('/[;,]+/', (string) ($row['roles'] ?? '')) ?: [])
-                        ->map(fn (string $role): string => trim($role))->filter()->values()->all();
+                    $roles = [];
+                    foreach (preg_split('/[;,]+/', (string) ($row['roles'] ?? '')) ?: [] as $role) {
+                        $role = trim((string) $role);
+                        if ($role !== '') {
+                            $roles[] = $role;
+                        }
+                    }
 
                     $existing = User::query()->where('email', $email)->first();
 

@@ -11,6 +11,13 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property BackupSnapshotKind $kind
+ * @property BackupSnapshotStatus $status
+ * @property CarbonInterface|null $taken_at
+ * @property CarbonInterface|null $created_at
+ * @property CarbonInterface|null $promoted_at
+ */
 class BackupSnapshot extends Model
 {
     /** @use HasFactory<BackupSnapshotFactory> */
@@ -65,7 +72,9 @@ class BackupSnapshot extends Model
 
     public function takenAt(): CarbonInterface
     {
-        return $this->taken_at ?? $this->created_at ?? now();
+        $taken = $this->taken_at ?? $this->created_at;
+
+        return $taken instanceof CarbonInterface ? $taken : now();
     }
 
     public function displayName(): string

@@ -23,12 +23,18 @@ final class RolePermissionService
         return $this->persistNewRole($actor, $label, $description, $permissions, 'role_created');
     }
 
-    /** @param list<string> $permissions @param array<string, mixed>|null $before */
+    /**
+     * @param  list<string>  $permissions
+     * @param  array<string, mixed>|null  $before
+     */
     private function persistNewRole(User $actor, string $label, ?string $description, array $permissions, string $action, ?array $before = null): Role
     {
         return DB::transaction(function () use ($actor, $label, $description, $permissions, $action, $before): Role {
             $slug = $this->uniqueSlug($label);
-            $role = Role::create(['name' => $slug, 'guard_name' => 'web']);
+            $role = new Role;
+            $role->name = $slug;
+            $role->guard_name = 'web';
+            $role->save();
             RoleProfile::query()->create([
                 'role_id' => $role->id,
                 'label' => $label,
@@ -38,7 +44,7 @@ final class RolePermissionService
                 'updated_by' => $actor->id,
             ]);
             $role->syncPermissions($permissions);
-            $this->record($actor, $role, $action, $before, ['role_id' => $role->id, 'permissions' => array_values($permissions)]);
+            $this->record($actor, $role, $action, $before, ['role_id' => $role->id, 'permissions' => $permissions]);
 
             return $role->load(['permissions']);
         });
@@ -69,7 +75,10 @@ final class RolePermissionService
         if ($source->name === 'super-admin') {
             throw $this->validation('role', __('The internal System owner role cannot be cloned.'));
         }
-        $permissions = $source->permissions()->pluck('name')->all();
+        $permissions = [];
+        foreach ($source->permissions()->pluck('name') as $name) {
+            $permissions[] = (string) $name;
+        }
         $this->assertPermissionCeiling($actor, $permissions);
         $description = RoleProfile::query()->where('role_id', $source->id)->value('description');
 
@@ -109,19 +118,17 @@ final class RolePermissionService
         }
 
         $held = $actor->getAllPermissions()->pluck('name')->all();
+        $keys = [];
+        foreach (PermissionCatalogue::all() as $entry) {
+            if ($entry['delegable'] !== true) {
+                continue;
+            }
+            if (in_array($entry['key'], $held, true) || array_intersect($entry['legacy'], $held) !== []) {
+                $keys[] = (string) $entry['key'];
+            }
+        }
 
-        return collect(PermissionCatalogue::all())
-            ->filter(function (array $entry) use ($held): bool {
-                if ($entry['delegable'] !== true) {
-                    return false;
-                }
-
-                return in_array($entry['key'], $held, true)
-                    || array_intersect($entry['legacy'], $held) !== [];
-            })
-            ->pluck('key')
-            ->values()
-            ->all();
+        return $keys;
     }
 
     /** @param list<string> $permissions */
@@ -174,7 +181,10 @@ final class RolePermissionService
         return $slug;
     }
 
-    /** @param array<string, mixed>|null $before @param array<string, mixed>|null $after */
+    /**
+     * @param  array<string, mixed>|null  $before
+     * @param  array<string, mixed>|null  $after
+     */
     private function record(User $actor, Role $role, string $action, ?array $before, ?array $after): void
     {
         RoleChangeEvent::query()->create(['actor_id' => $actor->id, 'role_id' => $role->id, 'action' => $action, 'before' => $before, 'after' => $after]);

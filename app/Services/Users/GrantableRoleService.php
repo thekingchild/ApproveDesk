@@ -21,22 +21,37 @@ final class GrantableRoleService
             ->orderBy('name')
             ->get();
 
-        return $roles->filter(function (Role $role) use ($actor): bool {
+        $names = [];
+        foreach ($roles as $role) {
             if ($role->name === 'admin') {
-                return $actor->isSystemOwner();
+                if ($actor->isSystemOwner()) {
+                    $names[] = (string) $role->name;
+                }
+
+                continue;
             }
             if ($actor->isSystemOwner()) {
-                return true;
+                $names[] = (string) $role->name;
+
+                continue;
             }
             if ($role->profile?->is_builtin) {
-                return $actor->can('users.manage') || $actor->can('users.update');
+                if ($actor->can('users.manage') || $actor->can('users.update')) {
+                    $names[] = (string) $role->name;
+                }
+
+                continue;
             }
             if (! $actor->can('roles.assign.custom')) {
-                return false;
+                continue;
             }
 
-            return array_diff($role->permissions->pluck('name')->all(), $this->permissions->ceiling($actor)) === [];
-        })->pluck('name')->values()->all();
+            if (array_diff($role->permissions->pluck('name')->all(), $this->permissions->ceiling($actor)) === []) {
+                $names[] = (string) $role->name;
+            }
+        }
+
+        return $names;
     }
 
     /** @param list<string> $roles */

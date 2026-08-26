@@ -168,7 +168,10 @@ class User extends Authenticatable implements PasskeyUser
         return $this->exists && $ownerId !== null && (int) $this->getKey() === $ownerId;
     }
 
-    /** @param Builder<User> $query */
+    /**
+     * @param  Builder<User>  $query
+     * @return Builder<User>
+     */
     public function scopeVisibleTo(Builder $query, User $viewer): Builder
     {
         if ($viewer->isSystemOwner()) {
@@ -178,7 +181,10 @@ class User extends Authenticatable implements PasskeyUser
         return $query->whereNotIn('id', SystemOwner::query()->select('user_id'));
     }
 
-    /** @param Builder<User> $query */
+    /**
+     * @param  Builder<User>  $query
+     * @return Builder<User>
+     */
     public function scopeAssignable(Builder $query): Builder
     {
         return $query->whereNotIn('id', SystemOwner::query()->select('user_id'));
