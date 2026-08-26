@@ -128,7 +128,7 @@ A 6-digit number emailed to someone who self-registers when **Require email conf
 
 ## [Domain allow-list](/help/organization-settings)
 
-The list of email domains permitted to self-register, set on Branding. Empty means any provider. It does not apply to accounts an administrator creates or imports.
+The list of email domains permitted to self-register, set on Branding. Empty means any provider. New Google and Microsoft accounts follow the same list. It does not apply to accounts an administrator creates or imports, or to linking Google or Microsoft on an account that already exists.
 
 ## [User import](/help/users-and-roles)
 

@@ -1035,13 +1035,13 @@ This supplement is self-hosted v2.7.2 work on `feature/sh-sec272-security-harden
 
 **Out of scope:** in-app timezone editor, per-user timezone, tenant timezone, installer UI.
 
-### SH-SEC-OAUTH — OAuth registration respects the domain allow-list (Finding 2)
+### SH-SEC-OAUTH — OAuth registration respects the domain allow-list (Finding 2) — Complete (2026-08-26)
 
 **Objective:** Google/Microsoft new-user creation uses the same `RegistrationSettings::domainAllowed()` gate as password registration. Linking an existing account is unchanged.
 
-- **SH-SEC-OAUTH-01:** In `app/Actions/Auth/ResolveOAuthUserAction.php`, before `User::create` when registration is open, call `RegistrationSettings::domainAllowed($data->email)`. On denial throw `ValidationException` with the same user-facing message as `CreateNewUser` (`Please register with your organization email address.`). Do not enumerate allowed domains. Do not apply the list to existing-user linking or returning OAuth identities.
-- **SH-SEC-OAUTH-02:** Keep the global registration switch, active-user cap, and `email_verified_at` / `is_active` behavior for allowed new OAuth users.
-- **SH-SEC-OAUTH-03:** Tests in `tests/Feature/Auth/OAuthAuthenticationTest.php`:
+- **SH-SEC-OAUTH-01 — Complete (2026-08-26):** In `app/Actions/Auth/ResolveOAuthUserAction.php`, before `User::create` when registration is open, call `RegistrationSettings::domainAllowed($data->email)`. On denial throw `ValidationException` with the same user-facing message as `CreateNewUser` (`Please register with your organization email address.`). Do not enumerate allowed domains. Do not apply the list to existing-user linking or returning OAuth identities.
+- **SH-SEC-OAUTH-02 — Complete (2026-08-26):** Keep the global registration switch, active-user cap, and `email_verified_at` / `is_active` behavior for allowed new OAuth users.
+- **SH-SEC-OAUTH-03 — Complete (2026-08-26):** Tests in `tests/Feature/Auth/OAuthAuthenticationTest.php`:
   - allow-list `example.com`; Google new user `someone@gmail.com` is rejected; no user row.
   - allow-list `example.com`; Microsoft new user `person@example.com` is created as submitter.
   - empty allow-list still creates a new OAuth user (current behavior).

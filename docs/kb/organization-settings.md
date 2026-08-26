@@ -14,7 +14,7 @@ Set the organisation identity and the public login screen. The page is organised
 - Favicon replaces the browser-tab icon. ICO, PNG, JPG, or WebP, up to 512 KB, with the same preview-and-undo behaviour.
 - Allow self-registration sits here because it controls who can create an account. When it is on, two further controls appear:
   - **After someone registers** — require a 6-digit email confirmation (recommended, the default) or grant immediate access. Confirmation codes expire after 10 minutes. Until the person confirms, they cannot sign in.
-  - **Registration domains** — one domain per line (for example `bluechipanalytical.com`). Only those email addresses may self-register. Leave empty to allow any email provider. Subdomains match only when listed. This is an onboarding convenience, not a security boundary: anyone can type any address, so passwords, two-factor, and passkeys remain the real assurance. Administrator-created and imported users ignore this list.
+  - **Registration domains** — one domain per line (for example `bluechipanalytical.com`). Only those email addresses may self-register, including people who create an account with Google or Microsoft. Leave empty to allow any email provider. Subdomains match only when listed. An existing account can still link Google or Microsoft even if that address would not be allowed to self-register. This is an onboarding convenience, not a security boundary: anyone can type any address, so passwords, two-factor, and passkeys remain the real assurance. Administrator-created and imported users ignore this list.
 
 **Login page** settings are the public login screen — what requesters see before they sign in:
 

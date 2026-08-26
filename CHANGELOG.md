@@ -15,6 +15,7 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Changed
 
+- Google and Microsoft new accounts follow the same registration domain list as password sign-up. Existing accounts can still link those providers.
 - Permission cache is not flushed until the `cache` table exists, so `composer install` / `package:discover` no longer fail on an empty SQLite memory database.
 
 ### Fixed

@@ -204,6 +204,7 @@ class HelpCentreTest extends TestCase
             ->assertSee('Notification channels')
             ->assertSee('Security & privacy')
             ->assertSee('installation timezone')
+            ->assertSee('Google or Microsoft')
             ->assertDontSee('application timezone (UTC)')
             ->assertDontSee('APP_TIMEZONE')
             ->assertDontSee('.env');

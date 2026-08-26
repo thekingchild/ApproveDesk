@@ -7,6 +7,7 @@ use App\Models\OAuthIdentity;
 use App\Models\User;
 use App\Services\Users\ActiveUserLimitService;
 use App\Support\Branding;
+use App\Support\RegistrationSettings;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -35,6 +36,12 @@ final class ResolveOAuthUserAction
                 if (! Branding::registrationOpen()) {
                     throw ValidationException::withMessages([
                         'oauth' => __('No ApproveDesk account exists for this email address and registration is disabled.'),
+                    ]);
+                }
+
+                if (! RegistrationSettings::domainAllowed($data->email)) {
+                    throw ValidationException::withMessages([
+                        'oauth' => __('Please register with your organization email address.'),
                     ]);
                 }
 
