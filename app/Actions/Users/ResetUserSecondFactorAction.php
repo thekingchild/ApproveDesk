@@ -33,13 +33,8 @@ final class ResetUserSecondFactorAction
                 'two_factor_confirmed_at' => null,
             ])->save();
 
-            if (method_exists($locked, 'passkeys')) {
-                $locked->passkeys()->delete();
-            }
-
-            if (method_exists($locked, 'tokens')) {
-                $locked->tokens()->delete();
-            }
+            $locked->passkeys()->delete();
+            $locked->tokens()->delete();
 
             $this->sessions->revokeAll($locked);
 

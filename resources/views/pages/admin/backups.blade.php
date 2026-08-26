@@ -10,6 +10,7 @@ use App\Actions\Backups\VerifyBackupSnapshotAction;
 use App\Enums\BackupSnapshotKind;
 use App\Enums\BackupSnapshotStatus;
 use App\Models\BackupDestination;
+use App\Models\BackupRestoreEvent;
 use App\Models\BackupSnapshot;
 use App\Services\Backups\BackupRecorder;
 use App\Support\BackupSettings;
@@ -83,7 +84,7 @@ new #[Title('Backups')] class extends Component
             throw \Illuminate\Validation\ValidationException::withMessages(['backup' => $exception->getMessage()]);
         }
 
-        unset($this->snapshots);
+        unset($this->snapshots, $this->restoreEvents);
         Flux::toast(__('Database snapshot stored.'), variant: 'success');
     }
 
@@ -97,7 +98,7 @@ new #[Title('Backups')] class extends Component
             throw \Illuminate\Validation\ValidationException::withMessages(['backup' => $exception->getMessage()]);
         }
 
-        unset($this->snapshots);
+        unset($this->snapshots, $this->restoreEvents);
         Flux::toast(__('Files snapshot stored.'), variant: 'success');
     }
 
@@ -109,7 +110,7 @@ new #[Title('Backups')] class extends Component
         } catch (\InvalidArgumentException $exception) {
             throw \Illuminate\Validation\ValidationException::withMessages(['promoteConfirmation' => $exception->getMessage()]);
         }
-        unset($this->snapshots);
+        unset($this->snapshots, $this->restoreEvents);
         Flux::toast(__('Snapshot checked out.'), variant: 'success');
     }
 
@@ -129,7 +130,7 @@ new #[Title('Backups')] class extends Component
         }
 
         $this->promoteConfirmation = '';
-        unset($this->snapshots);
+        unset($this->snapshots, $this->restoreEvents);
         Flux::toast(__('Snapshot promoted.'), variant: 'success');
     }
 
@@ -150,7 +151,7 @@ new #[Title('Backups')] class extends Component
             throw \Illuminate\Validation\ValidationException::withMessages(['promoteConfirmation' => $exception->getMessage()]);
         }
 
-        unset($this->snapshots);
+        unset($this->snapshots, $this->restoreEvents);
         Flux::toast(__('Local copy removed. Remote copies were kept.'), variant: 'success');
     }
 
@@ -158,7 +159,7 @@ new #[Title('Backups')] class extends Component
     {
         $this->authorize('backups.local_copies.remove');
         $removed = $action->executeEligible();
-        unset($this->snapshots);
+        unset($this->snapshots, $this->restoreEvents);
         Flux::toast(
             $removed === 0
                 ? __('No local copies had a remote replica.')
@@ -212,7 +213,14 @@ new #[Title('Backups')] class extends Component
     #[Computed]
     public function snapshots(): \Illuminate\Support\Collection
     {
-        return BackupSnapshot::query()->with('destination')->latest('id')->limit(40)->get();
+        return BackupSnapshot::query()->with(['destination', 'promoter'])->latest('taken_at')->latest('id')->limit(40)->get();
+    }
+
+    /** @return \Illuminate\Support\Collection<int, BackupRestoreEvent> */
+    #[Computed]
+    public function restoreEvents(): \Illuminate\Support\Collection
+    {
+        return BackupRestoreEvent::query()->latest('id')->limit(20)->get();
     }
 
     /** @return \Illuminate\Support\Collection<int, BackupDestination> */
@@ -380,6 +388,7 @@ new #[Title('Backups')] class extends Component
             <table class="w-full text-sm">
                 <thead>
                     <tr class="text-left text-zinc-500">
+                        <th class="py-2 pr-3">{{ __('Date and time') }}</th>
                         <th class="py-2 pr-3">{{ __('Id') }}</th>
                         <th class="py-2 pr-3">{{ __('Kind') }}</th>
                         <th class="py-2 pr-3">{{ __('Where') }}</th>
@@ -391,6 +400,7 @@ new #[Title('Backups')] class extends Component
                 <tbody>
                     @forelse ($this->snapshots as $snapshot)
                         <tr class="border-t border-zinc-200 dark:border-zinc-800" data-test="backup-snapshot">
+                            <td class="py-2 pr-3 font-mono" data-test="backup-snapshot-taken">{{ $snapshot->displayName() }}</td>
                             <td class="py-2 pr-3 font-mono">{{ $snapshot->id }}</td>
                             <td class="py-2 pr-3">{{ $snapshot->kind->value }}</td>
                             <td class="py-2 pr-3">{{ $snapshot->destination?->name }}</td>
@@ -417,11 +427,29 @@ new #[Title('Backups')] class extends Component
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="py-4 text-zinc-500">{{ __('No snapshots yet.') }}</td>
+                            <td colspan="7" class="py-4 text-zinc-500">{{ __('No snapshots yet.') }}</td>
                         </tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
+    </div>
+
+    <div class="mt-8" data-test="backup-restore-trail">
+        <flux:heading size="sm">{{ __('Restore history') }}</flux:heading>
+        <flux:text class="mt-1">{{ __('Each promote is recorded here: who restored which snapshot, and when. Database restores keep this trail on the restored copy.') }}</flux:text>
+        <ul class="mt-4 space-y-2 text-sm">
+            @forelse ($this->restoreEvents as $event)
+                <li data-test="backup-restore-event">
+                    {{ $event->created_at?->timezone((string) config('app.timezone', 'UTC'))->format('D j M Y, H:i') }}
+                    —
+                    {{ $event->kind->value }}
+                    {{ $event->snapshot_name }}
+                    {{ __('restored by :name', ['name' => $event->actor_name]) }}
+                </li>
+            @empty
+                <li class="text-zinc-500">{{ __('No snapshots have been restored yet.') }}</li>
+            @endforelse
+        </ul>
     </div>
 </div>

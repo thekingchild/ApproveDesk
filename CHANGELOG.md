@@ -29,6 +29,20 @@ All notable changes to ApproveDesk are documented here. The project follows
 - Add a standalone push-subscription `user_id` index so MySQL can replace or roll back the device uniqueness index without error 1553.
 - Relaxed the business-calendar “completes quickly” bound so parallel PHPUnit is not flaky on a busy runner.
 
+## [2.7.1] - 2026-08-26
+
+### Added
+
+- Backup snapshots are named with the date and time they were taken, listed newest first, and shown in a Date and time column. Restore history records who promoted which snapshot.
+
+### Changed
+
+- README, `.env.example` `APP_VERSION`, and this changelog treat **v2.7.1** as the current single-company release.
+
+### Fixed
+
+- Promoting a database snapshot on SQLite no longer fails on older dumps that start with `SET FOREIGN_KEY_CHECKS`.
+
 ## [2.7.0] - 2026-08-26
 
 ### Added

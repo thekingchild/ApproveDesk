@@ -14,7 +14,7 @@ class DownloadBackupSnapshotController extends Controller
 
         return response()->download(
             $absolute,
-            ($snapshot->kind->value).'-'.$snapshot->id.'.'.pathinfo((string) $snapshot->path, PATHINFO_EXTENSION),
+            ($snapshot->downloadName()),
         );
     }
 }

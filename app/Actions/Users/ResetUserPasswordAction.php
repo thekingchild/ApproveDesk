@@ -42,9 +42,7 @@ final class ResetUserPasswordAction
                 'remember_token' => null,
             ])->save();
 
-            if (method_exists($locked, 'tokens')) {
-                $locked->tokens()->delete();
-            }
+            $locked->tokens()->delete();
 
             $this->sessions->revokeAll($locked);
 

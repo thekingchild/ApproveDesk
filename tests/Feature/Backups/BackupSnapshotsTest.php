@@ -52,6 +52,14 @@ class BackupSnapshotsTest extends TestCase
         $this->assertTrue($result->ok, implode(' ', $result->issues));
         $this->assertSame(WorkflowAction::query()->count(), $snapshot->manifest['workflow_actions']);
         $this->assertSame(1, $snapshot->manifest['tables']['backup_destinations']);
+        $decodedSql = (string) file_get_contents($decoded);
+        if (Schema::getConnection()->getDriverName() === 'sqlite') {
+            $this->assertStringContainsString('PRAGMA foreign_keys=OFF', $decodedSql);
+            $this->assertStringNotContainsString('SET FOREIGN_KEY_CHECKS', $decodedSql);
+        } else {
+            $this->assertStringContainsString('SET FOREIGN_KEY_CHECKS=0', $decodedSql);
+            $this->assertStringNotContainsString('PRAGMA foreign_keys', $decodedSql);
+        }
         unlink($decoded);
     }
 
@@ -241,6 +249,55 @@ class BackupSnapshotsTest extends TestCase
             ->assertHasNoErrors();
 
         $this->assertTrue(BackupSnapshot::query()->where('kind', BackupSnapshotKind::Database)->exists());
+    }
+
+    public function test_snapshots_are_named_and_listed_by_taken_time_newest_first(): void
+    {
+        $admin = User::factory()->create()->assignRole('admin');
+        $destination = BackupDestination::factory()->create();
+        $older = BackupSnapshot::factory()->create([
+            'destination_id' => $destination->id,
+            'taken_at' => now()->subHour(),
+            'path' => 'backups/database/2026-08-26-140000.sql.gz',
+        ]);
+        $newer = BackupSnapshot::factory()->create([
+            'destination_id' => $destination->id,
+            'taken_at' => now(),
+            'path' => 'backups/database/2026-08-26-150000.sql.gz',
+        ]);
+
+        $this->actingAs($admin)->get(route('admin.backups.index'))
+            ->assertOk()
+            ->assertSee(__('Date and time'))
+            ->assertSee($newer->displayName())
+            ->assertSeeInOrder([$newer->displayName(), $older->displayName()]);
+
+        $snapshot = app(CreateDatabaseBackupAction::class)->execute();
+        $this->assertNotNull($snapshot->taken_at);
+        $this->assertStringContainsString($snapshot->takenAt()->timezone((string) config('app.timezone'))->format('Y-m-d-His'), (string) $snapshot->path);
+        $this->assertSame($snapshot->kind->value.'-'.$snapshot->takenAt()->timezone((string) config('app.timezone'))->format('Y-m-d-His').'.gz', $snapshot->downloadName());
+    }
+
+    public function test_promoting_a_snapshot_records_visible_restore_history(): void
+    {
+        $admin = User::factory()->create(['name' => 'Ada Restore'])->assignRole('admin');
+        $snapshot = app(CreateDatabaseBackupAction::class)->execute();
+        app(VerifyBackupSnapshotAction::class)->execute($snapshot);
+
+        app(PromoteDatabaseBackupAction::class)->rememberPromoted($snapshot, $admin);
+
+        $this->assertDatabaseHas('backup_restore_events', [
+            'snapshot_id' => $snapshot->id,
+            'actor_name' => 'Ada Restore',
+            'kind' => 'database',
+            'snapshot_name' => $snapshot->fresh()->displayName(),
+        ]);
+
+        $this->actingAs($admin)->get(route('admin.backups.index'))
+            ->assertOk()
+            ->assertSee(__('Restore history'))
+            ->assertSee('Ada Restore')
+            ->assertSee($snapshot->fresh()->displayName());
     }
 
     public function test_schedule_registers_backup_jobs_without_overlapping(): void

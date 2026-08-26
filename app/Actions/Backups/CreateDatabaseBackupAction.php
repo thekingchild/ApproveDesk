@@ -62,7 +62,9 @@ final class CreateDatabaseBackupAction
         }
 
         $tables = [];
-        fwrite($handle, "-- ApproveDesk database snapshot\nSET FOREIGN_KEY_CHECKS=0;\n");
+        $driver = Schema::getConnection()->getDriverName();
+        fwrite($handle, "-- ApproveDesk database snapshot\n");
+        fwrite($handle, $driver === 'sqlite' ? "PRAGMA foreign_keys=OFF;\n" : "SET FOREIGN_KEY_CHECKS=0;\n");
 
         foreach ($this->tableNames() as $table) {
             fwrite($handle, $this->createStatement($table)."\n");
@@ -74,7 +76,7 @@ final class CreateDatabaseBackupAction
             $tables[$table] = $count;
         }
 
-        fwrite($handle, "SET FOREIGN_KEY_CHECKS=1;\n");
+        fwrite($handle, $driver === 'sqlite' ? "PRAGMA foreign_keys=ON;\n" : "SET FOREIGN_KEY_CHECKS=1;\n");
         fclose($handle);
 
         foreach (BackupVerifier::REQUIRED_TABLES as $required) {

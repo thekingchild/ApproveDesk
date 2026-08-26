@@ -1,7 +1,37 @@
 parameters:
 	ignoreErrors:
 		-
-			message: '#^Offset ''workflow_actions'' on non\-empty\-array\<string, int\<0, max\>\> on left side of \?\? always exists and is not nullable\.$#'
+			message: '#^Comparison operation "\>\=" between \-1 and 0 is always false\.$#'
+			identifier: greaterOrEqual.alwaysFalse
+			count: 2
+			path: app/Actions/Backups/PromoteDatabaseBackupAction.php
+
+		-
+			message: '#^Offset ''workflow_actions'' on string\|null on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 2
+			path: app/Actions/Backups/PromoteDatabaseBackupAction.php
+
+		-
+			message: '#^Parameter \#1 \$query of static method Illuminate\\Database\\Connection\:\:unprepared\(\) expects literal\-string, non\-empty\-string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Actions/Backups/PromoteDatabaseBackupAction.php
+
+		-
+			message: '#^Result of && is always false\.$#'
+			identifier: booleanAnd.alwaysFalse
+			count: 2
+			path: app/Actions/Backups/PromoteDatabaseBackupAction.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between int and \*NEVER\* will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 2
+			path: app/Actions/Backups/PromoteDatabaseBackupAction.php
+
+		-
+			message: '#^Offset ''workflow_actions'' on non-empty-array<string, int<0, max>> on left side of \?\? always exists and is not nullable\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Actions/Backups/CreateDatabaseBackupAction.php
@@ -25,90 +55,6 @@ parameters:
 			path: app/Actions/Backups/MaterializeBackupSnapshotAction.php
 
 		-
-			message: '#^Comparison operation "\>\=" between \-1 and 0 is always false\.$#'
-			identifier: greaterOrEqual.alwaysFalse
-			count: 2
-			path: app/Actions/Backups/PromoteDatabaseBackupAction.php
-
-		-
-			message: '#^Method App\\Actions\\Backups\\PromoteDatabaseBackupAction\:\:promoteSqlDump\(\) is unused\.$#'
-			identifier: method.unused
-			count: 1
-			path: app/Actions/Backups/PromoteDatabaseBackupAction.php
-
-		-
-			message: '#^Method App\\Actions\\Backups\\PromoteDatabaseBackupAction\:\:promoteSqliteFile\(\) is unused\.$#'
-			identifier: method.unused
-			count: 1
-			path: app/Actions/Backups/PromoteDatabaseBackupAction.php
-
-		-
-			message: '#^Offset ''workflow_actions'' on string\|null on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 2
-			path: app/Actions/Backups/PromoteDatabaseBackupAction.php
-
-		-
-			message: '#^Parameter \#1 \$query of static method Illuminate\\Database\\Connection\:\:unprepared\(\) expects literal\-string, non\-empty\-string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Actions/Backups/PromoteDatabaseBackupAction.php
-
-		-
-			message: '#^Property App\\Actions\\Backups\\PromoteDatabaseBackupAction\:\:\$reconciler is never read, only written\.$#'
-			identifier: property.onlyWritten
-			count: 1
-			path: app/Actions/Backups/PromoteDatabaseBackupAction.php
-
-		-
-			message: '#^Property App\\Actions\\Backups\\PromoteDatabaseBackupAction\:\:\$verify is never read, only written\.$#'
-			identifier: property.onlyWritten
-			count: 1
-			path: app/Actions/Backups/PromoteDatabaseBackupAction.php
-
-		-
-			message: '#^Result of && is always false\.$#'
-			identifier: booleanAnd.alwaysFalse
-			count: 2
-			path: app/Actions/Backups/PromoteDatabaseBackupAction.php
-
-		-
-			message: '#^Strict comparison using \!\=\= between int and \*NEVER\* will always evaluate to true\.$#'
-			identifier: notIdentical.alwaysTrue
-			count: 2
-			path: app/Actions/Backups/PromoteDatabaseBackupAction.php
-
-		-
-			message: '#^Strict comparison using \!\=\= between string and App\\Enums\\BackupSnapshotKind\:\:Database will always evaluate to true\.$#'
-			identifier: notIdentical.alwaysTrue
-			count: 1
-			path: app/Actions/Backups/PromoteDatabaseBackupAction.php
-
-		-
-			message: '#^Unreachable statement \- code above always terminates\.$#'
-			identifier: deadCode.unreachable
-			count: 1
-			path: app/Actions/Backups/PromoteDatabaseBackupAction.php
-
-		-
-			message: '#^Property App\\Actions\\Backups\\PromoteFilesBackupAction\:\:\$verify is never read, only written\.$#'
-			identifier: property.onlyWritten
-			count: 1
-			path: app/Actions/Backups/PromoteFilesBackupAction.php
-
-		-
-			message: '#^Strict comparison using \!\=\= between string and App\\Enums\\BackupSnapshotKind\:\:Files will always evaluate to true\.$#'
-			identifier: notIdentical.alwaysTrue
-			count: 1
-			path: app/Actions/Backups/PromoteFilesBackupAction.php
-
-		-
-			message: '#^Unreachable statement \- code above always terminates\.$#'
-			identifier: deadCode.unreachable
-			count: 1
-			path: app/Actions/Backups/PromoteFilesBackupAction.php
-
-		-
 			message: '#^Cannot access property \$value on string\.$#'
 			identifier: property.nonObject
 			count: 1
@@ -123,12 +69,6 @@ parameters:
 		-
 			message: '#^Parameter \#2 \$manifest of method App\\Actions\\Backups\\VerifyBackupSnapshotAction\:\:verifyZip\(\) expects array\<string, mixed\>, array\|string given\.$#'
 			identifier: argument.type
-			count: 1
-			path: app/Actions/Backups/VerifyBackupSnapshotAction.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\BackupSnapshotKind\:\:Files will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
 			count: 1
 			path: app/Actions/Backups/VerifyBackupSnapshotAction.php
 
@@ -180,11 +120,6 @@ parameters:
 			count: 1
 			path: app/Http/Controllers/Api/V1/SubmissionController.php
 
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Http/Controllers/DownloadBackupSnapshotController.php
 
 		-
 			message: '#^Using nullsafe method call on non\-nullable type Illuminate\\Contracts\\Session\\Session\. Use \-\> instead\.$#'
@@ -239,18 +174,6 @@ parameters:
 			identifier: match.unhandled
 			count: 1
 			path: app/Models/BackupDestination.php
-
-		-
-			message: '#^Call to function in_array\(\) with arguments string, array\{App\\Enums\\BackupSnapshotStatus\:\:Success, App\\Enums\\BackupSnapshotStatus\:\:Verified, App\\Enums\\BackupSnapshotStatus\:\:Promoted\} and true will always evaluate to false\.$#'
-			identifier: function.impossibleType
-			count: 1
-			path: app/Models/BackupSnapshot.php
-
-		-
-			message: '#^Call to function in_array\(\) with arguments string, array\{App\\Enums\\BackupSnapshotStatus\:\:Verified, App\\Enums\\BackupSnapshotStatus\:\:Promoted\} and true will always evaluate to false\.$#'
-			identifier: function.impossibleType
-			count: 1
-			path: app/Models/BackupSnapshot.php
 
 		-
 			message: '#^Using nullsafe property access on non\-nullable type App\\Models\\RequestTypeVersion\. Use \-\> instead\.$#'
@@ -335,12 +258,6 @@ parameters:
 			identifier: return.unusedType
 			count: 1
 			path: app/Services/Auth/RegistrationOtpService.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Services/Backups/BackupRecorder.php
 
 		-
 			message: '#^Match arm comparison between string and App\\Enums\\BackupDestinationKind\:\:GoogleDrive is always false\.$#'
@@ -498,11 +415,6 @@ parameters:
 			count: 1
 			path: app/Services/SubmissionSearchService.php
 
-		-
-			message: '#^Method App\\Services\\Users\\UserImportService\:\:grantableRoles\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Services/Users/UserImportService.php
 
 		-
 			message: '#^Method App\\Services\\Users\\UserImportService\:\:sniffDelimiter\(\) has parameter \$handle with no type specified\.$#'

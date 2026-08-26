@@ -6,14 +6,19 @@ use App\Enums\BackupSnapshotKind;
 use App\Enums\BackupSnapshotStatus;
 use App\Models\BackupSnapshot;
 use App\Models\User;
+use App\Services\Backups\BackupRestoreTrail;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
 use ZipArchive;
 
 final class PromoteFilesBackupAction
 {
-    public function __construct(private readonly VerifyBackupSnapshotAction $verify) {}
+    public function __construct(
+        private readonly VerifyBackupSnapshotAction $verify,
+        private readonly BackupRestoreTrail $restores,
+    ) {}
 
     public function execute(BackupSnapshot $snapshot, User $actor, string $confirmation): BackupSnapshot
     {
@@ -53,10 +58,15 @@ final class PromoteFilesBackupAction
             rename($extracted, Storage::disk('local')->path('submissions'));
         }
 
-        $snapshot->forceFill([
+        $attributes = [
             'status' => BackupSnapshotStatus::Promoted,
             'promoted_at' => now(),
-        ])->save();
+        ];
+        if (Schema::hasColumn('backup_snapshots', 'promoted_by_id')) {
+            $attributes['promoted_by_id'] = $actor->id;
+        }
+        $snapshot->forceFill($attributes)->save();
+        $this->restores->record($snapshot, $actor);
 
         Log::info('backup.promoted', [
             'kind' => 'files',

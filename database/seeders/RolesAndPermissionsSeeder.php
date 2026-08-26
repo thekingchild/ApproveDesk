@@ -54,7 +54,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 ['role_id' => $role->id],
                 [
                     'label' => Str::of($role->name)->replace('-', ' ')->title()->toString(),
-                    'slug' => $this->uniqueSlug($role->name, $role->id),
+                    'slug' => $this->uniqueSlug((string) $role->name, (int) $role->id),
                     'is_builtin' => $builtIn,
                     'is_protected' => $builtIn,
                     'is_archived' => false,

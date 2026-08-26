@@ -8,6 +8,8 @@ use App\Models\BackupDestination;
 use App\Models\BackupSnapshot;
 use App\Models\User;
 use App\Services\Backups\BackupRecorder;
+use App\Services\Backups\BackupRestoreTrail;
+use App\Services\Backups\SqliteSnapshotLoader;
 use App\Services\Operations\BackupVerifier;
 use App\Services\Operations\OperationsReconciler;
 use App\Support\SchemaTable;
@@ -23,6 +25,8 @@ final class PromoteDatabaseBackupAction
     public function __construct(
         private readonly VerifyBackupSnapshotAction $verify,
         private readonly BackupRecorder $recorder,
+        private readonly BackupRestoreTrail $restores,
+        private readonly SqliteSnapshotLoader $sqliteLoader,
         private readonly BackupVerifier $verifier,
         private readonly OperationsReconciler $reconciler,
     ) {}
@@ -79,6 +83,12 @@ final class PromoteDatabaseBackupAction
             'promoted_at' => now(),
             'error' => null,
         ];
+        if (Schema::hasColumn('backup_snapshots', 'promoted_by_id')) {
+            $attributes['promoted_by_id'] = $actor->id;
+        }
+        if (Schema::hasColumn('backup_snapshots', 'taken_at')) {
+            $attributes['taken_at'] = $snapshot->taken_at ?? $snapshot->created_at;
+        }
 
         $persisted = BackupSnapshot::query()->find($snapshot->id);
         if ($persisted === null) {
@@ -87,6 +97,7 @@ final class PromoteDatabaseBackupAction
         }
 
         $persisted->forceFill($attributes)->save();
+        $this->restores->record($persisted, $actor);
 
         Log::info('backup.promoted', [
             'kind' => 'database',
@@ -216,9 +227,7 @@ final class PromoteDatabaseBackupAction
                 return;
             }
 
-            $pdo = new \PDO('sqlite:'.$scratch);
-            $pdo->exec('PRAGMA foreign_keys = OFF');
-            $pdo->exec((string) file_get_contents($decoded));
+            $this->sqliteLoader->loadSqlDump((string) file_get_contents($decoded), $scratch);
         } finally {
             if (is_file($decoded)) {
                 unlink($decoded);

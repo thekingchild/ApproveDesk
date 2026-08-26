@@ -28,6 +28,7 @@ class BackupSnapshotFactory extends Factory
             'bytes' => 128,
             'checksum' => hash('sha256', 'example'),
             'retained_until' => now()->addDays(14),
+            'taken_at' => now(),
         ];
     }
 }

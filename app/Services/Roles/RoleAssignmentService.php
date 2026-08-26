@@ -44,7 +44,11 @@ final class RoleAssignmentService
                 if (! $actor->can('roles.assign.custom')) {
                     throw ValidationException::withMessages(['roles' => __('You are not allowed to assign custom roles.')]);
                 }
-                $this->permissions->assertPermissionCeiling($actor, $role->permissions()->pluck('name')->all());
+                $held = [];
+                foreach ($role->permissions()->pluck('name') as $name) {
+                    $held[] = (string) $name;
+                }
+                $this->permissions->assertPermissionCeiling($actor, $held);
             }
         }
 
@@ -63,7 +67,10 @@ final class RoleAssignmentService
         });
     }
 
-    /** @param list<string> $identifiers @return \Illuminate\Support\Collection<int, Role> */
+    /**
+     * @param  list<string>  $identifiers
+     * @return Collection<int, Role>
+     */
     private function resolve(array $identifiers): Collection
     {
         $profiles = RoleProfile::query()->whereIn('slug', $identifiers)->pluck('role_id');
