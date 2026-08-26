@@ -30,6 +30,13 @@ All notable changes to ApproveDesk are documented here. The project follows
 - Add a standalone push-subscription `user_id` index so MySQL can replace or roll back the device uniqueness index without error 1553.
 - Relaxed the business-calendar “completes quickly” bound so parallel PHPUnit is not flaky on a busy runner.
 
+## [2.5.5] - 2026-08-26
+
+### Added
+
+- Optional second-factor enforcement for signed approval URLs: when enabled, a valid link still requires the named approver to sign in and prove an authenticator, recovery code, or passkey in the current browser session before approving. Existing installations retain the previous link behavior until an administrator turns the option on.
+- Optional analytics and custom code on **Settings → Branding**. Administrators can paste a tracking snippet or JavaScript that is added to login, the signed-in application, and the public home page. The field is empty until saved.
+
 ## [2.5.4] - 2026-08-24
 
 ### Added

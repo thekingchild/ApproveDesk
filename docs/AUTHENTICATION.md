@@ -8,6 +8,14 @@ Administrators choose the lifetime under **Settings → Approval links**. The ac
 
 Because the URL grants the named approver's authority for one current step, mail transport must use HTTPS and recipients should not forward the message.
 
+### Optional current-session second factor
+
+Administrators can enable **Require sign-in and a second factor for approval links** under **Settings → Approval settings**. The absent/default setting is off for v2.5.4 upgrade compatibility.
+
+When enabled, signature validation runs before any authentication redirect. A valid link then requires an active authenticated account whose ID exactly matches the signed approver, current-step policy authorization, and a user-bound assurance marker in the same session. Fortify authenticator/recovery-code success and Laravel passkey verification establish the marker; merely having a factor enrolled does not establish it in a new session. The confirmation GET stays non-mutating and the approval POST remains signed, throttled, CSRF-protected, and processed by `WorkflowEngine`.
+
+Enabling or disabling the option immediately affects links already issued but not expired. Messages that open `email-approvals/*`, including email, Telegram, and WhatsApp links, inherit the gate. Direct Teams and Slack action tokens use another endpoint and are not covered by this setting.
+
 ## Google login
 
 Create an OAuth web application in Google Cloud and register this exact callback:

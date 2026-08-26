@@ -20,6 +20,8 @@ new #[Title('Branding settings')] class extends Component {
 
     public string $custom_css = '';
 
+    public string $custom_code = '';
+
     public bool $allow_registration = true;
 
     public string $meta_title = '';
@@ -58,6 +60,7 @@ new #[Title('Branding settings')] class extends Component {
         $this->accent_color = (string) Setting::get('brand.accent_color', '#4f46e5');
         $this->overlay = (int) Setting::get('brand.login_background_overlay', '40');
         $this->custom_css = (string) Setting::get('brand.custom_css', '');
+        $this->custom_code = (string) Setting::get('brand.custom_code', '');
         $this->allow_registration = Setting::get('auth.allow_registration', 'true') !== 'false';
         $this->meta_title = (string) Setting::get('brand.meta_title', '');
         $this->meta_description = (string) Setting::get('brand.meta_description', '');
@@ -107,6 +110,7 @@ new #[Title('Branding settings')] class extends Component {
             'accent_color' => ['required', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
             'overlay' => ['required', 'integer', 'min:0', 'max:90'],
             'custom_css' => ['nullable', 'string', 'max:5000'],
+            'custom_code' => ['nullable', 'string', 'max:8000'],
             'meta_title' => ['nullable', 'string', 'max:80'],
             'meta_description' => ['nullable', 'string', 'max:180'],
             'registration_mode' => ['required', \Illuminate\Validation\Rule::in(['immediate', 'otp'])],
@@ -132,6 +136,7 @@ new #[Title('Branding settings')] class extends Component {
             accentColor: $this->accent_color,
             overlay: $this->overlay,
             customCss: $this->custom_css === '' ? null : $this->custom_css,
+            customCode: $this->custom_code === '' ? null : $this->custom_code,
             allowRegistration: $this->allow_registration,
             registrationMode: $this->registration_mode,
             allowedRegistrationDomains: $this->allowed_registration_domains,
@@ -346,6 +351,15 @@ new #[Title('Branding settings')] class extends Component {
                                 <flux:textarea wire:model="custom_css" rows="4" placeholder="/* e.g. .brand-mark { border-radius: 0; } */" />
                                 <flux:error name="custom_css" />
                                 <p class="text-xs text-zinc-500 dark:text-zinc-400">{{ __('For fine-grained adjustments only. Applied after standard styles; invalid CSS is ignored by browsers.') }}</p>
+                            </div>
+                        </details>
+
+                        <details class="rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
+                            <summary class="cursor-pointer text-sm font-medium">{{ __('Advanced: analytics and custom code') }}</summary>
+                            <div class="mt-3 space-y-2">
+                                <flux:textarea wire:model="custom_code" rows="6" placeholder="<!-- Google tag or other tracking snippet -->" data-test="custom-code" />
+                                <flux:error name="custom_code" />
+                                <p class="text-xs text-zinc-500 dark:text-zinc-400">{{ __('Optional. Paste a tracking snippet or JavaScript from your analytics provider. It is added to login, the signed-in app, and the public home page. Only administrators can change this. Do not paste secrets.') }}</p>
                             </div>
                         </details>
                     </div>

@@ -16,6 +16,7 @@ final class UpdateBrandingSettingsAction
         Setting::put('brand.accent_color', $data->accentColor);
         Setting::put('brand.login_background_overlay', (string) $data->overlay);
         Setting::put('brand.custom_css', $data->customCss === '' ? null : $data->customCss);
+        Setting::put('brand.custom_code', $data->customCode === '' ? null : $data->customCode);
         Setting::put('auth.allow_registration', $data->allowRegistration ? 'true' : 'false');
         Setting::put('auth.registration_mode', in_array($data->registrationMode, ['immediate', 'otp'], true) ? $data->registrationMode : 'otp');
 

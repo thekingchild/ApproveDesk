@@ -209,7 +209,18 @@ new #[Title('Security settings')] class extends Component {
 <section class="w-full">
     @include('partials.settings-heading')
 
-    @if (session('second_factor_required') || (\App\Support\SecuritySettings::twoFactorRequired() && ! auth()->user()?->hasSatisfiedSecondFactor()))
+    @if (session('approval_second_factor_enrollment_required'))
+        <flux:callout variant="warning" icon="lock-closed" class="mb-6" data-test="approval-second-factor-enrollment-required">
+            <div class="space-y-3">
+                <p>{{ __('Set up an authenticator or passkey to continue to this approval.') }}</p>
+                @if (session('approval_second_factor_intended'))
+                    <flux:button :href="session('approval_second_factor_intended')" size="sm" variant="primary">
+                        {{ __('Return to approval after setup') }}
+                    </flux:button>
+                @endif
+            </div>
+        </flux:callout>
+    @elseif (session('second_factor_required') || (\App\Support\SecuritySettings::twoFactorRequired() && ! auth()->user()?->hasSatisfiedSecondFactor()))
         <flux:callout variant="warning" icon="lock-closed" class="mb-6" data-test="second-factor-required">
             {{ __('Your organization requires a second factor. Confirm an authenticator or add a passkey before you continue.') }}
         </flux:callout>

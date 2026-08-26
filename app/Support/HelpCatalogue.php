@@ -141,7 +141,7 @@ final class HelpCatalogue
             new HelpArticle(
                 slug: 'organization-settings',
                 title: 'Organization settings',
-                summary: 'Login branding, application logo and favicon, browser title and description, self-registration (activation mode and domain allow-list), email approval link lifetime, the business calendar, and optional notification channels.',
+                summary: 'Login branding, application logo and favicon, browser title and description, self-registration (activation mode and domain allow-list), optional analytics or custom code, email approval link lifetime, the business calendar, and optional notification channels.',
                 icon: 'cog-6-tooth',
                 group: 'Administration',
                 audience: 'admin',

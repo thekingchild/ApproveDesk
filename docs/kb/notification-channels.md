@@ -16,13 +16,15 @@ Cards show whether each optional channel is off, missing credentials, or ready. 
 
 ### Email copy
 
-Pick a notification kind, edit subject and body, preview, save, or restore the default. Merge fields such as `{{title}}` and `{{approval_url}}` are replaced when a message is sent. **Action required** copy must include `{{approval_url}}`. Saving does not change signed-link lifetime.
+Pick a notification kind, edit subject and body, preview, save, or restore the default. Merge fields such as `{{title}}` and `{{approval_url}}` are replaced when a message is sent. **Action required** copy must include `{{approval_url}}`. Saving does not change signed-link lifetime or whether the named approver must sign in.
+
+Administrators control that requirement on **Settings → Approval settings**. When it is on, the link in email, Telegram, WhatsApp, or another message still opens the request, but only after the named approver signs in and verifies a second factor in that browser session.
 
 ### Chat channels
 
 Enable a channel, paste credentials on the save form (secrets are not shown again), and test. Disable leaves credentials in place. Slack needs an interactivity URL. Telegram needs the webhook URL ApproveDesk shows on that card. WhatsApp fetch loads Meta templates; map each kind to an **approved** template. Unmapped or paused templates skip WhatsApp. ApproveDesk never sends free-form WhatsApp text.
 
-Teams and Slack action-required messages can include an **Approve** button. That button uses a signed token with the same stale-step rules as email. Opening the message does not approve.
+Teams and Slack action-required messages can include an **Approve** button. That button uses a separate signed token with the same stale-step rules as email. Opening the message does not approve. The approval-link second-factor option does not cover these direct buttons; use **Open in ApproveDesk** when the decision must happen in a signed-in session.
 
 ### People
 

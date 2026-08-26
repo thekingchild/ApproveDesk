@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\Branding;
 use App\Support\Turnstile;
 use Closure;
 use Illuminate\Http\Request;
@@ -33,6 +34,7 @@ final class SecurityHeaders
         $script = "script-src 'self' 'unsafe-inline' 'unsafe-eval'";
         $connect = "connect-src 'self'";
         $frame = "frame-src 'self'";
+        $img = "img-src 'self' data: blob:";
 
         if (Turnstile::enabled()) {
             $script .= ' https://challenges.cloudflare.com';
@@ -40,11 +42,18 @@ final class SecurityHeaders
             $frame .= ' https://challenges.cloudflare.com';
         }
 
+        foreach (Branding::customCodeOrigins() as $origin) {
+            $script .= ' '.$origin;
+            $connect .= ' '.$origin;
+            $frame .= ' '.$origin;
+            $img .= ' '.$origin;
+        }
+
         return implode('; ', [
             "default-src 'self'",
             $script,
             "style-src 'self' 'unsafe-inline'",
-            "img-src 'self' data: blob:",
+            $img,
             "font-src 'self' data:",
             $connect,
             $frame,

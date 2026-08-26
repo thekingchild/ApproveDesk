@@ -74,6 +74,65 @@ final class Branding
         return $css === null || $css === '' ? null : str_ireplace('</style', '', $css);
     }
 
+    public static function customCodeHtml(): ?string
+    {
+        $code = Setting::get('brand.custom_code');
+
+        if ($code === null || trim($code) === '') {
+            return null;
+        }
+
+        $html = self::normalizeCustomCode(str_replace("\0", '', $code));
+
+        return $html === '' ? null : $html;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function customCodeOrigins(): array
+    {
+        $html = self::customCodeHtml();
+
+        if ($html === null) {
+            return [];
+        }
+
+        preg_match_all('#https://[a-z0-9.-]+(?::\d+)?#i', $html, $matches);
+
+        $origins = [];
+
+        foreach ($matches[0] as $origin) {
+            $host = parse_url($origin, PHP_URL_HOST);
+
+            if (! is_string($host) || $host === '') {
+                continue;
+            }
+
+            $origins['https://'.strtolower($host)] = true;
+        }
+
+        return array_keys($origins);
+    }
+
+    private static function normalizeCustomCode(string $code): string
+    {
+        $trimmed = trim($code);
+        $looksLikeMarkup = preg_match('/<\s*(script|noscript|img|iframe|meta|link)\b/i', $trimmed) === 1;
+
+        if (! $looksLikeMarkup) {
+            return '<script>'.str_ireplace('</script', '', $trimmed).'</script>';
+        }
+
+        $html = preg_replace(
+            '/\s+(src|href)\s*=\s*(["\']?)(?:javascript|data|vbscript):[^"\'>\s]*/i',
+            '',
+            $trimmed,
+        );
+
+        return is_string($html) ? $html : $trimmed;
+    }
+
     public static function registrationOpen(): bool
     {
         return Setting::get('auth.allow_registration', 'true') !== 'false';

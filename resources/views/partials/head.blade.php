@@ -26,3 +26,7 @@
 
 @vite(['resources/css/app.css', 'resources/js/app.js'])
 @fluxAppearance
+@if ($code = \App\Support\Branding::customCodeHtml())
+    <!-- approvedesk-custom-code -->
+    {!! $code !!}
+@endif

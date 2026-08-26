@@ -16,6 +16,7 @@ class SettingsSeeder extends Seeder
         'brand.login_background' => null,
         'brand.login_background_overlay' => 40,
         'brand.custom_css' => null,
+        'brand.custom_code' => null,
         'brand.logo' => null,
         'brand.favicon' => null,
         'brand.meta_title' => null,

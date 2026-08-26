@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Security;
 
+use App\Models\Setting;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -35,5 +36,14 @@ class SecurityHeadersTest extends TestCase
             ->get(route('dashboard'))
             ->assertOk()
             ->assertHeader('Content-Security-Policy');
+    }
+
+    public function test_custom_code_https_hosts_are_added_to_the_content_security_policy(): void
+    {
+        Setting::put('brand.custom_code', '<script src="https://www.googletagmanager.com/gtag/js?id=G-TEST"></script>');
+
+        $csp = (string) $this->get(route('login'))->headers->get('Content-Security-Policy');
+
+        $this->assertStringContainsString('https://www.googletagmanager.com', $csp);
     }
 }

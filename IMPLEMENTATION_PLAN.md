@@ -152,6 +152,7 @@ Locked product decision for Phase 8.2. It does not reopen Phase 8.1. Design: [do
 | MFA | v2.5.2 | Enforce two-factor authentication | Complete |
 | TS | v2.5.3 | Cloudflare Turnstile | Complete |
 | BK | v2.5.4 | In-app database and file backups | Complete |
+| E2FA | v2.5.5 | Optional second-factor assurance for signed approval URLs | Complete |
 | 10 | v3.0.0 | SaaS multi-tenancy foundation | Not started |
 | 11 | v3.1.0 | Paystack and Flutterwave subscriptions | Not started |
 | 12 | v3.2.0 | SaaS onboarding, entitlements, and commercial operations | Not started |
@@ -883,6 +884,44 @@ This phase is additive. It does not reopen Phase 9.3 verification, `workflow_act
 **Phase BK demo — Complete (2026-08-24):** administrator enables local + an S3-compatible destination, runs **Backup database** and **Backup files**, sees two snapshots, verifies the database snapshot, promotes it onto a disposable copy that still opens `/login`; a 15-day-old files snapshot is pruned while yesterday’s remains.
 
 **Out of scope:** continuous WAL shipping, point-in-time restore, tenant-scoped backups (P12-OPS-04), encrypting the zip with a customer-managed KMS, backing up `website/` marketing files, using Integration hub webhooks as the transport, rewriting Phase 9.3 commands.
+
+---
+
+## Phase E2FA — Optional second-factor assurance for signed approval URLs — Complete (2026-08-26)
+
+**Goal:** let administrators change signed approval URLs from bearer-link authority into expiring entry points that require the named approver to sign in and prove a second factor in the current session before approving.
+
+This is a self-hosted maintenance phase based on immutable tag `v2.5.4` and released as `v2.5.5`. It does not reopen workflow-engine invariants or Phase 10. The setting is off by default for upgrade compatibility. No schema change is required; the existing settings table stores the option.
+
+**Locked decisions**
+
+- The signed URL, expiry, throttling, confirmation screen, current-step check, policy authorization, CSRF protection, transaction lock, duplicate protection, and append-only action remain required.
+- When enabled, the authenticated account must exactly match the approver encoded in the signed URL and the same session must contain assurance from a successful authenticator/recovery-code or passkey ceremony. Enrollment alone is insufficient.
+- Enabling or disabling takes effect immediately for already-issued links that remain valid.
+- `{{approval_url}}` remains required in action-required notification templates. Email, Telegram, WhatsApp, and other messages that open the shared web URL inherit the gate. Direct Teams/Slack action tokens are a separate channel and remain out of scope.
+
+### E2FA.1 Decision and setting
+
+- **E2FA-ADR-01:** Record the bearer-link threat, default-off compatibility, session-assurance definition, identity binding, channel boundary, and no-schema decision. — Complete (2026-08-26)
+- **E2FA-SET-01:** Add the administrator-only `approvals.email_require_second_factor` setting beside link lifetime. Only an administrator with a factor and current-session assurance may enable it. — Complete (2026-08-26)
+
+### E2FA.2 Session assurance and route enforcement
+
+- **E2FA-AUTH-01:** Record a user-bound marker in the current session after successful Fortify authenticator/recovery-code or passkey verification; a new or malformed session is not assured. — Complete (2026-08-26)
+- **E2FA-AUTH-02:** Require the signed-in account to match the signed route approver, remain active, and remain authorized for the current step. — Complete (2026-08-26)
+- **E2FA-ROUTE-01:** Gate confirmation GET and approval POST after signature validation while preserving expiry, throttle, stale-step, policy, CSRF, and `WorkflowEngine` protections. — Complete (2026-08-26)
+- **E2FA-AUD-01:** Record generic enforcement outcomes without logging signed URLs, query strings, codes, credential identifiers, session identifiers, or request contents. — Complete (2026-08-26)
+
+### E2FA.3 User experience, tests, docs, and exit gate
+
+- **E2FA-UX-01:** Provide clear login, wrong-account, factor-enrollment, reauthentication, expired-link, and stale-link states without exposing submission details to the wrong account. — Complete (2026-08-26)
+- **E2FA-TEST-01:** Prove setting-off compatibility and setting-on denial/success paths for authenticator/recovery-code and passkey users. — Complete (2026-08-26)
+- **E2FA-TEST-02:** Prove notification templates, link expiry, current-step authorization, CSRF, and append-only workflow behavior remain intact. — Complete (2026-08-26)
+- **E2FA-DOC-01:** Update administrator Help, authentication/security documentation, threat model, changelog, roadmap, and this plan. — Complete (2026-08-26)
+
+**Phase E2FA demo:** an administrator enables the option; a forwarded approval message cannot reveal or approve its request from a guest or different account; the named approver signs in with a second factor and completes the same signed confirmation flow; disabling the option restores the v2.5.4 behavior for valid links.
+
+**Out of scope:** removing `{{approval_url}}`, SMS OTP, SAML assurance levels, per-workflow policy, tenant policy, a configurable assurance-age window, or changing direct Teams/Slack action tokens.
 
 ---
 

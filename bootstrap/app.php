@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\CorrelateRequests;
 use App\Http\Middleware\EnsureAppConfigured;
+use App\Http\Middleware\EnsureEmailApprovalSecondFactor;
 use App\Http\Middleware\EnsureSecondFactorWhenRequired;
 use App\Http\Middleware\EnsureUserIsActive;
 use App\Http\Middleware\RedirectUnconfirmedRegistration;
@@ -28,6 +29,9 @@ return Application::configure(basePath: dirname(__DIR__))
             RedirectUnconfirmedRegistration::class,
             EnsureSecondFactorWhenRequired::class,
             VerifyTurnstileWhenEnabled::class,
+        ]);
+        $middleware->alias([
+            'email-approval.second-factor' => EnsureEmailApprovalSecondFactor::class,
         ]);
         $middleware->validateCsrfTokens(except: [
             'integrations/telegram/webhook',
