@@ -6,6 +6,7 @@ use App\Actions\Backups\CreateDatabaseBackupAction;
 use App\Actions\Backups\CreateFilesBackupAction;
 use App\Actions\Backups\DeleteLocalBackupCopyAction;
 use App\Actions\Backups\PromoteDatabaseBackupAction;
+use App\Actions\Backups\PromoteFilesBackupAction;
 use App\Actions\Backups\RetainBackupSnapshotsAction;
 use App\Actions\Backups\VerifyBackupSnapshotAction;
 use App\Enums\BackupDestinationKind;
@@ -26,8 +27,10 @@ use Illuminate\Foundation\Testing\RefreshDatabaseState;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use InvalidArgumentException;
 use Livewire\Livewire;
 use Tests\TestCase;
+use ZipArchive;
 
 class BackupSnapshotsTest extends TestCase
 {
@@ -150,7 +153,7 @@ class BackupSnapshotsTest extends TestCase
         $admin = User::factory()->create()->assignRole('admin');
         $snapshot = app(CreateDatabaseBackupAction::class)->execute();
 
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(InvalidArgumentException::class);
         app(PromoteDatabaseBackupAction::class)->execute($snapshot, $admin, (string) $snapshot->id);
     }
 
@@ -205,7 +208,7 @@ class BackupSnapshotsTest extends TestCase
         $snapshot = app(CreateDatabaseBackupAction::class)->execute();
         Storage::disk('local')->put((string) $snapshot->path, 'not-a-gzip');
 
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(InvalidArgumentException::class);
         app(VerifyBackupSnapshotAction::class)->execute($snapshot);
     }
 
@@ -354,7 +357,7 @@ class BackupSnapshotsTest extends TestCase
     {
         $local = app(CreateDatabaseBackupAction::class)->execute();
 
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(InvalidArgumentException::class);
         app(DeleteLocalBackupCopyAction::class)->execute($local);
         $this->assertTrue(Storage::disk('local')->exists((string) $local->path));
     }
@@ -375,6 +378,118 @@ class BackupSnapshotsTest extends TestCase
 
         $verified = app(VerifyBackupSnapshotAction::class)->execute($replica);
         $this->assertTrue($verified->isVerified());
+    }
+
+    public function test_swapped_database_dump_with_valid_tables_fails_verify_and_cannot_promote(): void
+    {
+        $admin = User::factory()->create()->assignRole('admin');
+        $snapshot = app(CreateDatabaseBackupAction::class)->execute();
+
+        Storage::disk('local')->put(
+            (string) $snapshot->path,
+            (string) gzencode($this->validLookingSqlDump(), 6),
+        );
+
+        try {
+            app(VerifyBackupSnapshotAction::class)->execute($snapshot);
+            $this->fail('Expected verify to reject a swapped dump.');
+        } catch (InvalidArgumentException) {
+            // expected
+        }
+
+        $this->assertFalse($snapshot->fresh()?->isVerified());
+
+        $this->expectException(InvalidArgumentException::class);
+        app(PromoteDatabaseBackupAction::class)->execute($snapshot->fresh(), $admin, (string) $snapshot->id);
+    }
+
+    public function test_swapped_remote_database_dump_with_valid_tables_fails_verify(): void
+    {
+        $store = [];
+        $this->bindArrayRemote($store);
+
+        $remote = BackupDestination::factory()->s3()->create(['enabled' => true, 'name' => 'Offsite']);
+        $remote->putCredentials(['key' => 'id', 'secret' => 'secret', 'bucket' => 'bucket']);
+
+        $local = app(CreateDatabaseBackupAction::class)->execute();
+        $replica = BackupSnapshot::query()->where('destination_id', $remote->id)->successful()->first();
+        $this->assertNotNull($replica);
+
+        app(DeleteLocalBackupCopyAction::class)->execute($local);
+        $store[(string) $replica->remote_id] = (string) gzencode($this->validLookingSqlDump(), 6);
+
+        $this->expectException(InvalidArgumentException::class);
+        app(VerifyBackupSnapshotAction::class)->execute($replica);
+    }
+
+    public function test_files_zip_that_keeps_pathnames_but_changes_bytes_fails_verify(): void
+    {
+        Storage::disk('local')->put('submissions/9/note.txt', 'invoice body');
+        $snapshot = app(CreateFilesBackupAction::class)->execute();
+
+        $this->replaceZipEntry(
+            Storage::disk('local')->path((string) $snapshot->path),
+            'submissions/9/note.txt',
+            'forged invoice',
+        );
+
+        $this->expectException(InvalidArgumentException::class);
+        app(VerifyBackupSnapshotAction::class)->execute($snapshot);
+    }
+
+    public function test_files_zip_with_forged_bytes_fails_even_when_archive_digest_is_updated(): void
+    {
+        Storage::disk('local')->put('submissions/9/note.txt', 'invoice body');
+        $snapshot = app(CreateFilesBackupAction::class)->execute();
+        $absolute = Storage::disk('local')->path((string) $snapshot->path);
+
+        $this->replaceZipEntry($absolute, 'submissions/9/note.txt', 'forged invoice');
+        $this->restampSnapshot($snapshot, $absolute);
+
+        $this->expectException(InvalidArgumentException::class);
+        app(VerifyBackupSnapshotAction::class)->execute($snapshot->fresh());
+    }
+
+    public function test_files_zip_with_extra_or_traversal_entries_fails_verify(): void
+    {
+        Storage::disk('local')->put('submissions/9/note.txt', 'invoice body');
+        $snapshot = app(CreateFilesBackupAction::class)->execute();
+        $absolute = Storage::disk('local')->path((string) $snapshot->path);
+
+        $zip = new ZipArchive;
+        $this->assertTrue($zip->open($absolute) === true);
+        $zip->addFromString('../escape.txt', 'pwned');
+        $zip->addFromString('extra.txt', 'bonus');
+        $zip->close();
+        $this->restampSnapshot($snapshot, $absolute);
+
+        $this->expectException(InvalidArgumentException::class);
+        app(VerifyBackupSnapshotAction::class)->execute($snapshot->fresh());
+    }
+
+    public function test_files_snapshot_with_matching_hashes_verifies_and_promotes(): void
+    {
+        Storage::disk('local')->put('submissions/9/note.txt', 'invoice body');
+        $snapshot = app(CreateFilesBackupAction::class)->execute();
+        $verified = app(VerifyBackupSnapshotAction::class)->execute($snapshot);
+        $this->assertTrue($verified->isVerified());
+
+        Storage::disk('local')->put('submissions/9/note.txt', 'changed after backup');
+
+        $admin = User::factory()->create()->assignRole('admin');
+        app(PromoteFilesBackupAction::class)->execute($verified->fresh(), $admin, (string) $verified->id);
+
+        $this->assertSame('invoice body', Storage::disk('local')->get('submissions/9/note.txt'));
+        $this->assertSame(BackupSnapshotStatus::Promoted, $verified->fresh()?->status);
+    }
+
+    public function test_matching_database_digest_still_verifies(): void
+    {
+        $snapshot = app(CreateDatabaseBackupAction::class)->execute();
+        $verified = app(VerifyBackupSnapshotAction::class)->execute($snapshot);
+
+        $this->assertTrue($verified->isVerified());
+        $this->assertSame($snapshot->checksum, $verified->checksum);
     }
 
     public function test_backups_page_shows_database_and_file_sizes(): void
@@ -400,6 +515,29 @@ class BackupSnapshotsTest extends TestCase
             ->assertSee(__('Database'))
             ->assertSee(BackupSnapshot::formatBytes(2048))
             ->assertSee(BackupSnapshot::formatBytes(4096));
+    }
+
+    private function validLookingSqlDump(): string
+    {
+        return collect(BackupVerifier::REQUIRED_TABLES)
+            ->map(fn (string $table): string => 'CREATE TABLE '.$table.' (id integer);')
+            ->implode("\n");
+    }
+
+    private function replaceZipEntry(string $absolute, string $name, string $contents): void
+    {
+        $zip = new ZipArchive;
+        $this->assertTrue($zip->open($absolute) === true);
+        $zip->addFromString($name, $contents);
+        $zip->close();
+    }
+
+    private function restampSnapshot(BackupSnapshot $snapshot, string $absolute): void
+    {
+        $snapshot->forceFill([
+            'bytes' => filesize($absolute),
+            'checksum' => hash_file('sha256', $absolute) ?: '',
+        ])->save();
     }
 
     /**

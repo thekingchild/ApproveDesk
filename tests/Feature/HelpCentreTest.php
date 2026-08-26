@@ -281,7 +281,8 @@ class HelpCentreTest extends TestCase
             ->assertSee('Refresh token')
             ->assertSee('https://console.cloud.google.com/', false)
             ->assertSee('https://developers.google.com/oauthplayground', false)
-            ->assertSee('installation timezone');
+            ->assertSee('installation timezone')
+            ->assertSee('still the same one that was taken');
     }
 
     public function test_updates_article_explains_apply_and_backup_reminder(): void

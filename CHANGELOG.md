@@ -17,6 +17,7 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 - Google and Microsoft new accounts follow the same registration domain list as password sign-up. Existing accounts can still link those providers.
 - Analytics and custom code on Branding can be changed only by the System owner after confirming their password and second factor. Branding managers cannot add or remove it.
+- Verify and promote refuse a snapshot whose file no longer matches the recorded size and checksum, including remote copies. File archives must match the stored file list exactly.
 - Permission cache is not flushed until the `cache` table exists, so `composer install` / `package:discover` no longer fail on an empty SQLite memory database.
 
 ### Fixed

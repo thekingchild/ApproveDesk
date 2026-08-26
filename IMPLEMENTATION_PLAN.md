@@ -1070,16 +1070,16 @@ This supplement is self-hosted v2.7.2 work on `feature/sh-sec272-security-harden
 
 **Out of scope:** removing custom code entirely; nonce CSP; Google Analytics / Plausible structured fields.
 
-### SH-SEC-BKINT — Backup digest and files-hash verification (Findings 4 and 5)
+### SH-SEC-BKINT — Backup digest and files-hash verification (Findings 4 and 5) — Complete (2026-08-27)
 
 **Objective:** every materialize / verify / download / promote path rejects bytes that do not match the snapshot’s recorded SHA-256 and size, and files ZIPs must match the per-entry manifest exactly.
 
-- **SH-SEC-BKINT-01:** Shared helper (e.g. `App\Services\Backups\BackupIntegrity`): given a local file and `BackupSnapshot`, require `is_file`, `filesize === snapshot.bytes`, and `hash_equals(snapshot.checksum, hash_file('sha256', ...))`. Empty checksum or size mismatch fails closed. Use this before verify, download, and promote, including local copies.
-- **SH-SEC-BKINT-02:** `MaterializeBackupSnapshotAction`: fetch remote objects into a unique private temp file under `storage/app/private/backups/.materialize-*`, run the integrity helper, then move onto the recorded path only on success. Never accept a non-empty fetch as sufficient. Clean up temp files on failure.
-- **SH-SEC-BKINT-03:** Keep `BackupVerifier` table-string checks as a second pass only after digest success. Do not treat CREATE TABLE presence as integrity.
-- **SH-SEC-BKINT-04:** `VerifyBackupSnapshotAction::verifyZip`: after archive-level digest, require an exact entry set (`manifest.files` paths plus the stored `manifest.json`), reject duplicates, extra names, directories, symlinks, absolute/`..`/`\\`/`\0` names; cap entry count and uncompressed size; stream each expected file through SHA-256 and `hash_equals` the manifest hash.
-- **SH-SEC-BKINT-05:** `PromoteFilesBackupAction`: extract only verified entries into a fresh private directory, then atomically replace `submissions`. Do not `extractTo` the whole archive. This also closes the deferred ZIP path-traversal follow-up for supported PHP/libzip by never trusting entry names blindly.
-- **SH-SEC-BKINT-06:** Tests (`tests/Feature/Backups/`):
+- **SH-SEC-BKINT-01 — Complete (2026-08-27):** Shared helper (e.g. `App\Services\Backups\BackupIntegrity`): given a local file and `BackupSnapshot`, require `is_file`, `filesize === snapshot.bytes`, and `hash_equals(snapshot.checksum, hash_file('sha256', ...))`. Empty checksum or size mismatch fails closed. Use this before verify, download, and promote, including local copies.
+- **SH-SEC-BKINT-02 — Complete (2026-08-27):** `MaterializeBackupSnapshotAction`: fetch remote objects into a unique private temp file under `storage/app/private/backups/.materialize-*`, run the integrity helper, then move onto the recorded path only on success. Never accept a non-empty fetch as sufficient. Clean up temp files on failure.
+- **SH-SEC-BKINT-03 — Complete (2026-08-27):** Keep `BackupVerifier` table-string checks as a second pass only after digest success. Do not treat CREATE TABLE presence as integrity.
+- **SH-SEC-BKINT-04 — Complete (2026-08-27):** `VerifyBackupSnapshotAction::verifyZip`: after archive-level digest, require an exact entry set (`manifest.files` paths plus the stored `manifest.json`), reject duplicates, extra names, directories, symlinks, absolute/`..`/`\\`/`\0` names; cap entry count and uncompressed size; stream each expected file through SHA-256 and `hash_equals` the manifest hash.
+- **SH-SEC-BKINT-05 — Complete (2026-08-27):** `PromoteFilesBackupAction`: extract only verified entries into a fresh private directory, then atomically replace `submissions`. Do not `extractTo` the whole archive. This also closes the deferred ZIP path-traversal follow-up for supported PHP/libzip by never trusting entry names blindly.
+- **SH-SEC-BKINT-06 — Complete (2026-08-27):** Tests (`tests/Feature/Backups/`):
   - remote (or swapped) database dump with valid CREATE TABLE text but wrong SHA-256 fails verify and cannot promote.
   - matching digest + tables still verifies and promotes.
   - files ZIP that keeps pathnames but changes bytes fails.
