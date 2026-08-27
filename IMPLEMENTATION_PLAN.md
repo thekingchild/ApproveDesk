@@ -858,6 +858,7 @@ This phase is additive. It does not reopen Phase 9.3 verification, `workflow_act
 - **BK-RUN-02 — Complete (2026-08-24):** `CreateFilesBackupAction` — zip of `storage/app/private/submissions` plus branding assets; exclude `backups/`, logs, cache, sessions; same upload/verify path.
 - **BK-RUN-03 — Complete (2026-08-24):** Scheduled jobs + **Backup now** on **Administration → Backups** (or Operations). Failures go to dead-letter style status and appear on Operations health. Unconfigured remote destinations skip and do not fail the local copy.
 - **BK-RUN-04 — Complete (2026-08-24):** Retention job deletes expired snapshots per kind, keeping at least one successful copy. Legal holds / disposition are not applied to backup files in this phase (live records stay authoritative).
+- **BK-RUN-06 — Complete (2026-08-27):** Retention applies the current keep-days setting to existing snapshots from the taken date, not the expiry stamped at create. Saving schedule/retain runs cleanup immediately. Daily 04:15 still runs. Last successful copy of each kind is kept.
 
 ### BK.3 Destinations — Complete (2026-08-24)
 

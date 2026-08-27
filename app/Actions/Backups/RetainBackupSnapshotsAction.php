@@ -24,6 +24,8 @@ final class RetainBackupSnapshotsAction
 
     private function prune(BackupSnapshotKind $kind, int $days): int
     {
+        $cutoff = now()->subDays(BackupSettings::clampDays($days));
+
         $keep = BackupSnapshot::query()
             ->where('kind', $kind)
             ->successful()
@@ -32,8 +34,14 @@ final class RetainBackupSnapshotsAction
 
         $expired = BackupSnapshot::query()
             ->where('kind', $kind)
-            ->where('retained_until', '<', now())
             ->where('status', '!=', BackupSnapshotStatus::Failed)
+            ->where(function ($query) use ($cutoff): void {
+                $query->where('taken_at', '<', $cutoff)
+                    ->orWhere(function ($query) use ($cutoff): void {
+                        $query->whereNull('taken_at')
+                            ->where('created_at', '<', $cutoff);
+                    });
+            })
             ->get();
 
         $deleted = 0;

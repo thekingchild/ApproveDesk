@@ -256,7 +256,7 @@ A Google sign-in code that lets ApproveDesk copy snapshots to Drive on a schedul
 
 ## [Retain](/help/backups)
 
-How many days a snapshot is kept. The last successful copy of each kind is never removed.
+How many days a snapshot is kept, counted from the date it was taken. Saving keep-days applies at once. The last successful copy of each kind is never removed.
 
 ## [Promote](/help/backups)
 

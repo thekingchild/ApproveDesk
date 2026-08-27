@@ -14,6 +14,7 @@ use App\Enums\BackupSnapshotKind;
 use App\Enums\BackupSnapshotStatus;
 use App\Models\BackupDestination;
 use App\Models\BackupSnapshot;
+use App\Models\Setting;
 use App\Models\User;
 use App\Models\WorkflowAction;
 use App\Services\Backups\BackupTransport;
@@ -24,6 +25,7 @@ use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\RefreshDatabaseState;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -42,6 +44,8 @@ class BackupSnapshotsTest extends TestCase
         $this->seed(RolesAndPermissionsSeeder::class);
         Storage::fake('local');
         Storage::fake('public');
+        Cache::forget('settings.backup.database_retain_days');
+        Cache::forget('settings.backup.files_retain_days');
     }
 
     public function test_database_backup_gzip_passes_backup_verifier(): void
@@ -133,11 +137,13 @@ class BackupSnapshotsTest extends TestCase
         $destination = BackupDestination::factory()->create();
         $old = BackupSnapshot::factory()->create([
             'destination_id' => $destination->id,
+            'taken_at' => now()->subDays(20),
             'retained_until' => now()->subDay(),
             'status' => BackupSnapshotStatus::Success,
         ]);
         $kept = BackupSnapshot::factory()->create([
             'destination_id' => $destination->id,
+            'taken_at' => now()->subDays(20),
             'retained_until' => now()->subDay(),
             'status' => BackupSnapshotStatus::Success,
         ]);
@@ -146,6 +152,68 @@ class BackupSnapshotsTest extends TestCase
 
         $this->assertNull($old->fresh());
         $this->assertNotNull($kept->fresh());
+    }
+
+    public function test_retention_uses_current_keep_days_not_the_date_stamped_at_create(): void
+    {
+        Setting::put('backup.database_retain_days', '3');
+
+        $destination = BackupDestination::factory()->create();
+        $stale = BackupSnapshot::factory()->create([
+            'destination_id' => $destination->id,
+            'kind' => BackupSnapshotKind::Database,
+            'taken_at' => now()->subDays(10),
+            'retained_until' => now()->addDays(4),
+            'status' => BackupSnapshotStatus::Success,
+        ]);
+        $recent = BackupSnapshot::factory()->create([
+            'destination_id' => $destination->id,
+            'kind' => BackupSnapshotKind::Database,
+            'taken_at' => now()->subDay(),
+            'retained_until' => now()->addDays(13),
+            'status' => BackupSnapshotStatus::Success,
+        ]);
+        $latest = BackupSnapshot::factory()->create([
+            'destination_id' => $destination->id,
+            'kind' => BackupSnapshotKind::Database,
+            'taken_at' => now(),
+            'retained_until' => now()->addDays(3),
+            'status' => BackupSnapshotStatus::Success,
+        ]);
+
+        app(RetainBackupSnapshotsAction::class)->execute();
+
+        $this->assertNull($stale->fresh());
+        $this->assertNotNull($recent->fresh());
+        $this->assertNotNull($latest->fresh());
+    }
+
+    public function test_saving_keep_days_removes_snapshots_older_than_the_new_setting(): void
+    {
+        $admin = User::factory()->create()->assignRole('admin');
+        $destination = BackupDestination::factory()->create();
+        $stale = BackupSnapshot::factory()->create([
+            'destination_id' => $destination->id,
+            'kind' => BackupSnapshotKind::Database,
+            'taken_at' => now()->subDays(10),
+            'retained_until' => now()->addDays(4),
+            'status' => BackupSnapshotStatus::Success,
+        ]);
+        $fresh = BackupSnapshot::factory()->create([
+            'destination_id' => $destination->id,
+            'kind' => BackupSnapshotKind::Database,
+            'taken_at' => now()->subDay(),
+            'status' => BackupSnapshotStatus::Success,
+        ]);
+
+        Livewire::actingAs($admin)
+            ->test('pages::admin.backups')
+            ->set('databaseRetainDays', 3)
+            ->call('saveSettings')
+            ->assertHasNoErrors();
+
+        $this->assertNull($stale->fresh());
+        $this->assertNotNull($fresh->fresh());
     }
 
     public function test_promote_without_verify_is_refused_and_tampered_dump_is_refused(): void

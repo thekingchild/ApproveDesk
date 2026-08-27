@@ -71,6 +71,7 @@ new #[Title('Backups')] class extends Component
             'files_hour' => $validated['filesHour'],
         ]);
 
+        unset($this->snapshots, $this->restoreEvents);
         Flux::toast(__('Backup settings saved.'), variant: 'success');
     }
 
@@ -258,7 +259,7 @@ new #[Title('Backups')] class extends Component
 
     <form wire:submit="saveSettings" class="mt-8 space-y-5">
         <flux:heading size="sm">{{ __('Schedule and retain') }}</flux:heading>
-        <flux:text>{{ __('Database defaults to 14 daily copies at 02:30. Files default to 7 daily copies at 02:45. Expired copies are removed at 04:15, but the last successful copy of each kind is kept.') }}</flux:text>
+        <flux:text>{{ __('Database defaults to 14 days at 02:30. Files default to 7 days at 02:45. Copies older than the keep-days setting are removed when you save the schedule, and again at 04:15. The last successful copy of each kind is kept.') }}</flux:text>
         <flux:text data-test="backup-schedule-summary">
             {{ __('Times use :timezone. Next database run: :database. Next files run: :files. Retention cleanup: 04:15.', [
                 'timezone' => $this->scheduleSummary()['timezone'],

@@ -6,6 +6,10 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ## [Unreleased]
 
+### Fixed
+
+- Backup keep-days now apply to existing snapshots from the date they were taken. Saving the schedule removes copies older than the new setting; the last successful copy of each kind is still kept.
+
 ## [2.7.2] - 2026-08-27
 
 ### Added
