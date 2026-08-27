@@ -42,7 +42,7 @@ final class PromoteFilesBackupAction
         Storage::disk('local')->makeDirectory($holding);
 
         $absolute = app(MaterializeBackupSnapshotAction::class)->execute($snapshot);
-        $names = $this->integrity->verifiedZipEntryNames($absolute, $snapshot->manifest ?? []);
+        $names = $this->integrity->verifiedZipEntryNames($absolute, $snapshot->manifestArray());
 
         $zip = new ZipArchive;
         if ($zip->open($absolute) !== true) {

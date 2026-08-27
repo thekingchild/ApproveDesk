@@ -41,10 +41,6 @@ final class OutboundDestination
             throw new InvalidArgumentException(__('The destination cannot use that port.'));
         }
 
-        if ($port < 1 || $port > 65535) {
-            throw new InvalidArgumentException(__('The destination cannot use that port.'));
-        }
-
         if (! $allowPrivate && $this->isBlockedHostname($host)) {
             throw new InvalidArgumentException(__('The destination cannot target a private or local address.'));
         }

@@ -104,7 +104,7 @@ final class BackupIntegrity
                 throw new InvalidArgumentException('This snapshot failed the backup check.');
             }
 
-            $name = (string) ($stat['name'] ?? '');
+            $name = $stat['name'];
             if ($name === '' || isset($seen[$name])) {
                 throw new InvalidArgumentException('This snapshot failed the backup check.');
             }
@@ -117,7 +117,7 @@ final class BackupIntegrity
             $this->assertSafeZipName($name);
             $this->assertRegularFileEntry($zip, $i, $name);
 
-            $size = (int) ($stat['size'] ?? 0);
+            $size = $stat['size'];
             if ($size < 0) {
                 throw new InvalidArgumentException('This snapshot failed the backup check.');
             }

@@ -29,7 +29,7 @@ final class VerifyBackupSnapshotAction
                 $this->recorder->gunzipTo($absolute, $scratch);
                 $ok = $this->verifier->verifyPath($scratch)->ok;
             } elseif ($snapshot->kind === BackupSnapshotKind::Files) {
-                $this->integrity->assertZipMatchesManifest($absolute, $snapshot->manifest ?? []);
+                $this->integrity->assertZipMatchesManifest($absolute, $snapshot->manifestArray());
                 $ok = true;
             } else {
                 $ok = $this->verifier->verifyPath($absolute)->ok;
