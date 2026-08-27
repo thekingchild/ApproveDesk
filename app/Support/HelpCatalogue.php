@@ -123,7 +123,7 @@ final class HelpCatalogue
             new HelpArticle(
                 slug: 'webhooks',
                 title: 'Webhooks',
-                summary: 'Send signed workflow events to another system.',
+                summary: 'Send signed workflow events to another system. Destinations must be public HTTPS.',
                 icon: 'rss',
                 group: 'Administration',
                 audience: 'admin',
@@ -141,7 +141,7 @@ final class HelpCatalogue
             new HelpArticle(
                 slug: 'organization-settings',
                 title: 'Organization settings',
-                summary: 'Login branding, application logo and favicon, browser title and description, self-registration (activation mode and domain allow-list), optional analytics or custom code, email approval link lifetime, the business calendar, and optional notification channels.',
+                summary: 'Login branding, application logo and favicon, browser title and description, self-registration (activation mode and domain allow-list), analytics or custom code that only the System owner can change, email approval link lifetime, the business calendar, and optional notification channels.',
                 icon: 'cog-6-tooth',
                 group: 'Administration',
                 audience: 'admin',
@@ -194,7 +194,7 @@ final class HelpCatalogue
             new HelpArticle(
                 slug: 'backups',
                 title: 'Backups',
-                summary: 'Separate database and file snapshots, destinations, and promote after a check.',
+                summary: 'Separate database and file snapshots, destinations, and promote after a check that the copy is still the one that was taken.',
                 icon: 'circle-stack',
                 group: 'Administration',
                 audience: 'admin',

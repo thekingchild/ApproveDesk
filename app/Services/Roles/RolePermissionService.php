@@ -114,7 +114,14 @@ final class RolePermissionService
     public function ceiling(User $actor): array
     {
         if ($actor->isSystemOwner()) {
-            return PermissionCatalogue::keys();
+            $keys = [];
+            foreach (PermissionCatalogue::all() as $entry) {
+                if ($entry['delegable'] === true || $entry['key'] === 'roles.manage.custom') {
+                    $keys[] = (string) $entry['key'];
+                }
+            }
+
+            return $keys;
         }
 
         $held = $actor->getAllPermissions()->pluck('name')->all();

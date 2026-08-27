@@ -91,6 +91,41 @@ class InstallerTest extends TestCase
         $this->get(route('install.migrate'))->assertRedirect(route('install.database'));
     }
 
+    public function test_write_environment_sets_utc_timezone_when_missing(): void
+    {
+        app(Installer::class)->writeEnvironment([
+            'connection' => 'sqlite',
+            'host' => '',
+            'port' => '',
+            'database' => '',
+            'username' => '',
+            'password' => null,
+            'path' => 'install-test.sqlite',
+            'url' => 'https://approvedesk.example.test',
+        ]);
+
+        $this->assertMatchesRegularExpression('/^APP_TIMEZONE=UTC$/m', (string) file_get_contents($this->envFile));
+    }
+
+    public function test_write_environment_keeps_an_existing_timezone(): void
+    {
+        file_put_contents($this->envFile, "APP_TIMEZONE=Africa/Lagos\n");
+
+        app(Installer::class)->writeEnvironment([
+            'connection' => 'sqlite',
+            'host' => '',
+            'port' => '',
+            'database' => '',
+            'username' => '',
+            'password' => null,
+            'path' => 'install-test.sqlite',
+            'url' => 'https://approvedesk.example.test',
+        ]);
+
+        $this->assertMatchesRegularExpression('/^APP_TIMEZONE=Africa\/Lagos$/m', (string) file_get_contents($this->envFile));
+        $this->assertDoesNotMatchRegularExpression('/^APP_TIMEZONE=UTC$/m', (string) file_get_contents($this->envFile));
+    }
+
     #[TestDox('the full sqlite install flow locks the installer and creates the admin')]
     public function test_full_install_flow_with_sqlite(): void
     {
@@ -103,6 +138,7 @@ class InstallerTest extends TestCase
         $this->assertFileExists($this->envFile);
         $this->assertStringContainsString('DB_CONNECTION=sqlite', (string) file_get_contents($this->envFile));
         $this->assertStringContainsString('APP_KEY=base64:', (string) file_get_contents($this->envFile));
+        $this->assertMatchesRegularExpression('/^APP_TIMEZONE=UTC$/m', (string) file_get_contents($this->envFile));
 
         // Step 3: migrations + base seeders.
         $this->post(route('install.migrate.run'))

@@ -128,7 +128,7 @@ A 6-digit number emailed to someone who self-registers when **Require email conf
 
 ## [Domain allow-list](/help/organization-settings)
 
-The list of email domains permitted to self-register, set on Branding. Empty means any provider. It does not apply to accounts an administrator creates or imports.
+The list of email domains permitted to self-register, set on Branding. Empty means any provider. New Google and Microsoft accounts follow the same list. It does not apply to accounts an administrator creates or imports, or to linking Google or Microsoft on an account that already exists.
 
 ## [User import](/help/users-and-roles)
 
@@ -140,7 +140,7 @@ The administrator screen for connectors and post-approval actions (upload a file
 
 ## [Connector](/help/integrations)
 
-One configured destination in the integration hub, such as Slack or generic HTTP. Credentials stay hidden after you save. A disabled connector is skipped.
+One configured destination in the integration hub, such as Slack or generic HTTP. Credentials stay hidden after you save. Destination URLs must be public HTTPS. A disabled connector is skipped.
 
 ## [Replay](/help/operations)
 

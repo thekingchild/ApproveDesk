@@ -3,7 +3,9 @@
 use App\Actions\Settings\UpdateBrandingSettingsAction;
 use App\DTOs\BrandingSettingsData;
 use App\Models\Setting;
+use App\Models\User;
 use App\Support\Branding;
+use App\Support\SecondFactorAssurance;
 use Flux\Flux;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -131,12 +133,25 @@ new #[Title('Branding settings')] class extends Component {
             }
         }
 
+        $existingCode = Setting::get('brand.custom_code');
+        $existingCode = $existingCode === '' ? null : $existingCode;
+        $submittedCode = $this->custom_code === '' ? null : $this->custom_code;
+
+        if ($submittedCode !== $existingCode) {
+            if ($this->canManageCustomCode()) {
+                $this->ensureCustomCodeSaveAuthorized();
+            } else {
+                $submittedCode = $existingCode;
+                $this->custom_code = (string) ($existingCode ?? '');
+            }
+        }
+
         $updateBranding->execute(new BrandingSettingsData(
             tagline: $this->tagline,
             accentColor: $this->accent_color,
             overlay: $this->overlay,
             customCss: $this->custom_css === '' ? null : $this->custom_css,
-            customCode: $this->custom_code === '' ? null : $this->custom_code,
+            customCode: $submittedCode,
             allowRegistration: $this->allow_registration,
             registrationMode: $this->registration_mode,
             allowedRegistrationDomains: $this->allowed_registration_domains,
@@ -148,7 +163,7 @@ new #[Title('Branding settings')] class extends Component {
             removeLogo: $this->remove_logo,
             favicon: $this->favicon,
             removeFavicon: $this->remove_favicon,
-        ));
+        ), auth()->user());
 
         $this->current_background = Setting::get('brand.login_background');
         $this->current_logo = Setting::get('brand.logo');
@@ -161,6 +176,30 @@ new #[Title('Branding settings')] class extends Component {
         $this->remove_favicon = false;
 
         Flux::toast('Branding updated.', variant: 'success');
+    }
+
+    public function canManageCustomCode(): bool
+    {
+        return auth()->user()?->can('branding.custom_code.manage') === true;
+    }
+
+    private function ensureCustomCodeSaveAuthorized(): void
+    {
+        $this->authorize('branding.custom_code.manage');
+
+        $user = auth()->user();
+        if (! $user instanceof User) {
+            abort(403);
+        }
+
+        $confirmedAt = session('auth.password_confirmed_at');
+        if (! is_numeric($confirmedAt)) {
+            abort(403);
+        }
+
+        if (! $user->hasSatisfiedSecondFactor() || ! app(SecondFactorAssurance::class)->satisfied(request(), $user)) {
+            abort(403);
+        }
     }
 
     public function previewStyle(): string
@@ -354,14 +393,16 @@ new #[Title('Branding settings')] class extends Component {
                             </div>
                         </details>
 
+                        @if ($this->canManageCustomCode())
                         <details class="rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
                             <summary class="cursor-pointer text-sm font-medium">{{ __('Advanced: analytics and custom code') }}</summary>
                             <div class="mt-3 space-y-2">
                                 <flux:textarea wire:model="custom_code" rows="6" placeholder="<!-- Google tag or other tracking snippet -->" data-test="custom-code" />
                                 <flux:error name="custom_code" />
-                                <p class="text-xs text-zinc-500 dark:text-zinc-400">{{ __('Optional. Paste a tracking snippet or JavaScript from your analytics provider. It is added to login, the signed-in app, and the public home page. Only administrators can change this. Do not paste secrets.') }}</p>
+                                <p class="text-xs text-zinc-500 dark:text-zinc-400">{{ __('Optional. Paste a tracking snippet or JavaScript from your analytics provider. It is added to login, the signed-in app, and the public home page. Only the System owner can change this, after confirming their password and second factor. Do not paste secrets.') }}</p>
                             </div>
                         </details>
+                        @endif
                     </div>
                 </flux:card>
 

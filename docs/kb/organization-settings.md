@@ -14,14 +14,14 @@ Set the organisation identity and the public login screen. The page is organised
 - Favicon replaces the browser-tab icon. ICO, PNG, JPG, or WebP, up to 512 KB, with the same preview-and-undo behaviour.
 - Allow self-registration sits here because it controls who can create an account. When it is on, two further controls appear:
   - **After someone registers** — require a 6-digit email confirmation (recommended, the default) or grant immediate access. Confirmation codes expire after 10 minutes. Until the person confirms, they cannot sign in.
-  - **Registration domains** — one domain per line (for example `bluechipanalytical.com`). Only those email addresses may self-register. Leave empty to allow any email provider. Subdomains match only when listed. This is an onboarding convenience, not a security boundary: anyone can type any address, so passwords, two-factor, and passkeys remain the real assurance. Administrator-created and imported users ignore this list.
+  - **Registration domains** — one domain per line (for example `bluechipanalytical.com`). Only those email addresses may self-register, including people who create an account with Google or Microsoft. Leave empty to allow any email provider. Subdomains match only when listed. An existing account can still link Google or Microsoft even if that address would not be allowed to self-register. This is an onboarding convenience, not a security boundary: anyone can type any address, so passwords, two-factor, and passkeys remain the real assurance. Administrator-created and imported users ignore this list.
 
 **Login page** settings are the public login screen — what requesters see before they sign in:
 
 - Tagline, accent colour, background image, overlay slider, and optional CSS.
 - The background image is shown on large screens in the left panel and on smaller screens behind the sign-in form; its upload card previews the current or chosen image.
 - Custom CSS lives under **Advanced: custom CSS** — it is for fine-grained tweaks only and is never required.
-- Analytics and custom code lives under **Advanced: analytics and custom code**. Paste a tracking snippet or JavaScript from your analytics provider. ApproveDesk adds it to login, the signed-in application, and the public home page. Leave it empty to add nothing. Only administrators can change this, and it should not contain secrets.
+- Analytics and custom code lives under **Advanced: analytics and custom code**. Paste a tracking snippet or JavaScript from your analytics provider. ApproveDesk adds it to login, the signed-in application, and the public home page. Leave it empty to add nothing. Only the System owner can change this, after confirming their password and second factor. It should not contain secrets. People who only manage branding cannot add or remove this code.
 - You can allow or block self-registration. If registration is off, only administrators create accounts.
 
 The **Live preview** panel has two tabs. **Login** shows the background, overlay darkness, tagline, and logo/name as requesters will see them. **Browser** shows how your favicon, application name, and description appear in a browser tab and next to the signed-in header.
@@ -46,7 +46,7 @@ Set working days, optional office hours, and holiday dates (YYYY-MM-DD). A life-
 
 Workflow steps that use **Business hours** count time only on working days that are not holidays, and only inside the office-hour window when one is set. Leave both time fields empty to count every hour of a working day. That empty state is the 24-hour working day — do not enter 00:00–23:59 to mean “all day”; that window is 23 hours and 59 minutes.
 
-Times are in the application timezone (UTC). Changing working days, office hours, or holidays immediately changes in-flight **Business hours** deadlines, overdue badges, and automatic SLA actions. Steps that use **Elapsed hours** still count every hour on the clock and ignore this calendar. Approval link lifetime is a separate elapsed clock. Estimated due time on a request uses the same calendars.
+Times are in the installation timezone — the same name shown on Approval settings and Backups. Until that is changed, it is UTC. Changing working days, office hours, or holidays immediately changes in-flight **Business hours** deadlines, overdue badges, and automatic SLA actions. Steps that use **Elapsed hours** still count every hour on the clock and ignore this calendar. Approval link lifetime is a separate elapsed clock. Estimated due time on a request uses the same calendars.
 
 ## Reminder quiet hours
 

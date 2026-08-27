@@ -47,4 +47,31 @@ class PushSubscriptionTest extends TestCase
         $this->assertSame(hash('sha256', $endpoint), $subscription->endpoint_hash);
         $this->assertSame(str_repeat('D', 88), $subscription->public_key);
     }
+
+    public function test_private_or_nonstandard_push_endpoints_are_rejected(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->postJson(route('settings.push-subscriptions.store'), [
+                'endpoint' => 'https://127.0.0.1/push',
+                'keys' => [
+                    'p256dh' => str_repeat('B', 88),
+                    'auth' => str_repeat('C', 24),
+                ],
+            ])
+            ->assertUnprocessable();
+
+        $this->actingAs($user)
+            ->postJson(route('settings.push-subscriptions.store'), [
+                'endpoint' => 'https://push.example.test:8080/push',
+                'keys' => [
+                    'p256dh' => str_repeat('B', 88),
+                    'auth' => str_repeat('C', 24),
+                ],
+            ])
+            ->assertUnprocessable();
+
+        $this->assertSame(0, PushSubscription::query()->where('user_id', $user->id)->count());
+    }
 }

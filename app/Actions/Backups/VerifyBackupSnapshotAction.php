@@ -5,16 +5,17 @@ namespace App\Actions\Backups;
 use App\Enums\BackupSnapshotKind;
 use App\Enums\BackupSnapshotStatus;
 use App\Models\BackupSnapshot;
+use App\Services\Backups\BackupIntegrity;
 use App\Services\Backups\BackupRecorder;
 use App\Services\Operations\BackupVerifier;
 use InvalidArgumentException;
-use ZipArchive;
 
 final class VerifyBackupSnapshotAction
 {
     public function __construct(
         private readonly BackupVerifier $verifier,
         private readonly BackupRecorder $recorder,
+        private readonly BackupIntegrity $integrity,
     ) {}
 
     public function execute(BackupSnapshot $snapshot): BackupSnapshot
@@ -28,7 +29,8 @@ final class VerifyBackupSnapshotAction
                 $this->recorder->gunzipTo($absolute, $scratch);
                 $ok = $this->verifier->verifyPath($scratch)->ok;
             } elseif ($snapshot->kind === BackupSnapshotKind::Files) {
-                $ok = $this->verifyZip($absolute, $snapshot->manifest ?? []);
+                $this->integrity->assertZipMatchesManifest($absolute, $snapshot->manifestArray());
+                $ok = true;
             } else {
                 $ok = $this->verifier->verifyPath($absolute)->ok;
             }
@@ -50,36 +52,5 @@ final class VerifyBackupSnapshotAction
         ])->save();
 
         return $snapshot->fresh() ?? $snapshot;
-    }
-
-    /**
-     * @param  array<string, mixed>  $manifest
-     */
-    private function verifyZip(string $path, array $manifest): bool
-    {
-        $zip = new ZipArchive;
-        if ($zip->open($path) !== true) {
-            return false;
-        }
-
-        $expected = $manifest['files'] ?? [];
-        if (! is_array($expected)) {
-            $zip->close();
-
-            return false;
-        }
-
-        foreach ($expected as $file) {
-            $name = is_array($file) ? (string) ($file['path'] ?? '') : '';
-            if ($name === '' || $zip->locateName($name) === false) {
-                $zip->close();
-
-                return false;
-            }
-        }
-
-        $zip->close();
-
-        return true;
     }
 }

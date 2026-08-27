@@ -2,9 +2,15 @@
 
 namespace Tests\Feature;
 
+use App\Actions\Settings\UpdateBrandingSettingsAction;
+use App\DTOs\BrandingSettingsData;
 use App\Models\Setting;
+use App\Models\SystemOwner;
 use App\Models\User;
+use App\Services\Roles\RolePermissionService;
+use App\Services\Users\SystemOwnerService;
 use App\Support\Branding;
+use App\Support\SecondFactorAssurance;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -185,7 +191,7 @@ class BrandingTest extends TestCase
             ->assertSee('JPG, PNG or WebP · max 2 MB · shown at every screen width', false)
             // Advanced CSS is tucked away, preview has login + browser tabs, save is prominent.
             ->assertSee('Advanced: custom CSS', false)
-            ->assertSee('Advanced: analytics and custom code', false)
+            ->assertDontSee('Advanced: analytics and custom code', false)
             ->assertSee('Live preview', false)
             ->assertSee('preview-tab-browser', false)
             ->assertSee('data-test="save-branding"', false);
@@ -201,7 +207,7 @@ class BrandingTest extends TestCase
             ->set('accent_color', '#00aa55')
             ->set('overlay', 55)
             ->set('custom_css', '.brand-mark { border-radius: 0; }')
-            ->set('custom_code', '<script src="https://plausible.test/js/script.js" defer></script>')
+            ->set('custom_code', 'window.ADMIN_TRACK = 1;')
             ->set('allow_registration', false)
             ->set('meta_title', 'Desk of Approvals')
             ->set('meta_description', 'Internal request desk.')
@@ -212,7 +218,7 @@ class BrandingTest extends TestCase
         $this->assertSame('#00aa55', Setting::get('brand.accent_color'));
         $this->assertSame('55', Setting::get('brand.login_background_overlay'));
         $this->assertSame('.brand-mark { border-radius: 0; }', Setting::get('brand.custom_css'));
-        $this->assertSame('<script src="https://plausible.test/js/script.js" defer></script>', Setting::get('brand.custom_code'));
+        $this->assertTrue(blank(Setting::get('brand.custom_code')));
         $this->assertSame('false', Setting::get('auth.allow_registration'));
         $this->assertSame('Desk of Approvals', Setting::get('brand.meta_title'));
         $this->assertSame('Internal request desk.', Setting::get('brand.meta_description'));
@@ -312,5 +318,128 @@ class BrandingTest extends TestCase
 
         $this->assertNull(Branding::backgroundUrl());
         $this->assertSame(config('app.name'), Branding::name());
+    }
+
+    public function test_action_writes_custom_code_only_for_authorized_actor(): void
+    {
+        $owner = $this->owner();
+        $admin = User::factory()->create()->assignRole('admin');
+
+        app(UpdateBrandingSettingsAction::class)->execute(new BrandingSettingsData(
+            tagline: 'T',
+            accentColor: '#4f46e5',
+            overlay: 40,
+            customCss: null,
+            allowRegistration: true,
+            customCode: '<script src="https://owner.test/tracker.js"></script>',
+        ), $admin);
+        $this->assertTrue(blank(Setting::get('brand.custom_code')));
+
+        app(UpdateBrandingSettingsAction::class)->execute(new BrandingSettingsData(
+            tagline: 'T',
+            accentColor: '#4f46e5',
+            overlay: 40,
+            customCss: null,
+            allowRegistration: true,
+            customCode: '<script src="https://owner.test/tracker.js"></script>',
+        ), $owner);
+        $this->assertSame('<script src="https://owner.test/tracker.js"></script>', Setting::get('brand.custom_code'));
+
+        auth()->forgetGuards();
+
+        $this->get('/login')
+            ->assertOk()
+            ->assertSee('https://owner.test/tracker.js', false);
+
+        $this->actingAs($owner)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('https://owner.test/tracker.js', false);
+    }
+
+    public function test_branding_manager_cannot_persist_or_clear_custom_code(): void
+    {
+        Setting::put('brand.custom_code', '<script src="https://kept.test/tracker.js"></script>');
+        $manager = $this->brandingManager();
+
+        Livewire::actingAs($manager)
+            ->test('pages::settings.branding')
+            ->assertDontSee('data-test="custom-code"', false)
+            ->set('tagline', 'Brand desk.')
+            ->set('custom_code', 'window.PWNED = 1;')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertSame('Brand desk.', Setting::get('brand.tagline'));
+        $this->assertSame('<script src="https://kept.test/tracker.js"></script>', Setting::get('brand.custom_code'));
+    }
+
+    public function test_system_owner_needs_reauthentication_to_save_custom_code(): void
+    {
+        $owner = $this->owner();
+
+        Livewire::actingAs($owner)
+            ->test('pages::settings.branding')
+            ->set('custom_code', '<script src="https://owner.test/tracker.js"></script>')
+            ->call('save')
+            ->assertForbidden();
+
+        $this->assertTrue(blank(Setting::get('brand.custom_code')));
+    }
+
+    public function test_system_owner_sees_custom_code_editor(): void
+    {
+        $owner = $this->owner();
+        $this->actingAs($owner);
+        session($this->ownerSession($owner));
+        $this->assertTrue($owner->can('branding.custom_code.manage'));
+
+        $component = Livewire::actingAs($owner)
+            ->test('pages::settings.branding')
+            ->assertSee('data-test="custom-code"', false);
+
+        $this->assertTrue($component->instance()->canManageCustomCode());
+    }
+
+    public function test_administrator_does_not_receive_custom_code_permission(): void
+    {
+        $admin = User::factory()->create()->assignRole('admin');
+
+        $this->assertFalse($admin->can('branding.custom_code.manage'));
+        $this->assertTrue($admin->can('branding.manage'));
+    }
+
+    private function owner(): User
+    {
+        $owner = User::factory()->create()->assignRole('super-admin');
+        $owner->passkeys()->create([
+            'name' => 'Owner key',
+            'credential_id' => 'cred-branding-owner-1',
+            'credential' => ['id' => 'cred-branding-owner-1'],
+        ]);
+        SystemOwner::query()->create(['id' => SystemOwner::SINGLETON_ID, 'user_id' => $owner->id]);
+        app(SystemOwnerService::class)->forget();
+
+        return $owner->fresh() ?? $owner;
+    }
+
+    private function brandingManager(): User
+    {
+        $role = app(RolePermissionService::class)->create($this->owner(), 'Brand editor', null, ['branding.manage']);
+
+        return User::factory()->create()->assignRole($role->name);
+    }
+
+    /** @return array<string, mixed> */
+    private function ownerSession(User $owner): array
+    {
+        return [
+            'auth.password_confirmed_at' => time(),
+            SecondFactorAssurance::SESSION_KEY => [
+                'user_id' => (string) $owner->id,
+                'verified_at' => time(),
+                'method' => 'passkey',
+            ],
+        ];
     }
 }

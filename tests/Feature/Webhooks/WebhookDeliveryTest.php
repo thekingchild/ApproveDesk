@@ -12,6 +12,7 @@ use App\Models\Submission;
 use App\Models\User;
 use App\Models\WebhookEndpoint;
 use App\Models\WorkflowTemplate;
+use App\Support\DnsResolver;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
@@ -19,6 +20,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
 use RuntimeException;
+use Tests\Support\ArrayDnsResolver;
 use Tests\TestCase;
 
 class WebhookDeliveryTest extends TestCase
@@ -134,6 +136,34 @@ class WebhookDeliveryTest extends TestCase
         $delivery->refresh();
         $this->assertSame(WebhookDeliveryStatus::Failed, $delivery->status);
         $this->assertSame('Endpoint was inactive when delivery was attempted.', $delivery->last_error);
+        Http::assertNothingSent();
+    }
+
+    public function test_rebinding_hostname_is_refused_at_delivery(): void
+    {
+        $endpoint = WebhookEndpoint::factory()->create(['url' => 'https://rebind.example.test/hooks']);
+        $delivery = $endpoint->deliveries()->create([
+            'event_id' => (string) Str::uuid(),
+            'event' => WebhookEvent::WorkflowCompleted->value,
+            'payload' => ['event' => WebhookEvent::WorkflowCompleted->value],
+            'status' => WebhookDeliveryStatus::Pending,
+        ]);
+
+        $resolver = app(DnsResolver::class);
+        $this->assertInstanceOf(ArrayDnsResolver::class, $resolver);
+        $resolver->set('rebind.example.test', ['10.0.0.1']);
+
+        Http::fake();
+
+        try {
+            (new DeliverWebhook($delivery->id))->handle();
+            $this->fail('Expected delivery to refuse a rebinding hostname.');
+        } catch (RuntimeException) {
+            // expected
+        }
+
+        $delivery->refresh();
+        $this->assertSame('The destination is not allowed.', $delivery->last_error);
         Http::assertNothingSent();
     }
 

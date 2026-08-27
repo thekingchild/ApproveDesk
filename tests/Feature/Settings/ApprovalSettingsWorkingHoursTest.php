@@ -191,4 +191,14 @@ class ApprovalSettingsWorkingHoursTest extends TestCase
             json_decode((string) Setting::get('calendar.working_hours'), true),
         );
     }
+
+    public function test_office_hours_copy_uses_the_configured_timezone(): void
+    {
+        config(['app.timezone' => 'Africa/Lagos']);
+        $admin = User::factory()->create()->assignRole('admin');
+
+        Livewire::actingAs($admin)
+            ->test('pages::settings.approvals')
+            ->assertSee('Africa/Lagos');
+    }
 }

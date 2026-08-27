@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\PushSubscription;
+use App\Rules\ValidOutboundUrl;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -11,7 +12,7 @@ class PushSubscriptionController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'endpoint' => ['required', 'url', 'max:2000'],
+            'endpoint' => ['required', 'url', 'max:2000', new ValidOutboundUrl],
             'keys.p256dh' => ['required', 'string', 'max:255'],
             'keys.auth' => ['required', 'string', 'max:255'],
             'contentEncoding' => ['nullable', 'string', 'max:32'],

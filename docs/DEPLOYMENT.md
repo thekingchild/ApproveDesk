@@ -28,6 +28,10 @@ Security notes for operators:
 - The installer middleware also honors `APP_INSTALLED=true` for environments where the lock file can't be written.
 - Re-running setup requires deliberately deleting the lock file (documented recovery path for broken installs only).
 
+Office hours, backup clocks, snapshot names, and scheduler display use `APP_TIMEZONE` (IANA name, default `UTC`). Example: `APP_TIMEZONE=Africa/Lagos`. The installer writes `UTC` when the key is missing and does not overwrite an existing value. Changing to a DST zone must keep calendar math on `setTime`, never `addHours(24)`.
+
+Custom S3-compatible backup endpoints must be public HTTPS. For a private MinIO (or similar) on your network, set `BACKUP_ALLOW_PRIVATE_S3_ENDPOINT=true`. Leave it unset in production internet-facing installs.
+
 ## 3. cPanel Bring-Up (once per server)
 
 **Database:** cPanel → MySQL Databases → create DB + user, grant privileges. Restrict later per §6.
@@ -140,7 +144,7 @@ Do not enable multiple app replicas with the local file/session volume. A future
 - [ ] After a code deploy, **Administration → Updates** shows no unsafe pending migrations; apply only after a host backup
 - [ ] `.env` permissions tightened; `APP_DEBUG=false`
 - [ ] Backups scheduled (JetBackup / Plesk Backup Manager) **and a restore drill done**
-- [ ] **Administration → Backups** has a local database snapshot and a files snapshot after first use
+- [ ] **Administration → Backups** has a local database snapshot and a files snapshot after first use. In-app Verify compares the file to the recorded size and SHA-256 before any table or ZIP checks, so a replaced remote object that still looks like a dump is refused.
 - [ ] Admin accounts have 2FA enabled
 - [ ] The installer-created System owner exists (`php artisan tinker` → `App\Models\SystemOwner::query()->first()`). If ownership is missing after an upgrade, run `php artisan owner:assign {email}` once. This command will not overwrite an existing owner.
 

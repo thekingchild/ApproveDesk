@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /**
  * @property BackupSnapshotKind $kind
  * @property BackupSnapshotStatus $status
+ * @property array<string, mixed>|null $manifest
  * @property CarbonInterface|null $taken_at
  * @property CarbonInterface|null $created_at
  * @property CarbonInterface|null $promoted_at
@@ -75,6 +76,14 @@ class BackupSnapshot extends Model
         $taken = $this->taken_at ?? $this->created_at;
 
         return $taken instanceof CarbonInterface ? $taken : now();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function manifestArray(): array
+    {
+        return is_array($this->manifest) ? $this->manifest : [];
     }
 
     public function displayName(): string

@@ -132,6 +132,14 @@ class RolePermissionCeilingTest extends TestCase
         $this->assertTrue($target->fresh()->hasRole('viewer'));
     }
 
+    public function test_owner_cannot_put_custom_code_permission_on_a_custom_role(): void
+    {
+        $owner = $this->owner();
+
+        $this->expectException(ValidationException::class);
+        app(RolePermissionService::class)->create($owner, 'Code editor', null, ['branding.manage', 'branding.custom_code.manage']);
+    }
+
     private function owner(): User
     {
         $owner = User::factory()->create()->assignRole('super-admin');

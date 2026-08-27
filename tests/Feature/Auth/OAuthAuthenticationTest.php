@@ -8,6 +8,7 @@ use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
@@ -20,6 +21,8 @@ class OAuthAuthenticationTest extends TestCase
         parent::setUp();
 
         $this->seed(RolesAndPermissionsSeeder::class);
+        Setting::query()->delete();
+        Artisan::call('cache:clear');
         config([
             'services.oauth.google.client_id' => 'google-client',
             'services.oauth.google.client_secret' => 'google-secret',
@@ -150,6 +153,107 @@ class OAuthAuthenticationTest extends TestCase
         $this->assertGuest();
         $this->assertSame(0, OAuthIdentity::query()->count());
         $this->assertDatabaseMissing('users', ['email' => 'new@example.com']);
+    }
+
+    public function test_google_new_user_outside_the_domain_allow_list_is_rejected(): void
+    {
+        Setting::put('auth.allowed_registration_domains', 'example.com');
+        $this->get(route('oauth.redirect', 'google'));
+        $attempt = session('oauth.google');
+
+        Http::fake([
+            'https://oauth2.googleapis.com/token' => Http::response(['access_token' => 'google-access-token']),
+            'https://openidconnect.googleapis.com/v1/userinfo' => Http::response([
+                'sub' => 'google-gmail-user',
+                'name' => 'Outside Person',
+                'email' => 'someone@gmail.com',
+                'email_verified' => true,
+            ]),
+        ]);
+
+        $this->get(route('oauth.callback', ['provider' => 'google', 'state' => $attempt['state'], 'code' => 'auth-code']))
+            ->assertRedirect(route('login'))
+            ->assertSessionHasErrors(['oauth' => __('Please register with your organization email address.')]);
+
+        $this->assertGuest();
+        $this->assertSame(0, OAuthIdentity::query()->count());
+        $this->assertDatabaseMissing('users', ['email' => 'someone@gmail.com']);
+    }
+
+    public function test_microsoft_new_user_inside_the_domain_allow_list_is_created(): void
+    {
+        Setting::put('auth.allowed_registration_domains', 'example.com');
+        $this->get(route('oauth.redirect', 'microsoft'));
+        $attempt = session('oauth.microsoft');
+
+        Http::fake([
+            'https://login.microsoftonline.com/organizations/oauth2/v2.0/token' => Http::response(['access_token' => 'microsoft-token']),
+            'https://graph.microsoft.com/oidc/userinfo' => Http::response([
+                'sub' => 'microsoft-allowed-user',
+                'name' => 'Allowed Person',
+                'preferred_username' => 'person@example.com',
+            ]),
+        ]);
+
+        $this->get(route('oauth.callback', ['provider' => 'microsoft', 'state' => $attempt['state'], 'code' => 'auth-code']))
+            ->assertRedirect(route('dashboard', absolute: false));
+
+        $user = User::query()->where('email', 'person@example.com')->firstOrFail();
+        $this->assertAuthenticatedAs($user);
+        $this->assertTrue($user->hasRole('submitter'));
+        $this->assertNotNull($user->email_verified_at);
+        $this->assertTrue($user->is_active);
+    }
+
+    public function test_empty_domain_allow_list_still_creates_a_new_oauth_user(): void
+    {
+        Setting::put('auth.allowed_registration_domains', '');
+        $this->get(route('oauth.redirect', 'google'));
+        $attempt = session('oauth.google');
+
+        Http::fake([
+            'https://oauth2.googleapis.com/token' => Http::response(['access_token' => 'google-access-token']),
+            'https://openidconnect.googleapis.com/v1/userinfo' => Http::response([
+                'sub' => 'google-any-domain',
+                'name' => 'Any Domain',
+                'email' => 'anyone@gmail.com',
+                'email_verified' => true,
+            ]),
+        ]);
+
+        $this->get(route('oauth.callback', ['provider' => 'google', 'state' => $attempt['state'], 'code' => 'auth-code']))
+            ->assertRedirect(route('dashboard', absolute: false));
+
+        $this->assertDatabaseHas('users', ['email' => 'anyone@gmail.com']);
+    }
+
+    public function test_existing_user_outside_the_allow_list_can_still_link_google(): void
+    {
+        Setting::put('auth.allowed_registration_domains', 'example.com');
+        $user = User::factory()->create(['email' => 'person@gmail.com']);
+        $this->get(route('oauth.redirect', 'google'));
+        $attempt = session('oauth.google');
+
+        Http::fake([
+            'https://oauth2.googleapis.com/token' => Http::response(['access_token' => 'google-access-token']),
+            'https://openidconnect.googleapis.com/v1/userinfo' => Http::response([
+                'sub' => 'google-existing-gmail',
+                'name' => 'Staff Gmail',
+                'email' => 'person@gmail.com',
+                'email_verified' => true,
+            ]),
+        ]);
+
+        $this->get(route('oauth.callback', ['provider' => 'google', 'state' => $attempt['state'], 'code' => 'auth-code']))
+            ->assertRedirect(route('dashboard', absolute: false));
+
+        $this->assertAuthenticatedAs($user);
+        $this->assertDatabaseHas('oauth_identities', [
+            'user_id' => $user->id,
+            'provider' => 'google',
+            'provider_user_id' => 'google-existing-gmail',
+        ]);
+        $this->assertSame(1, User::query()->where('email', 'person@gmail.com')->count());
     }
 
     public function test_disabled_or_unknown_provider_is_not_exposed(): void

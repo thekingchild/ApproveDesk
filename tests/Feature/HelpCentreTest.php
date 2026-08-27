@@ -202,7 +202,24 @@ class HelpCentreTest extends TestCase
             ->assertSee('Favicon')
             ->assertSee('Meta description')
             ->assertSee('Notification channels')
-            ->assertSee('Security & privacy');
+            ->assertSee('Security & privacy')
+            ->assertSee('installation timezone')
+            ->assertSee('Google or Microsoft')
+            ->assertSee('Only the System owner can change this')
+            ->assertDontSee('application timezone (UTC)')
+            ->assertDontSee('APP_TIMEZONE')
+            ->assertDontSee('.env');
+    }
+
+    public function test_users_and_roles_article_keeps_custom_code_off_custom_roles(): void
+    {
+        $admin = User::factory()->create()->assignRole('admin');
+
+        $this->actingAs($admin)
+            ->get(route('help.show', 'users-and-roles'))
+            ->assertOk()
+            ->assertSee('or the ability to add analytics and custom code')
+            ->assertSee('or add analytics and custom code');
     }
 
     public function test_notification_channels_article_explains_optional_delivery(): void
@@ -274,7 +291,32 @@ class HelpCentreTest extends TestCase
             ->assertSee('Save Drive destination')
             ->assertSee('Refresh token')
             ->assertSee('https://console.cloud.google.com/', false)
-            ->assertSee('https://developers.google.com/oauthplayground', false);
+            ->assertSee('https://developers.google.com/oauthplayground', false)
+            ->assertSee('installation timezone')
+            ->assertSee('still the same one that was taken')
+            ->assertSee('Extra or altered files');
+    }
+
+    public function test_webhooks_article_requires_public_https(): void
+    {
+        $admin = User::factory()->create()->assignRole('admin');
+
+        $this->actingAs($admin)
+            ->get(route('help.show', 'webhooks'))
+            ->assertOk()
+            ->assertSee('public HTTPS')
+            ->assertSee('your own network');
+    }
+
+    public function test_integrations_article_requires_public_https_and_hides_response_bodies(): void
+    {
+        $admin = User::factory()->create()->assignRole('admin');
+
+        $this->actingAs($admin)
+            ->get(route('help.show', 'integrations'))
+            ->assertOk()
+            ->assertSee('public HTTPS')
+            ->assertSee('not the response body');
     }
 
     public function test_updates_article_explains_apply_and_backup_reminder(): void
@@ -327,7 +369,7 @@ class HelpCentreTest extends TestCase
                 $article->slug.' still links to a raw .md file',
             );
 
-            foreach (['Livewire', 'docs/kb', 'IMPLEMENTATION_PLAN', 'schema hash', 'long-polling', 'Phase 6A', 'leave_reason'] as $leak) {
+            foreach (['Livewire', 'docs/kb', 'IMPLEMENTATION_PLAN', 'schema hash', 'long-polling', 'Phase 6A', 'leave_reason', 'APP_TIMEZONE', '.env'] as $leak) {
                 $this->assertStringNotContainsStringIgnoringCase(
                     $leak,
                     $html,

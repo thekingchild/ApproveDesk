@@ -43,9 +43,12 @@ use App\Services\Notifications\NotificationDeliveryRecorder;
 use App\Services\Users\SystemOwnerService;
 use App\Services\Workflow\AssigneeResolver;
 use App\Support\CorrelationId;
+use App\Support\DnsResolver;
 use App\Support\FeaturePermission;
+use App\Support\OutboundDestination;
 use App\Support\PermissionCache;
 use App\Support\PermissionCatalogue;
+use App\Support\PhpDnsResolver;
 use App\Support\RateLimitProfiles;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Events\Login;
@@ -103,6 +106,8 @@ class AppServiceProvider extends ServiceProvider
         });
 
         $this->app->singleton(SystemOwnerService::class);
+        $this->app->singleton(DnsResolver::class, PhpDnsResolver::class);
+        $this->app->singleton(OutboundDestination::class);
     }
 
     /**

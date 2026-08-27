@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\Backups\StoreBackupDestinationAction;
 use App\Models\BackupDestination;
+use App\Rules\ValidOutboundUrl;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -19,7 +20,10 @@ class BackupDestinationController extends Controller
             'secret' => ['nullable', 'string', 'max:255'],
             'region' => ['nullable', 'string', 'max:80'],
             'bucket' => ['nullable', 'string', 'max:255'],
-            'endpoint' => ['nullable', 'string', 'max:255'],
+            'endpoint' => ['nullable', 'string', 'max:255', new ValidOutboundUrl([
+                'allow_private' => (bool) config('backups.allow_private_s3_endpoint'),
+                'allow_nonstandard_port' => (bool) config('backups.allow_private_s3_endpoint'),
+            ])],
             'path_style' => ['nullable', 'string', 'max:1'],
             'prefix' => ['nullable', 'string', 'max:120'],
             'folder_id' => ['nullable', 'string', 'max:255'],

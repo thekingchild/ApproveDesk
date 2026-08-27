@@ -15,7 +15,7 @@ return [
 
     'name' => env('APP_NAME', 'Laravel'),
 
-    'version' => env('APP_VERSION', '2.7.1'),
+    'version' => env('APP_VERSION', '2.7.2'),
 
     /*
     |--------------------------------------------------------------------------
@@ -64,10 +64,11 @@ return [
     | Here you may specify the default timezone for your application, which
     | will be used by the PHP date and date-time functions. The timezone
     | is set to "UTC" by default as it is suitable for most use cases.
+    | Override with APP_TIMEZONE in the environment (IANA name).
     |
     */
 
-    'timezone' => 'UTC',
+    'timezone' => env('APP_TIMEZONE', 'UTC'),
 
     /*
     |--------------------------------------------------------------------------

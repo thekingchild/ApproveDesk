@@ -9,6 +9,8 @@ use App\Enums\ConnectorKey;
 use App\Models\IntegrationAction;
 use App\Models\Submission;
 use App\Services\Integrations\ConnectorHttpClient;
+use App\Support\OutboundDestination;
+use InvalidArgumentException;
 
 abstract class WebhookStyleConnector implements Connector
 {
@@ -35,8 +37,14 @@ abstract class WebhookStyleConnector implements Connector
     {
         $url = $credentials['webhook_url'] ?? $credentials['url'] ?? '';
 
-        if ($url === '' || ! str_starts_with($url, 'https://')) {
+        if ($url === '') {
             return new ConnectorHealth(false, 'An HTTPS destination URL is required.');
+        }
+
+        try {
+            app(OutboundDestination::class)->validate($url);
+        } catch (InvalidArgumentException $exception) {
+            return new ConnectorHealth(false, $exception->getMessage());
         }
 
         return new ConnectorHealth(true, 'Destination URL looks valid. A live ping is sent when you test.');

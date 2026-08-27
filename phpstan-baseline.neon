@@ -1,33 +1,9 @@
 parameters:
 	ignoreErrors:
 		-
-			message: '#^Comparison operation "\>\=" between \-1 and 0 is always false\.$#'
-			identifier: greaterOrEqual.alwaysFalse
-			count: 2
-			path: app/Actions/Backups/PromoteDatabaseBackupAction.php
-
-		-
-			message: '#^Offset ''workflow_actions'' on string\|null on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 2
-			path: app/Actions/Backups/PromoteDatabaseBackupAction.php
-
-		-
 			message: '#^Parameter \#1 \$query of static method Illuminate\\Database\\Connection\:\:unprepared\(\) expects literal\-string, non\-empty\-string given\.$#'
 			identifier: argument.type
 			count: 1
-			path: app/Actions/Backups/PromoteDatabaseBackupAction.php
-
-		-
-			message: '#^Result of && is always false\.$#'
-			identifier: booleanAnd.alwaysFalse
-			count: 2
-			path: app/Actions/Backups/PromoteDatabaseBackupAction.php
-
-		-
-			message: '#^Strict comparison using \!\=\= between int and \*NEVER\* will always evaluate to true\.$#'
-			identifier: notIdentical.alwaysTrue
-			count: 2
 			path: app/Actions/Backups/PromoteDatabaseBackupAction.php
 
 		-
@@ -65,12 +41,6 @@ parameters:
 			identifier: identical.alwaysFalse
 			count: 1
 			path: app/Actions/Backups/StoreBackupDestinationAction.php
-
-		-
-			message: '#^Parameter \#2 \$manifest of method App\\Actions\\Backups\\VerifyBackupSnapshotAction\:\:verifyZip\(\) expects array\<string, mixed\>, array\|string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Actions/Backups/VerifyBackupSnapshotAction.php
 
 		-
 			message: '#^Call to function method_exists\(\) with App\\Models\\User and ''passkeys'' will always evaluate to true\.$#'

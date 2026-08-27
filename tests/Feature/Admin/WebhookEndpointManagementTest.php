@@ -59,4 +59,17 @@ class WebhookEndpointManagementTest extends TestCase
             ->call('save')
             ->assertHasErrors('url');
     }
+
+    public function test_endpoint_rejects_loopback_https_urls(): void
+    {
+        $admin = User::factory()->create()->assignRole('admin');
+
+        Livewire::actingAs($admin)
+            ->test('pages::admin.webhooks')
+            ->set('name', 'Loopback connector')
+            ->set('url', 'https://127.0.0.1/webhook')
+            ->set('events', [WebhookEvent::SubmissionCreated->value])
+            ->call('save')
+            ->assertHasErrors('url');
+    }
 }

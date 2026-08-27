@@ -43,7 +43,7 @@ class RolesAndPermissionsSeeder extends Seeder
             $permissions = self::MATRIX[$roleName] ?? [];
             if ($roleName === 'admin') {
                 $permissions = array_values(array_unique([...$permissions, ...PermissionCatalogue::keys()]));
-                $permissions = array_values(array_diff($permissions, ['roles.manage.custom']));
+                $permissions = array_values(array_diff($permissions, ['roles.manage.custom', 'branding.custom_code.manage']));
             }
             $role->syncPermissions($permissions);
         }

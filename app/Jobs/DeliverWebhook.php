@@ -4,12 +4,14 @@ namespace App\Jobs;
 
 use App\Enums\WebhookDeliveryStatus;
 use App\Models\WebhookDelivery;
+use App\Support\OutboundDestination;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
+use InvalidArgumentException;
 use RuntimeException;
 use Throwable;
 
@@ -59,6 +61,7 @@ class DeliverWebhook implements ShouldQueue
         }
 
         try {
+            $pin = app(OutboundDestination::class)->validate($delivery->endpoint->url);
             $body = json_encode($delivery->payload, JSON_THROW_ON_ERROR);
             $timestamp = (string) now()->timestamp;
             $signature = hash_hmac('sha256', $timestamp.'.'.$body, $delivery->endpoint->secret);
@@ -66,6 +69,7 @@ class DeliverWebhook implements ShouldQueue
             $response = Http::acceptJson()
                 ->timeout(10)
                 ->withoutRedirecting()
+                ->withOptions($pin->httpOptions())
                 ->withHeaders([
                     'Content-Type' => 'application/json',
                     'X-ApproveDesk-Event' => $delivery->event,
@@ -74,8 +78,10 @@ class DeliverWebhook implements ShouldQueue
                     'X-ApproveDesk-Signature' => 'sha256='.$signature,
                 ])
                 ->withBody($body, 'application/json')
-                ->send('POST', $delivery->endpoint->url);
+                ->send('POST', $pin->url);
 
+        } catch (InvalidArgumentException) {
+            $this->failDelivery($delivery, 'The destination is not allowed.');
         } catch (ConnectionException $exception) {
             $this->failDelivery($delivery, $exception->getMessage());
         } catch (Throwable $exception) {

@@ -46,6 +46,16 @@ class BackupScheduleUiTest extends TestCase
         $this->assertSame('23:59', BackupSettings::filesAt());
     }
 
+    public function test_backup_page_labels_use_the_configured_timezone(): void
+    {
+        config(['app.timezone' => 'Africa/Lagos']);
+        $admin = User::factory()->create()->assignRole('admin');
+
+        Livewire::actingAs($admin)
+            ->test('pages::admin.backups')
+            ->assertSee('Africa/Lagos');
+    }
+
     public function test_invalid_backup_time_is_rejected(): void
     {
         $admin = User::factory()->create()->assignRole('admin');
