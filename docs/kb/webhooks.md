@@ -8,4 +8,4 @@ ApproveDesk signs each delivery. Copy the signing secret when it is shown. You w
 
 Failed deliveries retry. Inactive endpoints stop sending but keep their history.
 
-Do not point a webhook at an untrusted URL. Only HTTPS destinations are accepted.
+Do not point a webhook at an untrusted URL. Only public HTTPS destinations are accepted. Addresses on your own network are refused.

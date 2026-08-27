@@ -1090,16 +1090,16 @@ This supplement is self-hosted v2.7.2 work on `feature/sh-sec272-security-harden
 
 **Out of scope:** new backup format, HMAC-signed manifests, changing destination credentials, installer.
 
-### SH-SEC-SSRF — Outbound destination validation (Findings 6–9)
+### SH-SEC-SSRF — Outbound destination validation (Findings 6–9) — Complete (2026-08-27)
 
 **Objective:** one outbound-destination policy used at save and at request time: HTTPS, no userinfo, no unusual ports unless explicitly allowed, resolve A/AAAA, reject private/reserved/loopback/link-local/IPv6 unique-local, pin the connection to the validated address while keeping TLS SNI on the original hostname. Do not expose raw response bodies as a diagnostic oracle.
 
-- **SH-SEC-SSRF-01:** Add `App\Support\OutboundDestination` (rule + resolver + pin). Unit-test literal private IPs, `localhost`, `.local`, public hostname whose lookup is private, DNS rebinding (public at save, private at send), and a public HTTPS host that is allowed. Skip real network in tests by injecting a resolver stub.
-- **SH-SEC-SSRF-02:** Webhooks (Finding 8): `ValidWebhookUrl` uses the helper (not only literal IPs). `DeliverWebhook` revalidates and pins before POST. Keep HTTPS-only, no redirects, timeout.
-- **SH-SEC-SSRF-03:** Integration connectors (Finding 6): validate `url` / `webhook_url` (and other HTTP URL credential fields) in `IntegrationCredentialController` at save. `ConnectorHttpClient` revalidates/pins before GET/POST. Store a generic `last_error` (status class only); do not persist or render response bodies.
-- **SH-SEC-SSRF-04:** Web Push (Finding 7): store and send only HTTPS endpoints that pass the helper. Reject userinfo and non-443 ports. Revalidate at send in `WebPushService`; drop the subscription on failure as today. Do not hard-code vendor push origins (they vary).
-- **SH-SEC-SSRF-05:** Custom S3 endpoints (Finding 9): if `endpoint` is set, require HTTPS URL and public resolution unless operator opt-in `BACKUP_ALLOW_PRIVATE_S3_ENDPOINT=true` (documented in `docs/DEPLOYMENT.md` for private MinIO). Revalidate on test and on every transport operation. Bound/redact SDK exception text shown in the UI.
-- **SH-SEC-SSRF-06:** Tests for each sink: private hostname rejected at save; rebinding hostname rejected at send; legitimate public HTTPS still delivers; connector failure message has no response body; S3 private endpoint rejected unless the opt-in env is true.
+- **SH-SEC-SSRF-01 — Complete (2026-08-27):** Add `App\Support\OutboundDestination` (rule + resolver + pin). Unit-test literal private IPs, `localhost`, `.local`, public hostname whose lookup is private, DNS rebinding (public at save, private at send), and a public HTTPS host that is allowed. Skip real network in tests by injecting a resolver stub.
+- **SH-SEC-SSRF-02 — Complete (2026-08-27):** Webhooks (Finding 8): `ValidWebhookUrl` uses the helper (not only literal IPs). `DeliverWebhook` revalidates and pins before POST. Keep HTTPS-only, no redirects, timeout.
+- **SH-SEC-SSRF-03 — Complete (2026-08-27):** Integration connectors (Finding 6): validate `url` / `webhook_url` (and other HTTP URL credential fields) in `IntegrationCredentialController` at save. `ConnectorHttpClient` revalidates/pins before GET/POST. Store a generic `last_error` (status class only); do not persist or render response bodies.
+- **SH-SEC-SSRF-04 — Complete (2026-08-27):** Web Push (Finding 7): store and send only HTTPS endpoints that pass the helper. Reject userinfo and non-443 ports. Revalidate at send in `WebPushService`; drop the subscription on failure as today. Do not hard-code vendor push origins (they vary).
+- **SH-SEC-SSRF-05 — Complete (2026-08-27):** Custom S3 endpoints (Finding 9): if `endpoint` is set, require HTTPS URL and public resolution unless operator opt-in `BACKUP_ALLOW_PRIVATE_S3_ENDPOINT=true` (documented in `docs/DEPLOYMENT.md` for private MinIO). Revalidate on test and on every transport operation. Bound/redact SDK exception text shown in the UI.
+- **SH-SEC-SSRF-06 — Complete (2026-08-27):** Tests for each sink: private hostname rejected at save; rebinding hostname rejected at send; legitimate public HTTPS still delivers; connector failure message has no response body; S3 private endpoint rejected unless the opt-in env is true.
 
 **Demo:** a webhook manager cannot save `https://127.0.0.1/`; a hostname that resolves to `10.0.0.1` is refused at delivery; Slack-style public HTTPS still works.
 

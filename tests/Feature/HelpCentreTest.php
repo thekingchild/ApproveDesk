@@ -285,6 +285,28 @@ class HelpCentreTest extends TestCase
             ->assertSee('still the same one that was taken');
     }
 
+    public function test_webhooks_article_requires_public_https(): void
+    {
+        $admin = User::factory()->create()->assignRole('admin');
+
+        $this->actingAs($admin)
+            ->get(route('help.show', 'webhooks'))
+            ->assertOk()
+            ->assertSee('public HTTPS')
+            ->assertSee('your own network');
+    }
+
+    public function test_integrations_article_requires_public_https_and_hides_response_bodies(): void
+    {
+        $admin = User::factory()->create()->assignRole('admin');
+
+        $this->actingAs($admin)
+            ->get(route('help.show', 'integrations'))
+            ->assertOk()
+            ->assertSee('public HTTPS')
+            ->assertSee('not the response body');
+    }
+
     public function test_updates_article_explains_apply_and_backup_reminder(): void
     {
         $admin = User::factory()->create()->assignRole('admin');

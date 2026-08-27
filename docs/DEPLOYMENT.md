@@ -30,6 +30,8 @@ Security notes for operators:
 
 Office hours, backup clocks, snapshot names, and scheduler display use `APP_TIMEZONE` (IANA name, default `UTC`). Example: `APP_TIMEZONE=Africa/Lagos`. The installer writes `UTC` when the key is missing and does not overwrite an existing value. Changing to a DST zone must keep calendar math on `setTime`, never `addHours(24)`.
 
+Custom S3-compatible backup endpoints must be public HTTPS. For a private MinIO (or similar) on your network, set `BACKUP_ALLOW_PRIVATE_S3_ENDPOINT=true`. Leave it unset in production internet-facing installs.
+
 ## 3. cPanel Bring-Up (once per server)
 
 **Database:** cPanel → MySQL Databases → create DB + user, grant privileges. Restrict later per §6.

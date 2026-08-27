@@ -5,6 +5,7 @@ namespace App\Actions\Backups;
 use App\Enums\BackupDestinationKind;
 use App\Models\BackupDestination;
 use App\Services\Backups\BackupTransportFactory;
+use App\Support\OutboundDestination;
 use InvalidArgumentException;
 use Throwable;
 
@@ -90,6 +91,14 @@ final class StoreBackupDestinationAction
             if (array_key_exists($field, $input)) {
                 $posted[$field] = is_string($input[$field]) ? $input[$field] : null;
             }
+        }
+
+        $endpoint = trim((string) ($posted['endpoint'] ?? ''));
+        if ($endpoint !== '') {
+            app(OutboundDestination::class)->validate($endpoint, [
+                'allow_private' => (bool) config('backups.allow_private_s3_endpoint'),
+                'allow_nonstandard_port' => (bool) config('backups.allow_private_s3_endpoint'),
+            ]);
         }
 
         return $posted;

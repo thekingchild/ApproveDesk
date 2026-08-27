@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Str;
 use Throwable;
 
 class BackupDestination extends Model
@@ -97,7 +98,9 @@ class BackupDestination extends Model
 
     public function rememberError(?string $message): void
     {
-        $redacted = $message === null ? null : preg_replace('/[A-Za-z0-9_\\-]{20,}/', '[redacted]', $message);
+        $redacted = $message === null
+            ? null
+            : Str::limit((string) preg_replace('/[A-Za-z0-9_\\-]{20,}/', '[redacted]', $message), 200, '');
         $this->forceFill(['last_error' => $redacted])->save();
     }
 }

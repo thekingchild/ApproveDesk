@@ -77,16 +77,15 @@ class DeliverIntegrationAction implements ShouldQueue
         if (! $result->ok) {
             $this->failDelivery(
                 $delivery,
-                $connector->redact(($result->error !== '' ? $result->error : 'Connector returned a failure.').' '.$result->body),
+                $result->error !== '' ? $result->error : 'The destination returned an error.',
                 $result->status,
-                $connector->redact($result->body),
             );
         }
 
         $delivery->update([
             'status' => IntegrationDeliveryStatus::Delivered,
             'response_status' => $result->status,
-            'response_body' => Str::limit($connector->redact($result->body), 2000, ''),
+            'response_body' => null,
             'last_error' => null,
             'delivered_at' => now(),
             'next_attempt_at' => null,
@@ -98,7 +97,6 @@ class DeliverIntegrationAction implements ShouldQueue
         IntegrationDelivery $delivery,
         string $error,
         ?int $status = null,
-        string $body = '',
     ): never {
         $final = $delivery->attempts >= $this->tries;
         $redacted = $delivery->action->connector->redact($error);
@@ -106,7 +104,7 @@ class DeliverIntegrationAction implements ShouldQueue
         $delivery->update([
             'status' => $final ? IntegrationDeliveryStatus::DeadLetter : IntegrationDeliveryStatus::Pending,
             'response_status' => $status,
-            'response_body' => $body === '' ? null : Str::limit($body, 2000, ''),
+            'response_body' => null,
             'last_error' => Str::limit($redacted, 2000, ''),
             'next_attempt_at' => $final ? null : now()->addSeconds($this->backoff[$delivery->attempts - 1] ?? 3600),
         ]);

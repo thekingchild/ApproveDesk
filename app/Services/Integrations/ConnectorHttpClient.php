@@ -4,8 +4,9 @@ namespace App\Services\Integrations;
 
 use App\DTOs\Integrations\ConnectorResult;
 use App\Models\Submission;
+use App\Support\OutboundDestination;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Str;
 
 /**
  * Shared HTTP transport for connectors. Callers never log credentials.
@@ -19,20 +20,17 @@ final class ConnectorHttpClient
     public function post(string $url, array|string $body, array $headers = [], int $timeout = 10): ConnectorResult
     {
         $encoded = is_string($body) ? $body : json_encode($body, JSON_THROW_ON_ERROR);
+        $pin = app(OutboundDestination::class)->validate($url);
 
         $response = Http::acceptJson()
             ->timeout($timeout)
             ->withoutRedirecting()
+            ->withOptions($pin->httpOptions())
             ->withHeaders($headers)
             ->withBody($encoded, 'application/json')
-            ->send('POST', $url);
+            ->send('POST', $pin->url);
 
-        return new ConnectorResult(
-            ok: $response->successful(),
-            status: $response->status(),
-            body: Str::limit($response->body(), 2000, ''),
-            error: $response->successful() ? '' : 'HTTP '.$response->status(),
-        );
+        return $this->result($response);
     }
 
     /**
@@ -40,18 +38,16 @@ final class ConnectorHttpClient
      */
     public function get(string $url, array $headers = [], int $timeout = 8): ConnectorResult
     {
+        $pin = app(OutboundDestination::class)->validate($url);
+
         $response = Http::acceptJson()
             ->timeout($timeout)
             ->withoutRedirecting()
+            ->withOptions($pin->httpOptions())
             ->withHeaders($headers)
-            ->get($url);
+            ->get($pin->url);
 
-        return new ConnectorResult(
-            ok: $response->successful(),
-            status: $response->status(),
-            body: Str::limit($response->body(), 2000, ''),
-            error: $response->successful() ? '' : 'HTTP '.$response->status(),
-        );
+        return $this->result($response);
     }
 
     /** @return array<string, mixed> */
@@ -91,5 +87,28 @@ final class ConnectorHttpClient
             'X-ApproveDesk-Timestamp' => $timestamp,
             'X-ApproveDesk-Signature' => 'sha256='.hash_hmac('sha256', $timestamp.'.'.$body, $secret),
         ];
+    }
+
+    private function result(Response $response): ConnectorResult
+    {
+        return new ConnectorResult(
+            ok: $response->successful(),
+            status: $response->status(),
+            body: '',
+            error: $response->successful() ? '' : $this->statusClass($response->status()),
+        );
+    }
+
+    private function statusClass(int $status): string
+    {
+        if ($status >= 500) {
+            return 'HTTP 5xx';
+        }
+
+        if ($status >= 400) {
+            return 'HTTP 4xx';
+        }
+
+        return 'HTTP '.$status;
     }
 }

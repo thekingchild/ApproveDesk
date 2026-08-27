@@ -6,6 +6,7 @@ use App\DTOs\OutboundNotification;
 use App\Models\PushSubscription;
 use App\Models\Setting;
 use App\Models\User;
+use App\Support\OutboundDestination;
 use Minishlink\WebPush\Subscription;
 use Minishlink\WebPush\VAPID;
 use Minishlink\WebPush\WebPush;
@@ -56,6 +57,7 @@ final class WebPushService
 
         foreach ($user->pushSubscriptions as $row) {
             try {
+                app(OutboundDestination::class)->validate($row->endpoint);
                 $webPush->queueNotification(
                     Subscription::create([
                         'endpoint' => $row->endpoint,

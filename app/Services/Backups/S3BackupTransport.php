@@ -3,6 +3,7 @@
 namespace App\Services\Backups;
 
 use App\Models\BackupDestination;
+use App\Support\OutboundDestination;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
@@ -69,6 +70,13 @@ final class S3BackupTransport implements BackupTransport
         }
 
         $credentials = $this->destination->credentials();
+        $endpoint = $credentials['endpoint'] ?? null;
+        if (is_string($endpoint) && trim($endpoint) !== '') {
+            app(OutboundDestination::class)->validate($endpoint, [
+                'allow_private' => (bool) config('backups.allow_private_s3_endpoint'),
+                'allow_nonstandard_port' => (bool) config('backups.allow_private_s3_endpoint'),
+            ]);
+        }
 
         $this->disk = Storage::build([
             'driver' => 's3',

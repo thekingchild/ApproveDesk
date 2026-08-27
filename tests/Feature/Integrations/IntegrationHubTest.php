@@ -95,8 +95,10 @@ class IntegrationHubTest extends TestCase
 
         $delivery->refresh();
         $this->assertSame(IntegrationDeliveryStatus::Pending, $delivery->status);
+        $this->assertSame('HTTP 5xx', $delivery->last_error);
+        $this->assertNull($delivery->response_body);
         $this->assertStringNotContainsString('super-secret-token', (string) $delivery->last_error);
-        $this->assertStringContainsString('[redacted]', (string) $delivery->last_error);
+        $this->assertStringNotContainsString('leaked', (string) $delivery->last_error);
     }
 
     public function test_successful_delivery_is_marked_delivered(): void
@@ -171,6 +173,18 @@ class IntegrationHubTest extends TestCase
         ])->assertRedirect(route('admin.integrations.index'));
 
         $this->assertSame('keep-me', $connector->fresh()->credentialMap()['secret']);
+    }
+
+    public function test_private_connector_url_is_rejected_at_save(): void
+    {
+        $connector = IntegrationConnector::factory()->create();
+
+        $this->actingAs($this->admin)->post(route('admin.integrations.credentials', $connector), [
+            'url' => 'https://10.0.0.1/hook',
+            'secret' => 'keep-me',
+        ])->assertSessionHasErrors('url');
+
+        $this->assertSame('https://hooks.example.test/approvedesk', $connector->fresh()->credentialMap()['url']);
     }
 
     public function test_submitter_cannot_open_integration_hub(): void

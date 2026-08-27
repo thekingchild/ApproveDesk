@@ -7,8 +7,8 @@ Open **Administration → Integrations** to connect another system and run work 
 A connector is one destination: Microsoft Teams, Slack, Google Drive, SharePoint/OneDrive, Gmail/Outlook, or generic HTTP.
 
 1. Add a connector and give it a name.
-2. Save credentials on the connector card. Tokens are encrypted and never shown again. Leave a field blank to keep the current secret.
-3. Test the connection. Failures are stored with secrets stripped out.
+2. Save credentials on the connector card. Tokens are encrypted and never shown again. Leave a field blank to keep the current secret. Destination URLs must be public HTTPS.
+3. Test the connection. Failures show only that the destination returned an error, not the response body.
 4. Enable the connector when you are ready.
 
 Unconfigured or disabled connectors skip. They do not block the approval.
