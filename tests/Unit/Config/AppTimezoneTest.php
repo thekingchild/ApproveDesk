@@ -36,22 +36,48 @@ class AppTimezoneTest extends TestCase
     private function withAppTimezoneEnv(?string $value, callable $callback): void
     {
         $repository = Env::getRepository();
-        $previous = $repository->has('APP_TIMEZONE') ? $repository->get('APP_TIMEZONE') : null;
-        $had = $repository->has('APP_TIMEZONE');
+        $previousRepo = $repository->has('APP_TIMEZONE') ? $repository->get('APP_TIMEZONE') : null;
+        $hadRepo = $repository->has('APP_TIMEZONE');
+        $previousPut = getenv('APP_TIMEZONE');
+        $previousEnv = array_key_exists('APP_TIMEZONE', $_ENV) ? $_ENV['APP_TIMEZONE'] : false;
+        $previousServer = array_key_exists('APP_TIMEZONE', $_SERVER) ? $_SERVER['APP_TIMEZONE'] : false;
 
         try {
             if ($value === null) {
                 $repository->clear('APP_TIMEZONE');
+                putenv('APP_TIMEZONE');
+                unset($_ENV['APP_TIMEZONE'], $_SERVER['APP_TIMEZONE']);
             } else {
                 $repository->set('APP_TIMEZONE', $value);
+                putenv('APP_TIMEZONE='.$value);
+                $_ENV['APP_TIMEZONE'] = $value;
+                $_SERVER['APP_TIMEZONE'] = $value;
             }
 
             $callback();
         } finally {
-            if ($had && is_string($previous)) {
-                $repository->set('APP_TIMEZONE', $previous);
+            if ($hadRepo && is_string($previousRepo)) {
+                $repository->set('APP_TIMEZONE', $previousRepo);
             } else {
                 $repository->clear('APP_TIMEZONE');
+            }
+
+            if ($previousPut === false) {
+                putenv('APP_TIMEZONE');
+            } else {
+                putenv('APP_TIMEZONE='.$previousPut);
+            }
+
+            if ($previousEnv === false) {
+                unset($_ENV['APP_TIMEZONE']);
+            } else {
+                $_ENV['APP_TIMEZONE'] = $previousEnv;
+            }
+
+            if ($previousServer === false) {
+                unset($_SERVER['APP_TIMEZONE']);
+            } else {
+                $_SERVER['APP_TIMEZONE'] = $previousServer;
             }
         }
     }
