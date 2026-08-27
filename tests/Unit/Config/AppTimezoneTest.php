@@ -25,12 +25,12 @@ class AppTimezoneTest extends TestCase
         });
     }
 
-    public function test_example_env_declares_app_timezone_without_changing_version(): void
+    public function test_example_env_declares_app_timezone_and_current_version(): void
     {
         $example = (string) file_get_contents(base_path('.env.example'));
 
         $this->assertMatchesRegularExpression('/^APP_TIMEZONE=UTC$/m', $example);
-        $this->assertMatchesRegularExpression('/^APP_VERSION=2\\.7\\.1$/m', $example);
+        $this->assertMatchesRegularExpression('/^APP_VERSION=2\.7\.2$/m', $example);
     }
 
     private function withAppTimezoneEnv(?string $value, callable $callback): void

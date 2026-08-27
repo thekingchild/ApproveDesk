@@ -6,6 +6,8 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ## [Unreleased]
 
+## [2.7.2] - 2026-08-27
+
 ### Added
 
 - Application timezone is read from `APP_TIMEZONE` (IANA name, default UTC) instead of a hardcoded UTC value.
@@ -20,6 +22,7 @@ All notable changes to ApproveDesk are documented here. The project follows
 - Verify and promote refuse a snapshot whose file no longer matches the recorded size and checksum, including remote copies. File archives must match the stored file list exactly.
 - Webhooks, integration connectors, web-push endpoints, and custom S3 backup endpoints must be public HTTPS. Private S3/MinIO needs `BACKUP_ALLOW_PRIVATE_S3_ENDPOINT=true`. Connector failures no longer store response bodies.
 - Permission cache is not flushed until the `cache` table exists, so `composer install` / `package:discover` no longer fail on an empty SQLite memory database.
+- README, `.env.example` `APP_VERSION`, and this changelog treat **v2.7.2** as the current single-company release.
 
 ### Fixed
 

@@ -1003,7 +1003,7 @@ This supplement is self-hosted v2.7.1 work. It does not implement or change Appr
 
 ## Self-hosted supplement — Security hardening and application timezone — Complete (2026-08-27)
 
-**Goal:** close the v2.7.1 static security findings that are in product scope, and stop hardcoding the application timezone so operators set `APP_TIMEZONE` in `.env`. Target release is **v2.7.2** after every sub-phase below lands. Do not bump `APP_VERSION` / README / `.env.example` until the CI release push.
+**Goal:** close the v2.7.1 static security findings that are in product scope, and stop hardcoding the application timezone so operators set `APP_TIMEZONE` in `.env`. Target release is **v2.7.2**. Version metadata is bumped in the CI release push.
 
 This supplement is self-hosted v2.7.2 work on `feature/sh-sec272-security-hardening`. It does not implement or change ApproveDesk SaaS Phase 10–15. It does not reopen WorkflowEngine, append-only `workflow_actions`, installer lock design, custom-role ceilings, or backup date-time naming.
 
@@ -1114,7 +1114,7 @@ This supplement is self-hosted v2.7.2 work on `feature/sh-sec272-security-harden
   - `docs/kb/webhooks.md` and `docs/kb/integrations.md` — destinations must be public HTTPS.
   - Refresh `docs/kb/definitions.md` and `HelpCatalogue` summaries only if terms change. End-user language only.
 - **SH-SEC-DOC-02 — Complete (2026-08-27):** `CHANGELOG.md` `[Unreleased]` entries for each shipped control. Do not retitle as `[2.7.2]` or set `APP_VERSION` until the CI release push after this supplement is complete.
-- **SH-SEC-DOC-03 — Complete (2026-08-27):** Mark every task and this supplement Complete (date) in this plan and set the release-map row to Complete only when tests (`php artisan test --parallel`) and `./vendor/bin/pint --dirty` are green. Keep SaaS Phase 10–15 untouched. Product version remains **v2.7.1** until that CI push.
+- **SH-SEC-DOC-03 — Complete (2026-08-27):** Mark every task and this supplement Complete (date) in this plan and set the release-map row to Complete only when tests (`php artisan test --parallel`) and `./vendor/bin/pint --dirty` are green. Keep SaaS Phase 10–15 untouched. Product version is **v2.7.2** on this release push.
 
 **Phase SH-SEC272 demo:** outside-domain OAuth cannot join; branding managers cannot plant JavaScript; a replaced remote backup cannot verify; private/rebinding destinations cannot be called; backup and office-hour clocks follow `APP_TIMEZONE`. Installer first-run remains as in v2.7.1.
 
