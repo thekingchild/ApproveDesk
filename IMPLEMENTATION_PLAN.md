@@ -156,7 +156,7 @@ Locked product decision for Phase 8.2. It does not reopen Phase 8.1. Design: [do
 | SH-OWN/REC/CAP | v2.6.0 | Self-hosted system owner, account recovery, and active-user capacity | Complete |
 | SH-RBAC/BTIME/CRON | v2.7.0 | Custom roles, backup time pickers, and scheduler diagnostics | Complete |
 | SH-BK271 | v2.7.1 | Backup date-time names, restore history, SQLite promote | Complete |
-| SH-SEC272 | v2.7.2 | Security hardening: OAuth domain gate, owner-only custom code, backup digests, outbound URL checks, APP_TIMEZONE | In progress |
+| SH-SEC272 | v2.7.2 | Security hardening: OAuth domain gate, owner-only custom code, backup digests, outbound URL checks, APP_TIMEZONE | Complete |
 | 10 | v3.0.0 | SaaS multi-tenancy foundation | Not started |
 | 11 | v3.1.0 | Paystack and Flutterwave subscriptions | Not started |
 | 12 | v3.2.0 | SaaS onboarding, entitlements, and commercial operations | Not started |
@@ -1001,7 +1001,7 @@ This supplement is self-hosted v2.7.1 work. It does not implement or change Appr
 
 ---
 
-## Self-hosted supplement — Security hardening and application timezone — In progress
+## Self-hosted supplement — Security hardening and application timezone — Complete (2026-08-27)
 
 **Goal:** close the v2.7.1 static security findings that are in product scope, and stop hardcoding the application timezone so operators set `APP_TIMEZONE` in `.env`. Target release is **v2.7.2** after every sub-phase below lands. Do not bump `APP_VERSION` / README / `.env.example` until the CI release push.
 
@@ -1105,16 +1105,16 @@ This supplement is self-hosted v2.7.2 work on `feature/sh-sec272-security-harden
 
 **Out of scope:** blocking all custom S3 endpoints; changing webhook signing; adding a UI host allow-list (env opt-in is enough for MinIO).
 
-### SH-SEC-DOC — Help, changelog, and release isolation
+### SH-SEC-DOC — Help, changelog, and release isolation — Complete (2026-08-27)
 
-- **SH-SEC-DOC-01:** Update Help in the same delivery as each sub-phase:
+- **SH-SEC-DOC-01 — Complete (2026-08-27):** Update Help in the same delivery as each sub-phase:
   - `docs/kb/organization-settings.md` — domain list applies to Google/Microsoft sign-up; custom code is System-owner only; times use the installation timezone.
   - `docs/kb/users-and-roles.md` — custom code is not a delegable branding permission.
   - `docs/kb/backups.md` — copies are checked against the fingerprint taken at backup time before restore; extra or altered files are refused.
   - `docs/kb/webhooks.md` and `docs/kb/integrations.md` — destinations must be public HTTPS.
   - Refresh `docs/kb/definitions.md` and `HelpCatalogue` summaries only if terms change. End-user language only.
-- **SH-SEC-DOC-02:** `CHANGELOG.md` `[Unreleased]` entries for each shipped control. Do not retitle as `[2.7.2]` or set `APP_VERSION` until the CI release push after this supplement is complete.
-- **SH-SEC-DOC-03:** Mark every task and this supplement Complete (date) in this plan and set the release-map row to Complete only when tests (`php artisan test --parallel`) and `./vendor/bin/pint --dirty` are green. Keep SaaS Phase 10–15 untouched.
+- **SH-SEC-DOC-02 — Complete (2026-08-27):** `CHANGELOG.md` `[Unreleased]` entries for each shipped control. Do not retitle as `[2.7.2]` or set `APP_VERSION` until the CI release push after this supplement is complete.
+- **SH-SEC-DOC-03 — Complete (2026-08-27):** Mark every task and this supplement Complete (date) in this plan and set the release-map row to Complete only when tests (`php artisan test --parallel`) and `./vendor/bin/pint --dirty` are green. Keep SaaS Phase 10–15 untouched. Product version remains **v2.7.1** until that CI push.
 
 **Phase SH-SEC272 demo:** outside-domain OAuth cannot join; branding managers cannot plant JavaScript; a replaced remote backup cannot verify; private/rebinding destinations cannot be called; backup and office-hour clocks follow `APP_TIMEZONE`. Installer first-run remains as in v2.7.1.
 

@@ -12,7 +12,7 @@ The owner may appoint a role manager. A role manager can work only with custom r
 
 | Role | What it is for |
 |---|---|
-| Administrator | Users, departments, workflows, request types, branding, analytics, webhooks, and sensitive fields. Cannot grant another Administrator or recover passwords. |
+| Administrator | Users, departments, workflows, request types, branding, webhooks, and sensitive fields. Cannot grant another Administrator, recover passwords, or add analytics and custom code. |
 | Department head | Department work, plus create and view submissions. |
 | Approver | Act on assigned steps. |
 | Submitter | Create, edit own drafts, and withdraw own requests. |

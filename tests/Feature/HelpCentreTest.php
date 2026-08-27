@@ -211,6 +211,17 @@ class HelpCentreTest extends TestCase
             ->assertDontSee('.env');
     }
 
+    public function test_users_and_roles_article_keeps_custom_code_off_custom_roles(): void
+    {
+        $admin = User::factory()->create()->assignRole('admin');
+
+        $this->actingAs($admin)
+            ->get(route('help.show', 'users-and-roles'))
+            ->assertOk()
+            ->assertSee('or the ability to add analytics and custom code')
+            ->assertSee('or add analytics and custom code');
+    }
+
     public function test_notification_channels_article_explains_optional_delivery(): void
     {
         $admin = User::factory()->create()->assignRole('admin');
@@ -282,7 +293,8 @@ class HelpCentreTest extends TestCase
             ->assertSee('https://console.cloud.google.com/', false)
             ->assertSee('https://developers.google.com/oauthplayground', false)
             ->assertSee('installation timezone')
-            ->assertSee('still the same one that was taken');
+            ->assertSee('still the same one that was taken')
+            ->assertSee('Extra or altered files');
     }
 
     public function test_webhooks_article_requires_public_https(): void

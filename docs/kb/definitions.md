@@ -140,7 +140,7 @@ The administrator screen for connectors and post-approval actions (upload a file
 
 ## [Connector](/help/integrations)
 
-One configured destination in the integration hub, such as Slack or generic HTTP. Credentials stay hidden after you save. A disabled connector is skipped.
+One configured destination in the integration hub, such as Slack or generic HTTP. Credentials stay hidden after you save. Destination URLs must be public HTTPS. A disabled connector is skipped.
 
 ## [Replay](/help/operations)
 
