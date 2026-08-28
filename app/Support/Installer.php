@@ -141,21 +141,53 @@ class Installer
      * Minimal boot environment so the installer pages themselves render
      * (a fresh deploy may have no .env at all): copy the example file and
      * make sure an APP_KEY exists for cookie encryption.
+     *
+     * Also pin file session/cache for this request. The example file uses
+     * database stores, which 500 before migrations exist on cPanel/Plesk.
      */
     public function ensureBootstrapEnvironment(): void
     {
         $envPath = $this->envPath();
+        $createdEnv = ! is_file($envPath);
 
-        if (! is_file($envPath)) {
+        if ($createdEnv) {
             $example = base_path('.env.example');
             $contents = is_file($example) ? file_get_contents($example) : "APP_NAME=ApproveDesk\n";
             file_put_contents($envPath, (string) $contents);
+            $this->writeEnvValue('APP_ENV', 'production');
+            $this->writeEnvValue('APP_DEBUG', 'true');
+            $this->writeEnvValue('SESSION_DRIVER', 'file');
+            $this->writeEnvValue('CACHE_STORE', 'file');
         }
 
-        if (trim((string) $this->readEnvValue('APP_KEY')) === '') {
+        $key = trim((string) $this->readEnvValue('APP_KEY'));
+        $keyWasEmpty = $key === '';
+        if ($keyWasEmpty) {
             $key = $this->generateKey();
             $this->writeEnvValue('APP_KEY', $key);
+            if (! $createdEnv) {
+                if ($this->readEnvValue('SESSION_DRIVER') === 'database') {
+                    $this->writeEnvValue('SESSION_DRIVER', 'file');
+                }
+                if ($this->readEnvValue('CACHE_STORE') === 'database') {
+                    $this->writeEnvValue('CACHE_STORE', 'file');
+                }
+            }
+        }
+
+        $needsFileStores = $createdEnv || $keyWasEmpty || trim((string) config('app.key')) === '';
+
+        if (trim((string) config('app.key')) === '') {
             config()->set('app.key', $key);
+        }
+
+        if ($needsFileStores) {
+            if (config('session.driver') === 'database') {
+                config()->set('session.driver', 'file');
+            }
+            if (config('cache.default') === 'database') {
+                config()->set('cache.default', 'file');
+            }
         }
     }
 

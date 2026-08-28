@@ -173,6 +173,7 @@ Performance budgets: [PERFORMANCE.md](PERFORMANCE.md).
 | Symptom | Check |
 |---|---|
 | White page / 500 after upload | `storage/logs/laravel.log`; `.env` present?; PHP version ≥ 8.3 selected in MultiPHP |
+| `/install` is 500 on a brand-new unzip | PHP 8.3+ selected for the domain; `storage/` and `bootstrap/cache/` writable; document root is `public/`. A missing `.env` is expected — the wizard creates it. If the log says `MissingAppKeyException` or `database.sqlite does not exist`, the build is older than the first-run bootstrap fix; replace the app files and retry `/install`. |
 | Installer stuck on requirements | extension missing (compare §1 list); `storage/` not writable |
 | Emails not sending | mail credentials in Settings/.env; queue cron running; test via tinker `Mail::raw()` |
 | Styles/JS 404 | `public/build/` missing — deploy the release bundle, not the raw repo |

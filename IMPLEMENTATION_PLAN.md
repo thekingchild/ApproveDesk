@@ -750,6 +750,7 @@ This phase is additive. It does not reopen Phases 0–9, UO, or LP. It does not 
 - **IN-TEST-01 — Complete (2026-08-24):** Extend `InstallerTest`: after the sqlite flow, every installer URL is 404; `/login` is 200 and shows the completion flash once; a second `/login` does not repeat it.
 - **IN-TEST-02 — Complete (2026-08-24):** Feature tests: submitter cannot open Updates; admin sees pending migration names from a fake pending file or an empty list; apply with a clean preflight runs migrate; apply with a dropColumn pending file is refused; apply does not mutate `workflow_actions` except through normal migrations.
 - **IN-DOC-01 — Complete (2026-08-24):** `docs/DEPLOYMENT.md`, `docs/OPERATIONS.md`, Help (`docs/kb/getting-around.md` or a short Updates note in `docs/kb/operations.md`), `docs/kb/definitions.md`, Help catalogue if a new article is needed, `CHANGELOG.md`, and this plan.
+- **IN-BOOT-01 — Complete (2026-08-28):** A fresh shared-host zip opens `/install` with no `.env`, no `APP_KEY`, and no database. `PrepareFirstRunEnvironment` writes the key and file session/cache before `EncryptCookies`; `Setting::get` returns defaults when the cache or settings table does not exist.
 
 **Phase IN demo — Complete (2026-08-24):** finish `/install`; `/install` and `/install/done` 404; login shows “ApproveDesk is ready” once; an administrator opens Updates, sees “no pending migrations”, and cannot reopen the wizard.
 

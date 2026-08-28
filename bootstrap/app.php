@@ -6,6 +6,7 @@ use App\Http\Middleware\EnsureEmailApprovalSecondFactor;
 use App\Http\Middleware\EnsureSecondFactorWhenRequired;
 use App\Http\Middleware\EnsureSystemOwnerReauthenticated;
 use App\Http\Middleware\EnsureUserIsActive;
+use App\Http\Middleware\PrepareFirstRunEnvironment;
 use App\Http\Middleware\RedirectUnconfirmedRegistration;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\VerifyTurnstileWhenEnabled;
@@ -22,6 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->prepend(PrepareFirstRunEnvironment::class);
         $middleware->append(SecurityHeaders::class);
         $middleware->append(CorrelateRequests::class);
         $middleware->web([
