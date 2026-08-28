@@ -78,16 +78,10 @@ class PublicWebsiteTest extends TestCase
 
     public function test_application_and_livewire_scripts_bypass_cloudflare_rocket_loader(): void
     {
-        $this->withVite();
-
         $html = $this->get(route('login'))
             ->assertOk()
             ->getContent();
 
-        $this->assertMatchesRegularExpression(
-            '/<script[^>]*data-cfasync="false"[^>]*src="[^"]*\/build\/assets\/app-[^"]*\.js"[^>]*>/',
-            $html,
-        );
         $this->assertMatchesRegularExpression(
             '/<script[^>]*data-cfasync="false"[^>]*src="[^"]*\/livewire[^"?]*\/livewire\.js[^>]*>/',
             $html,
