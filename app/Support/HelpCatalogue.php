@@ -34,7 +34,7 @@ final class HelpCatalogue
             new HelpArticle(
                 slug: 'requests',
                 title: 'Requests',
-                summary: 'Create, draft, attach files, comment, withdraw, and revise a request.',
+                summary: 'Create, draft, attach files, comment, withdraw, revise, and print or download an approval report.',
                 icon: 'document-plus',
                 group: 'Using ApproveDesk',
                 audience: 'all',
@@ -43,7 +43,7 @@ final class HelpCatalogue
             new HelpArticle(
                 slug: 'approvals',
                 title: 'Approvals',
-                summary: 'Use the workbench to preview, decide, delegate, escalate, or ask for information.',
+                summary: 'Use the workbench to preview, decide, delegate, escalate, ask for information, or open an approval report.',
                 icon: 'check-circle',
                 group: 'Using ApproveDesk',
                 audience: 'all',

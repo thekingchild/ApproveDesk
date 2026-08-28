@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\ResetUserPasswordController;
 use App\Http\Controllers\Admin\ResetUserSecondFactorController;
 use App\Http\Controllers\AnalyticsExportController;
+use App\Http\Controllers\ApprovalReportController;
 use App\Http\Controllers\Auth\RegistrationConfirmationController;
 use App\Http\Controllers\BackupDestinationController;
 use App\Http\Controllers\BrandingAssetController;
@@ -222,6 +223,11 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::livewire('submissions/{submission}/edit', 'pages::submissions.create')
         ->middleware('can:update,submission')
         ->name('submissions.edit');
+    Route::get('submissions/{submission}/approval-report', [ApprovalReportController::class, 'show'])
+        ->name('submissions.approval-report.show');
+    Route::get('submissions/{submission}/approval-report.pdf', [ApprovalReportController::class, 'download'])
+        ->middleware('throttle:exports')
+        ->name('submissions.approval-report.download');
     Route::livewire('submissions/{submission}', 'pages::submissions.show')->name('submissions.show');
     Route::livewire('approvals/inbox', 'pages::approvals.inbox')->name('approvals.inbox');
 

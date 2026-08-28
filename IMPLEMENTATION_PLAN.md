@@ -157,6 +157,7 @@ Locked product decision for Phase 8.2. It does not reopen Phase 8.1. Design: [do
 | SH-RBAC/BTIME/CRON | v2.7.0 | Custom roles, backup time pickers, and scheduler diagnostics | Complete |
 | SH-BK271 | v2.7.1 | Backup date-time names, restore history, SQLite promote | Complete |
 | SH-SEC272 | v2.7.2 | Security hardening: OAuth domain gate, owner-only custom code, backup digests, outbound URL checks, APP_TIMEZONE | Complete |
+| SH-PRN273 | v2.7.3 | Professional printable approval reports | Complete |
 | 10 | v3.0.0 | SaaS multi-tenancy foundation | Not started |
 | 11 | v3.1.0 | Paystack and Flutterwave subscriptions | Not started |
 | 12 | v3.2.0 | SaaS onboarding, entitlements, and commercial operations | Not started |
@@ -1119,6 +1120,44 @@ This supplement is self-hosted v2.7.2 work on `feature/sh-sec272-security-harden
 **Phase SH-SEC272 demo:** outside-domain OAuth cannot join; branding managers cannot plant JavaScript; a replaced remote backup cannot verify; private/rebinding destinations cannot be called; backup and office-hour clocks follow `APP_TIMEZONE`. Installer first-run remains as in v2.7.1.
 
 **Out of scope:** Finding 1 installer takeover; SaaS tenancy; CSP nonce migration; changing WorkflowEngine.
+
+---
+
+## Self-hosted supplement — Professional printable approval reports — Complete (2026-08-28)
+
+**Goal:** replace the submission screen's generic browser print with a branded, authorization-safe approval report that reads cleanly on screen, on A4 paper, and as a downloaded PDF. Target release is **v2.7.3**. Version metadata is bumped only on the verified release commit.
+
+This supplement is self-hosted v2.7.3 work on `feature/sh-prn273-approval-report`. It does not implement or change ApproveDesk SaaS Phase 10–15. It does not change workflow decisions, rewrite append-only `workflow_actions`, alter published request schemas, or treat recorded decisions as cryptographic signatures.
+
+**Working contract**
+
+- One report route serves an authenticated HTML preview; a separate throttled route downloads the same report as PDF.
+- Existing submission `view` authorization and request-field visibility remain authoritative. A report never reveals a field that the viewer cannot see on the submission.
+- Report times use the installation timezone and report decisions exactly as recorded in workflow history.
+- The output is document-first: no application navigation, dark mode, action controls, comments editor, follower controls, or attachment-download links.
+- No schema change is required.
+
+### SH-PRN-DOC — Report content and presentation — Complete (2026-08-28)
+
+- **SH-PRN-DOC-01 — Complete (2026-08-28):** Add a dedicated branded HTML approval-report preview with organization identity, report title, request reference, prominent status, request summary, body, visible custom fields, attachment manifest, workflow progress, and recorded action history.
+- **SH-PRN-DOC-02 — Complete (2026-08-28):** Add A4 print rules with controlled margins, print-safe colours, wrapping for long values, repeating table headings, section page-break protection, and a footer containing the reference, generation time, installation timezone, and page numbering where the renderer supports it.
+- **SH-PRN-DOC-03 — Complete (2026-08-28):** Replace the existing `window.print()` control with **Approval report** actions for preview and PDF download. The preview supplies its own Print control and never prints signed-in application chrome.
+
+### SH-PRN-AUTH — Authorization and faithful audit output — Complete (2026-08-28)
+
+- **SH-PRN-AUTH-01 — Complete (2026-08-28):** Authorize preview and PDF through the existing submission `view` policy and return the same denial semantics as the submission page.
+- **SH-PRN-AUTH-02 — Complete (2026-08-28):** Reuse the request-field access rules for sensitive and conditional fields; preserve typed display values without exposing internal field keys or database identifiers.
+- **SH-PRN-AUTH-03 — Complete (2026-08-28):** Render workflow steps and append-only actions without inventing signatures. Show actor, recorded outcome, installation-timezone timestamp, and comment where present; label system actions as System.
+
+### SH-PRN-PDF — PDF generation and quality gates — Complete (2026-08-28)
+
+- **SH-PRN-PDF-01 — Complete (2026-08-28):** Generate a downloadable PDF from the report view with the existing Dompdf dependency, a sanitized reference-based filename, embedded/local branding where available, and no remote-resource requirement.
+- **SH-PRN-PDF-02 — Complete (2026-08-28):** Add feature tests for owner/participant access, stranger denial, sensitive-field redaction, report content, immutable action-history output, preview response, PDF response headers/content, and requests without a workflow or custom form.
+- **SH-PRN-PDF-03 — Complete (2026-08-28):** Update the in-app Requests/Approvals Help, definitions if needed, `HelpCatalogue` summaries if needed, and `CHANGELOG.md`; run the full parallel suite, Pint, PHPStan/CI parity, and print/PDF smoke checks before marking this supplement Complete.
+
+**Phase SH-PRN273 demo:** open an approved request, choose **Approval report**, inspect a clean branded preview, print it on A4, and download the same report as a PDF. A person who cannot open the request is denied, and a person without sensitive-field access cannot reveal those values through either report route.
+
+**Out of scope:** cryptographic or handwritten signatures, configurable report templates, merging attachment contents into the PDF, public report links, batch reports, changing workflow state, or adding a new reporting permission.
 
 ---
 
