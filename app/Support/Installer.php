@@ -6,10 +6,11 @@ use App\Exceptions\InstallerException;
 use App\Models\SiteLimit;
 use App\Models\SystemOwner;
 use App\Models\User;
+use Dotenv\Exception\InvalidFileException;
+use Dotenv\Parser\Parser;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\URL;
-use Illuminate\Support\Str;
 use PDO;
 use RuntimeException;
 
@@ -156,7 +157,7 @@ class Installer
             $contents = is_file($example) ? file_get_contents($example) : "APP_NAME=ApproveDesk\n";
             file_put_contents($envPath, (string) $contents);
             $this->writeEnvValue('APP_ENV', 'production');
-            $this->writeEnvValue('APP_DEBUG', 'true');
+            $this->writeEnvValue('APP_DEBUG', 'false');
             $this->writeEnvValue('SESSION_DRIVER', 'file');
             $this->writeEnvValue('CACHE_STORE', 'file');
         }
@@ -243,7 +244,7 @@ class Installer
         $values = [
             'APP_NAME' => 'ApproveDesk',
             'APP_ENV' => 'production',
-            'APP_DEBUG' => 'true', // flipped off by finalize()
+            'APP_DEBUG' => 'false',
             'APP_URL' => $input['url'] ?: request()->getSchemeAndHttpHost(),
             'APP_KEY' => $this->readEnvValue('APP_KEY') ?: $this->generateKey(),
             'DB_CONNECTION' => $input['connection'],
@@ -271,9 +272,25 @@ class Installer
         }
 
         config()->set('app.key', $values['APP_KEY']);
-        if (isset($values['APP_URL'])) {
-            config()->set('app.url', $values['APP_URL']);
+        config()->set('app.url', $values['APP_URL']);
+    }
+
+    /**
+     * Apply the database saved in .env before migrate. Skips PHPUnit's
+     * in-memory SQLite so installer tests keep using RefreshDatabase.
+     */
+    public function applySavedDatabaseConfiguration(): void
+    {
+        $connection = $this->plainEnvValue('DB_CONNECTION');
+        if ($connection === '') {
+            return;
         }
+
+        if ($connection === 'sqlite' && config('database.connections.sqlite.database') === ':memory:') {
+            return;
+        }
+
+        $this->syncRuntimeFromEnvFile();
     }
 
     /**
@@ -301,7 +318,9 @@ class Installer
             if ($database !== '') {
                 config()->set('database.connections.sqlite.database', $database);
             }
-            DB::purge('sqlite');
+            if (! app()->environment('testing')) {
+                DB::purge('sqlite');
+            }
         }
 
         $url = $this->plainEnvValue('APP_URL');
@@ -319,9 +338,7 @@ class Installer
      */
     public function runMigrations(): array
     {
-        if ($this->plainEnvValue('DB_CONNECTION') === 'mysql') {
-            $this->syncRuntimeFromEnvFile();
-        }
+        $this->applySavedDatabaseConfiguration();
 
         Artisan::call('migrate', ['--force' => true]);
         $migrationOutput = Artisan::output();
@@ -373,7 +390,7 @@ class Installer
     }
 
     /**
-     * Final step: flip debug off, mark installed, write the lock file.
+     * Final step: keep debug off, mark installed, write the lock file.
      */
     public function finalize(): void
     {
@@ -402,11 +419,30 @@ class Installer
             return null;
         }
 
-        $lines = file($this->envPath(), FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [];
+        $contents = (string) file_get_contents($this->envPath());
+
+        try {
+            foreach ((new Parser)->parse($contents) as $entry) {
+                if ($entry->getName() !== $key) {
+                    continue;
+                }
+
+                return $entry->getValue()->map(fn ($value) => $value->getChars())->getOrElse('');
+            }
+        } catch (InvalidFileException) {
+            return $this->readEnvValueFallback($key, $contents);
+        }
+
+        return null;
+    }
+
+    private function readEnvValueFallback(string $key, string $contents): ?string
+    {
+        $lines = preg_split("/\r\n|\n|\r/", $contents) ?: [];
 
         foreach ($lines as $line) {
             if (str_starts_with($line, "{$key}=")) {
-                return trim(substr($line, strlen($key) + 1));
+                return $this->decodeEnvValue(substr($line, strlen($key) + 1));
             }
         }
 
@@ -415,20 +451,17 @@ class Installer
 
     private function plainEnvValue(string $key): string
     {
-        return trim((string) $this->readEnvValue($key), "\"'");
+        return (string) $this->readEnvValue($key);
     }
 
     private function writeEnvValue(string $key, string $value): void
     {
         $envPath = $this->envPath();
         $contents = is_file($envPath) ? (string) file_get_contents($envPath) : '';
-
-        if ($value !== '' && ! Str::startsWith($value, ['base64:']) && preg_match('/[\s"#]/', $value)) {
-            $value = '"'.$value.'"';
-        }
+        $encoded = $this->encodeEnvValue($value);
 
         $pattern = is_file($envPath) ? '/^'.preg_quote($key, '/').'.*/m' : '';
-        $line = "{$key}={$value}";
+        $line = "{$key}={$encoded}";
 
         if ($pattern !== '' && preg_match($pattern, $contents)) {
             $contents = (string) preg_replace($pattern, $line, $contents);
@@ -439,5 +472,39 @@ class Installer
         if (file_put_contents($envPath, $contents) === false) {
             throw new RuntimeException("Could not write to [{$envPath}]. Check file permissions.");
         }
+    }
+
+    private function encodeEnvValue(string $value): string
+    {
+        if ($value === '' || str_starts_with($value, 'base64:')) {
+            return $value;
+        }
+
+        if (! preg_match('/[\s"\'#\\\\$]/', $value)) {
+            return $value;
+        }
+
+        return '"'.str_replace(
+            ['\\', '"', '$'],
+            ['\\\\', '\\"', '\\$'],
+            $value,
+        ).'"';
+    }
+
+    private function decodeEnvValue(string $raw): string
+    {
+        $raw = trim($raw);
+
+        if (str_starts_with($raw, '"') && str_ends_with($raw, '"') && strlen($raw) >= 2) {
+            $inner = substr($raw, 1, -1);
+
+            return str_replace(['\\$', '\\"', '\\\\'], ['$', '"', '\\'], $inner);
+        }
+
+        if (str_starts_with($raw, "'") && str_ends_with($raw, "'") && strlen($raw) >= 2) {
+            return substr($raw, 1, -1);
+        }
+
+        return $raw;
     }
 }

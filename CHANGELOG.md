@@ -9,8 +9,13 @@ All notable changes to ApproveDesk are documented here. The project follows
 ### Fixed
 
 - A fresh cPanel/Plesk zip no longer returns HTTP 500 on `/install`. First-run boot now writes `APP_KEY` and uses file session/cache before cookies start, and settings reads no longer require the cache table.
+- After installation, a failed settings read fails closed instead of silently disabling 2FA, Turnstile, and related controls.
+- The public installer keeps `APP_DEBUG` off for the whole first-run wizard.
 - The installer Welcome **Continue** control opens database setup instead of posting empty credentials to the save step.
 - Choosing MySQL now migrates MySQL. The wizard no longer keeps the example file’s SQLite connection after you save database settings.
+- Choosing a custom SQLite file updates the running installer connection before migrations, except the PHPUnit in-memory database.
+- MySQL passwords that contain quotes, `#`, spaces, or `$` round-trip through `.env` instead of being truncated or interpolated.
+- Vite, Livewire, and Flux scripts opt out of Cloudflare Rocket Loader with `data-cfasync="false"` placed before `src`. The deployment guide documents Full (strict) SSL, dynamic-route cache bypasses, and the recommended app-hostname rule.
 
 ## [2.7.3] - 2026-08-28
 

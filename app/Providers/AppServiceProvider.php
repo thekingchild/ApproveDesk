@@ -42,6 +42,7 @@ use App\Services\Notifications\Channels\WhatsAppNotificationChannel;
 use App\Services\Notifications\NotificationDeliveryRecorder;
 use App\Services\Users\SystemOwnerService;
 use App\Services\Workflow\AssigneeResolver;
+use App\Support\CloudflareRocketLoader;
 use App\Support\CorrelationId;
 use App\Support\DnsResolver;
 use App\Support\FeaturePermission;
@@ -53,6 +54,7 @@ use App\Support\RateLimitProfiles;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Foundation\Http\Events\RequestHandled;
 use Illuminate\Http\Request;
 use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Support\Facades\Date;
@@ -116,6 +118,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+        $this->configureCloudflareCompatibility();
 
         PermissionCache::forgetIfReady();
 
@@ -197,6 +200,13 @@ class AppServiceProvider extends ServiceProvider
                 'job' => $event->job->resolveName(),
                 'job_uuid' => $event->job->uuid(),
             ]);
+        });
+    }
+
+    private function configureCloudflareCompatibility(): void
+    {
+        Event::listen(RequestHandled::class, function (RequestHandled $event): void {
+            CloudflareRocketLoader::protect($event->response);
         });
     }
 

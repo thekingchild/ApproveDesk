@@ -76,6 +76,28 @@ class PublicWebsiteTest extends TestCase
             ->assertSee(__('Log in to your account'));
     }
 
+    public function test_application_and_livewire_scripts_bypass_cloudflare_rocket_loader(): void
+    {
+        $this->withVite();
+
+        $html = $this->get(route('login'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertMatchesRegularExpression(
+            '/<script[^>]*data-cfasync="false"[^>]*src="[^"]*\/build\/assets\/app-[^"]*\.js"[^>]*>/',
+            $html,
+        );
+        $this->assertMatchesRegularExpression(
+            '/<script[^>]*data-cfasync="false"[^>]*src="[^"]*\/livewire[^"?]*\/livewire\.js[^>]*>/',
+            $html,
+        );
+        $this->assertMatchesRegularExpression(
+            '/<script[^>]*data-cfasync="false"[^>]*src="[^"]*\/flux\/flux(?:\.min)?\.js[^>]*>/',
+            $html,
+        );
+    }
+
     public function test_path_traversal_and_dotfiles_are_not_served(): void
     {
         $this->get('/../.env')->assertNotFound();

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\Installer;
 use Database\Factories\SettingFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -31,7 +32,11 @@ class Setting extends Model
                 "settings.{$key}",
                 fn () => static::query()->where('key', $key)->value('value') ?? $default,
             );
-        } catch (Throwable) {
+        } catch (Throwable $exception) {
+            if (app(Installer::class)->isInstalled()) {
+                throw $exception;
+            }
+
             return $default;
         }
     }
