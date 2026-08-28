@@ -6,9 +6,15 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ## [Unreleased]
 
+## [2.7.3] - 2026-08-28
+
 ### Added
 
 - Professional approval reports for every request, with a branded A4 preview, browser printing, PDF download, request details, visible custom fields, attachment manifest, workflow progress, and the recorded action history. Report access follows the request policy and sensitive-field rules.
+
+### Changed
+
+- README, `.env.example` `APP_VERSION`, and this changelog treat **v2.7.3** as the current single-company release.
 
 ## [2.7.2] - 2026-08-27
 

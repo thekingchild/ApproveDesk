@@ -30,7 +30,7 @@ class AppTimezoneTest extends TestCase
         $example = (string) file_get_contents(base_path('.env.example'));
 
         $this->assertMatchesRegularExpression('/^APP_TIMEZONE=UTC$/m', $example);
-        $this->assertMatchesRegularExpression('/^APP_VERSION=2\.7\.2$/m', $example);
+        $this->assertMatchesRegularExpression('/^APP_VERSION=2\.7\.3$/m', $example);
     }
 
     private function withAppTimezoneEnv(?string $value, callable $callback): void
