@@ -8,6 +8,7 @@ use App\Models\SystemOwner;
 use App\Models\User;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use PDO;
 use RuntimeException;
@@ -270,6 +271,47 @@ class Installer
         }
 
         config()->set('app.key', $values['APP_KEY']);
+        if (isset($values['APP_URL'])) {
+            config()->set('app.url', $values['APP_URL']);
+        }
+    }
+
+    /**
+     * Point Laravel at the database written to .env. Needed because php-fpm
+     * may still have sqlite from the copied example file after MySQL is saved.
+     */
+    public function syncRuntimeFromEnvFile(): void
+    {
+        $connection = $this->plainEnvValue('DB_CONNECTION');
+        if ($connection === '') {
+            return;
+        }
+
+        config()->set('database.default', $connection);
+
+        if ($connection === 'mysql') {
+            config()->set('database.connections.mysql.host', $this->plainEnvValue('DB_HOST') ?: '127.0.0.1');
+            config()->set('database.connections.mysql.port', $this->plainEnvValue('DB_PORT') ?: '3306');
+            config()->set('database.connections.mysql.database', $this->plainEnvValue('DB_DATABASE'));
+            config()->set('database.connections.mysql.username', $this->plainEnvValue('DB_USERNAME'));
+            config()->set('database.connections.mysql.password', $this->plainEnvValue('DB_PASSWORD'));
+            DB::purge('mysql');
+        } else {
+            $database = $this->plainEnvValue('DB_DATABASE');
+            if ($database !== '') {
+                config()->set('database.connections.sqlite.database', $database);
+            }
+            DB::purge('sqlite');
+        }
+
+        $url = $this->plainEnvValue('APP_URL');
+        if ($url !== '') {
+            config()->set('app.url', $url);
+            $scheme = parse_url($url, PHP_URL_SCHEME);
+            if ($scheme === 'https') {
+                URL::forceScheme('https');
+            }
+        }
     }
 
     /**
@@ -277,6 +319,10 @@ class Installer
      */
     public function runMigrations(): array
     {
+        if ($this->plainEnvValue('DB_CONNECTION') === 'mysql') {
+            $this->syncRuntimeFromEnvFile();
+        }
+
         Artisan::call('migrate', ['--force' => true]);
         $migrationOutput = Artisan::output();
 
@@ -365,6 +411,11 @@ class Installer
         }
 
         return null;
+    }
+
+    private function plainEnvValue(string $key): string
+    {
+        return trim((string) $this->readEnvValue($key), "\"'");
     }
 
     private function writeEnvValue(string $key, string $value): void

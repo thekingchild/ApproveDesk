@@ -143,6 +143,37 @@ class InstallerTest extends TestCase
         $this->assertDoesNotMatchRegularExpression('/^APP_TIMEZONE=UTC$/m', (string) file_get_contents($this->envFile));
     }
 
+    #[TestDox('choosing MySQL writes mysql into .env and runtime config, not sqlite')]
+    public function test_mysql_selection_replaces_sqlite_in_env_and_config(): void
+    {
+        file_put_contents($this->envFile, (string) file_get_contents(base_path('.env.example')));
+        config(['database.default' => 'sqlite']);
+
+        $installer = app(Installer::class);
+        $installer->writeEnvironment([
+            'connection' => 'mysql',
+            'host' => '127.0.0.1',
+            'port' => '3306',
+            'database' => 'approvedesk',
+            'username' => 'app_user',
+            'password' => 'secret',
+            'path' => null,
+            'url' => 'https://approvals.example.com',
+        ]);
+        $installer->syncRuntimeFromEnvFile();
+
+        $env = (string) file_get_contents($this->envFile);
+        $this->assertMatchesRegularExpression('/^DB_CONNECTION=mysql$/m', $env);
+        $this->assertDoesNotMatchRegularExpression('/^DB_CONNECTION=sqlite$/m', $env);
+        $this->assertMatchesRegularExpression('/^DB_DATABASE=approvedesk$/m', $env);
+        $this->assertSame('mysql', config('database.default'));
+        $this->assertSame('approvedesk', config('database.connections.mysql.database'));
+        $this->assertSame('app_user', config('database.connections.mysql.username'));
+        $this->assertSame('https://approvals.example.com', config('app.url'));
+
+        config(['database.default' => 'sqlite']);
+    }
+
     #[TestDox('the full sqlite install flow locks the installer and creates the admin')]
     public function test_full_install_flow_with_sqlite(): void
     {

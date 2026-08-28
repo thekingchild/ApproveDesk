@@ -752,6 +752,7 @@ This phase is additive. It does not reopen Phases 0–9, UO, or LP. It does not 
 - **IN-DOC-01 — Complete (2026-08-24):** `docs/DEPLOYMENT.md`, `docs/OPERATIONS.md`, Help (`docs/kb/getting-around.md` or a short Updates note in `docs/kb/operations.md`), `docs/kb/definitions.md`, Help catalogue if a new article is needed, `CHANGELOG.md`, and this plan.
 - **IN-BOOT-01 — Complete (2026-08-28):** A fresh shared-host zip opens `/install` with no `.env`, no `APP_KEY`, and no database. `PrepareFirstRunEnvironment` writes the key and file session/cache before `EncryptCookies`; `Setting::get` returns defaults when the cache or settings table does not exist.
 - **IN-NAV-01 — Complete (2026-08-28):** Welcome **Continue** is a GET to `/install/database`. It must not POST to the database save route (that submits empty credentials and the page appears stuck).
+- **IN-DB-01 — Complete (2026-08-28):** After MySQL is saved, `runMigrations()` syncs runtime config from `.env` so `migrate` does not run against the example SQLite connection.
 
 **Phase IN demo — Complete (2026-08-24):** finish `/install`; `/install` and `/install/done` 404; login shows “ApproveDesk is ready” once; an administrator opens Updates, sees “no pending migrations”, and cannot reopen the wizard.
 
