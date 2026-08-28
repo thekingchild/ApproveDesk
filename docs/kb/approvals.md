@@ -22,6 +22,8 @@ Reject, return, escalate, request information, and approve with conditions need 
 
 Keyboard shortcuts move to the next or previous request and open the approve or reject dialog. Destructive actions still need confirmation.
 
+For a document-ready copy, choose **Approval report** on the request. The preview and downloadable PDF include the request information you are allowed to see, workflow steps, recorded decisions, decision comments, and the attachment list. See [Requests](requests.md) for printing, sensitive-field, and signature guidance.
+
 ## Batch approve
 
 You can approve several requests at once only when they are the same workflow step and you are the current actor. Reject, return, escalate, and information request stay one-at-a-time.

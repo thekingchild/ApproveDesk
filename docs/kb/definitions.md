@@ -10,6 +10,10 @@ The marketing page visitors see at the site address before they sign in. Guests 
 
 A single case waiting for a decision. It has a form, optional files, comments, a status, and a workflow history. Requesters create requests. Approvers act on them.
 
+## [Approval report](/help/requests)
+
+A branded, document-ready view of one request, its visible details, workflow progress, recorded decisions, and attachment list. It can be printed or downloaded as a PDF without changing the request.
+
 ## [Request type](/help/request-types)
 
 A named form, such as Leave Request or Purchase Request. The request type is what a requester chooses. It owns the fields people fill in and the approval chain that starts when they submit.

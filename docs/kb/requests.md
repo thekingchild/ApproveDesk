@@ -37,3 +37,13 @@ If an approver returns the request, status becomes Returned. Edit the form, answ
 **My submissions** has views for Drafts, In progress, Needs my response, Completed, and Withdrawn. Administrators who can see all submissions get an organization list with filters, reportable columns, and named saved views.
 
 Sensitive form fields stay hidden from people who are not allowed to see them, including in search and list columns.
+
+## Print or save an approval report
+
+An approval report is a document-ready record of one request. Use it when you need a presentable copy for a meeting, filing, an audit response, or an email attachment.
+
+Open the request and choose **Approval report**. The preview shows the organization identity, request summary, request details, visible form fields, workflow progress, recorded decisions and comments, and an attachment list. Choose **Print** for the browser print dialog, or **Download PDF** for a file you can store or send. Times use the installation timezone shown in the report footer.
+
+The report follows the same access rules as the request. A sensitive field you cannot open on the request is not revealed in the preview or PDF. Opening an authorized sensitive value is recorded. Attachment names are listed, but the report does not place the attachment contents inside the PDF.
+
+Do not treat the report as a handwritten or cryptographic signature. It is a formatted account of decisions already recorded in the workflow history. Printing or downloading it does not change the request, add a decision, or rewrite an earlier action.

@@ -680,6 +680,8 @@ new #[Title('Submission')] class extends Component {
 
         <div class="flex items-center gap-2">
             <x-ui.help-link article="collaboration" />
+            <flux:button :href="route('submissions.approval-report.show', $submission)" target="_blank" variant="ghost" icon="printer">{{ __('Approval report') }}</flux:button>
+            <flux:button :href="route('submissions.approval-report.download', $submission)" variant="ghost" icon="arrow-down-tray">{{ __('Download PDF') }}</flux:button>
             @can('downloadEvidence', $submission)
                 <flux:button :href="route('submissions.evidence.download', $submission)" variant="ghost" data-test="download-evidence">{{ __('Download evidence pack') }}</flux:button>
             @endcan
@@ -775,10 +777,7 @@ new #[Title('Submission')] class extends Component {
             </flux:card>
         @endif
         <flux:card class="print:shadow-none">
-            <div class="flex items-center justify-between gap-3">
-                <flux:heading size="sm">{{ $submission->requestTypeVersion->requestType->name }} · {{ __('Version') }} {{ $submission->requestTypeVersion->version }}</flux:heading>
-                <flux:button size="sm" icon="printer" x-on:click="window.print()" class="print:hidden">{{ __('Print') }}</flux:button>
-            </div>
+            <flux:heading size="sm">{{ $submission->requestTypeVersion->requestType->name }} · {{ __('Version') }} {{ $submission->requestTypeVersion->version }}</flux:heading>
             <dl class="mt-4 divide-y divide-zinc-200 dark:divide-zinc-700">
                 @foreach ($this->visibleCustomFields as $field)
                     @php $stored = $submission->fieldValues->firstWhere('request_field_definition_id', $field->id); @endphp
