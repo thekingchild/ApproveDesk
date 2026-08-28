@@ -161,7 +161,7 @@ class ApprovalReportTest extends TestCase
         $instance = $this->submission->fresh()->workflowInstance;
         $step = $instance->currentStep;
 
-        WorkflowAction::factory()->create([
+        $approval = WorkflowAction::factory()->create([
             'instance_id' => $instance->id,
             'step_id' => $step->id,
             'actor_id' => $this->participant->id,
@@ -184,7 +184,7 @@ class ApprovalReportTest extends TestCase
             ->assertSee($this->participant->name)
             ->assertSee('Approve with conditions')
             ->assertSee('Approved after confirming the budget ceiling.')
-            ->assertSee('28 Aug 2026 10:30')
+            ->assertSee($approval->fresh()->created_at->copy()->timezone('Africa/Lagos')->format('d M Y H:i'))
             ->assertSee('System')
             ->assertSee('Auto approve')
             ->assertSee('Africa/Lagos');
