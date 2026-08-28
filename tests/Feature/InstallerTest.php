@@ -63,6 +63,23 @@ class InstallerTest extends TestCase
             ->assertSee('ext/mbstring');
     }
 
+    #[TestDox('continue from welcome opens database setup with GET, not the save POST')]
+    public function test_welcome_continue_opens_database_setup(): void
+    {
+        $html = $this->get(route('install.welcome'))
+            ->assertOk()
+            ->assertSee('Continue to database setup')
+            ->getContent();
+
+        $this->assertStringContainsString('href="'.e(route('install.database')).'"', $html);
+        $this->assertStringNotContainsString('method="POST"', $html);
+
+        $this->get(route('install.database'))
+            ->assertOk()
+            ->assertSee('Connection type')
+            ->assertSee('MySQL / MariaDB');
+    }
+
     #[TestDox('steps cannot be skipped ahead')]
     public function test_steps_cannot_be_skipped(): void
     {

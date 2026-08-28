@@ -28,7 +28,8 @@
         input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
         .row { display: grid; grid-template-columns: 1fr 1fr; gap: .9rem; }
         button { margin-top: 1.5rem; width: 100%; background: var(--accent); color: #fff; border: 0; border-radius: 9px; padding: .7rem; font-size: 1rem; font-weight: 600; cursor: pointer; }
-        button:hover { filter: brightness(1.1); }
+        a.continue { display: block; margin-top: 1.5rem; width: 100%; background: var(--accent); color: #fff; border: 0; border-radius: 9px; padding: .7rem; font-size: 1rem; font-weight: 600; cursor: pointer; text-align: center; text-decoration: none; }
+        button:hover, a.continue:hover { filter: brightness(1.1); }
         button[disabled] { opacity: .45; cursor: not-allowed; }
         button.ghost { background: transparent; border: 1px solid var(--line); }
         .flash { border-radius: 9px; padding: .7rem .9rem; margin-bottom: 1.25rem; font-size: .9rem; }

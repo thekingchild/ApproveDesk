@@ -9,6 +9,7 @@ All notable changes to ApproveDesk are documented here. The project follows
 ### Fixed
 
 - A fresh cPanel/Plesk zip no longer returns HTTP 500 on `/install`. First-run boot now writes `APP_KEY` and uses file session/cache before cookies start, and settings reads no longer require the cache table.
+- The installer Welcome **Continue** control opens database setup instead of posting empty credentials to the save step.
 
 ## [2.7.3] - 2026-08-28
 
