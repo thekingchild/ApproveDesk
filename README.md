@@ -1,6 +1,6 @@
 # ApproveDesk
 
-Approval Workflow Application — submit documents, notes, and memos; route them through configurable approval chains (single, sequential, parallel, quorum, conditional, auto-approve, delegation) with an immutable audit trail, notifications, and dashboards. **ApproveDesk v2.7.4** is the single-organization product: Laravel 13 (PHP 8.3+), Livewire 4, Alpine.js, Tailwind CSS, and Flux UI. It deploys to ordinary cPanel/Plesk shared hosting without Docker or Redis, and also ships a production container for EasyPanel, Coolify, Docker Compose, and compatible platforms.
+Approval Workflow Application — submit documents, notes, and memos; route them through configurable approval chains (single, sequential, parallel, quorum, conditional, auto-approve, delegation) with an immutable audit trail, notifications, and dashboards. **ApproveDesk v2.7.5** is the single-organization product: Laravel 13 (PHP 8.3+), Livewire 4, Alpine.js, Tailwind CSS, and Flux UI. It deploys to ordinary cPanel/Plesk shared hosting without Docker or Redis, and also ships a production container for EasyPanel, Coolify, Docker Compose, and compatible platforms.
 
 ## Documentation Index
 
@@ -39,4 +39,4 @@ Use **MySQL 8 / MariaDB 10.6+** in production. Host panel backups stay recommend
 
 ## Status
 
-**v2.7.4** is the single-company product (phases 0–9 plus installer lock, enforced 2FA, Turnstile, in-app backups, optional second-factor assurance for signed approval links, System owner controls, custom roles, pickable backup times, scheduler diagnostics, named backup snapshots, restore history, application timezone from `APP_TIMEZONE`, OAuth domain matching, owner-only custom code, backup digest checks, public-HTTPS outbound destinations, professional printable approval reports, and shared-host installer plus Cloudflare compatibility fixes). Multi-tenant SaaS is a separate product and is not implemented in this repository.
+**v2.7.5** is the single-company product (phases 0–9 plus installer lock, enforced 2FA, Turnstile, in-app backups, optional second-factor assurance for signed approval links, System owner controls, custom roles, pickable backup times, scheduler diagnostics, named backup snapshots, restore history, application timezone from `APP_TIMEZONE`, OAuth domain matching, owner-only custom code, backup digest checks, public-HTTPS outbound destinations, professional printable approval reports, shared-host installer and Cloudflare compatibility fixes, and an optional public landing page with a login-first default). Multi-tenant SaaS is a separate product and is not implemented in this repository.

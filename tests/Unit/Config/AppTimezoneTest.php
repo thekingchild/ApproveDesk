@@ -28,9 +28,13 @@ class AppTimezoneTest extends TestCase
     public function test_example_env_declares_app_timezone_and_current_version(): void
     {
         $example = (string) file_get_contents(base_path('.env.example'));
+        $config = (string) file_get_contents(config_path('app.php'));
+        $updatesPage = (string) file_get_contents(resource_path('views/pages/admin/updates.blade.php'));
 
         $this->assertMatchesRegularExpression('/^APP_TIMEZONE=UTC$/m', $example);
-        $this->assertMatchesRegularExpression('/^APP_VERSION=2\.7\.4$/m', $example);
+        $this->assertMatchesRegularExpression('/^APP_VERSION=2\.7\.5$/m', $example);
+        $this->assertStringContainsString("'version' => env('APP_VERSION', '2.7.5')", $config);
+        $this->assertStringContainsString("config('app.version', '2.7.5')", $updatesPage);
     }
 
     private function withAppTimezoneEnv(?string $value, callable $callback): void

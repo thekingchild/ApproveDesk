@@ -4,9 +4,11 @@ The sidebar is the same on every signed-in screen. Use it to move between your w
 
 ## Public website
 
-The address you open first is the public marketing home, not the signed-in app. Guests see **Log in** and, when self-registration is allowed, **Sign up**. If you are already signed in, that button becomes **Dashboard** and opens your usual home.
+The site address opens **Login** by default. If you are already signed in, it opens **Dashboard** instead.
 
-That page is not edited from Branding or any other settings screen.
+An administrator can turn on **Show public landing page** under **Settings → Branding**. When it is on, the site address shows the public marketing page: guests see **Log in** and, when self-registration is allowed, **Sign up**; signed-in people see **Dashboard**.
+
+Branding turns the public page on or off but does not edit its content.
 
 ## Home
 

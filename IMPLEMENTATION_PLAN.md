@@ -159,6 +159,7 @@ Locked product decision for Phase 8.2. It does not reopen Phase 8.1. Design: [do
 | SH-SEC272 | v2.7.2 | Security hardening: OAuth domain gate, owner-only custom code, backup digests, outbound URL checks, APP_TIMEZONE | Complete |
 | SH-PRN273 | v2.7.3 | Professional printable approval reports | Complete |
 | SH-IN274 | v2.7.4 | Shared-host installer and Cloudflare compatibility fixes | Complete |
+| SH-LP275 | v2.7.5 | Optional public landing page with login-first default | Complete |
 | 10 | v3.0.0 | SaaS multi-tenancy foundation | Not started |
 | 11 | v3.1.0 | Paystack and Flutterwave subscriptions | Not started |
 | 12 | v3.2.0 | SaaS onboarding, entitlements, and commercial operations | Not started |
@@ -1177,6 +1178,39 @@ This supplement is self-hosted v2.7.3 work on `feature/sh-prn273-approval-report
 - **SH-IN274-QA-01 — Complete (2026-08-29):** Installer regressions, full SQLite suite, MySQL CI, Pint, PHPStan, assets, and required Quality jobs (`php`, `mysql`, `assets`) passed on PR #9 before tagging.
 
 **Out of scope:** changing workflow state, end-user screens, schema, tenant/SaaS work, or requiring Cloudflare.
+
+---
+
+## Self-hosted supplement — Optional public landing page and login-first default — Complete (2026-08-29)
+
+**Goal:** let an administrator choose whether the public marketing website is available, while making the branded login page the default entry point for a new or upgraded v2.7.5 installation. Target release is **v2.7.5**. No schema change is required; the existing settings table stores the option.
+
+This supplement is self-hosted v2.7.5 work on `feature/sh-lp275-landing-toggle`, based on the GitHub v2.7.4 release. It does not implement or change ApproveDesk SaaS Phase 10–15, the installer, self-registration policy, Fortify's signed-in home, the PWA start URL, `WorkflowEngine`, or append-only workflow history.
+
+**Working contract**
+
+- Setting `brand.landing_page_enabled` defaults to **off**. A guest opening `/` is redirected to the branded login page; a signed-in person opening `/` is redirected to Dashboard.
+- An administrator with `branding.manage` may turn **Show public landing page** on or off under **Settings → Branding**. The change takes effect on the next request.
+- When on, the existing drop-in `website/` contract, server-side Login/Sign up/Dashboard injection, static assets, and safe-path rules remain unchanged.
+- When off, the public website fallback does not serve HTML pages or assets from `website/`; application routes, branding assets, `/up`, and the installer continue to work normally.
+- Logout may continue to target the named `home` route: with the landing page off, that route leads guests to login instead of creating a redirect loop.
+
+### SH-LP275 — Setting, routing, and administration — Complete (2026-08-29)
+
+- **SH-LP275-SET-01 — Complete (2026-08-29):** Add the cache-backed landing-page setting to `Branding`, `BrandingSettingsData`, and `UpdateBrandingSettingsAction`, with a safe default of off and no migration.
+- **SH-LP275-ROUTE-01 — Complete (2026-08-29):** Make `/` redirect guests to login and authenticated users to Dashboard while the option is off; preserve the current static home when it is on.
+- **SH-LP275-ROUTE-02 — Complete (2026-08-29):** Refuse the `website/` fallback while the option is off so disabling the landing page also disables its additional pages and assets. Earlier Laravel routes must still win.
+- **SH-LP275-UI-01 — Complete (2026-08-29):** Add a plain-language **Show public landing page** checkbox to **Settings → Branding**, explaining that off makes Login the site address and on serves the drop-in public website.
+
+### SH-LP275-QA — Tests, Help, and release — Complete (2026-08-29)
+
+- **SH-LP275-TEST-01 — Complete (2026-08-29):** Feature tests prove the off-by-default guest and authenticated redirects, enabled public home, disabled fallback assets/pages, enabled static assets, registration-aware auth links, setting persistence, and permission gate.
+- **SH-LP275-DOC-01 — Complete (2026-08-29):** Update Getting around, Organization settings, feature definitions, Help catalogue summaries, `CHANGELOG.md`, README/version metadata, and this plan in end-user language.
+- **SH-LP275-REL-01 — Complete (2026-08-29):** Run the affected tests, full parallel suite, Pint, PHPStan, asset build, and live `/`, `/login`, and `/up` checks; then publish the verified commit as GitHub release tag **v2.7.5**.
+
+**Phase SH-LP275 demo:** with the option off, a visitor opening the site address lands on Login and a signed-in person lands on Dashboard; an administrator turns on **Show public landing page**, and the same site address immediately serves the drop-in marketing page with the correct Login, Sign up, or Dashboard action.
+
+**Out of scope:** editing marketing content from ApproveDesk, replacing the `website/` folder contract, changing the signed-in Dashboard, redirecting named application routes, changing registration rules, or adding a database migration.
 
 ---
 

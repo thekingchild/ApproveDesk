@@ -23,6 +23,7 @@ final class UpdateBrandingSettingsAction
             Setting::put('brand.custom_code', $data->customCode === '' ? null : $data->customCode);
         }
         Setting::put('auth.allow_registration', $data->allowRegistration ? 'true' : 'false');
+        Setting::put('brand.landing_page_enabled', $data->landingPageEnabled ? 'true' : 'false');
         Setting::put('auth.registration_mode', in_array($data->registrationMode, ['immediate', 'otp'], true) ? $data->registrationMode : 'otp');
 
         // Normalise the allow-list: lowercase, one per line, no blanks/dupes.

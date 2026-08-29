@@ -25,7 +25,7 @@ final class HelpCatalogue
             new HelpArticle(
                 slug: 'getting-around',
                 title: 'Getting around',
-                summary: 'Public website versus signed-in home, search, notifications, and how Help stays out of the way.',
+                summary: 'Login-first site address, optional public website, signed-in home, search, notifications, and Help.',
                 icon: 'home',
                 group: 'Using ApproveDesk',
                 audience: 'all',
@@ -141,7 +141,7 @@ final class HelpCatalogue
             new HelpArticle(
                 slug: 'organization-settings',
                 title: 'Organization settings',
-                summary: 'Login branding, application logo and favicon, browser title and description, self-registration (activation mode and domain allow-list), analytics or custom code that only the System owner can change, email approval link lifetime, the business calendar, and optional notification channels.',
+                summary: 'Login branding, optional public landing page, application identity, self-registration, owner-only custom code, approval links, calendars, and notification channels.',
                 icon: 'cog-6-tooth',
                 group: 'Administration',
                 audience: 'admin',

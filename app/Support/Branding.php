@@ -138,6 +138,11 @@ final class Branding
         return Setting::get('auth.allow_registration', 'true') !== 'false';
     }
 
+    public static function landingPageEnabled(): bool
+    {
+        return Setting::get('brand.landing_page_enabled', 'false') === 'true';
+    }
+
     /**
      * Public URL for a file stored under branding/ on the public disk.
      * Uses the application route so the image is reachable without a

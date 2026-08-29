@@ -12,6 +12,7 @@ final readonly class BrandingSettingsData
         public int $overlay,
         public ?string $customCss,
         public bool $allowRegistration,
+        public bool $landingPageEnabled = false,
         public string $registrationMode = 'otp',
         public string $allowedRegistrationDomains = '',
         public string $metaTitle = '',

@@ -4,7 +4,7 @@ Short meanings for the words used on ApproveDesk screens. Open a term’s name t
 
 ## [Public website](/help/getting-around)
 
-The marketing page visitors see at the site address before they sign in. Guests see **Log in** and, when self-registration is allowed, **Sign up**. If you are already signed in, that button becomes **Dashboard**.
+An optional marketing page at the site address. It is off by default, so guests go to Login and signed-in people go to Dashboard. When an administrator turns it on, guests see **Log in** and, when self-registration is allowed, **Sign up**; signed-in people see **Dashboard**.
 
 ## [Request](/help/requests)
 
