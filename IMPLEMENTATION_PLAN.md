@@ -158,7 +158,7 @@ Locked product decision for Phase 8.2. It does not reopen Phase 8.1. Design: [do
 | SH-BK271 | v2.7.1 | Backup date-time names, restore history, SQLite promote | Complete |
 | SH-SEC272 | v2.7.2 | Security hardening: OAuth domain gate, owner-only custom code, backup digests, outbound URL checks, APP_TIMEZONE | Complete |
 | SH-PRN273 | v2.7.3 | Professional printable approval reports | Complete |
-| SH-IN274 | v2.7.4 | Shared-host installer and Cloudflare compatibility fixes | In progress |
+| SH-IN274 | v2.7.4 | Shared-host installer and Cloudflare compatibility fixes | Complete |
 | 10 | v3.0.0 | SaaS multi-tenancy foundation | Not started |
 | 11 | v3.1.0 | Paystack and Flutterwave subscriptions | Not started |
 | 12 | v3.2.0 | SaaS onboarding, entitlements, and commercial operations | Not started |
@@ -1165,7 +1165,7 @@ This supplement is self-hosted v2.7.3 work on `feature/sh-prn273-approval-report
 
 ---
 
-## Self-hosted supplement — Shared-host installer and Cloudflare compatibility — In progress
+## Self-hosted supplement — Shared-host installer and Cloudflare compatibility — Complete (2026-08-29)
 
 **Goal:** make a clean cPanel/Plesk bundle install reliably without shell access, honor the selected production database, and keep the Livewire/Flux application interactive when Cloudflare proxies the hostname. Target release is **v2.7.4**. No schema change is required.
 
@@ -1174,7 +1174,7 @@ This supplement is self-hosted v2.7.3 work on `feature/sh-prn273-approval-report
 - **SH-IN274-DB-01 — Complete (2026-08-28):** Saving MySQL/MariaDB updates both `.env` and the running installer configuration before migrations and seeders execute; the example SQLite connection cannot receive a MySQL installation. Custom SQLite paths are applied the same way on a host; PHPUnit’s in-memory database is left alone. Installer `.env` writes quote and escape credentials so `#`, quotes, and `$` survive.
 - **SH-IN274-CF-01 — Complete (2026-08-29):** Vite, Livewire, and Flux scripts opt out of Cloudflare Rocket Loader rewriting with `data-cfasync="false"` before `src`, including tags Livewire injects after middleware.
 - **SH-IN274-DOC-01 — Complete (2026-08-28):** The operator deployment guide documents Cloudflare Full (strict) SSL, Rocket Loader off, dynamic-route cache bypasses, cache purge, and DNS-only diagnosis. This is server administration, so no end-user Help article changes.
-- **SH-IN274-QA-01:** Installer regressions, full SQLite suite, MySQL CI, Pint, PHPStan, assets, a clean staged-bundle `/install` smoke check, and release-archive content checks pass before tagging.
+- **SH-IN274-QA-01 — Complete (2026-08-29):** Installer regressions, full SQLite suite, MySQL CI, Pint, PHPStan, assets, and required Quality jobs (`php`, `mysql`, `assets`) passed on PR #9 before tagging.
 
 **Out of scope:** changing workflow state, end-user screens, schema, tenant/SaaS work, or requiring Cloudflare.
 
