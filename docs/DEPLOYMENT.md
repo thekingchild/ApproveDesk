@@ -34,7 +34,7 @@ Custom S3-compatible backup endpoints must be public HTTPS. For a private MinIO 
 
 ## 3. cPanel Bring-Up (once per server)
 
-**Database:** cPanel → MySQL Databases → create DB + user, grant privileges. Restrict later per §6.
+**Database:** cPanel → MySQL Databases → create DB + user, grant privileges. Restrict later per §9.
 
 **Files (first time, manual; later automated by CI):**
 1. Build locally or pull the CI release bundle (`vendor/` and `public/build/` included — cPanel needs no Node/Composer).
@@ -85,7 +85,18 @@ RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 4. Nginx additional directives: `client_max_body_size 50M;` (uploads) and the standard `try_files … /index.php?$query_string` front-controller block.
 5. Visit the domain → `/install` wizard (§2).
 
-## 5. Docker Compose
+## 5. Cloudflare proxy/CDN
+
+Cloudflare may proxy an ApproveDesk hostname, but it must not rewrite or cache the interactive application shell.
+
+1. Set **SSL/TLS encryption mode** to **Full (strict)**. Do not use Flexible SSL. Install a valid certificate (Let's Encrypt or a Cloudflare Origin Certificate) at cPanel/Plesk and set `APP_URL=https://approvals.example.com` to the exact public origin, with no trailing slash.
+2. Create a Cloudflare **Configuration Rule** for the ApproveDesk hostname and turn **Rocket Loader off**. ApproveDesk rewrites Vite, Livewire, and Flux script tags so `data-cfasync="false"` appears before `src` as a defensive fallback, but the hostname rule is still recommended.
+3. Do not use **Cache Everything** for the app hostname. If custom cache rules exist, bypass cache for HTML and at least `/install*`, `/login*`, `/logout`, `/livewire*`, `/flux*`, `/dashboard*`, `/admin*`, `/approvals*`, `/submissions*`, `/profile*`, and `/api*`. Static files under `/build/assets/*` may be cached normally.
+4. After installing or upgrading, purge the Cloudflare cache. If navigation renders but the main panel is blank, temporarily switch the DNS record to **DNS only**. If that fixes it, inspect Rocket Loader and cache rules before restoring the proxy; do not reinstall or change databases.
+
+Cloudflare **Turnstile** in Administration → Security & privacy is independent of the DNS/CDN proxy. Removing the proxy does not disable a configured Turnstile challenge, and disabling Turnstile does not change Cloudflare caching.
+
+## 6. Docker Compose
 
 The production image contains PHP-FPM, Nginx, and the Laravel scheduler under Supervisor. The scheduled database queue worker still drains and exits once per minute, so Redis is not required. Application uploads, installer state, sessions, and logs live in the persistent `approvedesk-storage` volume.
 
@@ -120,7 +131,7 @@ docker compose pull && docker compose up -d --build
 
 Back up both named volumes. Never recreate or remove them during a routine release.
 
-## 6. EasyPanel and Coolify
+## 7. EasyPanel and Coolify
 
 Both platforms can build the checked-in `Dockerfile` directly.
 
@@ -133,7 +144,7 @@ Both platforms can build the checked-in `Dockerfile` directly.
 
 Do not enable multiple app replicas with the local file/session volume. A future high-availability profile would require shared object storage and shared session/cache services; it is roadmap work, not part of the v2.5.5 single-company release.
 
-## 7. Post-install checklist (per server, once)
+## 8. Post-install checklist (per server, once)
 
 - [ ] `/up` health route returns 200 over HTTPS
 - [ ] Cron firing (check `storage/logs/schedule.log` or scheduler output)
@@ -148,7 +159,7 @@ Do not enable multiple app replicas with the local file/session volume. A future
 - [ ] Admin accounts have 2FA enabled
 - [ ] The installer-created System owner exists (`php artisan tinker` → `App\Models\SystemOwner::query()->first()`). If ownership is missing after an upgrade, run `php artisan owner:assign {email}` once. This command will not overwrite an existing owner.
 
-## 8. Hardening the database user (audit integrity)
+## 9. Hardening the database user (audit integrity)
 
 After installation, reduce the MySQL user's privileges:
 
@@ -162,17 +173,18 @@ FLUSH PRIVILEGES;
 
 This makes the immutability of `workflow_actions` a database-level guarantee, per the compliance requirement in the spec. Use a separate read-only user for reporting exports if Phase 3 analytics get heavy.
 
-## 9. Routine releases & rollback
+## 10. Routine releases & rollback
 
 Handled by CI — see [CI-CD.md §6–9](CI-CD.md) and the full runbook in [OPERATIONS.md](OPERATIONS.md). Short version: tags deploy to production after approval; `migrate:preflight` is available before `migrate --force`; rollback re-deploys the previous tag; database changes are forward-only. After any restore, run `php artisan ops:restore-drill` against the scratch copy and `php artisan evidence:verify` on one pack.
 
 Performance budgets: [PERFORMANCE.md](PERFORMANCE.md).
 
-## 10. Troubleshooting quick hits
+## 11. Troubleshooting quick hits
 
 | Symptom | Check |
 |---|---|
 | White page / 500 after upload | `storage/logs/laravel.log`; `.env` present?; PHP version ≥ 8.3 selected in MultiPHP |
+| `/install` is 500 on a brand-new unzip | PHP 8.3+ selected for the domain; `storage/` and `bootstrap/cache/` writable; document root is `public/`. A missing `.env` is expected — the wizard creates it. If the log says `MissingAppKeyException` or `database.sqlite does not exist`, the build is older than the first-run bootstrap fix; replace the app files and retry `/install`. |
 | Installer stuck on requirements | extension missing (compare §1 list); `storage/` not writable |
 | Emails not sending | mail credentials in Settings/.env; queue cron running; test via tinker `Mail::raw()` |
 | Styles/JS 404 | `public/build/` missing — deploy the release bundle, not the raw repo |

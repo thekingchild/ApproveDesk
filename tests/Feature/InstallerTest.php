@@ -8,6 +8,7 @@ use App\Models\SystemOwner;
 use App\Models\User;
 use App\Support\Installer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\TestDox;
 use Tests\TestCase;
 
@@ -29,6 +30,7 @@ class InstallerTest extends TestCase
         @unlink($this->envFile);
         @unlink($this->lockFile);
         @unlink(database_path('install-test.sqlite'));
+        @unlink(database_path('custom-host.sqlite'));
 
         config([
             'installer.enabled' => true,
@@ -40,11 +42,22 @@ class InstallerTest extends TestCase
 
     protected function tearDown(): void
     {
+        $this->restoreTestingDatabase();
         @unlink($this->envFile);
         @unlink($this->lockFile);
         @unlink(database_path('install-test.sqlite'));
+        @unlink(database_path('custom-host.sqlite'));
 
         parent::tearDown();
+    }
+
+    private function restoreTestingDatabase(): void
+    {
+        config([
+            'database.default' => 'sqlite',
+            'database.connections.sqlite.database' => ':memory:',
+        ]);
+        DB::purge('mysql');
     }
 
     #[TestDox('guests are redirected to the installer while the app is not installed')]
@@ -61,6 +74,23 @@ class InstallerTest extends TestCase
             ->assertOk()
             ->assertSee('PHP >= 8.3')
             ->assertSee('ext/mbstring');
+    }
+
+    #[TestDox('continue from welcome opens database setup with GET, not the save POST')]
+    public function test_welcome_continue_opens_database_setup(): void
+    {
+        $html = $this->get(route('install.welcome'))
+            ->assertOk()
+            ->assertSee('Continue to database setup')
+            ->getContent();
+
+        $this->assertStringContainsString('href="'.e(route('install.database')).'"', $html);
+        $this->assertStringNotContainsString('method="POST"', $html);
+
+        $this->get(route('install.database'))
+            ->assertOk()
+            ->assertSee('Connection type')
+            ->assertSee('MySQL / MariaDB');
     }
 
     #[TestDox('steps cannot be skipped ahead')]
@@ -124,6 +154,88 @@ class InstallerTest extends TestCase
 
         $this->assertMatchesRegularExpression('/^APP_TIMEZONE=Africa\/Lagos$/m', (string) file_get_contents($this->envFile));
         $this->assertDoesNotMatchRegularExpression('/^APP_TIMEZONE=UTC$/m', (string) file_get_contents($this->envFile));
+    }
+
+    #[TestDox('choosing MySQL writes mysql into .env and runtime config, not sqlite')]
+    public function test_mysql_selection_replaces_sqlite_in_env_and_config(): void
+    {
+        file_put_contents($this->envFile, (string) file_get_contents(base_path('.env.example')));
+        config(['database.default' => 'sqlite']);
+
+        $installer = app(Installer::class);
+        $installer->writeEnvironment([
+            'connection' => 'mysql',
+            'host' => '127.0.0.1',
+            'port' => '3306',
+            'database' => 'approvedesk',
+            'username' => 'app_user',
+            'password' => 'secret',
+            'path' => null,
+            'url' => 'https://approvals.example.com',
+        ]);
+        $installer->syncRuntimeFromEnvFile();
+
+        $env = (string) file_get_contents($this->envFile);
+        $this->assertMatchesRegularExpression('/^DB_CONNECTION=mysql$/m', $env);
+        $this->assertDoesNotMatchRegularExpression('/^DB_CONNECTION=sqlite$/m', $env);
+        $this->assertMatchesRegularExpression('/^DB_DATABASE=approvedesk$/m', $env);
+        $this->assertSame('mysql', config('database.default'));
+        $this->assertSame('approvedesk', config('database.connections.mysql.database'));
+        $this->assertSame('app_user', config('database.connections.mysql.username'));
+        $this->assertSame('https://approvals.example.com', config('app.url'));
+
+        config(['database.default' => 'sqlite']);
+    }
+
+    #[TestDox('choosing a custom SQLite file replaces a stale runtime database path')]
+    public function test_sqlite_selection_replaces_stale_runtime_database_path(): void
+    {
+        file_put_contents($this->envFile, (string) file_get_contents(base_path('.env.example')));
+        config([
+            'database.default' => 'sqlite',
+            'database.connections.sqlite.database' => database_path('stale.sqlite'),
+        ]);
+
+        $installer = app(Installer::class);
+        $installer->writeEnvironment([
+            'connection' => 'sqlite',
+            'host' => '',
+            'port' => '',
+            'database' => '',
+            'username' => '',
+            'password' => null,
+            'path' => 'custom-host.sqlite',
+            'url' => 'https://approvals.example.com',
+        ]);
+
+        $this->assertSame(database_path('stale.sqlite'), config('database.connections.sqlite.database'));
+
+        $installer->applySavedDatabaseConfiguration();
+
+        $this->assertSame('sqlite', config('database.default'));
+        $this->assertSame(database_path('custom-host.sqlite'), config('database.connections.sqlite.database'));
+    }
+
+    #[TestDox('MySQL passwords with quotes, hashes, and spaces round-trip through .env')]
+    public function test_mysql_password_special_characters_round_trip(): void
+    {
+        file_put_contents($this->envFile, (string) file_get_contents(base_path('.env.example')));
+
+        $password = '"sec#ret$1"';
+        $installer = app(Installer::class);
+        $installer->writeEnvironment([
+            'connection' => 'mysql',
+            'host' => '127.0.0.1',
+            'port' => '3306',
+            'database' => 'approvedesk',
+            'username' => 'app_user',
+            'password' => $password,
+            'path' => null,
+            'url' => 'https://approvals.example.com',
+        ]);
+        $installer->syncRuntimeFromEnvFile();
+
+        $this->assertSame($password, config('database.connections.mysql.password'));
     }
 
     #[TestDox('the full sqlite install flow locks the installer and creates the admin')]

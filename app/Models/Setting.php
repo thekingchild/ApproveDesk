@@ -2,10 +2,12 @@
 
 namespace App\Models;
 
+use App\Support\Installer;
 use Database\Factories\SettingFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
+use Throwable;
 
 /**
  * App-wide key/value configuration (branding, quotas, mail overrides).
@@ -25,10 +27,18 @@ class Setting extends Model
 
     public static function get(string $key, ?string $default = null): ?string
     {
-        return Cache::rememberForever(
-            "settings.{$key}",
-            fn () => static::query()->where('key', $key)->value('value') ?? $default,
-        );
+        try {
+            return Cache::rememberForever(
+                "settings.{$key}",
+                fn () => static::query()->where('key', $key)->value('value') ?? $default,
+            );
+        } catch (Throwable $exception) {
+            if (app(Installer::class)->isInstalled()) {
+                throw $exception;
+            }
+
+            return $default;
+        }
     }
 
     public static function put(string $key, ?string $value): void

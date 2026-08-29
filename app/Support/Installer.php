@@ -6,9 +6,11 @@ use App\Exceptions\InstallerException;
 use App\Models\SiteLimit;
 use App\Models\SystemOwner;
 use App\Models\User;
+use Dotenv\Exception\InvalidFileException;
+use Dotenv\Parser\Parser;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\URL;
 use PDO;
 use RuntimeException;
 
@@ -141,21 +143,53 @@ class Installer
      * Minimal boot environment so the installer pages themselves render
      * (a fresh deploy may have no .env at all): copy the example file and
      * make sure an APP_KEY exists for cookie encryption.
+     *
+     * Also pin file session/cache for this request. The example file uses
+     * database stores, which 500 before migrations exist on cPanel/Plesk.
      */
     public function ensureBootstrapEnvironment(): void
     {
         $envPath = $this->envPath();
+        $createdEnv = ! is_file($envPath);
 
-        if (! is_file($envPath)) {
+        if ($createdEnv) {
             $example = base_path('.env.example');
             $contents = is_file($example) ? file_get_contents($example) : "APP_NAME=ApproveDesk\n";
             file_put_contents($envPath, (string) $contents);
+            $this->writeEnvValue('APP_ENV', 'production');
+            $this->writeEnvValue('APP_DEBUG', 'false');
+            $this->writeEnvValue('SESSION_DRIVER', 'file');
+            $this->writeEnvValue('CACHE_STORE', 'file');
         }
 
-        if (trim((string) $this->readEnvValue('APP_KEY')) === '') {
+        $key = trim((string) $this->readEnvValue('APP_KEY'));
+        $keyWasEmpty = $key === '';
+        if ($keyWasEmpty) {
             $key = $this->generateKey();
             $this->writeEnvValue('APP_KEY', $key);
+            if (! $createdEnv) {
+                if ($this->readEnvValue('SESSION_DRIVER') === 'database') {
+                    $this->writeEnvValue('SESSION_DRIVER', 'file');
+                }
+                if ($this->readEnvValue('CACHE_STORE') === 'database') {
+                    $this->writeEnvValue('CACHE_STORE', 'file');
+                }
+            }
+        }
+
+        $needsFileStores = $createdEnv || $keyWasEmpty || trim((string) config('app.key')) === '';
+
+        if (trim((string) config('app.key')) === '') {
             config()->set('app.key', $key);
+        }
+
+        if ($needsFileStores) {
+            if (config('session.driver') === 'database') {
+                config()->set('session.driver', 'file');
+            }
+            if (config('cache.default') === 'database') {
+                config()->set('cache.default', 'file');
+            }
         }
     }
 
@@ -210,7 +244,7 @@ class Installer
         $values = [
             'APP_NAME' => 'ApproveDesk',
             'APP_ENV' => 'production',
-            'APP_DEBUG' => 'true', // flipped off by finalize()
+            'APP_DEBUG' => 'false',
             'APP_URL' => $input['url'] ?: request()->getSchemeAndHttpHost(),
             'APP_KEY' => $this->readEnvValue('APP_KEY') ?: $this->generateKey(),
             'DB_CONNECTION' => $input['connection'],
@@ -238,6 +272,65 @@ class Installer
         }
 
         config()->set('app.key', $values['APP_KEY']);
+        config()->set('app.url', $values['APP_URL']);
+    }
+
+    /**
+     * Apply the database saved in .env before migrate. Skips PHPUnit's
+     * in-memory SQLite so installer tests keep using RefreshDatabase.
+     */
+    public function applySavedDatabaseConfiguration(): void
+    {
+        $connection = $this->plainEnvValue('DB_CONNECTION');
+        if ($connection === '') {
+            return;
+        }
+
+        if ($connection === 'sqlite' && config('database.connections.sqlite.database') === ':memory:') {
+            return;
+        }
+
+        $this->syncRuntimeFromEnvFile();
+    }
+
+    /**
+     * Point Laravel at the database written to .env. Needed because php-fpm
+     * may still have sqlite from the copied example file after MySQL is saved.
+     */
+    public function syncRuntimeFromEnvFile(): void
+    {
+        $connection = $this->plainEnvValue('DB_CONNECTION');
+        if ($connection === '') {
+            return;
+        }
+
+        config()->set('database.default', $connection);
+
+        if ($connection === 'mysql') {
+            config()->set('database.connections.mysql.host', $this->plainEnvValue('DB_HOST') ?: '127.0.0.1');
+            config()->set('database.connections.mysql.port', $this->plainEnvValue('DB_PORT') ?: '3306');
+            config()->set('database.connections.mysql.database', $this->plainEnvValue('DB_DATABASE'));
+            config()->set('database.connections.mysql.username', $this->plainEnvValue('DB_USERNAME'));
+            config()->set('database.connections.mysql.password', $this->plainEnvValue('DB_PASSWORD'));
+            DB::purge('mysql');
+        } else {
+            $database = $this->plainEnvValue('DB_DATABASE');
+            if ($database !== '') {
+                config()->set('database.connections.sqlite.database', $database);
+            }
+            if (! app()->environment('testing')) {
+                DB::purge('sqlite');
+            }
+        }
+
+        $url = $this->plainEnvValue('APP_URL');
+        if ($url !== '') {
+            config()->set('app.url', $url);
+            $scheme = parse_url($url, PHP_URL_SCHEME);
+            if ($scheme === 'https') {
+                URL::forceScheme('https');
+            }
+        }
     }
 
     /**
@@ -245,6 +338,8 @@ class Installer
      */
     public function runMigrations(): array
     {
+        $this->applySavedDatabaseConfiguration();
+
         Artisan::call('migrate', ['--force' => true]);
         $migrationOutput = Artisan::output();
 
@@ -295,7 +390,7 @@ class Installer
     }
 
     /**
-     * Final step: flip debug off, mark installed, write the lock file.
+     * Final step: keep debug off, mark installed, write the lock file.
      */
     public function finalize(): void
     {
@@ -324,28 +419,49 @@ class Installer
             return null;
         }
 
-        $lines = file($this->envPath(), FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [];
+        $contents = (string) file_get_contents($this->envPath());
+
+        try {
+            foreach ((new Parser)->parse($contents) as $entry) {
+                if ($entry->getName() !== $key) {
+                    continue;
+                }
+
+                return $entry->getValue()->map(fn ($value) => $value->getChars())->getOrElse('');
+            }
+        } catch (InvalidFileException) {
+            return $this->readEnvValueFallback($key, $contents);
+        }
+
+        return null;
+    }
+
+    private function readEnvValueFallback(string $key, string $contents): ?string
+    {
+        $lines = preg_split("/\r\n|\n|\r/", $contents) ?: [];
 
         foreach ($lines as $line) {
             if (str_starts_with($line, "{$key}=")) {
-                return trim(substr($line, strlen($key) + 1));
+                return $this->decodeEnvValue(substr($line, strlen($key) + 1));
             }
         }
 
         return null;
     }
 
+    private function plainEnvValue(string $key): string
+    {
+        return (string) $this->readEnvValue($key);
+    }
+
     private function writeEnvValue(string $key, string $value): void
     {
         $envPath = $this->envPath();
         $contents = is_file($envPath) ? (string) file_get_contents($envPath) : '';
-
-        if ($value !== '' && ! Str::startsWith($value, ['base64:']) && preg_match('/[\s"#]/', $value)) {
-            $value = '"'.$value.'"';
-        }
+        $encoded = $this->encodeEnvValue($value);
 
         $pattern = is_file($envPath) ? '/^'.preg_quote($key, '/').'.*/m' : '';
-        $line = "{$key}={$value}";
+        $line = "{$key}={$encoded}";
 
         if ($pattern !== '' && preg_match($pattern, $contents)) {
             $contents = (string) preg_replace($pattern, $line, $contents);
@@ -356,5 +472,39 @@ class Installer
         if (file_put_contents($envPath, $contents) === false) {
             throw new RuntimeException("Could not write to [{$envPath}]. Check file permissions.");
         }
+    }
+
+    private function encodeEnvValue(string $value): string
+    {
+        if ($value === '' || str_starts_with($value, 'base64:')) {
+            return $value;
+        }
+
+        if (! preg_match('/[\s"\'#\\\\$]/', $value)) {
+            return $value;
+        }
+
+        return '"'.str_replace(
+            ['\\', '"', '$'],
+            ['\\\\', '\\"', '\\$'],
+            $value,
+        ).'"';
+    }
+
+    private function decodeEnvValue(string $raw): string
+    {
+        $raw = trim($raw);
+
+        if (str_starts_with($raw, '"') && str_ends_with($raw, '"') && strlen($raw) >= 2) {
+            $inner = substr($raw, 1, -1);
+
+            return str_replace(['\\$', '\\"', '\\\\'], ['$', '"', '\\'], $inner);
+        }
+
+        if (str_starts_with($raw, "'") && str_ends_with($raw, "'") && strlen($raw) >= 2) {
+            return substr($raw, 1, -1);
+        }
+
+        return $raw;
     }
 }

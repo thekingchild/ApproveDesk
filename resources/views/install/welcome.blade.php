@@ -20,10 +20,7 @@
     </ul>
 
     @if ($meets)
-        <form method="POST" action="{{ route('install.database') }}">
-            @csrf
-            <button type="submit">Continue to database setup</button>
-        </form>
+        <a class="continue" href="{{ route('install.database') }}">Continue to database setup</a>
     @else
         <button disabled>Fix the red items above, then reload</button>
     @endif

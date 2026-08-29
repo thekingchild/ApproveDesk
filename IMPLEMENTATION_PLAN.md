@@ -158,6 +158,7 @@ Locked product decision for Phase 8.2. It does not reopen Phase 8.1. Design: [do
 | SH-BK271 | v2.7.1 | Backup date-time names, restore history, SQLite promote | Complete |
 | SH-SEC272 | v2.7.2 | Security hardening: OAuth domain gate, owner-only custom code, backup digests, outbound URL checks, APP_TIMEZONE | Complete |
 | SH-PRN273 | v2.7.3 | Professional printable approval reports | Complete |
+| SH-IN274 | v2.7.4 | Shared-host installer and Cloudflare compatibility fixes | In progress |
 | 10 | v3.0.0 | SaaS multi-tenancy foundation | Not started |
 | 11 | v3.1.0 | Paystack and Flutterwave subscriptions | Not started |
 | 12 | v3.2.0 | SaaS onboarding, entitlements, and commercial operations | Not started |
@@ -750,6 +751,9 @@ This phase is additive. It does not reopen Phases 0–9, UO, or LP. It does not 
 - **IN-TEST-01 — Complete (2026-08-24):** Extend `InstallerTest`: after the sqlite flow, every installer URL is 404; `/login` is 200 and shows the completion flash once; a second `/login` does not repeat it.
 - **IN-TEST-02 — Complete (2026-08-24):** Feature tests: submitter cannot open Updates; admin sees pending migration names from a fake pending file or an empty list; apply with a clean preflight runs migrate; apply with a dropColumn pending file is refused; apply does not mutate `workflow_actions` except through normal migrations.
 - **IN-DOC-01 — Complete (2026-08-24):** `docs/DEPLOYMENT.md`, `docs/OPERATIONS.md`, Help (`docs/kb/getting-around.md` or a short Updates note in `docs/kb/operations.md`), `docs/kb/definitions.md`, Help catalogue if a new article is needed, `CHANGELOG.md`, and this plan.
+- **IN-BOOT-01 — Complete (2026-08-28):** A fresh shared-host zip opens `/install` with no `.env`, no `APP_KEY`, and no database. `PrepareFirstRunEnvironment` writes the key and file session/cache before `EncryptCookies`; `Setting::get` returns defaults when the cache or settings table does not exist.
+- **IN-NAV-01 — Complete (2026-08-28):** Welcome **Continue** is a GET to `/install/database`. It must not POST to the database save route (that submits empty credentials and the page appears stuck).
+- **IN-DB-01 — Complete (2026-08-28):** After MySQL is saved, `runMigrations()` syncs runtime config from `.env` so `migrate` does not run against the example SQLite connection.
 
 **Phase IN demo — Complete (2026-08-24):** finish `/install`; `/install` and `/install/done` 404; login shows “ApproveDesk is ready” once; an administrator opens Updates, sees “no pending migrations”, and cannot reopen the wizard.
 
@@ -1158,6 +1162,21 @@ This supplement is self-hosted v2.7.3 work on `feature/sh-prn273-approval-report
 **Phase SH-PRN273 demo:** open an approved request, choose **Approval report**, inspect a clean branded preview, print it on A4, and download the same report as a PDF. A person who cannot open the request is denied, and a person without sensitive-field access cannot reveal those values through either report route.
 
 **Out of scope:** cryptographic or handwritten signatures, configurable report templates, merging attachment contents into the PDF, public report links, batch reports, changing workflow state, or adding a new reporting permission.
+
+---
+
+## Self-hosted supplement — Shared-host installer and Cloudflare compatibility — In progress
+
+**Goal:** make a clean cPanel/Plesk bundle install reliably without shell access, honor the selected production database, and keep the Livewire/Flux application interactive when Cloudflare proxies the hostname. Target release is **v2.7.4**. No schema change is required.
+
+- **SH-IN274-BOOT-01 — Complete (2026-08-28):** A bundle with no `.env`, application key, or database opens `/install` instead of returning HTTP 500. First-run boot creates a unique key and file-backed session/cache before cookie middleware runs.
+- **SH-IN274-NAV-01 — Complete (2026-08-28):** Welcome **Continue** uses GET to open database settings rather than posting empty credentials to the save route.
+- **SH-IN274-DB-01 — Complete (2026-08-28):** Saving MySQL/MariaDB updates both `.env` and the running installer configuration before migrations and seeders execute; the example SQLite connection cannot receive a MySQL installation. Custom SQLite paths are applied the same way on a host; PHPUnit’s in-memory database is left alone. Installer `.env` writes quote and escape credentials so `#`, quotes, and `$` survive.
+- **SH-IN274-CF-01 — Complete (2026-08-29):** Vite, Livewire, and Flux scripts opt out of Cloudflare Rocket Loader rewriting with `data-cfasync="false"` before `src`, including tags Livewire injects after middleware.
+- **SH-IN274-DOC-01 — Complete (2026-08-28):** The operator deployment guide documents Cloudflare Full (strict) SSL, Rocket Loader off, dynamic-route cache bypasses, cache purge, and DNS-only diagnosis. This is server administration, so no end-user Help article changes.
+- **SH-IN274-QA-01:** Installer regressions, full SQLite suite, MySQL CI, Pint, PHPStan, assets, a clean staged-bundle `/install` smoke check, and release-archive content checks pass before tagging.
+
+**Out of scope:** changing workflow state, end-user screens, schema, tenant/SaaS work, or requiring Cloudflare.
 
 ---
 
