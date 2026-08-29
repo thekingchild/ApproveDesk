@@ -4,7 +4,7 @@ These screens sit under Settings and are limited to administrators.
 
 ## Branding
 
-Set the organisation identity and the public login screen. The page is organised into two cards — **Application identity** and **Login page** — with a **Live preview** panel beside them so you can check both branding surfaces before saving.
+Set the organisation identity, choose the site's first page, and customise the public login screen. The page is organised into two cards — **Application identity** and **Login page** — with a **Live preview** panel beside them so you can check both branding surfaces before saving.
 
 **Application identity** is used after people sign in as well as on login:
 
@@ -12,6 +12,7 @@ Set the organisation identity and the public login screen. The page is organised
 - Meta description is the short text search engines and link previews can show. It is optional.
 - Application logo replaces the default mark in the sidebar, header, and login screen. PNG, JPG, or WebP, up to 1 MB. The card shows the current logo (or your new choice) as a thumbnail the moment you pick a file, with a *Keep current logo instead* link if you change your mind.
 - Favicon replaces the browser-tab icon. ICO, PNG, JPG, or WebP, up to 512 KB, with the same preview-and-undo behaviour.
+- **Show public landing page** controls the site address. It is off by default, so guests opening the site go to Login and signed-in people go to Dashboard. Turn it on to show the public marketing page instead. This switch does not edit the marketing page.
 - Allow self-registration sits here because it controls who can create an account. When it is on, two further controls appear:
   - **After someone registers** — require a 6-digit email confirmation (recommended, the default) or grant immediate access. Confirmation codes expire after 10 minutes. Until the person confirms, they cannot sign in.
   - **Registration domains** — one domain per line (for example `bluechipanalytical.com`). Only those email addresses may self-register, including people who create an account with Google or Microsoft. Leave empty to allow any email provider. Subdomains match only when listed. An existing account can still link Google or Microsoft even if that address would not be allowed to self-register. This is an onboarding convenience, not a security boundary: anyone can type any address, so passwords, two-factor, and passkeys remain the real assurance. Administrator-created and imported users ignore this list.

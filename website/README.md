@@ -1,6 +1,10 @@
 # Public website (`website/`)
 
-This folder **is** the marketing site. Laravel serves it at `/` and injects the Log in / Sign up / Dashboard buttons. Replace these files with any static site built outside this repository.
+This folder **is** the optional marketing site. When an administrator turns on **Show public landing page** under **Settings → Branding**, Laravel serves it at `/` and injects the Log in / Sign up / Dashboard buttons. When the option is off (the default), `/` opens Login for guests and Dashboard for signed-in people, and files in this folder are not public. Replace these files with any static site built outside this repository.
+
+## Availability
+
+The setting controls the whole folder: `index.html`, additional pages, CSS, scripts, images, and other static files are served only while **Show public landing page** is on. Turning it off does not delete or change these files, so the same site returns when the option is enabled again.
 
 ## Layout
 

@@ -181,6 +181,8 @@ class BrandingTest extends TestCase
             // Two clear sections with context subtitles.
             ->assertSee('Application identity')
             ->assertSee('Appears on login and throughout the app', false)
+            ->assertSee('Show public landing page', false)
+            ->assertSee('When off, the site address opens Login. Turn it on to show the public website.', false)
             ->assertSee('Login page')
             ->assertSee('What requesters see before they sign in', false)
             // Upload cards show the current assets inline.
@@ -230,6 +232,37 @@ class BrandingTest extends TestCase
             ->assertDontSee('Sign up')
             ->assertSee('Desk of Approvals')
             ->assertSee('Internal request desk.');
+    }
+
+    public function test_branding_page_saves_the_landing_page_option(): void
+    {
+        $admin = User::factory()->create()->assignRole('admin');
+
+        Livewire::actingAs($admin)
+            ->test('pages::settings.branding')
+            ->set('landing_page_enabled', true)
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertSame('true', Setting::get('brand.landing_page_enabled'));
+
+        auth()->forgetGuards();
+
+        $this->get(route('home'))->assertOk();
+        $this->get('/css/app.css')->assertOk();
+
+        Livewire::actingAs($admin)
+            ->test('pages::settings.branding')
+            ->set('landing_page_enabled', false)
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertSame('false', Setting::get('brand.landing_page_enabled'));
+
+        auth()->forgetGuards();
+
+        $this->get(route('home'))->assertRedirect(route('login'));
+        $this->get('/css/app.css')->assertNotFound();
     }
 
     public function test_background_upload_stores_file_and_updates_setting(): void

@@ -26,6 +26,8 @@ new #[Title('Branding settings')] class extends Component {
 
     public bool $allow_registration = true;
 
+    public bool $landing_page_enabled = false;
+
     public string $meta_title = '';
 
     public string $meta_description = '';
@@ -64,6 +66,7 @@ new #[Title('Branding settings')] class extends Component {
         $this->custom_css = (string) Setting::get('brand.custom_css', '');
         $this->custom_code = (string) Setting::get('brand.custom_code', '');
         $this->allow_registration = Setting::get('auth.allow_registration', 'true') !== 'false';
+        $this->landing_page_enabled = Setting::get('brand.landing_page_enabled', 'false') === 'true';
         $this->meta_title = (string) Setting::get('brand.meta_title', '');
         $this->meta_description = (string) Setting::get('brand.meta_description', '');
         $this->registration_mode = (string) Setting::get('auth.registration_mode', 'otp');
@@ -153,6 +156,7 @@ new #[Title('Branding settings')] class extends Component {
             customCss: $this->custom_css === '' ? null : $this->custom_css,
             customCode: $submittedCode,
             allowRegistration: $this->allow_registration,
+            landingPageEnabled: $this->landing_page_enabled,
             registrationMode: $this->registration_mode,
             allowedRegistrationDomains: $this->allowed_registration_domains,
             metaTitle: $this->meta_title,
@@ -306,6 +310,11 @@ new #[Title('Branding settings')] class extends Component {
                                     @endif
                                 </div>
                             </div>
+                        </div>
+
+                        <div class="space-y-1.5 rounded-xl border border-zinc-200 p-4 dark:border-zinc-700">
+                            <flux:checkbox wire:model="landing_page_enabled" :label="__('Show public landing page')" />
+                            <p class="text-xs text-zinc-500 dark:text-zinc-400">{{ __('When off, the site address opens Login. Turn it on to show the public website.') }}</p>
                         </div>
 
                         <flux:checkbox wire:model="allow_registration" :label="__('Allow self-registration')" />

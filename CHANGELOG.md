@@ -6,6 +6,17 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ## [Unreleased]
 
+## [2.7.5] - 2026-08-29
+
+### Added
+
+- **Show public landing page** on **Settings → Branding** lets administrators enable or disable the drop-in marketing website without changing its files.
+
+### Changed
+
+- The site address is login-first by default: guests are sent to the branded Login page and signed-in people to Dashboard. Enabling the public landing page restores the existing marketing home, its account-aware header, and its static files.
+- README, `.env.example` `APP_VERSION`, and this changelog treat **v2.7.5** as the current single-company release.
+
 ## [2.7.4] - 2026-08-29
 
 ### Fixed
