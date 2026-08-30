@@ -2,6 +2,22 @@
 
 Short meanings for the words used on ApproveDesk screens. Open a term’s name to read the full guide, when one exists for your role.
 
+## [Announcement](/help/announcements)
+
+An in-app message published by the System owner to all active users or to selected roles. It appears above signed-in page content and is separate from approval notifications and email or chat delivery.
+
+## [Sticky announcement](/help/announcements)
+
+An announcement that stays on every eligible signed-in page until the System owner archives it. A user cannot dismiss it.
+
+## [Application theme](/help/application-themes)
+
+A fixed accessible color palette for signed-in ApproveDesk pages. A person chooses an enabled palette independently from Light, Dark, or System appearance mode.
+
+## [Organization default theme](/help/application-themes)
+
+The enabled application theme used when a person has not chosen another available palette, or when their former choice is disabled or archived.
+
 ## [Public website](/help/getting-around)
 
 An optional marketing page at the site address. It is off by default, so guests go to Login and signed-in people go to Dashboard. When an administrator turns it on, guests see **Log in** and, when self-registration is allowed, **Sign up**; signed-in people see **Dashboard**.

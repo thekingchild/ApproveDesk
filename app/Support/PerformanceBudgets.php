@@ -18,7 +18,9 @@ final class PerformanceBudgets
 
     public const SUBMISSION_LIST_QUERIES = 24;
 
-    public const OPERATIONS_QUERIES = 40;
+    // Includes bounded application-theme and announcement lookups in the
+    // signed-in application layout.
+    public const OPERATIONS_QUERIES = 42;
 
     public const LIST_GROWTH_SLACK = 4;
 

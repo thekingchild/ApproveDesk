@@ -55,7 +55,7 @@ use Spatie\Permission\Traits\HasRoles;
  * @property-read Collection<int, OutOfOffice> $outOfOffice
  * @property-read Collection<int, SubmissionWatcher> $watchedSubmissions
  */
-#[Fillable(['name', 'email', 'phone', 'password', 'department_id', 'manager_id', 'is_active', 'email_verified_at', 'notification_frequency', 'last_notification_digest_at', 'avatar'])]
+#[Fillable(['name', 'email', 'phone', 'password', 'department_id', 'manager_id', 'is_active', 'email_verified_at', 'notification_frequency', 'last_notification_digest_at', 'avatar', 'theme_id'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable implements PasskeyUser
 {
@@ -91,6 +91,18 @@ class User extends Authenticatable implements PasskeyUser
     public function department(): BelongsTo
     {
         return $this->belongsTo(Department::class);
+    }
+
+    /** @return BelongsTo<Theme, $this> */
+    public function theme(): BelongsTo
+    {
+        return $this->belongsTo(Theme::class);
+    }
+
+    /** @return HasMany<AnnouncementReceipt, $this> */
+    public function announcementReceipts(): HasMany
+    {
+        return $this->hasMany(AnnouncementReceipt::class);
     }
 
     /** @return BelongsTo<User, $this> */

@@ -6,6 +6,15 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ## [Unreleased]
 
+### Added
+
+- System-owner announcements for all active users or selected roles, with Sticky, Acknowledge, and Show once display modes, sanitized rich text, publish/archive/republish controls, and an accessible global in-app banner.
+- An owner-curated application-theme catalogue with immutable built-in palettes, WCAG contrast-checked custom palettes, enabled/default safeguards, and a per-user palette choice independent from Light, Dark, or System appearance mode.
+
+### Security
+
+- Announcement and theme administration is restricted to the singleton System owner; holding the legacy `super-admin` role alone does not grant access. Theme output uses fixed validated color variables and announcements are sanitized before storage.
+
 ## [2.7.5] - 2026-08-29
 
 ### Added

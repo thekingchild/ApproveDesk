@@ -135,6 +135,27 @@ class HelpCentreTest extends TestCase
             ->assertSee('A zip of your profile');
     }
 
+    public function test_announcement_and_application_theme_help_is_available_to_signed_in_people(): void
+    {
+        $user = User::factory()->create()->assignRole('submitter');
+
+        $this->actingAs($user)
+            ->get(route('help.show', 'announcements'))
+            ->assertOk()
+            ->assertSee('Sticky')
+            ->assertSee('Mark as read')
+            ->assertSee('Show once')
+            ->assertSee('System owner');
+
+        $this->actingAs($user)
+            ->get(route('help.show', 'application-themes'))
+            ->assertOk()
+            ->assertSee('Organization default')
+            ->assertSee('Light, Dark, or System')
+            ->assertSee('4.5:1')
+            ->assertSee('Built-in palettes cannot be archived');
+    }
+
     public function test_collaboration_article_explains_followers_and_ooo(): void
     {
         $user = User::factory()->create()->assignRole('submitter');

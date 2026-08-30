@@ -18,13 +18,24 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 @endif
 
-<meta name="theme-color" content="{{ \App\Support\Branding::accentColor() }}">
+@php
+    $applicationTheme = auth()->check() ? app(\App\Services\Themes\ThemeService::class)->effectiveFor(auth()->user()) : null;
+@endphp
+@if ($applicationTheme)
+    <meta name="theme-color" content="{{ $applicationTheme->primary_light }}" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="{{ $applicationTheme->primary_dark }}" media="(prefers-color-scheme: dark)">
+@else
+    <meta name="theme-color" content="{{ \App\Support\Branding::accentColor() }}">
+@endif
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <link rel="manifest" href="{{ route('manifest') }}">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 
 @vite(['resources/css/app.css', 'resources/js/app.js'])
+@if ($applicationTheme)
+    <style data-application-theme>{!! app(\App\Services\Themes\ThemeService::class)->cssVariables($applicationTheme) !!}</style>
+@endif
 @fluxAppearance
 @if ($code = \App\Support\Branding::customCodeHtml())
     <!-- approvedesk-custom-code -->

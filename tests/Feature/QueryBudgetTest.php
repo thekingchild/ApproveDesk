@@ -34,7 +34,9 @@ class QueryBudgetTest extends TestCase
 
         $queries = $this->countQueries(fn () => $this->actingAs($admin)->get(route('dashboard'))->assertOk());
 
-        $this->assertLessThanOrEqual(45, $queries, "Administrator dashboard exceeded its 45-query budget ({$queries}).");
+        // Global application-theme resolution and announcement eligibility add
+        // bounded, row-count-independent lookups to every signed-in page.
+        $this->assertLessThanOrEqual(46, $queries, "Administrator dashboard exceeded its 46-query budget ({$queries}).");
     }
 
     public function test_approval_inbox_stays_within_its_query_budget(): void
@@ -48,7 +50,7 @@ class QueryBudgetTest extends TestCase
 
         $queries = $this->countQueries(fn () => $this->actingAs($approver)->get(route('approvals.inbox'))->assertOk());
 
-        $this->assertLessThanOrEqual(31, $queries, "Approval inbox exceeded its 31-query budget ({$queries}).");
+        $this->assertLessThanOrEqual(33, $queries, "Approval inbox exceeded its 33-query budget ({$queries}).");
     }
 
     public function test_submission_list_stays_within_its_query_budget(): void
@@ -58,7 +60,7 @@ class QueryBudgetTest extends TestCase
 
         $queries = $this->countQueries(fn () => $this->actingAs($submitter)->get(route('submissions.index'))->assertOk());
 
-        $this->assertLessThanOrEqual(27, $queries, "Submission list exceeded its 27-query budget ({$queries}).");
+        $this->assertLessThanOrEqual(29, $queries, "Submission list exceeded its 29-query budget ({$queries}).");
     }
 
     private function countQueries(callable $request): int

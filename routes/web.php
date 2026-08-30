@@ -146,6 +146,13 @@ Route::middleware(['auth', 'verified', 'can:notification_channels.manage'])->gro
         ->name('settings.notification-channels.credentials');
 });
 
+Route::middleware(['auth', 'verified', 'can:viewAny,App\Models\Announcement'])->group(function (): void {
+    Route::livewire('admin/announcements', 'pages::admin.announcements')->name('admin.announcements.index');
+});
+Route::middleware(['auth', 'verified', 'can:viewAny,App\Models\Theme'])->group(function (): void {
+    Route::livewire('admin/application-themes', 'pages::admin.application-themes')->name('admin.themes.index');
+});
+
 Route::middleware(['auth', 'verified', 'can:viewAny,App\Models\User'])->group(function (): void {
     Route::livewire('admin/users', 'pages::admin.users')->name('admin.users.index');
     Route::post('admin/users/{user}/recovery/password', ResetUserPasswordController::class)
