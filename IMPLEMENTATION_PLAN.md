@@ -160,7 +160,7 @@ Locked product decision for Phase 8.2. It does not reopen Phase 8.1. Design: [do
 | SH-PRN273 | v2.7.3 | Professional printable approval reports | Complete |
 | SH-IN274 | v2.7.4 | Shared-host installer and Cloudflare compatibility fixes | Complete |
 | SH-LP275 | v2.7.5 | Optional public landing page with login-first default | Complete |
-| SH-COM280/SH-THM280 | v2.8.0 | Owner announcements and selectable application themes | In progress |
+| SH-COM280/SH-THM280 | v2.8.0 | Owner announcements and selectable application themes | Complete |
 | 10 | v3.0.0 | SaaS multi-tenancy foundation | Not started |
 | 11 | v3.1.0 | Paystack and Flutterwave subscriptions | Not started |
 | 12 | v3.2.0 | SaaS onboarding, entitlements, and commercial operations | Not started |
@@ -1215,7 +1215,7 @@ This supplement is self-hosted v2.7.5 work on `feature/sh-lp275-landing-toggle`,
 
 ---
 
-## Phase SH-COM280 / SH-THM280 — Owner announcements and application themes — In progress
+## Phase SH-COM280 / SH-THM280 — Owner announcements and application themes — Complete (2026-08-30)
 
 **Goal:** give the System owner a safe organization-wide communication surface and an owner-curated theme catalogue, while letting each person choose an available application palette and their existing Light/Dark/System appearance mode.
 
@@ -1242,7 +1242,7 @@ This is an additive self-hosted minor release. “Superadmin” in the request m
 - **SH-COM280-TEST-01 — Complete (2026-08-30):** Feature/unit tests cover System-owner-only management, role audience matching, all three display modes, receipt idempotency, sanitization, publish/archive/republish behavior, inactive users, invalid input, and global rendering without leaking an announcement to a non-target role.
 - **SH-THM280-TEST-01 — Complete (2026-08-30):** Feature/unit tests cover built-in invariants, custom color validation, owner-only management, enabled/default guards, preference save/fallback, CSS escaping/template output, and appearance-page/global-layout rendering in light/dark/system-compatible markup.
 - **SH-COM280-DOC-01 — Complete (2026-08-30):** Add end-user Help articles and definitions for Announcement, Sticky announcement, Application theme, and Organization default theme; register them in `HelpCatalogue`; update Help summaries, `CHANGELOG.md`, README, and this plan.
-- **SH-COM280-REL-01:** Back up the local database; prove fresh-install and v2.7.5 upgrade migrations; run targeted tests, the full parallel suite, Pint, PHPStan, asset build, and SQLite/MySQL CI; independently review the diff; merge through a green GitHub PR; publish annotated **v2.8.0**; sync both checkouts; migrate/clear caches locally; and verify `/up`, `/login`, owner administration, an eligible banner, and a saved user theme.
+- **SH-COM280-REL-01 — Complete (2026-08-30):** Back up the local database; prove fresh-install and v2.7.5 upgrade migrations; run targeted tests, the full parallel suite, Pint, PHPStan, asset build, and SQLite/MySQL CI; independently review the diff; merge through a green GitHub PR; publish annotated **v2.8.0**; sync both checkouts; migrate/clear caches locally; and verify `/up`, `/login`, owner administration, an eligible banner, and a saved user theme.
 
 **Phase demo:** the System owner publishes a sticky safety notice to all users and a one-time finance message to selected roles; eligible people see the correct global banner behavior. The owner enables a built-in palette, creates a custom accessible palette, sets the organization default, and a user chooses another enabled palette while retaining System appearance mode.
 
