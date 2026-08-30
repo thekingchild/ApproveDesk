@@ -161,7 +161,7 @@ Locked product decision for Phase 8.2. It does not reopen Phase 8.1. Design: [do
 | SH-IN274 | v2.7.4 | Shared-host installer and Cloudflare compatibility fixes | Complete |
 | SH-LP275 | v2.7.5 | Optional public landing page with login-first default | Complete |
 | SH-COM280/SH-THM280 | v2.8.0 | Owner announcements and selectable application themes | Complete |
-| SH-UX281 | v2.8.1 | Dashboard announcements, company identity, printable branding, and collapsible navigation | In progress |
+| SH-UX281 | v2.8.1 | Dashboard announcements, company identity, printable branding, and collapsible navigation | Complete |
 | 10 | v3.0.0 | SaaS multi-tenancy foundation | Not started |
 | 11 | v3.1.0 | Paystack and Flutterwave subscriptions | Not started |
 | 12 | v3.2.0 | SaaS onboarding, entitlements, and commercial operations | Not started |
@@ -1251,7 +1251,7 @@ This is an additive self-hosted minor release. “Superadmin” in the request m
 
 ---
 
-## Phase SH-UX281 — Dashboard announcements, company identity, printable branding, and collapsible navigation — In progress
+## Phase SH-UX281 — Dashboard announcements, company identity, printable branding, and collapsible navigation — Complete (2026-08-30)
 
 **Goal:** refine the v2.8 communication and application chrome so notices are useful without following people through every workflow screen, the saved company identity is presented consistently in the app and printable approval records, and desktop navigation can be collapsed and restored without losing orientation.
 
@@ -1279,7 +1279,7 @@ This is a supplementary self-hosted patch release. It does not change announceme
 - **SH-UX281-TEST-01 — Complete (2026-08-30):** Feature-test Dashboard-only rendering, Show once receipt timing, acknowledgement behavior, long-message disclosure markup, formatting controls, safe formatted persistence, company-name labels, long-name-safe chrome, and report masthead output with and without a logo.
 - **SH-UX281-TEST-02 — Complete (2026-08-30):** Verify sidebar collapse/restore markup and persistence hooks at desktop and mobile breakpoints; run the full parallel suite, Pint, PHPStan, asset build, SQLite/MySQL CI, and an independent diff review.
 - **SH-UX281-DOC-01 — Complete (2026-08-30):** Update Announcements, Organization settings, Getting around, definitions/Help summaries where needed, `CHANGELOG.md`, README, and this plan in the same delivery.
-- **SH-UX281-REL-01:** Back up the local database; prove no pending schema work; merge through a green GitHub PR; update every version surface to **2.8.1**; publish and verify annotated tag **v2.8.1** and GitHub release; sync both checkouts; clear local caches; and verify `/up`, `/login`, Dashboard announcements, company branding, printable report, and sidebar collapse/restore.
+- **SH-UX281-REL-01 — Complete (2026-08-30):** Back up the local database; prove no pending schema work; merge through a green GitHub PR; update every version surface to **2.8.1**; publish and verify annotated tag **v2.8.1** and GitHub release; sync both checkouts; clear local caches; and verify `/up`, `/login`, Dashboard announcements, company branding, printable report, and sidebar collapse/restore.
 
 **Phase demo:** the System owner formats and publishes a long announcement; an eligible person sees a compact excerpt only on Dashboard, expands and collapses it, and can acknowledge it when required. An administrator saves a long company name; the navigation remains usable and the full company identity appears beside the logo in a PDF-ready approval report. On desktop, the person collapses the sidebar, continues working with more horizontal space, and restores it from the visible control.
 

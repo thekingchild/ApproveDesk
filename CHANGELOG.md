@@ -6,12 +6,15 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ## [Unreleased]
 
+## [2.8.1] - 2026-08-30
+
 ### Changed
 
 - Announcements now appear only on Dashboard. Long messages start as a compact excerpt with accessible **Show more / Show less** controls, and Show once messages are consumed only when Dashboard renders them.
 - Announcement authoring now provides clickable controls for bold, italic, underline, bulleted and numbered lists, and safe hyperlinks while retaining server-side rich-text sanitization.
 - The Branding application-name field is now presented as **Company name** and is used consistently throughout the signed-in app and printable approval reports. Reports always show the company name beside an optional bounded logo and wrap long names safely.
 - The desktop sidebar can be collapsed and restored with a visible, keyboard-labelled control. The preference persists in the browser; the mobile drawer remains unchanged.
+- README, `.env.example` `APP_VERSION`, and this changelog treat **v2.8.1** as the current single-company release.
 
 ### Fixed
 
