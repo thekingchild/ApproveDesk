@@ -37,7 +37,7 @@
                     @endcan
                 </flux:sidebar.group>
 
-                @if (auth()->user()->can('viewAny', \App\Models\User::class) || auth()->user()->can('viewAny', \App\Models\Role::class) || auth()->user()->can('viewAny', \App\Models\Department::class) || auth()->user()->can('viewAny', \App\Models\WorkflowTemplate::class) || auth()->user()->can('viewAny', \App\Models\RequestType::class) || auth()->user()->can('reports.view') || auth()->user()->can('viewAny', \App\Models\WebhookEndpoint::class) || auth()->user()->can('viewAny', \App\Models\IntegrationConnector::class) || auth()->user()->can('settings.manage') || auth()->user()->can('operations.view') || auth()->user()->can('backups.view') || auth()->user()->can('updates.view'))
+                @if (auth()->user()->can('viewAny', \App\Models\User::class) || auth()->user()->can('viewAny', \App\Models\Role::class) || auth()->user()->can('viewAny', \App\Models\Department::class) || auth()->user()->can('viewAny', \App\Models\WorkflowTemplate::class) || auth()->user()->can('viewAny', \App\Models\RequestType::class) || auth()->user()->can('viewAny', \App\Models\Announcement::class) || auth()->user()->can('viewAny', \App\Models\Theme::class) || auth()->user()->can('reports.view') || auth()->user()->can('viewAny', \App\Models\WebhookEndpoint::class) || auth()->user()->can('viewAny', \App\Models\IntegrationConnector::class) || auth()->user()->can('settings.manage') || auth()->user()->can('operations.view') || auth()->user()->can('backups.view') || auth()->user()->can('updates.view'))
                     <flux:sidebar.group :heading="__('Administration')" class="grid">
                         @can('viewAny', \App\Models\User::class)
                             <flux:sidebar.item icon="users" :href="route('admin.users.index')" :current="request()->routeIs('admin.users.*')" wire:navigate>
@@ -62,6 +62,16 @@
                         @can('viewAny', \App\Models\RequestType::class)
                             <flux:sidebar.item icon="document-text" :href="route('admin.request-types.index')" :current="request()->routeIs('admin.request-types.*')" wire:navigate>
                                 {{ __('Request types') }}
+                            </flux:sidebar.item>
+                        @endcan
+                        @can('viewAny', \App\Models\Announcement::class)
+                            <flux:sidebar.item icon="megaphone" :href="route('admin.announcements.index')" :current="request()->routeIs('admin.announcements.*')" wire:navigate>
+                                {{ __('Announcements') }}
+                            </flux:sidebar.item>
+                        @endcan
+                        @can('viewAny', \App\Models\Theme::class)
+                            <flux:sidebar.item icon="swatch" :href="route('admin.themes.index')" :current="request()->routeIs('admin.themes.*')" wire:navigate>
+                                {{ __('Application themes') }}
                             </flux:sidebar.item>
                         @endcan
                         @can('reports.view')
