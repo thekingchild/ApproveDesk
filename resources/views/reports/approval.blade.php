@@ -13,9 +13,10 @@
         .toolbar a, .toolbar button { background: white; border: 1px solid #a1a1aa; border-radius: 6px; color: #27272a; cursor: pointer; font: inherit; padding: 8px 13px; text-decoration: none; }
         .toolbar .primary { background: var(--accent); border-color: var(--accent); color: white; }
         .document { background: white; margin: 18px auto 36px; max-width: 210mm; min-height: 297mm; padding: 16mm 14mm 20mm; }
-        .brand { align-items: center; border-bottom: 3px solid var(--accent); display: flex; justify-content: space-between; padding-bottom: 14px; }
-        .brand-name { font-size: 20px; font-weight: 700; }
-        .brand-logo { display: block; max-height: 52px; max-width: 180px; }
+        .brand { border-bottom: 3px solid var(--accent); padding-bottom: 14px; }
+        .brand-identity { align-items: center; display: flex; gap: 12px; max-width: 100%; min-width: 0; }
+        .brand-name { font-size: 20px; font-weight: 700; line-height: 1.2; max-width: 520px; overflow-wrap: anywhere; word-break: break-word; }
+        .brand-logo { display: block; flex: 0 0 auto; max-height: 52px; max-width: 140px; object-fit: contain; }
         .eyebrow { color: var(--muted); font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
         h1 { font-size: 28px; line-height: 1.15; margin: 18px 0 6px; }
         h2 { border-bottom: 1px solid var(--line); font-size: 16px; margin: 20px 0 10px; padding-bottom: 6px; break-after: avoid; page-break-after: avoid; }
@@ -71,13 +72,14 @@
 
     <main class="document">
         <header class="brand">
-            <div>
+            <div class="brand-identity" data-test="report-company-identity">
                 @if ($logo_data_uri)
-                    <img class="brand-logo" src="{{ $logo_data_uri }}" alt="{{ \App\Support\Branding::name() }}">
-                @else
-                    <div class="brand-name">{{ \App\Support\Branding::name() }}</div>
+                    <img class="brand-logo" src="{{ $logo_data_uri }}" alt="">
                 @endif
-                <div class="eyebrow">{{ __('Approval record') }}</div>
+                <div>
+                    <div class="brand-name">{{ \App\Support\Branding::name() }}</div>
+                    <div class="eyebrow">{{ __('Approval record') }}</div>
+                </div>
             </div>
         </header>
 

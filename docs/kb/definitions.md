@@ -4,7 +4,7 @@ Short meanings for the words used on ApproveDesk screens. Open a term’s name t
 
 ## [Announcement](/help/announcements)
 
-An in-app message published by the System owner to all active users or to selected roles. It appears above signed-in page content and is separate from approval notifications and email or chat delivery.
+An in-app message published by the System owner to all active users or to selected roles. It appears on the signed-in Dashboard and is separate from approval notifications and email or chat delivery.
 
 ## [Sticky announcement](/help/announcements)
 
@@ -92,7 +92,11 @@ An optional chat bot. People link their Telegram account; ApproveDesk sends a me
 
 ## [Branding](/help/organization-settings)
 
-The organisation identity administrators set under **Settings → Branding**: application name, meta description, logo, favicon, login tagline, accent colour, and login background. The logo and name appear after sign-in; the background is the public login screen.
+The organisation identity administrators set under **Settings → Branding**: company name, meta description, logo, favicon, login tagline, accent colour, and login background. The company name and logo appear after sign-in and on printable approval records; the background is the public login screen.
+
+## [Company name](/help/organization-settings)
+
+The organisation name saved under **Settings → Branding**. It is the application name shown throughout ApproveDesk, in browser titles, beside the logo, and on printable approval records.
 
 ## [Business calendar](/help/organization-settings)
 

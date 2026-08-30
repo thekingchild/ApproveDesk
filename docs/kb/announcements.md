@@ -1,6 +1,6 @@
 # Announcements
 
-An **announcement** is an in-app message that the System owner publishes to all active users or to people who hold selected roles. It appears above the signed-in page content. Announcements are separate from approval notifications: they are not emailed or sent to Teams, Slack, WhatsApp, or Telegram.
+An **announcement** is an in-app message that the System owner publishes to all active users or to people who hold selected roles. It appears at the top of the signed-in **Dashboard**. Announcements are separate from approval notifications: they are not emailed or sent to Teams, Slack, WhatsApp, or Telegram.
 
 ## When to use an announcement
 
@@ -8,9 +8,9 @@ Use announcements for information that people should see while working in Approv
 
 Choose the display mode that matches the message:
 
-- **Sticky** stays on every eligible signed-in page until the System owner archives it. A user cannot dismiss it.
-- **Acknowledge** stays visible to each eligible person until that person selects **Mark as read**.
-- **Show once** appears on the first eligible page load and is then hidden for that person.
+- **Sticky** stays on the Dashboard until the System owner archives it. A user cannot dismiss it.
+- **Acknowledge** stays visible on the Dashboard for each eligible person until that person selects **Mark as read**.
+- **Show once** appears on the first eligible Dashboard load and is then hidden for that person. Opening another page does not consume it.
 
 Use **All active users** when the message applies to everyone. Use **Selected roles** when it applies only to one or more roles. A person with any selected role is included.
 
@@ -19,13 +19,15 @@ Use **All active users** when the message applies to everyone. Use **Selected ro
 Only the System owner can open **Administration → Announcements** or change announcements.
 
 1. Enter a short, specific title.
-2. Write the message in complete sentences. Basic rich-text formatting is kept; scripts and unsafe markup are removed.
+2. Write the message in complete sentences. Select text and use the buttons for **bold**, *italic*, underline, bulleted or numbered lists, and links. Links must use `http`, `https`, `mailto`, a page path, or an in-page anchor. Formatting is stored as safe HTML; scripts and unsafe markup are removed when you save.
 3. Choose **All active users** or **Selected roles**. When selecting roles, choose at least one.
 4. Choose Sticky, Acknowledge, or Show once.
 5. Select **Save announcement**. Saving creates a draft; it does not show the message.
 6. Review the audience and display-mode summary, then select **Publish**.
 
 The list shows Draft, Published, or Archived status and how many user receipts have been recorded. A receipt means the announcement was shown or acknowledged; it is not an email-delivery report.
+
+On Dashboard, a long message starts as a short excerpt. Select **Show more** to expand it and **Show less** to make it compact again. Expanding or collapsing does not mark an Acknowledge message as read.
 
 ## Correct, end, or republish a message
 

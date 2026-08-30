@@ -76,6 +76,22 @@ class ApprovalReportTest extends TestCase
             ->assertDontSee('/branding/assets/report-logo.png', false);
     }
 
+    public function test_report_always_prints_wrapped_company_name_beside_the_logo(): void
+    {
+        Storage::fake('public');
+        Storage::disk('public')->put('branding/report-logo.png', 'local-logo-bytes');
+        Setting::put('brand.logo', 'branding/report-logo.png');
+        Setting::put('brand.meta_title', 'Bluechip Analytical Services and Integrated Laboratory Operations Limited');
+
+        $this->actingAs($this->owner)
+            ->get("/submissions/{$this->submission->id}/approval-report")
+            ->assertOk()
+            ->assertSee('data-test="report-company-identity"', false)
+            ->assertSee('Bluechip Analytical Services and Integrated Laboratory Operations Limited')
+            ->assertSee('overflow-wrap: anywhere', false)
+            ->assertSee('brand-identity', false);
+    }
+
     public function test_report_sanitizes_the_request_body_again_at_render_time(): void
     {
         DB::table('submissions')->where('id', $this->submission->id)->update([

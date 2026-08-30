@@ -34,7 +34,7 @@ class AnnouncementsAndThemesUiTest extends TestCase
         $this->actingAs($roleOnly)->get(route('admin.themes.index'))->assertForbidden();
     }
 
-    public function test_global_banner_is_targeted_and_show_once_records_on_render(): void
+    public function test_banner_is_dashboard_only_and_show_once_is_not_consumed_elsewhere(): void
     {
         $owner = $this->owner();
         $target = User::factory()->create()->assignRole('approver');
@@ -47,9 +47,36 @@ class AnnouncementsAndThemesUiTest extends TestCase
         ]);
 
         $this->actingAs($other)->get(route('dashboard'))->assertDontSee('Finance update');
+        $this->actingAs($target)->get(route('appearance.edit'))->assertOk()->assertDontSee('Finance update');
+        $this->assertDatabaseCount('announcement_receipts', 0);
         $this->actingAs($target)->get(route('dashboard'))->assertOk()->assertSee('Finance update');
         $this->actingAs($target)->get(route('dashboard'))->assertDontSee('Finance update');
         $this->assertDatabaseCount('announcement_receipts', 1);
+    }
+
+    public function test_visually_long_formatted_announcement_has_an_accessible_disclosure(): void
+    {
+        $owner = $this->owner();
+        $user = User::factory()->create();
+        Announcement::factory()->published()->create([
+            'creator_id' => $owner->id,
+            'title' => 'Detailed operational notice',
+            'message' => '<ul><li>First action</li><li>Second action</li><li>Third action</li><li>Fourth action</li><li>Fifth action</li></ul><p><a href="https://status.example.com">Service status</a></p>',
+            'audience' => AnnouncementAudience::All,
+            'display_mode' => AnnouncementDisplayMode::Sticky,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('data-test="announcement-excerpt"', false)
+            ->assertSee('First action Second action Third action Fourth action Fifth action Service status')
+            ->assertSee('x-show="expanded"', false)
+            ->assertSee('x-show="! expanded"', false)
+            ->assertSee('data-test="announcement-disclosure"', false)
+            ->assertSee('aria-expanded', false)
+            ->assertSee('Show more')
+            ->assertSee('Show less');
     }
 
     public function test_appearance_saves_theme_and_layout_emits_fixed_palette(): void
@@ -67,10 +94,25 @@ class AnnouncementsAndThemesUiTest extends TestCase
     {
         $owner = $this->owner();
 
+        $response = $this->actingAs($owner)->get(route('admin.announcements.index'));
+        $response
+            ->assertOk()
+            ->assertSee('data-test="announcement-format-toolbar"', false)
+            ->assertSee('aria-label="Bold"', false)
+            ->assertSee('aria-label="Italic"', false)
+            ->assertSee('aria-label="Underline"', false)
+            ->assertSee('aria-label="Bulleted list"', false)
+            ->assertSee('aria-label="Numbered list"', false)
+            ->assertSee('aria-label="Insert link"', false);
+
+        $document = new \DOMDocument;
+        @$document->loadHTML($response->getContent());
+        $this->assertSame(0, (new \DOMXPath($document))->query('//form//a')->length, 'The formatting expression must not break into a stray anchor element.');
+
         Livewire::actingAs($owner)
             ->test('pages::admin.announcements')
             ->set('title', 'Planned maintenance')
-            ->set('message', '<p>Services restart at 21:00.</p>')
+            ->set('message', '<p><strong>Services</strong> restart at 21:00. <script>alert(1)</script><a href="https://status.example.com">Status</a></p>')
             ->set('audience', 'all')
             ->set('displayMode', 'sticky')
             ->call('save')
@@ -78,6 +120,9 @@ class AnnouncementsAndThemesUiTest extends TestCase
             ->assertSee('Planned maintenance');
 
         $announcement = Announcement::query()->where('title', 'Planned maintenance')->firstOrFail();
+        $this->assertStringContainsString('<strong>Services</strong>', $announcement->message);
+        $this->assertStringContainsString('href="https://status.example.com"', $announcement->message);
+        $this->assertStringNotContainsString('<script', $announcement->message);
         Livewire::actingAs($owner)
             ->test('pages::admin.announcements')
             ->call('publish', $announcement->id)

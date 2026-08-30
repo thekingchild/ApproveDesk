@@ -25,7 +25,7 @@ final class HelpCatalogue
             new HelpArticle(
                 slug: 'getting-around',
                 title: 'Getting around',
-                summary: 'Login-first site address, optional public website, signed-in home, search, notifications, and Help.',
+                summary: 'Login-first site address, optional public website, signed-in home, collapsible navigation, search, notifications, and Help.',
                 icon: 'home',
                 group: 'Using ApproveDesk',
                 audience: 'all',
@@ -78,7 +78,7 @@ final class HelpCatalogue
             new HelpArticle(
                 slug: 'announcements',
                 title: 'Announcements',
-                summary: 'Read sticky, acknowledge, and one-time messages; System owners can publish them to everyone or selected roles.',
+                summary: 'Read compact Dashboard-only sticky, acknowledge, and one-time messages; System owners can format and publish them by audience.',
                 icon: 'megaphone',
                 group: 'Using ApproveDesk',
                 audience: 'all',
@@ -158,7 +158,7 @@ final class HelpCatalogue
             new HelpArticle(
                 slug: 'organization-settings',
                 title: 'Organization settings',
-                summary: 'Login branding, optional public landing page, application identity, self-registration, owner-only custom code, approval links, calendars, and notification channels.',
+                summary: 'Company identity and printable branding, login appearance, optional public landing page, self-registration, owner-only custom code, approval links, calendars, and notification channels.',
                 icon: 'cog-6-tooth',
                 group: 'Administration',
                 audience: 'admin',

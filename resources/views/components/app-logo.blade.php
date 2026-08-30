@@ -6,7 +6,14 @@
 @php($appName = \App\Support\Branding::name())
 
 @if($sidebar)
-    <flux:sidebar.brand :name="$appName" {{ $attributes }}>
+    <flux:sidebar.brand
+        :name="$appName"
+        class="max-w-full overflow-hidden in-data-flux-sidebar-collapsed-desktop:hidden"
+        :title="$appName"
+        :aria-label="$appName"
+        data-test="company-brand"
+        {{ $attributes }}
+    >
         <x-slot name="logo" @class([
             'flex aspect-square size-8 items-center justify-center rounded-md overflow-hidden',
             'bg-accent-content text-accent-foreground' => $logoUrl === null,

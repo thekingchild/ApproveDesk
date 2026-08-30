@@ -6,9 +6,24 @@
     <body class="min-h-screen bg-zinc-50 dark:bg-zinc-950">
         <a class="ad-skip-link" href="#main-content">{{ __('Skip to main content') }}</a>
 
-        <flux:sidebar sticky collapsible="mobile" class="border-e border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+        <flux:sidebar id="app-navigation" sticky collapsible persist class="border-e border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
             <flux:sidebar.header>
                 <x-app-logo :sidebar="true" href="{{ route('dashboard') }}" wire:navigate />
+                <button
+                    type="button"
+                    class="hidden size-10 shrink-0 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-800/5 hover:text-zinc-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ad-focus)] lg:flex dark:text-zinc-400 dark:hover:bg-white/15 dark:hover:text-white"
+                    x-data
+                    x-on:click="$dispatch('flux-sidebar-toggle')"
+                    aria-label="{{ __('Collapse or expand navigation') }}"
+                    title="{{ __('Collapse or expand navigation') }}"
+                    aria-controls="app-navigation"
+                    data-test="desktop-sidebar-toggle"
+                >
+                    <svg class="size-5" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                        <path d="M7.5 3.75V16.25M3.4375 16.25H16.5625C17.08 16.25 17.5 15.83 17.5 15.3125V4.6875C17.5 4.17 17.08 3.75 16.5625 3.75H3.4375C2.92 3.75 2.5 4.17 2.5 4.6875V15.3125C2.5 15.83 2.92 16.25 3.4375 16.25Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                    <span class="sr-only">{{ __('Collapse or expand navigation') }}</span>
+                </button>
                 <flux:sidebar.collapse class="lg:hidden" />
             </flux:sidebar.header>
 

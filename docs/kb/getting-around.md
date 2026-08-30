@@ -19,6 +19,12 @@ Dashboard content changes with your role.
 - Administrators see organization shortcuts and operational health, including **Administration → Operations**, **Administration → Backups**, and **Administration → Updates**.
 - People with more than one role see approvals first, then their own requests.
 
+## Sidebar
+
+On a desktop or laptop, select the visible navigation control beside the company name to collapse the sidebar and give the page more horizontal space. The control remains visible in the compact sidebar; select it again to expand the menu. ApproveDesk remembers this choice in that browser. Menu icons retain their labels as tooltips in compact mode.
+
+On a phone or narrow window, use the menu button in the header. Desktop collapse does not replace or change the mobile drawer.
+
 ## Search
 
 Open search from the sidebar, or press Command-K / Control-K. Search looks at reference numbers, titles, requesters, status, and configured form fields you are allowed to see. Results only include requests your account can open.

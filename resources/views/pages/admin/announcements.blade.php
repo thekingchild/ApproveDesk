@@ -142,7 +142,49 @@ new #[Title('Announcements')] class extends Component
             <form wire:submit="save" class="mt-5 space-y-4">
                 <flux:input wire:model="title" :label="__('Title')" maxlength="160" required />
                 <flux:error name="title" />
-                <flux:textarea wire:model="message" :label="__('Message')" rows="8" :description="__('Basic formatting is kept; scripts and unsafe markup are removed.')" required />
+                <div
+                    class="space-y-2"
+                    x-data="{
+                        replace(open, close, placeholder) {
+                            const field = this.$refs.message;
+                            const start = field.selectionStart;
+                            const end = field.selectionEnd;
+                            const selected = field.value.slice(start, end) || placeholder;
+                            field.setRangeText(open + selected + close, start, end, 'end');
+                            field.dispatchEvent(new Event('input', { bubbles: true }));
+                            field.focus();
+                        },
+                        list(tag) {
+                            const field = this.$refs.message;
+                            const start = field.selectionStart;
+                            const end = field.selectionEnd;
+                            const selected = field.value.slice(start, end) || 'List item';
+                            const items = selected.split(/\r?\n/).filter(line => line.trim() !== '').map(line => '<li>' + line + '</li>').join('\n');
+                            field.setRangeText('<' + tag + '>\n' + items + '\n</' + tag + '>', start, end, 'end');
+                            field.dispatchEvent(new Event('input', { bubbles: true }));
+                            field.focus();
+                        },
+                        link() {
+                            const url = window.prompt('{{ __('Enter an http, https, mailto, page, or anchor link') }}');
+                            if (! url || ! /^(https?:\/\/|mailto:|\/|#)/i.test(url)) return;
+                            const safe = url.replace(/[\u0022\u0027\u003C\u003E]/g, '');
+                            const open = '\u003Ca href=\u0027' + safe + '\u0027\u003E';
+                            this.replace(open, '</a>', '{{ __('Link text') }}');
+                        }
+                    }"
+                >
+                    <div class="flex flex-wrap gap-1 rounded-lg border border-zinc-200 bg-zinc-50 p-1.5 dark:border-zinc-700 dark:bg-zinc-800/60" role="group" aria-label="{{ __('Message formatting') }}" data-test="announcement-format-toolbar">
+                        <button type="button" class="min-h-9 min-w-9 rounded-md px-2 font-bold hover:bg-white dark:hover:bg-zinc-700" aria-label="{{ __('Bold') }}" title="{{ __('Bold') }}" x-on:click="replace('<strong>', '</strong>', '{{ __('bold text') }}')">B</button>
+                        <button type="button" class="min-h-9 min-w-9 rounded-md px-2 italic hover:bg-white dark:hover:bg-zinc-700" aria-label="{{ __('Italic') }}" title="{{ __('Italic') }}" x-on:click="replace('<em>', '</em>', '{{ __('italic text') }}')">I</button>
+                        <button type="button" class="min-h-9 min-w-9 rounded-md px-2 underline hover:bg-white dark:hover:bg-zinc-700" aria-label="{{ __('Underline') }}" title="{{ __('Underline') }}" x-on:click="replace('<u>', '</u>', '{{ __('underlined text') }}')">U</button>
+                        <span class="mx-1 w-px self-stretch bg-zinc-200 dark:bg-zinc-700" aria-hidden="true"></span>
+                        <button type="button" class="min-h-9 rounded-md px-2 text-sm font-medium hover:bg-white dark:hover:bg-zinc-700" aria-label="{{ __('Bulleted list') }}" title="{{ __('Bulleted list') }}" x-on:click="list('ul')">• {{ __('List') }}</button>
+                        <button type="button" class="min-h-9 rounded-md px-2 text-sm font-medium hover:bg-white dark:hover:bg-zinc-700" aria-label="{{ __('Numbered list') }}" title="{{ __('Numbered list') }}" x-on:click="list('ol')">1. {{ __('List') }}</button>
+                        <button type="button" class="min-h-9 rounded-md px-2 text-sm font-medium hover:bg-white dark:hover:bg-zinc-700" aria-label="{{ __('Insert link') }}" title="{{ __('Insert link') }}" x-on:click="link()">{{ __('Link') }}</button>
+                    </div>
+                    <flux:textarea x-ref="message" wire:model="message" :label="__('Message')" rows="8" :description="__('Select text, then use the formatting buttons. Safe links and basic formatting are kept; scripts and unsafe markup are removed.')" required />
+                    <p class="text-xs text-zinc-500 dark:text-zinc-400">{{ __('Formatting is stored as safe HTML and shown as styled text after saving.') }}</p>
+                </div>
                 <flux:error name="message" />
 
                 <flux:select wire:model.live="audience" :label="__('Audience')">

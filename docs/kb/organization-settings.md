@@ -8,9 +8,9 @@ Set the organisation identity, choose the site's first page, and customise the p
 
 **Application identity** is used after people sign in as well as on login:
 
-- Application name appears next to the logo and in the browser tab. Leave it blank to keep the installed product name.
+- **Company name** is the application name used throughout ApproveDesk, in the browser tab, next to the logo, and on printable approval records. Leave it blank to keep the installed product name. Long names are kept within the navigation instead of widening the menu.
 - Meta description is the short text search engines and link previews can show. It is optional.
-- Application logo replaces the default mark in the sidebar, header, and login screen. PNG, JPG, or WebP, up to 1 MB. The card shows the current logo (or your new choice) as a thumbnail the moment you pick a file, with a *Keep current logo instead* link if you change your mind.
+- Application logo replaces the default mark in the sidebar, header, login screen, and printable report. PNG, JPG, or WebP, up to 1 MB. The report always prints the company name beside the logo. The card shows the current logo (or your new choice) as a thumbnail the moment you pick a file, with a *Keep current logo instead* link if you change your mind.
 - Favicon replaces the browser-tab icon. ICO, PNG, JPG, or WebP, up to 512 KB, with the same preview-and-undo behaviour.
 - **Show public landing page** controls the site address. It is off by default, so guests opening the site go to Login and signed-in people go to Dashboard. Turn it on to show the public marketing page instead. This switch does not edit the marketing page.
 - Allow self-registration sits here because it controls who can create an account. When it is on, two further controls appear:
