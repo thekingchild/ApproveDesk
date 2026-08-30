@@ -15,7 +15,47 @@
                                 } }}
                             </span>
                         </div>
-                        <div class="prose prose-sm mt-2 max-w-none dark:prose-invert">{!! $announcement->message !!}</div>
+                        @php
+                            $excerptSource = preg_replace('/<\/?(?:p|li|h[1-4]|blockquote|pre|ul|ol)[^>]*>|<br\s*\/?>/i', ' ', $announcement->message) ?? $announcement->message;
+                            $plainMessage = \Illuminate\Support\Str::squish(html_entity_decode(strip_tags($excerptSource)));
+                            $blockCount = preg_match_all('/<(?:p|br|li|h[1-4]|blockquote|pre)\b/i', $announcement->message);
+                            $isLong = \Illuminate\Support\Str::length($plainMessage) > 280 || $blockCount >= 4;
+                        @endphp
+                        @if ($isLong)
+                            <div x-data="{ expanded: false }" class="mt-2">
+                                <p
+                                    id="announcement-excerpt-{{ $announcement->id }}"
+                                    class="text-sm leading-6 text-zinc-700 dark:text-zinc-200"
+                                    x-show="! expanded"
+                                    data-test="announcement-excerpt"
+                                >
+                                    {{ \Illuminate\Support\Str::limit($plainMessage, 240) }}
+                                </p>
+                                <div
+                                    id="announcement-message-{{ $announcement->id }}"
+                                    class="prose prose-sm max-w-none dark:prose-invert"
+                                    x-show="expanded"
+                                    x-cloak
+                                >
+                                    {!! $announcement->message !!}
+                                </div>
+                                <button
+                                    type="button"
+                                    class="mt-2 inline-flex min-h-8 items-center rounded-md text-sm font-semibold text-[var(--ad-primary)] underline decoration-dotted underline-offset-4 hover:no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ad-focus)]"
+                                    x-on:click="expanded = ! expanded"
+                                    x-bind:aria-expanded="expanded.toString()"
+                                    aria-controls="announcement-message-{{ $announcement->id }}"
+                                    data-test="announcement-disclosure"
+                                >
+                                    <span x-show="! expanded">{{ __('Show more') }}</span>
+                                    <span x-show="expanded" x-cloak>{{ __('Show less') }}</span>
+                                </button>
+                            </div>
+                        @else
+                            <div id="announcement-message-{{ $announcement->id }}" class="prose prose-sm mt-2 max-w-none dark:prose-invert">
+                                {!! $announcement->message !!}
+                            </div>
+                        @endif
                         <p class="mt-2 text-xs text-zinc-600 dark:text-zinc-300">
                             {{ __('Published :time', ['time' => $announcement->published_at?->diffForHumans()]) }}
                         </p>

@@ -161,6 +161,7 @@ Locked product decision for Phase 8.2. It does not reopen Phase 8.1. Design: [do
 | SH-IN274 | v2.7.4 | Shared-host installer and Cloudflare compatibility fixes | Complete |
 | SH-LP275 | v2.7.5 | Optional public landing page with login-first default | Complete |
 | SH-COM280/SH-THM280 | v2.8.0 | Owner announcements and selectable application themes | Complete |
+| SH-UX281 | v2.8.1 | Dashboard announcements, company identity, printable branding, and collapsible navigation | In progress |
 | 10 | v3.0.0 | SaaS multi-tenancy foundation | Not started |
 | 11 | v3.1.0 | Paystack and Flutterwave subscriptions | Not started |
 | 12 | v3.2.0 | SaaS onboarding, entitlements, and commercial operations | Not started |
@@ -1247,6 +1248,42 @@ This is an additive self-hosted minor release. “Superadmin” in the request m
 **Phase demo:** the System owner publishes a sticky safety notice to all users and a one-time finance message to selected roles; eligible people see the correct global banner behavior. The owner enables a built-in palette, creates a custom accessible palette, sets the organization default, and a user chooses another enabled palette while retaining System appearance mode.
 
 **Out of scope:** email/chat delivery, scheduled campaigns, file attachments, per-user targeting, comments on announcements, arbitrary theme CSS, user-created themes, login/marketing-page theming, per-tenant theme catalogues, or changes to workflow notifications and branding custom CSS.
+
+---
+
+## Phase SH-UX281 — Dashboard announcements, company identity, printable branding, and collapsible navigation — In progress
+
+**Goal:** refine the v2.8 communication and application chrome so notices are useful without following people through every workflow screen, the saved company identity is presented consistently in the app and printable approval records, and desktop navigation can be collapsed and restored without losing orientation.
+
+This is a supplementary self-hosted patch release. It does not change announcement audiences, receipt semantics, workflow state, role permissions, theme tokens, public landing-page behavior, or the Phase 10 SaaS boundary. No schema change is required: the existing sanitized announcement HTML and `brand.meta_title` setting remain the storage contracts.
+
+### SH-UX281.1 — Dashboard announcements and formatting
+
+- **SH-UX281-COM-01 — Complete (2026-08-30):** Render eligible announcement banners only on the named Dashboard route. A Show once receipt is created only when the message is actually rendered on Dashboard; visits to other signed-in pages do not consume it.
+- **SH-UX281-COM-02 — Complete (2026-08-30):** Keep each announcement compact by default with a short visual excerpt. Long content has an accessible **Show more / Show less** control that expands in place, preserves sanitized formatting, and does not interfere with **Mark as read**.
+- **SH-UX281-COM-03 — Complete (2026-08-30):** Replace the raw message textarea experience with a basic, keyboard-accessible formatting toolbar for bold, italic, underline, bulleted list, numbered list, and safe hyperlinks. Keep `RichTextSanitizer` as the server-side authority and retain a plain HTML-backed field for Livewire compatibility.
+
+### SH-UX281.2 — Company identity and reports
+
+- **SH-UX281-BRAND-01 — Complete (2026-08-30):** Present the existing application-name setting as **Company name** and explain that it is the organization identity used throughout ApproveDesk, browser titles, and printable approval records. Blank continues to fall back to the installed application name for upgrade compatibility.
+- **SH-UX281-BRAND-02 — Complete (2026-08-30):** Make signed-in branding resilient to long company names: constrain the sidebar label, wrap or truncate it without widening or displacing menu items, and expose the full value to assistive technology and pointer users.
+- **SH-UX281-PRN-01 — Complete (2026-08-30):** Always print the company name in the approval-report masthead, whether or not a logo exists. Lay out logo and name as a professional identity block with bounded logo dimensions and wrapping/overflow rules for long names in browser print and Dompdf output.
+
+### SH-UX281.3 — Collapsible desktop navigation
+
+- **SH-UX281-NAV-01 — Complete (2026-08-30):** Make the desktop sidebar collapsible through a visible labelled control, preserve mobile drawer behavior, and show an equally visible restore control while collapsed. The main content must reclaim the available width without a reload.
+- **SH-UX281-NAV-02 — Complete (2026-08-30):** Preserve the desktop collapsed preference across Livewire navigation and browser reloads, retain keyboard focus and accessible names, and keep logo, search, Help, notification, administration, and user-menu access understandable in compact mode.
+
+### SH-UX281.4 — Tests, Help, and release
+
+- **SH-UX281-TEST-01 — Complete (2026-08-30):** Feature-test Dashboard-only rendering, Show once receipt timing, acknowledgement behavior, long-message disclosure markup, formatting controls, safe formatted persistence, company-name labels, long-name-safe chrome, and report masthead output with and without a logo.
+- **SH-UX281-TEST-02 — Complete (2026-08-30):** Verify sidebar collapse/restore markup and persistence hooks at desktop and mobile breakpoints; run the full parallel suite, Pint, PHPStan, asset build, SQLite/MySQL CI, and an independent diff review.
+- **SH-UX281-DOC-01 — Complete (2026-08-30):** Update Announcements, Organization settings, Getting around, definitions/Help summaries where needed, `CHANGELOG.md`, README, and this plan in the same delivery.
+- **SH-UX281-REL-01:** Back up the local database; prove no pending schema work; merge through a green GitHub PR; update every version surface to **2.8.1**; publish and verify annotated tag **v2.8.1** and GitHub release; sync both checkouts; clear local caches; and verify `/up`, `/login`, Dashboard announcements, company branding, printable report, and sidebar collapse/restore.
+
+**Phase demo:** the System owner formats and publishes a long announcement; an eligible person sees a compact excerpt only on Dashboard, expands and collapses it, and can acknowledge it when required. An administrator saves a long company name; the navigation remains usable and the full company identity appears beside the logo in a PDF-ready approval report. On desktop, the person collapses the sidebar, continues working with more horizontal space, and restores it from the visible control.
+
+**Out of scope:** announcement scheduling or delivery outside Dashboard, a full document editor, image/file embeds, arbitrary HTML/CSS, a second company-name setting, per-report branding templates, changing report evidence content, or redesigning mobile navigation.
 
 ---
 

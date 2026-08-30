@@ -162,7 +162,8 @@ class BrandingTest extends TestCase
             ->get(route('settings.branding'))
             ->assertOk()
             ->assertSee('Branding')
-            ->assertSee('Application name')
+            ->assertSee('Company name')
+            ->assertSee('Used throughout ApproveDesk and on printable approval records.', false)
             ->assertSee('Favicon')
             ->assertSee('Meta description');
     }
@@ -322,6 +323,35 @@ class BrandingTest extends TestCase
             ->assertSee('/branding/assets/'.$logo, false)
             ->assertSee('/branding/assets/'.$favicon, false)
             ->assertSee('Acme Desk');
+    }
+
+    public function test_long_company_name_is_constrained_in_signed_in_navigation(): void
+    {
+        $admin = User::factory()->create()->assignRole('admin');
+        $company = 'Bluechip Analytical Services and Integrated Laboratory Operations Limited';
+        Setting::put('brand.meta_title', $company);
+
+        $this->actingAs($admin)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('data-test="company-brand"', false)
+            ->assertSee('title="'.$company.'"', false)
+            ->assertSee('max-w-full', false)
+            ->assertSee($company);
+    }
+
+    public function test_desktop_sidebar_has_a_visible_persistent_collapse_and_restore_control(): void
+    {
+        $admin = User::factory()->create()->assignRole('admin');
+
+        $this->actingAs($admin)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('collapsible="true"', false)
+            ->assertSee('persist', false)
+            ->assertSee('data-test="desktop-sidebar-toggle"', false)
+            ->assertSee('Collapse or expand navigation')
+            ->assertSee('dusk="mobile-navigation"', false);
     }
 
     public function test_removing_logo_and_favicon_restores_defaults(): void

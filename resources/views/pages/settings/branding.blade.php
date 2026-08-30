@@ -246,7 +246,7 @@ new #[Title('Branding settings')] class extends Component {
                     </div>
 
                     <div class="mt-4 space-y-4">
-                        <flux:input wire:model="meta_title" :label="__('Application name')" :description="__('Shown next to the logo and in the browser tab. Leave blank to use the installed application name.')" maxlength="80" data-test="branding-name" />
+                        <flux:input wire:model="meta_title" :label="__('Company name')" :description="__('Used throughout ApproveDesk and on printable approval records. Leave blank to use the installed application name.')" maxlength="80" data-test="branding-name" />
                         <flux:error name="meta_title" />
 
                         <flux:textarea wire:model="meta_description" :label="__('Meta description')" :description="__('Short description for search engines and link previews.')" rows="3" maxlength="180" />
