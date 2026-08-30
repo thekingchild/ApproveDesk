@@ -160,6 +160,7 @@ Locked product decision for Phase 8.2. It does not reopen Phase 8.1. Design: [do
 | SH-PRN273 | v2.7.3 | Professional printable approval reports | Complete |
 | SH-IN274 | v2.7.4 | Shared-host installer and Cloudflare compatibility fixes | Complete |
 | SH-LP275 | v2.7.5 | Optional public landing page with login-first default | Complete |
+| SH-COM280/SH-THM280 | v2.8.0 | Owner announcements and selectable application themes | In progress |
 | 10 | v3.0.0 | SaaS multi-tenancy foundation | Not started |
 | 11 | v3.1.0 | Paystack and Flutterwave subscriptions | Not started |
 | 12 | v3.2.0 | SaaS onboarding, entitlements, and commercial operations | Not started |
@@ -1211,6 +1212,41 @@ This supplement is self-hosted v2.7.5 work on `feature/sh-lp275-landing-toggle`,
 **Phase SH-LP275 demo:** with the option off, a visitor opening the site address lands on Login and a signed-in person lands on Dashboard; an administrator turns on **Show public landing page**, and the same site address immediately serves the drop-in marketing page with the correct Login, Sign up, or Dashboard action.
 
 **Out of scope:** editing marketing content from ApproveDesk, replacing the `website/` folder contract, changing the signed-in Dashboard, redirecting named application routes, changing registration rules, or adding a database migration.
+
+---
+
+## Phase SH-COM280 / SH-THM280 — Owner announcements and application themes — In progress
+
+**Goal:** give the System owner a safe organization-wide communication surface and an owner-curated theme catalogue, while letting each person choose an available application palette and their existing Light/Dark/System appearance mode.
+
+This is an additive self-hosted minor release. “Superadmin” in the request maps to the singleton **System owner**, not merely a user holding the legacy `super-admin` role. It does not change workflow state, notification-channel delivery, branding assets, custom CSS ownership, role permissions, or the Phase 10 SaaS boundary.
+
+### SH-COM280 — Announcements
+
+- **SH-COM280-DATA-01:** Add `announcements` plus per-user `announcement_receipts` through additive, SQLite/MySQL-portable migrations. Store creator, sanitized rich-text message, audience (all users or selected role IDs), display mode, publication state/timestamps, and archival metadata. A unique announcement/user receipt records first display and optional acknowledgement without copying one row per target at publish time.
+- **SH-COM280-RULE-01:** Support three explicit display modes: **Sticky** remains visible until the System owner archives it and cannot be dismissed; **Acknowledge** remains visible to that user until they choose **Mark as read**; **Show once** records the first rendered display and is hidden on later page loads. Audience matching is server-side, includes any active user with at least one selected role, and treats an empty role selection only as the explicit all-users audience.
+- **SH-COM280-SEC-01:** Only the System owner may open announcement administration or create, edit, publish, archive, and republish announcements. Legacy role name alone never grants access. Rich text is sanitized before persistence and authorization is enforced by policy/domain actions, not only hidden navigation.
+- **SH-COM280-UI-01:** Add **Administration → Announcements** with clear draft/published/archived states, audience and mode summaries, preview, validation, publish/archive controls, empty/success/error states, and confirmation before ending a sticky message. Published content may be corrected, with the changed content shown on the next eligible render.
+- **SH-COM280-UI-02:** Render eligible announcements in a global, accessible banner stack above signed-in page content. Show audience-neutral copy, publication time, and the mode-appropriate action. Keep announcements separate from workflow notifications and email/optional channels.
+
+### SH-THM280 — Built-in and custom application themes
+
+- **SH-THM280-DATA-01:** Add a theme catalogue and nullable per-user theme preference using additive migrations. Seed immutable built-in palettes with stable keys, keep the default palette enabled, and store owner-created custom palettes as validated color tokens. Disabling or archiving a selected theme falls back safely to the organization default without breaking the user record.
+- **SH-THM280-RULE-01:** The System owner can enable/disable built-in choices, create/edit/archive custom themes, preview them, and choose one enabled organization default. Built-in token values and stable keys cannot be edited or deleted; at least one theme and the selected default must remain enabled.
+- **SH-THM280-SEC-01:** Theme catalogue management is System-owner-only and policy/domain-action enforced. Custom colors accept strict six-digit hex values, are escaped into a fixed CSS-variable template, and never accept arbitrary CSS or markup.
+- **SH-THM280-UI-01:** Add **Administration → Application themes** with built-in/custom labels, palette swatches, enabled/default status, custom-theme form, previews, and guarded enable/default/archive actions.
+- **SH-THM280-UI-02:** Extend **Settings → Appearance** so every user can save one enabled application theme and independently keep the existing Light/Dark/System mode. Apply the effective palette on every signed-in page, across navigation, focus/accent controls, links, and the browser theme color, with accessible light/dark foreground tokens and a safe default for guests or removed preferences.
+
+### SH-COM280 / SH-THM280 — Tests, Help, and release
+
+- **SH-COM280-TEST-01:** Feature/unit tests cover System-owner-only management, role audience matching, all three display modes, receipt idempotency, sanitization, publish/archive/republish behavior, inactive users, invalid input, and global rendering without leaking an announcement to a non-target role.
+- **SH-THM280-TEST-01:** Feature/unit tests cover built-in invariants, custom color validation, owner-only management, enabled/default guards, preference save/fallback, CSS escaping/template output, and appearance-page/global-layout rendering in light/dark/system-compatible markup.
+- **SH-COM280-DOC-01:** Add end-user Help articles and definitions for Announcement, Sticky announcement, Application theme, and Organization default theme; register them in `HelpCatalogue`; update Help summaries, `CHANGELOG.md`, README, and this plan.
+- **SH-COM280-REL-01:** Back up the local database; prove fresh-install and v2.7.5 upgrade migrations; run targeted tests, the full parallel suite, Pint, PHPStan, asset build, and SQLite/MySQL CI; independently review the diff; merge through a green GitHub PR; publish annotated **v2.8.0**; sync both checkouts; migrate/clear caches locally; and verify `/up`, `/login`, owner administration, an eligible banner, and a saved user theme.
+
+**Phase demo:** the System owner publishes a sticky safety notice to all users and a one-time finance message to selected roles; eligible people see the correct global banner behavior. The owner enables a built-in palette, creates a custom accessible palette, sets the organization default, and a user chooses another enabled palette while retaining System appearance mode.
+
+**Out of scope:** email/chat delivery, scheduled campaigns, file attachments, per-user targeting, comments on announcements, arbitrary theme CSS, user-created themes, login/marketing-page theming, per-tenant theme catalogues, or changes to workflow notifications and branding custom CSS.
 
 ---
 
