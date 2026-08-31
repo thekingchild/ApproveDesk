@@ -23,6 +23,9 @@ final class RoleAssignmentService
             if ($locked->isSystemOwner()) {
                 throw ValidationException::withMessages(['roles' => __('The System owner’s roles cannot be changed.')]);
             }
+            if (! $actor->isSystemOwner() && $locked->hasRole('admin')) {
+                throw ValidationException::withMessages(['roles' => __('Only the System owner may change the administrator role.')]);
+            }
 
             $existing = array_values(DB::table(config('permission.table_names.model_has_roles'))
                 ->where(config('permission.column_names.model_morph_key'), $locked->id)

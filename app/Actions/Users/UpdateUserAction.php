@@ -24,6 +24,9 @@ final class UpdateUserAction
         if ($user->isSystemOwner()) {
             throw ValidationException::withMessages(['user' => __('The System owner cannot be changed from user administration.')]);
         }
+        if (! $actor->isSystemOwner() && $user->hasRole('admin')) {
+            throw ValidationException::withMessages(['roles' => __('Only the System owner may change the administrator role.')]);
+        }
         Gate::forUser($actor)->authorize('update', $user);
         if ($data->isActive !== $user->is_active) {
             Gate::forUser($actor)->authorize('activate', $user);
