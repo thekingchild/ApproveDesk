@@ -1309,7 +1309,7 @@ This is a supplementary self-hosted patch release. It does not add schema, does 
 
 ### SH-SEC282.3 — Help and release
 
-- **SH-SEC282-DOC-01:** Help/OpenAPI/DEPLOYMENT/changelog
+- **SH-SEC282-DOC-01 — Complete (2026-08-31):** Help/OpenAPI/DEPLOYMENT/changelog
 - **SH-SEC282-REL-01:** full gates, PR, annotated v2.8.2 tag, two-checkout sync
 
 **Phase demo:** a delegated user editor cannot grant Department head or change their own roles; web-push delivery pins DNS, refuses redirects, and drops documentation-range destinations; a write-only API token cannot read submission detail; a hostile XLSX is rejected before spreadsheet load; analytics CSV/XLSX exports treat attacker-controlled `=` prefixes as text.

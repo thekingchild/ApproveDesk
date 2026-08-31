@@ -17,6 +17,6 @@ Charts have a text summary and a table so the same numbers work without colour.
 
 ## Export
 
-Export CSV, Excel, or PDF from the same filters you have on screen. Sensitive field values stay out of unauthorized exports. Export downloads are rate limited.
+Export CSV, Excel, or PDF from the same filters you have on screen. Sensitive field values stay out of unauthorized exports. Export downloads are rate limited. CSV and Excel keep text as text so spreadsheet applications do not run request content as formulas.
 
 Use analytics to find stuck steps and overloaded approvers. It is not a substitute for the audit trail on a single request.
