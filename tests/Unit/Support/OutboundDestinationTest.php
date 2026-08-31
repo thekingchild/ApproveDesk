@@ -47,12 +47,12 @@ class OutboundDestinationTest extends TestCase
     public function test_dns_rebinding_is_rejected_on_the_second_lookup(): void
     {
         $resolver = new ArrayDnsResolver([
-            'rebind.example.test' => ['203.0.113.10'],
+            'rebind.example.test' => ['93.184.216.34'],
         ], []);
         $destination = new OutboundDestination($resolver);
 
         $pin = $destination->validate('https://rebind.example.test/hooks');
-        $this->assertSame('203.0.113.10', $pin->ip);
+        $this->assertSame('93.184.216.34', $pin->ip);
 
         $resolver->set('rebind.example.test', ['10.0.0.1']);
 
@@ -63,7 +63,7 @@ class OutboundDestinationTest extends TestCase
     public function test_public_https_host_is_allowed_and_pinned(): void
     {
         $resolver = new ArrayDnsResolver([
-            'hooks.example.test' => ['203.0.113.10'],
+            'hooks.example.test' => ['93.184.216.34'],
         ], []);
         $destination = new OutboundDestination($resolver);
 
@@ -71,15 +71,15 @@ class OutboundDestinationTest extends TestCase
 
         $this->assertSame('hooks.example.test', $pin->host);
         $this->assertSame(443, $pin->port);
-        $this->assertSame('203.0.113.10', $pin->ip);
+        $this->assertSame('93.184.216.34', $pin->ip);
         $this->assertSame('https://hooks.example.test/approvedesk', $pin->url);
-        $this->assertStringContainsString('hooks.example.test:443:203.0.113.10', $pin->curlResolve());
+        $this->assertStringContainsString('hooks.example.test:443:93.184.216.34', $pin->curlResolve());
     }
 
     public function test_userinfo_and_nonstandard_ports_are_rejected(): void
     {
         $destination = new OutboundDestination(new ArrayDnsResolver([
-            'hooks.example.test' => ['203.0.113.10'],
+            'hooks.example.test' => ['93.184.216.34'],
         ], []));
 
         try {
@@ -150,7 +150,7 @@ class OutboundDestinationTest extends TestCase
                 $destination->validate($url);
                 $this->fail("Expected {$url} to be rejected.");
             } catch (InvalidArgumentException) {
-                // expected
+                $this->addToAssertionCount(1);
             }
         }
     }

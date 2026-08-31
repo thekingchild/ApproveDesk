@@ -17,9 +17,25 @@ final readonly class OutboundPin
 
     public function curlResolve(): string
     {
-        $ip = str_contains($this->ip, ':') ? '['.$this->ip.']' : $this->ip;
+        return self::resolveEntry($this->host, $this->port, $this->ip);
+    }
 
-        return sprintf('%s:%d:%s', $this->host, $this->port, $ip);
+    /**
+     * @param  self|list<self>  $pins
+     * @return list<string>
+     */
+    public static function curlResolveEntries(self|array $pins): array
+    {
+        $pins = $pins instanceof self ? [$pins] : $pins;
+        $entries = [];
+
+        foreach ($pins as $pin) {
+            foreach ($pin->ips as $ip) {
+                $entries[] = self::resolveEntry($pin->host, $pin->port, $ip);
+            }
+        }
+
+        return array_values(array_unique($entries));
     }
 
     /**
@@ -34,10 +50,17 @@ final readonly class OutboundPin
 
         if (defined('CURLOPT_RESOLVE')) {
             $options['curl'] = [
-                CURLOPT_RESOLVE => [$this->curlResolve()],
+                CURLOPT_RESOLVE => self::curlResolveEntries($this),
             ];
         }
 
         return $options;
+    }
+
+    private static function resolveEntry(string $host, int $port, string $ip): string
+    {
+        $address = str_contains($ip, ':') ? '['.$ip.']' : $ip;
+
+        return sprintf('%s:%d:%s', $host, $port, $address);
     }
 }

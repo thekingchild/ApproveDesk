@@ -12,7 +12,7 @@ final class ArrayDnsResolver implements DnsResolver
      */
     public function __construct(
         private array $hosts = [],
-        private array $fallback = ['203.0.113.10'],
+        private array $fallback = ['93.184.216.34'],
     ) {}
 
     public function resolve(string $host): array

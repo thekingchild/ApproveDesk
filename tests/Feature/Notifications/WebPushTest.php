@@ -6,10 +6,14 @@ use App\DTOs\OutboundNotification;
 use App\Enums\NotificationKind;
 use App\Models\PushSubscription;
 use App\Models\User;
+use App\Services\Notifications\WebPushFactory;
 use App\Services\Notifications\WebPushService;
 use App\Support\OutboundDestination;
+use App\Support\OutboundPin;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use InvalidArgumentException;
+use Minishlink\WebPush\WebPush;
+use Mockery;
 use Tests\TestCase;
 
 class WebPushTest extends TestCase
@@ -44,6 +48,42 @@ class WebPushTest extends TestCase
         }
 
         $this->assertDatabaseHas('push_subscriptions', ['id' => $subscription->id]);
+    }
+
+    public function test_service_passes_every_validated_pin_to_the_factory_before_queueing(): void
+    {
+        $user = User::factory()->create();
+        $this->storeSubscription($user, 'https://push-one.example.test/push');
+        $this->storeSubscription($user, 'https://push-two.example.test/push');
+        $user->load('pushSubscriptions');
+
+        $webPush = Mockery::mock(WebPush::class);
+        $webPush->shouldReceive('queueNotification')->twice()->andReturnSelf();
+        $webPush->shouldReceive('flush')->once()->andReturnUsing(static function (): \Generator {
+            if (false) {
+                yield;
+            }
+        });
+
+        $seenHosts = [];
+        $factory = Mockery::mock(WebPushFactory::class);
+        $factory->shouldReceive('make')
+            ->once()
+            ->withArgs(function (array $vapid, array $pins) use (&$seenHosts): bool {
+                $this->assertArrayHasKey('publicKey', $vapid);
+                $this->assertArrayHasKey('privateKey', $vapid);
+                $this->assertContainsOnlyInstancesOf(OutboundPin::class, $pins);
+                $seenHosts = array_map(static fn (OutboundPin $pin): string => $pin->host, $pins);
+
+                return true;
+            })
+            ->andReturn($webPush);
+
+        (new WebPushService($factory, app(OutboundDestination::class)))->send($user, $this->notification());
+
+        sort($seenHosts);
+        $this->assertSame(['push-one.example.test', 'push-two.example.test'], $seenHosts);
+        $this->assertDatabaseCount('push_subscriptions', 2);
     }
 
     private function storeSubscription(User $user, string $endpoint): PushSubscription
