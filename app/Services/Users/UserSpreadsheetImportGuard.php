@@ -119,6 +119,7 @@ final class UserSpreadsheetImportGuard
 
         $seen = [];
         $uncompressed = 0;
+        $compressed = 0;
 
         for ($index = 0; $index < $zip->numFiles; $index++) {
             $stat = $zip->statIndex($index);
@@ -160,10 +161,21 @@ final class UserSpreadsheetImportGuard
                 $this->reject();
             }
             $uncompressed += $size;
+            if ($compressed > PHP_INT_MAX - $compSize) {
+                $this->reject();
+            }
+            $compressed += $compSize;
 
             if (strcasecmp($name, 'xl/sharedStrings.xml') === 0 && $size > self::MAX_SHARED_STRINGS_XML) {
                 $this->reject();
             }
+        }
+
+        if ($compressed === 0 && $uncompressed > 0) {
+            $this->reject();
+        }
+        if ($compressed > 0 && $compressed <= intdiv(PHP_INT_MAX, self::MAX_RATIO) && $uncompressed > $compressed * self::MAX_RATIO) {
+            $this->reject();
         }
 
         return array_keys($seen);
