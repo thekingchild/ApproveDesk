@@ -1301,7 +1301,7 @@ This is a supplementary self-hosted patch release. It does not add schema, does 
 
 ### SH-SEC282.2 — Remediation
 
-- **SH-SEC282-ROLE-01:** permission ceilings + block self-role changes (GrantableRoleService, RoleAssignmentService, UserPolicy::assignRoles, UpdateUserAction, users Livewire)
+- **SH-SEC282-ROLE-01 — Complete (2026-08-31):** permission ceilings + block self-role changes (GrantableRoleService, RoleAssignmentService, UserPolicy::assignRoles, UpdateUserAction, users Livewire)
 - **SH-SEC282-PUSH-01:** pin web-push destinations, disable redirects, harden public-IP CIDRs, WebPushFactory
 - **SH-SEC282-API-01:** submissions:read Form Request on submission detail
 - **SH-SEC282-IMPORT-01:** ZIP/XML preflight + bounded A:F read filter; no toArray()

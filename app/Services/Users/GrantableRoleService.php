@@ -22,6 +22,7 @@ final class GrantableRoleService
             ->get();
 
         $names = [];
+        $ceiling = $this->permissions->ceiling($actor);
         foreach ($roles as $role) {
             if ($role->name === 'admin') {
                 if ($actor->isSystemOwner()) {
@@ -36,17 +37,14 @@ final class GrantableRoleService
                 continue;
             }
             if ($role->profile?->is_builtin) {
-                if ($actor->can('users.manage') || $actor->can('users.update')) {
-                    $names[] = (string) $role->name;
+                if (! $actor->can('users.manage') && ! $actor->can('users.update')) {
+                    continue;
                 }
-
-                continue;
-            }
-            if (! $actor->can('roles.assign.custom')) {
+            } elseif (! $actor->can('roles.assign.custom')) {
                 continue;
             }
 
-            if (array_diff($role->permissions->pluck('name')->all(), $this->permissions->ceiling($actor)) === []) {
+            if (array_diff($role->permissions->pluck('name')->all(), $ceiling) === []) {
                 $names[] = (string) $role->name;
             }
         }

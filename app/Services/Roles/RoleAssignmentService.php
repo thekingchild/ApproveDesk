@@ -17,44 +17,70 @@ final class RoleAssignmentService
     /** @param list<string> $roles */
     public function sync(User $actor, User $target, array $roles): User
     {
-        if ($target->isSystemOwner()) {
-            throw ValidationException::withMessages(['roles' => __('The System owner’s roles cannot be changed.')]);
-        }
         $resolved = $this->resolve($roles);
-        if ($resolved->isEmpty()) {
-            throw ValidationException::withMessages(['roles' => __('Assign at least one role.')]);
-        }
-        $existing = $target->roles()->pluck('roles.id')->all();
-        foreach ($resolved as $role) {
-            if ($role->name === 'super-admin' || ($role->name === 'admin' && ! $actor->isSystemOwner())) {
-                throw ValidationException::withMessages(['roles' => __('Only the System owner may assign Administrator authority.')]);
-            }
-            $profile = RoleProfile::query()->where('role_id', $role->id)->first();
-            if ($profile === null) {
-                throw ValidationException::withMessages(['roles' => __('That role has no managed profile.')]);
-            }
-            if ($profile->is_builtin && ! $actor->isSystemOwner() && $role->name !== 'admin'
-                && ! $actor->can('users.manage') && ! $actor->can('users.update')) {
-                throw ValidationException::withMessages(['roles' => __('You cannot grant one or more of the selected roles.')]);
-            }
-            if ($profile->is_archived && ! in_array($role->id, $existing, true)) {
-                throw ValidationException::withMessages(['roles' => __('Archived roles cannot be newly assigned.')]);
-            }
-            if (! $profile->is_builtin && ! $actor->isSystemOwner()) {
-                if (! $actor->can('roles.assign.custom')) {
-                    throw ValidationException::withMessages(['roles' => __('You are not allowed to assign custom roles.')]);
-                }
-                $held = [];
-                foreach ($role->permissions()->pluck('name') as $name) {
-                    $held[] = (string) $name;
-                }
-                $this->permissions->assertPermissionCeiling($actor, $held);
-            }
-        }
 
-        return DB::transaction(function () use ($actor, $target, $resolved, $existing): User {
+        return DB::transaction(function () use ($actor, $target, $resolved): User {
             $locked = User::query()->whereKey($target->id)->lockForUpdate()->firstOrFail();
-            $new = $resolved->pluck('id')->all();
+            if ($locked->isSystemOwner()) {
+                throw ValidationException::withMessages(['roles' => __('The System owner’s roles cannot be changed.')]);
+            }
+
+            $existing = $locked->roles()->lockForUpdate()->pluck('roles.id')->map(fn ($id): int => (int) $id)->all();
+            $new = $resolved->pluck('id')->map(fn ($id): int => (int) $id)->unique()->values()->all();
+            sort($existing);
+            sort($new);
+
+            if (! $actor->isSystemOwner() && $actor->is($locked) && $new !== $existing) {
+                throw ValidationException::withMessages(['roles' => __('You cannot change your own roles.')]);
+            }
+            if ($resolved->isEmpty()) {
+                throw ValidationException::withMessages(['roles' => __('Assign at least one role.')]);
+            }
+
+            $ceiling = $this->permissions->ceiling($actor);
+            foreach ($resolved as $role) {
+                if ($role->name === 'super-admin') {
+                    throw ValidationException::withMessages(['roles' => __('The internal System owner role cannot be assigned.')]);
+                }
+                if ($role->name === 'admin') {
+                    if (! $actor->isSystemOwner() && ! in_array($role->id, $existing, true)) {
+                        throw ValidationException::withMessages(['roles' => __('Only the System owner may assign Administrator authority.')]);
+                    }
+
+                    continue;
+                }
+                if (in_array($role->id, $existing, true)) {
+                    continue;
+                }
+
+                $profile = RoleProfile::query()->where('role_id', $role->id)->first();
+                if ($profile === null) {
+                    throw ValidationException::withMessages(['roles' => __('That role has no managed profile.')]);
+                }
+                if ($profile->is_archived && ! in_array($role->id, $existing, true)) {
+                    throw ValidationException::withMessages(['roles' => __('Archived roles cannot be newly assigned.')]);
+                }
+                if (! $actor->isSystemOwner()) {
+                    if ($profile->is_builtin) {
+                        if (! $actor->can('users.manage') && ! $actor->can('users.update')) {
+                            throw ValidationException::withMessages(['roles' => __('You cannot grant one or more of the selected roles.')]);
+                        }
+                    } elseif (! $actor->can('roles.assign.custom')) {
+                        throw ValidationException::withMessages(['roles' => __('You are not allowed to assign custom roles.')]);
+                    }
+
+                    if (array_diff($role->permissions()->pluck('name')->all(), $ceiling) !== []) {
+                        throw ValidationException::withMessages(['roles' => __('A role cannot contain permissions above your permission ceiling.')]);
+                    }
+                }
+            }
+
+            $existingAdmin = Role::query()->where('name', 'admin')->whereIn('id', $existing)->exists();
+            $newAdmin = $resolved->contains(fn (Role $role): bool => $role->name === 'admin');
+            if (! $actor->isSystemOwner() && $existingAdmin !== $newAdmin) {
+                throw ValidationException::withMessages(['roles' => __('Only the System owner may change the administrator role.')]);
+            }
+
             $locked->syncRoles($resolved);
             foreach (array_diff($new, $existing) as $roleId) {
                 RoleChangeEvent::query()->create(['actor_id' => $actor->id, 'role_id' => $roleId, 'target_user_id' => $locked->id, 'action' => 'role_assigned', 'after' => ['role_id' => $roleId, 'user_id' => $locked->id]]);
