@@ -3,11 +3,14 @@
 namespace App\Services\Notifications;
 
 use App\Support\OutboundPin;
+use GuzzleHttp\HandlerStack;
 use Minishlink\WebPush\WebPush;
 use RuntimeException;
 
 class WebPushFactory
 {
+    public function __construct(private readonly ?HandlerStack $handler = null) {}
+
     /**
      * @param  array<string, string>  $vapid
      * @param  OutboundPin|list<OutboundPin>  $pins
@@ -19,7 +22,7 @@ class WebPushFactory
 
     /**
      * @param  OutboundPin|list<OutboundPin>  $pins
-     * @return array{verify: true, allow_redirects: false, curl: array<int, list<string>>}
+     * @return array{verify: true, allow_redirects: false, curl: array<int, list<string>>, handler?: HandlerStack}
      */
     public function clientOptions(OutboundPin|array $pins): array
     {
@@ -33,12 +36,18 @@ class WebPushFactory
             throw new RuntimeException('Pinned web push delivery requires at least one validated destination.');
         }
 
-        return [
+        $options = [
             'verify' => true,
             'allow_redirects' => false,
             'curl' => [
                 CURLOPT_RESOLVE => $entries,
             ],
         ];
+
+        if ($this->handler !== null) {
+            $options['handler'] = $this->handler;
+        }
+
+        return $options;
     }
 }

@@ -28,10 +28,16 @@ final class OutboundDestination
     /** @var list<array{string, int}> */
     private const BLOCKED_IPV6_CIDRS = [
         ['::', 96],            // Unspecified, loopback, and IPv4-compatible space
+        ['::ffff:0:0', 96],     // IPv4-mapped (classified recursively below)
         ['100::', 64],         // Discard-only
+        ['64:ff9b:1::', 48],    // Local-use IPv4/IPv6 translation
         ['2001:2::', 48],      // Benchmarking
         ['2001:db8::', 32],    // Documentation
+        ['2002::', 16],        // Deprecated 6to4
+        ['3fff::', 20],        // Documentation
+        ['5f00::', 16],        // Segment routing SIDs
         ['fc00::', 7],         // Unique-local
+        ['fec0::', 10],        // Deprecated site-local
         ['fe80::', 10],        // Link-local
         ['ff00::', 8],         // Multicast
     ];

@@ -154,4 +154,61 @@ class OutboundDestinationTest extends TestCase
             }
         }
     }
+
+    public function test_special_use_ipv6_literals_are_rejected(): void
+    {
+        $destination = new OutboundDestination(new ArrayDnsResolver([], []));
+
+        foreach ([
+            '64:ff9b:1::1',
+            'fec0::1',
+            '2002:0a00:0001::',
+            '3fff::1',
+            '5f00::1',
+            '::ffff:10.0.0.1',
+        ] as $ip) {
+            try {
+                $destination->validate("https://[{$ip}]/push");
+                $this->fail("Expected special-use IPv6 literal {$ip} to be rejected.");
+            } catch (InvalidArgumentException) {
+                $this->addToAssertionCount(1);
+            }
+        }
+    }
+
+    public function test_hostnames_resolving_to_special_use_ipv6_addresses_are_rejected(): void
+    {
+        foreach ([
+            '64:ff9b:1::1',
+            'fec0::1',
+            '2002:0a00:0001::',
+            '3fff::1',
+            '5f00::1',
+            '::ffff:10.0.0.1',
+        ] as $index => $ip) {
+            $host = "blocked-{$index}.example.test";
+            $destination = new OutboundDestination(new ArrayDnsResolver([$host => [$ip]], []));
+
+            try {
+                $destination->validate("https://{$host}/push");
+                $this->fail("Expected hostname resolving to special-use IPv6 {$ip} to be rejected.");
+            } catch (InvalidArgumentException) {
+                $this->addToAssertionCount(1);
+            }
+        }
+    }
+
+    public function test_legitimate_global_ipv6_literal_and_hostname_are_allowed(): void
+    {
+        $ip = '2606:4700:4700::1111';
+        $destination = new OutboundDestination(new ArrayDnsResolver([
+            'push.example.test' => [$ip],
+        ], []));
+
+        $literal = $destination->validate("https://[{$ip}]/push");
+        $hostname = $destination->validate('https://push.example.test/push');
+
+        $this->assertSame($ip, $literal->ip);
+        $this->assertSame($ip, $hostname->ip);
+    }
 }
