@@ -7,6 +7,37 @@ use Tests\TestCase;
 
 class OutboundPinTest extends TestCase
 {
+    public function test_ipv6_literal_host_and_address_are_bracketed_for_curl_resolve(): void
+    {
+        $ip = '2606:4700:4700::1111';
+        $pin = new OutboundPin(
+            "https://[{$ip}]/push",
+            $ip,
+            443,
+            $ip,
+            [$ip],
+        );
+
+        $entry = "[{$ip}]:443:[{$ip}]";
+
+        $this->assertSame([$entry], OutboundPin::curlResolveEntries($pin));
+
+        $handle = curl_init("https://[{$ip}]/push");
+        curl_setopt_array($handle, [
+            CURLOPT_RESOLVE => [$entry],
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CONNECTTIMEOUT_MS => 50,
+            CURLOPT_TIMEOUT_MS => 50,
+            CURLOPT_PROXY => '',
+        ]);
+        curl_exec($handle);
+
+        $this->assertStringNotContainsString(
+            'Could not parse CURLOPT_RESOLVE entry',
+            curl_error($handle),
+        );
+    }
+
     public function test_http_options_disable_redirects_verify_tls_and_pin_every_address(): void
     {
         $pin = new OutboundPin(

@@ -59,6 +59,7 @@ final readonly class OutboundPin
 
     private static function resolveEntry(string $host, int $port, string $ip): string
     {
+        $host = filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) !== false ? '['.$host.']' : $host;
         $address = str_contains($ip, ':') ? '['.$ip.']' : $ip;
 
         return sprintf('%s:%d:%s', $host, $port, $address);

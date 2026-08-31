@@ -198,6 +198,35 @@ class OutboundDestinationTest extends TestCase
         }
     }
 
+    public function test_orchid_ipv6_literals_are_rejected(): void
+    {
+        $destination = new OutboundDestination(new ArrayDnsResolver([], []));
+
+        foreach (['2001:10::1', '2001:20::1'] as $ip) {
+            try {
+                $destination->validate("https://[{$ip}]/push");
+                $this->fail("Expected ORCHID IPv6 literal {$ip} to be rejected.");
+            } catch (InvalidArgumentException) {
+                $this->addToAssertionCount(1);
+            }
+        }
+    }
+
+    public function test_hostnames_resolving_to_orchid_ipv6_addresses_are_rejected(): void
+    {
+        foreach (['2001:10::1', '2001:20::1'] as $index => $ip) {
+            $host = "orchid-{$index}.example.test";
+            $destination = new OutboundDestination(new ArrayDnsResolver([$host => [$ip]], []));
+
+            try {
+                $destination->validate("https://{$host}/push");
+                $this->fail("Expected hostname resolving to ORCHID IPv6 {$ip} to be rejected.");
+            } catch (InvalidArgumentException) {
+                $this->addToAssertionCount(1);
+            }
+        }
+    }
+
     public function test_legitimate_global_ipv6_literal_and_hostname_are_allowed(): void
     {
         $ip = '2606:4700:4700::1111';

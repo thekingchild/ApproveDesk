@@ -32,6 +32,8 @@ final class OutboundDestination
         ['100::', 64],         // Discard-only
         ['64:ff9b:1::', 48],    // Local-use IPv4/IPv6 translation
         ['2001:2::', 48],      // Benchmarking
+        ['2001:10::', 28],     // Deprecated ORCHID
+        ['2001:20::', 28],     // ORCHIDv2
         ['2001:db8::', 32],    // Documentation
         ['2002::', 16],        // Deprecated 6to4
         ['3fff::', 20],        // Documentation
