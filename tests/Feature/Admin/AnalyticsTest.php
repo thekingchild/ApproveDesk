@@ -2,10 +2,16 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Actions\RequestTypes\PublishRequestTypeVersionAction;
+use App\Actions\RequestTypes\StoreSubmissionFieldValuesAction;
+use App\Enums\RequestFieldType;
 use App\Enums\SubmissionStatus;
 use App\Enums\TimeoutCalendar;
 use App\Enums\WorkflowActionType;
 use App\Enums\WorkflowStatus;
+use App\Models\RequestFieldDefinition;
+use App\Models\RequestType;
+use App\Models\RequestTypeVersion;
 use App\Models\Setting;
 use App\Models\Submission;
 use App\Models\User;
@@ -247,23 +253,17 @@ class AnalyticsTest extends TestCase
         $this->assertIsString($csv);
 
         $cells = $this->csvCells($csv);
-        $indexed = [];
-        foreach ($cells as $cell) {
-            foreach ($payloads['dangerous'] as $payload) {
-                if ($cell === $payload || $cell === "'".$payload) {
-                    $indexed[$payload] = $cell;
-                }
-            }
-        }
 
         foreach ($payloads['dangerous'] as $payload) {
-            $this->assertArrayHasKey($payload, $indexed, 'CSV is missing formula payload: '.$this->visible($payload));
-            $this->assertSame("'".$payload, $indexed[$payload], 'CSV formula payload must be apostrophe-prefixed: '.$this->visible($payload));
+            $this->assertContains("'".$payload, $cells, 'CSV is missing prefixed formula payload: '.$this->visible($payload));
+            $this->assertNotContains($payload, $cells, 'CSV still contains a raw formula cell: '.$this->visible($payload));
         }
 
-        $this->assertContains('Benign purchase', $cells);
+        $this->assertContains('Benign note', $cells);
         $this->assertContains('ApproveDesk approval analytics', $cells);
-        $this->assertNotContains("'Benign purchase", $cells);
+        $this->assertContains('Notes', $cells);
+        $this->assertNotContains("'Benign note", $cells);
+        $this->assertNotContains("'Notes", $cells);
         $this->assertContains((string) $payloads['started'], $cells);
         $this->assertNotContains("'".$payloads['started'], $cells);
     }
@@ -284,9 +284,10 @@ class AnalyticsTest extends TestCase
         try {
             file_put_contents($temporary, $contents);
             $workbook = IOFactory::load($temporary);
-            $this->assertSame(['Summary', 'Daily Activity', 'Bottlenecks', 'Active Workflows'], $workbook->getSheetNames());
+            $this->assertSame(['Summary', 'Daily Activity', 'Bottlenecks', 'Active Workflows', 'Request Fields'], $workbook->getSheetNames());
 
             $seen = [];
+            $stringValues = [];
             foreach ($workbook->getWorksheetIterator() as $sheet) {
                 foreach ($sheet->getRowIterator() as $row) {
                     $iterator = $row->getCellIterator();
@@ -303,11 +304,14 @@ class AnalyticsTest extends TestCase
                             continue;
                         }
 
+                        $stringValues[] = $value;
+
                         foreach ($payloads['dangerous'] as $payload) {
-                            if ($value === $payload || $value === "'".$payload) {
+                            $excelValue = str_replace(["\r\n", "\r"], "\n", $payload);
+                            if ($value === $excelValue || $value === "'".$excelValue) {
                                 $seen[$payload] = $cell;
                                 $this->assertSame(DataType::TYPE_STRING, $cell->getDataType(), $sheet->getTitle().' '.$cell->getCoordinate());
-                                $this->assertSame($payload, $value);
+                                $this->assertSame($excelValue, $value, $sheet->getTitle().' '.$cell->getCoordinate().' must keep the original visible text.');
                             }
                         }
                     }
@@ -316,7 +320,11 @@ class AnalyticsTest extends TestCase
 
             foreach ($payloads['dangerous'] as $payload) {
                 $this->assertArrayHasKey($payload, $seen, 'XLSX is missing formula payload: '.$this->visible($payload));
+                $this->assertNotContains("'".$payload, $stringValues, 'XLSX must not apostrophe-prefix: '.$this->visible($payload));
             }
+
+            $this->assertContains('Benign purchase', $stringValues);
+            $this->assertContains('Notes', $stringValues);
 
             $summary = $workbook->getSheetByName('Summary');
             $this->assertNotNull($summary);
@@ -369,11 +377,12 @@ class AnalyticsTest extends TestCase
         return $instance;
     }
 
-    private function submission(SubmissionStatus $status, string $title = 'Purchase request'): Submission
+    private function submission(SubmissionStatus $status, string $title = 'Purchase request', ?int $requestTypeVersionId = null): Submission
     {
         return Submission::factory()->create([
             'status' => $status,
             'title' => $title,
+            ...($requestTypeVersionId === null ? [] : ['request_type_version_id' => $requestTypeVersionId]),
         ]);
     }
 
@@ -391,19 +400,57 @@ class AnalyticsTest extends TestCase
             "\t=cmd",
             "\r=cmd",
             ' =HYPERLINK("http://evil.test","padded")',
+            ' +cmd',
+            ' -cmd',
+            ' @SUM(1)',
+            "\n=cmd",
+            "\x0b=cmd",
         ];
+        $named = array_slice($dangerous, 0, 8);
+
+        $type = RequestType::factory()->create(['name' => 'Injection type']);
+        $version = RequestTypeVersion::factory()->for($type)->create();
+        RequestFieldDefinition::factory()->for($version)->create([
+            'key' => 'notes',
+            'label' => 'Notes',
+            'type' => RequestFieldType::ShortText,
+            'position' => 0,
+            'is_reportable' => true,
+        ]);
+        foreach ($dangerous as $index => $payload) {
+            RequestFieldDefinition::factory()->for($version)->create([
+                'key' => 'inject_'.$index,
+                'label' => $payload,
+                'type' => RequestFieldType::ShortText,
+                'position' => $index + 1,
+                'is_reportable' => true,
+            ]);
+        }
+        app(PublishRequestTypeVersionAction::class)->execute($version);
+
+        $fieldValues = ['notes' => 'Benign note'];
+        foreach ($dangerous as $index => $payload) {
+            $fieldValues['inject_'.$index] = $payload;
+        }
 
         $activeTemplate = null;
         $activeStep = null;
 
-        foreach ($dangerous as $index => $payload) {
+        foreach ($named as $index => $payload) {
             $template = WorkflowTemplate::factory()->create(['name' => $payload]);
             $step = WorkflowTemplateStep::factory()->forTemplate($template, 1)->create([
                 'name' => $payload,
                 'timeout_hours' => 24,
                 'assignee_ids' => [$this->actor->id],
             ]);
-            $resolved = $this->submission(SubmissionStatus::Approved);
+            $resolved = $this->submission(
+                SubmissionStatus::Approved,
+                'Purchase request',
+                $index === 0 ? $version->id : null,
+            );
+            if ($index === 0) {
+                app(StoreSubmissionFieldValuesAction::class)->execute($resolved, $fieldValues);
+            }
             $instance = WorkflowInstance::factory()->create([
                 'submission_id' => $resolved->id,
                 'template_id' => $template->id,
@@ -429,7 +476,7 @@ class AnalyticsTest extends TestCase
 
         $this->assertNotNull($activeTemplate);
         $this->assertNotNull($activeStep);
-        foreach ([...$dangerous, 'Benign purchase'] as $title) {
+        foreach ([...$named, 'Benign purchase'] as $title) {
             $active = $this->submission(SubmissionStatus::InReview, $title);
             WorkflowInstance::factory()->create([
                 'submission_id' => $active->id,
@@ -443,7 +490,7 @@ class AnalyticsTest extends TestCase
 
         return [
             'dangerous' => $dangerous,
-            'started' => count($dangerous) * 2 + 1,
+            'started' => count($named) * 2 + 1,
         ];
     }
 
