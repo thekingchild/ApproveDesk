@@ -19,13 +19,13 @@ final class RoleAssignmentService
     {
         return DB::transaction(function () use ($actor, $target, $roles): User {
             $locked = User::query()->whereKey($target->id)->lockForUpdate()->firstOrFail();
-            $resolved = $this->resolve($roles);
             if ($locked->isSystemOwner()) {
                 throw ValidationException::withMessages(['roles' => __('The System owner’s roles cannot be changed.')]);
             }
 
             $existing = $locked->roles()->lockForUpdate()->pluck('roles.id')->map(fn ($id): int => (int) $id)->all();
             $existingRoles = Role::query()->whereIn('id', $existing)->orderBy('id')->lockForUpdate()->get();
+            $resolved = $this->resolve($roles);
             $ceiling = $this->permissions->ceiling($actor);
 
             if (! $actor->isSystemOwner()) {
