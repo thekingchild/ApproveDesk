@@ -17,10 +17,9 @@ final class RoleAssignmentService
     /** @param list<string> $roles */
     public function sync(User $actor, User $target, array $roles): User
     {
-        $resolved = $this->resolve($roles);
-
-        return DB::transaction(function () use ($actor, $target, $resolved): User {
+        return DB::transaction(function () use ($actor, $target, $roles): User {
             $locked = User::query()->whereKey($target->id)->lockForUpdate()->firstOrFail();
+            $resolved = $this->resolve($roles);
             if ($locked->isSystemOwner()) {
                 throw ValidationException::withMessages(['roles' => __('The System owner’s roles cannot be changed.')]);
             }

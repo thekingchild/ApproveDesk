@@ -28,31 +28,33 @@ final class UpdateUserAction
         if ($data->isActive !== $user->is_active) {
             Gate::forUser($actor)->authorize('activate', $user);
         }
-        $held = collect($user->roles()->pluck('name')->all())->map(fn ($role): string => (string) $role)->unique()->sort()->values()->all();
-        $requested = collect($data->roles)->map(fn ($role): string => (string) $role)->unique()->sort()->values()->all();
-        $rolesChanged = $requested !== $held;
-        $roles = $held;
-        if ($rolesChanged) {
-            try {
-                Gate::forUser($actor)->authorize('assignRoles', $user);
-            } catch (AuthorizationException) {
-                throw ValidationException::withMessages(['roles' => __('You cannot change these roles.')]);
-            }
-            $grantable = $this->roles->for($actor);
-            $forged = array_diff($requested, $grantable, $held);
-            if ($forged !== []) {
-                throw ValidationException::withMessages(['roles' => __('You cannot grant one or more of the selected roles.')]);
-            }
-            $roles = array_values(array_unique([
-                ...array_diff($held, $grantable),
-                ...array_intersect($requested, $grantable),
-            ]));
-            sort($roles);
-        }
         $needsSlot = $data->isActive && ! $user->is_active;
 
-        return $this->limits->runActivation($needsSlot ? 1 : 0, function () use ($user, $data, $actor, $roles, $rolesChanged): User {
+        return $this->limits->runActivation($needsSlot ? 1 : 0, function () use ($user, $data, $actor): User {
             $user = User::query()->whereKey($user->getKey())->lockForUpdate()->firstOrFail();
+            $held = collect($user->roles()->pluck('name')->all())->map(fn ($role): string => (string) $role)->unique()->sort()->values()->all();
+            $requested = collect($data->roles)->map(fn ($role): string => (string) $role)->unique()->sort()->values()->all();
+            $rolesChanged = $requested !== $held;
+            $roles = $held;
+
+            if ($rolesChanged) {
+                try {
+                    Gate::forUser($actor)->authorize('assignRoles', $user);
+                } catch (AuthorizationException) {
+                    throw ValidationException::withMessages(['roles' => __('You cannot change these roles.')]);
+                }
+                $grantable = $this->roles->for($actor);
+                $forged = array_diff($requested, $grantable, $held);
+                if ($forged !== []) {
+                    throw ValidationException::withMessages(['roles' => __('You cannot grant one or more of the selected roles.')]);
+                }
+                $roles = array_values(array_unique([
+                    ...array_diff($held, $grantable),
+                    ...array_intersect($requested, $grantable),
+                ]));
+                sort($roles);
+            }
+
             if ($user->is($actor) && ! $data->isActive) {
                 throw ValidationException::withMessages(['isActive' => __('You cannot deactivate your own account.')]);
             }
