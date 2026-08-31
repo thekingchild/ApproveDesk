@@ -7,11 +7,14 @@ use App\DTOs\UserData;
 use App\Models\Role;
 use App\Models\SystemOwner;
 use App\Models\User;
+use App\Policies\UserPolicy;
 use App\Services\Roles\RoleAssignmentService;
 use App\Services\Roles\RolePermissionService;
 use App\Services\Users\UserImportService;
 use Database\Seeders\RolesAndPermissionsSeeder;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
@@ -88,6 +91,39 @@ class RolePermissionCeilingTest extends TestCase
         app(RoleAssignmentService::class)->sync($manager, $target, [$role->name, 'admin']);
     }
 
+    public function test_assignment_locks_requested_authorization_state_in_deterministic_order_on_mysql(): void
+    {
+        if (DB::getDriverName() !== 'mysql') {
+            $this->markTestSkipped('SQLite does not emit SELECT ... FOR UPDATE; the CI MySQL job exercises these row-lock assertions.');
+        }
+
+        $owner = $this->owner();
+        $target = User::factory()->create()->assignRole('viewer');
+        $requested = app(RolePermissionService::class)->create($owner, 'Locked reviewer', null, ['reports.view']);
+        $requestedPermissionId = $requested->permissions()->where('name', 'reports.view')->value('permissions.id');
+        $queries = [];
+        DB::listen(function (QueryExecuted $query) use (&$queries): void {
+            $queries[] = ['sql' => strtolower($query->sql), 'bindings' => $query->bindings];
+        });
+
+        app(RoleAssignmentService::class)->sync($owner, $target, [$requested->name]);
+
+        $assertLocked = function (string $table, string $order, int $binding) use ($queries): void {
+            $matches = collect($queries)->filter(fn (array $query): bool => str_contains($query['sql'], "from `{$table}`")
+                && str_contains($query['sql'], 'for update')
+                && str_contains($query['sql'], $order)
+                && in_array($binding, $query['bindings'], true));
+
+            $this->assertNotEmpty($matches, "Expected a locked {$table} query ordered by {$order} containing binding {$binding}.");
+        };
+
+        $assertLocked('roles', 'order by `id` asc', $requested->id);
+        $assertLocked('role_profiles', 'order by `id` asc', $requested->id);
+        $assertLocked('role_has_permissions', 'order by `role_id` asc, `permission_id` asc', $requested->id);
+        $assertLocked('permissions', 'order by `id` asc', (int) $requestedPermissionId);
+        $this->assertTrue($target->fresh()->hasRole($requested));
+    }
+
     public function test_import_create_rejects_roles_the_actor_cannot_grant(): void
     {
         $importer = User::factory()->create();
@@ -138,6 +174,123 @@ class RolePermissionCeilingTest extends TestCase
 
         $this->expectException(ValidationException::class);
         app(RolePermissionService::class)->create($owner, 'Code editor', null, ['branding.manage', 'branding.custom_code.manage']);
+    }
+
+    public function test_users_update_actor_cannot_assign_department_head_above_ceiling(): void
+    {
+        $editor = User::factory()->create();
+        $editor->givePermissionTo(['users.update', 'users.view']);
+        $target = User::factory()->create()->assignRole('viewer');
+
+        try {
+            app(RoleAssignmentService::class)->sync($editor, $target, ['department-head']);
+            $this->fail('Expected permission ceiling validation failure.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('roles', $exception->errors());
+        }
+
+        $this->assertTrue($target->fresh()->hasRole('viewer'));
+        $this->assertFalse($target->fresh()->hasRole('department-head'));
+    }
+
+    public function test_non_owner_cannot_add_or_remove_own_roles_via_assignment_service(): void
+    {
+        $editor = User::factory()->create()->assignRole('viewer');
+        $editor->givePermissionTo(['users.update', 'users.view']);
+
+        try {
+            app(RoleAssignmentService::class)->sync($editor, $editor, ['viewer', 'approver']);
+            $this->fail('Expected self-assignment validation failure.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('roles', $exception->errors());
+        }
+
+        $this->assertTrue($editor->fresh()->hasRole('viewer'));
+        $this->assertFalse($editor->fresh()->hasRole('approver'));
+    }
+
+    public function test_non_owner_cannot_remove_one_of_their_own_roles_via_assignment_service(): void
+    {
+        $editor = User::factory()->create()->assignRole(['viewer', 'approver']);
+        $editor->givePermissionTo(['users.update', 'users.view']);
+
+        try {
+            app(RoleAssignmentService::class)->sync($editor, $editor, ['viewer']);
+            $this->fail('Expected self-removal validation failure.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('roles', $exception->errors());
+        }
+
+        $editor->refresh();
+        $this->assertTrue($editor->hasRole('viewer'));
+        $this->assertTrue($editor->hasRole('approver'));
+    }
+
+    public function test_assign_roles_policy_preserves_owner_bypass_and_blocks_non_owner_self_or_owner_targets(): void
+    {
+        $owner = $this->owner();
+        $editor = User::factory()->create();
+        $editor->givePermissionTo('users.update');
+        $target = User::factory()->create();
+        $policy = app(UserPolicy::class);
+
+        $this->assertTrue($policy->assignRoles($owner, $owner));
+        $this->assertTrue($policy->assignRoles($owner, $target));
+        $this->assertFalse($policy->assignRoles($editor, $editor));
+        $this->assertFalse($policy->assignRoles($editor, $owner));
+        $this->assertTrue($policy->assignRoles($editor, $target));
+    }
+
+    public function test_non_owner_self_profile_edit_cannot_change_roles_via_update_action(): void
+    {
+        $editor = User::factory()->create()->assignRole('viewer');
+        $editor->givePermissionTo(['users.update']);
+
+        try {
+            app(UpdateUserAction::class)->execute(
+                $editor,
+                new UserData(
+                    name: $editor->name,
+                    email: $editor->email,
+                    phone: $editor->phone,
+                    departmentId: $editor->department_id,
+                    roles: ['approver'],
+                    isActive: true,
+                ),
+                $editor,
+            );
+            $this->fail('Expected self-assignment validation failure.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('roles', $exception->errors());
+        }
+
+        $this->assertTrue($editor->fresh()->hasRole('viewer'));
+        $this->assertFalse($editor->fresh()->hasRole('approver'));
+    }
+
+    public function test_import_create_rejects_department_head_when_actor_ceiling_is_users_update_only(): void
+    {
+        $importer = User::factory()->create();
+        $importer->givePermissionTo(['users.import', 'users.create', 'users.update', 'users.view']);
+
+        try {
+            app(UserImportService::class)->commit([
+                [
+                    'status' => 'ready',
+                    'name' => 'Pat Head',
+                    'email' => 'pat.head@example.com',
+                    'department' => '',
+                    'manager_email' => '',
+                    'phone' => '',
+                    'roles' => 'department-head',
+                ],
+            ], $importer);
+            $this->fail('Expected permission ceiling validation failure.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('roles', $exception->errors());
+        }
+
+        $this->assertDatabaseMissing('users', ['email' => 'pat.head@example.com']);
     }
 
     private function owner(): User

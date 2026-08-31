@@ -29,6 +29,11 @@ class UserPolicy
         return true;
     }
 
+    public function assignRoles(User $actor, User $target): bool
+    {
+        return $actor->isSystemOwner() || ($actor->can('users.update') && ! $actor->is($target) && ! $target->isSystemOwner());
+    }
+
     public function anonymize(User $user, User $target): bool
     {
         return $user->can('users.anonymize') && $this->update($user, $target) && ! $user->is($target);

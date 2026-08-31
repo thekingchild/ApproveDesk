@@ -125,6 +125,19 @@ new #[Title('User management')] class extends Component {
             ->get();
     }
 
+    /** @return \Illuminate\Support\Collection<string, string> */
+    #[Computed]
+    public function roleLabels(): \Illuminate\Support\Collection
+    {
+        return Role::query()
+            ->whereIn('name', $this->roles)
+            ->with('profile')
+            ->get()
+            ->mapWithKeys(fn (Role $role): array => [
+                $role->name => $role->profile?->label ?? str($role->name)->replace('-', ' ')->title()->toString(),
+            ]);
+    }
+
     public function updatedSearch(): void
     {
         $this->resetPage();
@@ -419,11 +432,33 @@ new #[Title('User management')] class extends Component {
                 </div>
 
                 <div class="sm:col-span-2">
-                    <flux:checkbox.group wire:model="roles" :label="__('Roles')" class="grid gap-2 sm:grid-cols-2">
-                        @foreach ($this->availableRoles as $role)
-                            <flux:checkbox :value="$role->name" :label="$role->profile?->label ?? str($role->name)->replace('-', ' ')->title()" />
-                        @endforeach
-                    </flux:checkbox.group>
+                    @php($editingSelf = $editingUserId && Auth::id() === $editingUserId && ! Auth::user()?->isSystemOwner())
+                    @if ($editingSelf)
+                        <p class="text-sm font-medium">{{ __('Roles') }}</p>
+                        <div class="mt-2 flex flex-wrap gap-1" data-test="self-roles-read-only">
+                            @foreach ($roles as $role)
+                                <flux:badge color="zinc">{{ $this->roleLabels->get($role, str($role)->replace('-', ' ')->title()) }}</flux:badge>
+                            @endforeach
+                        </div>
+                        <p class="mt-1 text-sm text-zinc-500">{{ __('You cannot change your own roles.') }}</p>
+                    @else
+                        <flux:checkbox.group wire:model="roles" :label="__('Roles')" class="grid gap-2 sm:grid-cols-2">
+                            @foreach ($this->availableRoles as $role)
+                                <flux:checkbox :value="$role->name" :label="$role->profile?->label ?? str($role->name)->replace('-', ' ')->title()" />
+                            @endforeach
+                        </flux:checkbox.group>
+                        @php($preservedRoles = array_diff($roles, $this->availableRoles->pluck('name')->all()))
+                        @if ($editingUserId && $preservedRoles !== [])
+                            <div class="mt-3" data-test="preserved-roles-read-only">
+                                <p class="text-sm text-zinc-500">{{ __('Roles you cannot remove:') }}</p>
+                                <div class="mt-1 flex flex-wrap gap-1">
+                                    @foreach ($preservedRoles as $role)
+                                        <flux:badge color="zinc">{{ $this->roleLabels->get($role, str($role)->replace('-', ' ')->title()) }}</flux:badge>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endif
+                    @endif
                     <flux:error name="roles" />
                 </div>
 
@@ -433,7 +468,15 @@ new #[Title('User management')] class extends Component {
                 @endif
 
                 <div class="sm:col-span-2">
-                    <flux:checkbox wire:model="isActive" :label="__('Account is active')" />
+                    @if ($editingSelf)
+                        <p class="text-sm font-medium">{{ __('Account status') }}</p>
+                        <flux:badge class="mt-2" :color="$isActive ? 'lime' : 'red'" data-test="self-active-read-only">
+                            {{ $isActive ? __('Active') : __('Inactive') }}
+                        </flux:badge>
+                        <p class="mt-1 text-sm text-zinc-500">{{ __('You cannot change your own account status.') }}</p>
+                    @else
+                        <flux:checkbox wire:model="isActive" :label="__('Account is active')" />
+                    @endif
                     <flux:error name="isActive" />
                 </div>
             </div>

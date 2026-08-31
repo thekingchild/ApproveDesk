@@ -14,6 +14,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Validation\ValidationException;
 use Livewire\Livewire;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
@@ -237,6 +238,38 @@ class UserOnboardingTest extends TestCase
         $this->assertSame(1, $counts['created']);
         $this->assertDatabaseHas('users', ['email' => 'ella@corp.example']);
         unlink($path);
+    }
+
+    public function test_import_preview_or_commit_rejects_department_head_for_users_update_only_actor(): void
+    {
+        $importer = User::factory()->create();
+        $importer->givePermissionTo(['users.import', 'users.create', 'users.update', 'users.view']);
+
+        $service = app(UserImportService::class);
+        $analyzed = $service->analyze([
+            [
+                'name' => 'Pat Head',
+                'email' => 'pat.head@example.com',
+                'department' => '',
+                'manager_email' => '',
+                'phone' => '',
+                'roles' => 'department-head',
+            ],
+        ], $importer);
+
+        if (($analyzed[0]['status'] ?? '') === 'error') {
+            $this->assertSame('error', $analyzed[0]['status']);
+            $this->assertDatabaseMissing('users', ['email' => 'pat.head@example.com']);
+
+            return;
+        }
+
+        try {
+            $service->commit($analyzed, $importer);
+            $this->fail('Expected import of department-head to be rejected.');
+        } catch (ValidationException) {
+            $this->assertDatabaseMissing('users', ['email' => 'pat.head@example.com']);
+        }
     }
 
     public function test_import_page_requires_user_management_permission(): void

@@ -3,12 +3,15 @@
 namespace Tests\Feature\Admin;
 
 use App\Models\Department;
+use App\Models\RoleProfile;
 use App\Models\SystemOwner;
 use App\Models\User;
+use App\Services\Roles\RolePermissionService;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Livewire\Livewire;
+use PHPUnit\Framework\ExpectationFailedException;
 use Tests\TestCase;
 
 class UserManagementTest extends TestCase
@@ -177,5 +180,76 @@ class UserManagementTest extends TestCase
             ->assertRedirect(route('login'));
 
         $this->assertGuest();
+    }
+
+    public function test_non_owner_cannot_forge_a_self_role_change_through_livewire(): void
+    {
+        $editor = User::factory()->create()->assignRole('viewer');
+        $editor->givePermissionTo(['users.update', 'users.view']);
+
+        $component = Livewire::actingAs($editor)
+            ->test('pages::admin.users')
+            ->call('editUser', $editor->id)
+            ->set('roles', ['approver'])
+            ->call('save');
+
+        try {
+            $component->assertHasErrors(['roles']);
+        } catch (ExpectationFailedException) {
+            $component->assertForbidden();
+        }
+
+        $this->assertTrue($editor->fresh()->hasRole('viewer'));
+        $this->assertFalse($editor->fresh()->hasRole('approver'));
+    }
+
+    public function test_users_update_actor_cannot_assign_department_head_through_livewire(): void
+    {
+        $editor = User::factory()->create();
+        $editor->givePermissionTo(['users.update', 'users.view']);
+        $target = User::factory()->create()->assignRole('viewer');
+
+        Livewire::actingAs($editor)
+            ->test('pages::admin.users')
+            ->call('editUser', $target->id)
+            ->set('roles', ['department-head'])
+            ->call('save')
+            ->assertHasErrors(['roles']);
+
+        $this->assertTrue($target->fresh()->hasRole('viewer'));
+        $this->assertFalse($target->fresh()->hasRole('department-head'));
+    }
+
+    public function test_self_edit_renders_profile_role_labels_and_status_as_read_only(): void
+    {
+        RoleProfile::query()->where('slug', 'viewer')->update(['label' => 'Read only viewer']);
+        $editor = User::factory()->create()->assignRole('viewer');
+        $editor->givePermissionTo(['users.update', 'users.view']);
+
+        Livewire::actingAs($editor)
+            ->test('pages::admin.users')
+            ->call('editUser', $editor->id)
+            ->assertSee('Read only viewer')
+            ->assertSee('You cannot change your own roles.')
+            ->assertSee('You cannot change your own account status.')
+            ->assertSeeHtml('data-test="self-roles-read-only"')
+            ->assertSeeHtml('data-test="self-active-read-only"');
+    }
+
+    public function test_preserved_ungrantable_role_uses_its_profile_label(): void
+    {
+        $owner = User::factory()->create()->assignRole('super-admin');
+        SystemOwner::query()->create(['id' => SystemOwner::SINGLETON_ID, 'user_id' => $owner->id]);
+        $preserved = app(RolePermissionService::class)->create($owner, 'Quarter close reviewer', null, ['reports.view']);
+        $editor = User::factory()->create();
+        $editor->givePermissionTo(['users.update', 'users.view']);
+        $target = User::factory()->create()->assignRole($preserved);
+
+        Livewire::actingAs($editor)
+            ->test('pages::admin.users')
+            ->call('editUser', $target->id)
+            ->assertSee('Roles you cannot remove:')
+            ->assertSee('Quarter close reviewer')
+            ->assertSeeHtml('data-test="preserved-roles-read-only"');
     }
 }

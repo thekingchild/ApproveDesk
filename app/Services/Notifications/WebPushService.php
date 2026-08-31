@@ -7,13 +7,18 @@ use App\Models\PushSubscription;
 use App\Models\Setting;
 use App\Models\User;
 use App\Support\OutboundDestination;
+use App\Support\OutboundPin;
 use Minishlink\WebPush\Subscription;
 use Minishlink\WebPush\VAPID;
-use Minishlink\WebPush\WebPush;
 use Throwable;
 
 final class WebPushService
 {
+    public function __construct(
+        private readonly WebPushFactory $factory,
+        private readonly OutboundDestination $destination,
+    ) {}
+
     /**
      * @return array{publicKey: string, privateKey: string}
      */
@@ -40,14 +45,28 @@ final class WebPushService
 
     public function send(User $user, OutboundNotification $message): void
     {
+        /** @var list<array{PushSubscription, OutboundPin}> $validated */
+        $validated = [];
+
+        foreach ($user->pushSubscriptions as $row) {
+            try {
+                $validated[] = [$row, $this->destination->validate($row->endpoint)];
+            } catch (Throwable) {
+                $row->delete();
+            }
+        }
+
+        if ($validated === []) {
+            return;
+        }
+
         $keys = $this->vapidKeys();
-        $webPush = new WebPush([
-            'VAPID' => [
-                'subject' => config('app.url'),
-                'publicKey' => $keys['publicKey'],
-                'privateKey' => $keys['privateKey'],
-            ],
-        ]);
+        $pins = array_map(static fn (array $entry): OutboundPin => $entry[1], $validated);
+        $webPush = $this->factory->make([
+            'subject' => (string) config('app.url'),
+            'publicKey' => $keys['publicKey'],
+            'privateKey' => $keys['privateKey'],
+        ], $pins);
 
         $payload = json_encode([
             'title' => $message->subject,
@@ -55,9 +74,8 @@ final class WebPushService
             'url' => $message->actionUrl ?? route('notifications.index'),
         ], JSON_THROW_ON_ERROR);
 
-        foreach ($user->pushSubscriptions as $row) {
+        foreach ($validated as [$row]) {
             try {
-                app(OutboundDestination::class)->validate($row->endpoint);
                 $webPush->queueNotification(
                     Subscription::create([
                         'endpoint' => $row->endpoint,

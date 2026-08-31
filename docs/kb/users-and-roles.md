@@ -21,6 +21,8 @@ The owner may appoint a role manager. A role manager can work only with custom r
 
 A person can hold more than one role. Mixed roles add up — they receive every ability those roles include.
 
+When you grant roles on **Administration → Users**, every role you assign — including built-in roles — must stay within your own access. The System owner is not limited this way. A non-owner cannot change their own roles from this screen. Saving name, email, department, phone, or other profile fields does not change the roles the person already holds, including roles you cannot grant.
+
 Only the System owner can grant or remove the Administrator role. Built-in roles can be cloned but not edited or deleted. Archive a custom role to stop new assignments without removing it from people who already hold it.
 
 ## Account recovery
@@ -54,7 +56,7 @@ Phone is optional. Enter it in international E.164 form, starting with `+` and t
 
 ## Import users
 
-For large onboarding, open **Administration → Users → Import users**.
+For large onboarding, open **Administration → Users → Import users**. A spreadsheet may include at most 5,000 data rows. Oversized or highly compressed workbooks are refused before preview.
 
 1. Download the CSV template. Columns are `name`, `email`, `department`, `manager_email`, `phone`, `roles`. Only name and email are required.
 2. Fill it in Excel or a text editor and upload the `.csv` or `.xlsx`. Nothing is written yet.

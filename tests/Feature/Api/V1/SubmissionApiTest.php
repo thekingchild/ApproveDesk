@@ -154,4 +154,59 @@ class SubmissionApiTest extends TestCase
             ->assertForbidden()
             ->assertJsonPath('message', 'Your account has been deactivated.');
     }
+
+    public function test_submission_detail_allows_token_with_submissions_read(): void
+    {
+        $submission = Submission::factory()->for($this->submitter, 'submitter')->create([
+            'status' => SubmissionStatus::Draft,
+        ]);
+
+        Sanctum::actingAs($this->submitter, ['submissions:read']);
+
+        $this->getJson('/api/v1/submissions/'.$submission->id)->assertOk();
+    }
+
+    public function test_submission_detail_rejects_token_with_only_submissions_write(): void
+    {
+        $submission = Submission::factory()->for($this->submitter, 'submitter')->create([
+            'status' => SubmissionStatus::Draft,
+        ]);
+
+        Sanctum::actingAs($this->submitter, ['submissions:write']);
+
+        $this->getJson('/api/v1/submissions/'.$submission->id)->assertForbidden();
+    }
+
+    public function test_submission_detail_rejects_token_with_only_approvals_act(): void
+    {
+        $submission = Submission::factory()->for($this->submitter, 'submitter')->create([
+            'status' => SubmissionStatus::Draft,
+        ]);
+
+        Sanctum::actingAs($this->submitter, ['approvals:act']);
+
+        $this->getJson('/api/v1/submissions/'.$submission->id)->assertForbidden();
+    }
+
+    public function test_submission_detail_rejects_token_with_no_abilities(): void
+    {
+        $submission = Submission::factory()->for($this->submitter, 'submitter')->create([
+            'status' => SubmissionStatus::Draft,
+        ]);
+
+        Sanctum::actingAs($this->submitter, []);
+
+        $this->getJson('/api/v1/submissions/'.$submission->id)->assertForbidden();
+    }
+
+    public function test_submission_detail_rejects_approver_who_cannot_view_draft(): void
+    {
+        $submission = Submission::factory()->for($this->submitter, 'submitter')->create([
+            'status' => SubmissionStatus::Draft,
+        ]);
+
+        Sanctum::actingAs($this->approver, ['submissions:read']);
+
+        $this->getJson('/api/v1/submissions/'.$submission->id)->assertForbidden();
+    }
 }

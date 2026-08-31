@@ -33,6 +33,27 @@ class OutboundDestinationTest extends TestCase
         $destination->validate('https://printer.local/hooks');
     }
 
+    public function test_dns_hostname_with_trailing_dot_is_rejected_before_it_can_be_pinned(): void
+    {
+        $destination = new OutboundDestination(new ArrayDnsResolver([
+            'push-pin.invalid' => ['93.184.216.34'],
+        ], []));
+
+        $this->expectException(InvalidArgumentException::class);
+        $destination->validate('https://push-pin.invalid./push');
+    }
+
+    public function test_bracketed_global_ipv6_literal_is_not_treated_as_a_trailing_dot_hostname(): void
+    {
+        $ip = '2606:4700:4700::1111';
+        $destination = new OutboundDestination(new ArrayDnsResolver([], []));
+
+        $pin = $destination->validate("https://[{$ip}]/push");
+
+        $this->assertSame($ip, $pin->host);
+        $this->assertSame("https://[{$ip}]/push", $pin->url);
+    }
+
     public function test_public_hostname_whose_lookup_is_private_is_rejected(): void
     {
         $resolver = new ArrayDnsResolver([
@@ -47,12 +68,12 @@ class OutboundDestinationTest extends TestCase
     public function test_dns_rebinding_is_rejected_on_the_second_lookup(): void
     {
         $resolver = new ArrayDnsResolver([
-            'rebind.example.test' => ['203.0.113.10'],
+            'rebind.example.test' => ['93.184.216.34'],
         ], []);
         $destination = new OutboundDestination($resolver);
 
         $pin = $destination->validate('https://rebind.example.test/hooks');
-        $this->assertSame('203.0.113.10', $pin->ip);
+        $this->assertSame('93.184.216.34', $pin->ip);
 
         $resolver->set('rebind.example.test', ['10.0.0.1']);
 
@@ -63,7 +84,7 @@ class OutboundDestinationTest extends TestCase
     public function test_public_https_host_is_allowed_and_pinned(): void
     {
         $resolver = new ArrayDnsResolver([
-            'hooks.example.test' => ['203.0.113.10'],
+            'hooks.example.test' => ['93.184.216.34'],
         ], []);
         $destination = new OutboundDestination($resolver);
 
@@ -71,15 +92,15 @@ class OutboundDestinationTest extends TestCase
 
         $this->assertSame('hooks.example.test', $pin->host);
         $this->assertSame(443, $pin->port);
-        $this->assertSame('203.0.113.10', $pin->ip);
+        $this->assertSame('93.184.216.34', $pin->ip);
         $this->assertSame('https://hooks.example.test/approvedesk', $pin->url);
-        $this->assertStringContainsString('hooks.example.test:443:203.0.113.10', $pin->curlResolve());
+        $this->assertStringContainsString('hooks.example.test:443:93.184.216.34', $pin->curlResolve());
     }
 
     public function test_userinfo_and_nonstandard_ports_are_rejected(): void
     {
         $destination = new OutboundDestination(new ArrayDnsResolver([
-            'hooks.example.test' => ['203.0.113.10'],
+            'hooks.example.test' => ['93.184.216.34'],
         ], []));
 
         try {
@@ -114,5 +135,184 @@ class OutboundDestinationTest extends TestCase
 
         $this->assertSame('10.0.0.5', $pin->ip);
         $this->assertSame(9000, $pin->port);
+    }
+
+    public function test_documentation_ipv4_203_0_113_10_is_rejected(): void
+    {
+        $destination = new OutboundDestination(new ArrayDnsResolver([], []));
+
+        $this->expectException(InvalidArgumentException::class);
+        $destination->validate('https://203.0.113.10/push');
+    }
+
+    public function test_documentation_range_hostname_lookup_is_rejected(): void
+    {
+        $resolver = new ArrayDnsResolver([
+            'example.test' => ['203.0.113.10'],
+        ], []);
+        $destination = new OutboundDestination($resolver);
+
+        $this->expectException(InvalidArgumentException::class);
+        $destination->validate('https://example.test/push');
+    }
+
+    public function test_link_local_multicast_and_unique_local_addresses_are_rejected(): void
+    {
+        $destination = new OutboundDestination(new ArrayDnsResolver([], []));
+
+        foreach ([
+            'https://169.254.1.1/push',
+            'https://224.0.0.1/push',
+            'https://[fd00::1]/push',
+            'https://[fe80::1]/push',
+            'https://[::1]/push',
+        ] as $url) {
+            try {
+                $destination->validate($url);
+                $this->fail("Expected {$url} to be rejected.");
+            } catch (InvalidArgumentException) {
+                $this->addToAssertionCount(1);
+            }
+        }
+    }
+
+    public function test_special_use_ipv6_literals_are_rejected(): void
+    {
+        $destination = new OutboundDestination(new ArrayDnsResolver([], []));
+
+        foreach ([
+            '64:ff9b:1::1',
+            '64:ff9b::5db8:d822',
+            '64:ff9b::a00:1',
+            '64:ff9b::7f00:1',
+            'fec0::1',
+            '2001::1',
+            '2002:0a00:0001::',
+            '3fff::1',
+            '5f00::1',
+            '::ffff:10.0.0.1',
+            '::ffff:93.184.216.34',
+        ] as $ip) {
+            try {
+                $destination->validate("https://[{$ip}]/push");
+                $this->fail("Expected special-use IPv6 literal {$ip} to be rejected.");
+            } catch (InvalidArgumentException) {
+                $this->addToAssertionCount(1);
+            }
+        }
+    }
+
+    public function test_hostnames_resolving_to_special_use_ipv6_addresses_are_rejected(): void
+    {
+        foreach ([
+            '64:ff9b:1::1',
+            '64:ff9b::5db8:d822',
+            '64:ff9b::a00:1',
+            '64:ff9b::7f00:1',
+            'fec0::1',
+            '2001::1',
+            '2002:0a00:0001::',
+            '3fff::1',
+            '5f00::1',
+            '::ffff:10.0.0.1',
+            '::ffff:93.184.216.34',
+        ] as $index => $ip) {
+            $host = "blocked-{$index}.example.test";
+            $destination = new OutboundDestination(new ArrayDnsResolver([$host => [$ip]], []));
+
+            try {
+                $destination->validate("https://{$host}/push");
+                $this->fail("Expected hostname resolving to special-use IPv6 {$ip} to be rejected.");
+            } catch (InvalidArgumentException) {
+                $this->addToAssertionCount(1);
+            }
+        }
+    }
+
+    public function test_orchid_ipv6_literals_are_rejected(): void
+    {
+        $destination = new OutboundDestination(new ArrayDnsResolver([], []));
+
+        foreach (['2001:10::1', '2001:20::1'] as $ip) {
+            try {
+                $destination->validate("https://[{$ip}]/push");
+                $this->fail("Expected ORCHID IPv6 literal {$ip} to be rejected.");
+            } catch (InvalidArgumentException) {
+                $this->addToAssertionCount(1);
+            }
+        }
+    }
+
+    public function test_hostnames_resolving_to_orchid_ipv6_addresses_are_rejected(): void
+    {
+        foreach (['2001:10::1', '2001:20::1'] as $index => $ip) {
+            $host = "orchid-{$index}.example.test";
+            $destination = new OutboundDestination(new ArrayDnsResolver([$host => [$ip]], []));
+
+            try {
+                $destination->validate("https://{$host}/push");
+                $this->fail("Expected hostname resolving to ORCHID IPv6 {$ip} to be rejected.");
+            } catch (InvalidArgumentException) {
+                $this->addToAssertionCount(1);
+            }
+        }
+    }
+
+    public function test_ipv6_addresses_outside_known_global_unicast_or_in_reserved_aggregates_are_rejected(): void
+    {
+        $destination = new OutboundDestination(new ArrayDnsResolver([], []));
+
+        foreach ([
+            '100:0:0:1::1',
+            '2001:100::1',
+            '4000::1',
+            '8000::1',
+            'f000::1',
+        ] as $ip) {
+            try {
+                $destination->validate("https://[{$ip}]/push");
+                $this->fail("Expected non-global or reserved IPv6 literal {$ip} to be rejected.");
+            } catch (InvalidArgumentException) {
+                $this->addToAssertionCount(1);
+            }
+        }
+    }
+
+    public function test_dns_results_outside_known_global_unicast_or_in_reserved_aggregates_are_rejected(): void
+    {
+        foreach ([
+            '100:0:0:1::1',
+            '2001:100::1',
+            '4000::1',
+            '8000::1',
+            'f000::1',
+        ] as $index => $ip) {
+            $host = "reserved-{$index}.example.test";
+            $destination = new OutboundDestination(new ArrayDnsResolver([$host => [$ip]], []));
+
+            try {
+                $destination->validate("https://{$host}/push");
+                $this->fail("Expected hostname resolving to non-global or reserved IPv6 {$ip} to be rejected.");
+            } catch (InvalidArgumentException) {
+                $this->addToAssertionCount(1);
+            }
+        }
+    }
+
+    public function test_ordinary_public_ipv4_and_legitimate_global_ipv6_are_allowed(): void
+    {
+        $ipv4 = '93.184.216.34';
+        $ipv6 = '2606:4700:4700::1111';
+        $destination = new OutboundDestination(new ArrayDnsResolver([
+            'push.example.test' => [$ipv6],
+        ], []));
+
+        $ipv4Literal = $destination->validate("https://{$ipv4}/push");
+        $ipv6Literal = $destination->validate("https://[{$ipv6}]/push");
+        $hostname = $destination->validate('https://push.example.test/push');
+
+        $this->assertSame($ipv4, $ipv4Literal->ip);
+        $this->assertSame($ipv6, $ipv6Literal->ip);
+        $this->assertSame($ipv6, $hostname->ip);
     }
 }

@@ -74,4 +74,21 @@ class PushSubscriptionTest extends TestCase
 
         $this->assertSame(0, PushSubscription::query()->where('user_id', $user->id)->count());
     }
+
+    public function test_trailing_dot_push_endpoint_is_rejected(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->postJson(route('settings.push-subscriptions.store'), [
+                'endpoint' => 'https://push.example.test./push',
+                'keys' => [
+                    'p256dh' => str_repeat('B', 88),
+                    'auth' => str_repeat('C', 24),
+                ],
+            ])
+            ->assertUnprocessable();
+
+        $this->assertDatabaseCount('push_subscriptions', 0);
+    }
 }

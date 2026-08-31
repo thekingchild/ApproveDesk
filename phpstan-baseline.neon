@@ -393,24 +393,6 @@ parameters:
 			path: app/Services/Users/UserImportService.php
 
 		-
-			message: '#^Method App\\Services\\Users\\UserImportService\:\:spreadsheetRows\(\) should return list\<array\<string, string\>\> but returns array\<array\<string, string\>\>\.$#'
-			identifier: return.type
-			count: 1
-			path: app/Services/Users/UserImportService.php
-
-		-
-			message: '#^Parameter \#1 \$header of method App\\Services\\Users\\UserImportService\:\:combine\(\) expects list\<string\>, array\<string\> given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Services/Users/UserImportService.php
-
-		-
-			message: '#^Parameter \#2 \$data of method App\\Services\\Users\\UserImportService\:\:combine\(\) expects list\<mixed\>, array given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Services/Users/UserImportService.php
-
-		-
 			message: '#^Parameter \#2 \$offset of function fseek expects int, int\|false given\.$#'
 			identifier: argument.type
 			count: 1

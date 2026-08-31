@@ -162,6 +162,7 @@ Locked product decision for Phase 8.2. It does not reopen Phase 8.1. Design: [do
 | SH-LP275 | v2.7.5 | Optional public landing page with login-first default | Complete |
 | SH-COM280/SH-THM280 | v2.8.0 | Owner announcements and selectable application themes | Complete |
 | SH-UX281 | v2.8.1 | Dashboard announcements, company identity, printable branding, and collapsible navigation | Complete |
+| SH-SEC282 | v2.8.2 | Security assessment remediation: role ceilings, web-push SSRF, API scope, bounded imports, safe exports | In progress |
 | 10 | v3.0.0 | SaaS multi-tenancy foundation | Not started |
 | 11 | v3.1.0 | Paystack and Flutterwave subscriptions | Not started |
 | 12 | v3.2.0 | SaaS onboarding, entitlements, and commercial operations | Not started |
@@ -1284,6 +1285,36 @@ This is a supplementary self-hosted patch release. It does not change announceme
 **Phase demo:** the System owner formats and publishes a long announcement; an eligible person sees a compact excerpt only on Dashboard, expands and collapses it, and can acknowledge it when required. An administrator saves a long company name; the navigation remains usable and the full company identity appears beside the logo in a PDF-ready approval report. On desktop, the person collapses the sidebar, continues working with more horizontal space, and restores it from the visible control.
 
 **Out of scope:** announcement scheduling or delivery outside Dashboard, a full document editor, image/file embeds, arbitrary HTML/CSS, a second company-name setting, per-report branding templates, changing report evidence content, or redesigning mobile navigation.
+
+---
+
+## Phase SH-SEC282 — Security assessment remediation — In progress
+
+**Goal:** close the five validated findings from the v2.7.2 repository security assessment on the self-hosted line: permission ceilings on role assignment (including self-service), web-push request pinning and redirect denial, `submissions:read` on the submission detail API, bounded spreadsheet import, and formula-safe analytics exports.
+
+This is a supplementary self-hosted patch release. It does not add schema, does not start Phase 10 SaaS multi-tenancy, and does not change workflow-engine semantics. No migration is required.
+
+### SH-SEC282.1 — Plan and failing tests
+
+- **SH-SEC282-PLAN-01 — Complete (2026-08-31):** release-map row + this phase section
+- **SH-SEC282-RED-01 — Complete (2026-08-31):** failing regression tests for all five findings
+
+### SH-SEC282.2 — Remediation
+
+- **SH-SEC282-ROLE-01 — Complete (2026-08-31):** permission ceilings + block self-role changes (GrantableRoleService, RoleAssignmentService, UserPolicy::assignRoles, UpdateUserAction, users Livewire)
+- **SH-SEC282-PUSH-01 — Complete (2026-08-31):** pin web-push destinations, disable redirects, harden public-IP CIDRs, WebPushFactory
+- **SH-SEC282-API-01 — Complete (2026-08-31):** submissions:read Form Request on submission detail
+- **SH-SEC282-IMPORT-01 — Complete (2026-08-31):** ZIP/XML preflight + bounded A:F read filter; no toArray()
+- **SH-SEC282-EXPORT-01 — Complete (2026-08-31):** CSV formula prefix neutralization + XLSX explicit string typing
+
+### SH-SEC282.3 — Help and release
+
+- **SH-SEC282-DOC-01 — Complete (2026-08-31):** Help/OpenAPI/DEPLOYMENT/changelog
+- **SH-SEC282-REL-01:** full gates, PR, annotated v2.8.2 tag, two-checkout sync
+
+**Phase demo:** a delegated user editor cannot grant Department head or change their own roles; web-push delivery pins DNS, refuses redirects, and drops documentation-range destinations; a write-only API token cannot read submission detail; a hostile XLSX is rejected before spreadsheet load; analytics CSV/XLSX exports treat attacker-controlled `=` prefixes as text.
+
+**Out of scope:** Phase 10 tenancy, installer takeover, CSP nonces, SaaS branches, and version bumps before the CI release push.
 
 ---
 

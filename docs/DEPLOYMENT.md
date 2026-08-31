@@ -157,6 +157,7 @@ Do not enable multiple app replicas with the local file/session volume. A future
 - [ ] Backups scheduled (JetBackup / Plesk Backup Manager) **and a restore drill done**
 - [ ] **Administration → Backups** has a local database snapshot and a files snapshot after first use. In-app Verify compares the file to the recorded size and SHA-256 before any table or ZIP checks, so a replaced remote object that still looks like a dump is refused.
 - [ ] Admin accounts have 2FA enabled
+- [ ] Runtime security verification in §12 is complete (web-push pinning, installer ingress allow-list, `installed.lock`)
 - [ ] The installer-created System owner exists (`php artisan tinker` → `App\Models\SystemOwner::query()->first()`). If ownership is missing after an upgrade, run `php artisan owner:assign {email}` once. This command will not overwrite an existing owner.
 
 ## 9. Hardening the database user (audit integrity)
@@ -191,3 +192,13 @@ Performance budgets: [PERFORMANCE.md](PERFORMANCE.md).
 | Cron "works" but nothing happens | wrong PHP binary path; check the cron's PHP version matches MultiPHP |
 | Container is unhealthy | confirm port 8080, `/up`, database reachability, `APP_KEY`, and writable `/var/www/html/storage` volume |
 | Installer loops in a container | use `SESSION_DRIVER=file` until migrations exist; confirm the storage volume persists and is writable |
+
+## 12. Runtime security verification
+
+This security patch does not add a migration or a new configuration key. Existing installations can run the new code immediately after replacing application files.
+
+Confirm on the running host:
+
+- [ ] Web-push delivery pins destinations and does not follow redirects. Public endpoints still send; invalid endpoints are still removed.
+- [ ] Installer ingress allow-listing is enforced at every public entry point and fails closed. A disallowed source cannot reach any installer step. This is an operational host check, not an application finding closed by this patch.
+- [ ] After installation, `storage/app/installed.lock` (or `APP_INSTALLED=true`) makes every `/install` URL unavailable, including `/install/done`.

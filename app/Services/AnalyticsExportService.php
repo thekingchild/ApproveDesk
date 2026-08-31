@@ -8,6 +8,7 @@ use Dompdf\Dompdf;
 use Dompdf\Options;
 use Illuminate\Support\Facades\View;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\Shared\Date;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
@@ -40,30 +41,30 @@ final class AnalyticsExportService
             throw new RuntimeException('Unable to open the CSV export stream.');
         }
 
-        fputcsv($stream, ['ApproveDesk approval analytics']);
-        fputcsv($stream, ['Cohort', 'Workflows started in selected period']);
-        fputcsv($stream, ['From', $report['from']->toDateString(), 'To', $report['to']->toDateString()]);
-        fputcsv($stream, []);
-        fputcsv($stream, ['Metric', 'Value']);
+        $this->writeCsvRow($stream, ['ApproveDesk approval analytics']);
+        $this->writeCsvRow($stream, ['Cohort', 'Workflows started in selected period']);
+        $this->writeCsvRow($stream, ['From', $report['from']->toDateString(), 'To', $report['to']->toDateString()]);
+        $this->writeCsvRow($stream, []);
+        $this->writeCsvRow($stream, ['Metric', 'Value']);
 
         foreach ($report['summary'] as $metric => $value) {
-            fputcsv($stream, [str_replace('_', ' ', ucfirst((string) $metric)), $value ?? 'N/A']);
+            $this->writeCsvRow($stream, [str_replace('_', ' ', ucfirst((string) $metric)), $value ?? 'N/A']);
         }
 
-        fputcsv($stream, []);
-        fputcsv($stream, ['Daily activity']);
-        fputcsv($stream, ['Date', 'Started', 'Resolved']);
+        $this->writeCsvRow($stream, []);
+        $this->writeCsvRow($stream, ['Daily activity']);
+        $this->writeCsvRow($stream, ['Date', 'Started', 'Resolved']);
 
         foreach ($report['daily'] as $day) {
-            fputcsv($stream, [$day['date'], $day['started'], $day['resolved']]);
+            $this->writeCsvRow($stream, [$day['date'], $day['started'], $day['resolved']]);
         }
 
-        fputcsv($stream, []);
-        fputcsv($stream, ['Step bottlenecks']);
-        fputcsv($stream, ['Workflow', 'Step', 'Average completed minutes', 'Completed samples', 'Open', 'Overdue', 'Oldest open minutes']);
+        $this->writeCsvRow($stream, []);
+        $this->writeCsvRow($stream, ['Step bottlenecks']);
+        $this->writeCsvRow($stream, ['Workflow', 'Step', 'Average completed minutes', 'Completed samples', 'Open', 'Overdue', 'Oldest open minutes']);
 
         foreach ($report['bottlenecks'] as $step) {
-            fputcsv($stream, [
+            $this->writeCsvRow($stream, [
                 $step['workflow'],
                 $step['step'],
                 $step['average_minutes'] ?? 'N/A',
@@ -75,13 +76,13 @@ final class AnalyticsExportService
         }
 
         if (($report['custom_fields'] ?? []) !== []) {
-            fputcsv($stream, []);
-            fputcsv($stream, ['Request field breakdown']);
-            fputcsv($stream, ['Field', 'Value', 'Count']);
+            $this->writeCsvRow($stream, []);
+            $this->writeCsvRow($stream, ['Request field breakdown']);
+            $this->writeCsvRow($stream, ['Field', 'Value', 'Count']);
 
             foreach ($report['custom_fields'] as $field) {
                 foreach ($field['values'] as $value) {
-                    fputcsv($stream, [$field['label'], $value['value'], $value['count']]);
+                    $this->writeCsvRow($stream, [$field['label'], $value['value'], $value['count']]);
                 }
             }
         }
@@ -152,15 +153,13 @@ final class AnalyticsExportService
         $row = 2;
 
         foreach ($report['bottlenecks'] as $step) {
-            $bottlenecks->fromArray([[
-                $step['workflow'],
-                $step['step'],
-                $step['average_minutes'] === null ? null : $step['average_minutes'] / 60,
-                $step['completed_samples'],
-                $step['open'],
-                $step['overdue'],
-                $step['oldest_open_minutes'] === null ? null : $step['oldest_open_minutes'] / 60,
-            ]], null, 'A'.$row, true);
+            $this->setStringCell($bottlenecks, 'A'.$row, $step['workflow']);
+            $this->setStringCell($bottlenecks, 'B'.$row, $step['step']);
+            $bottlenecks->setCellValue('C'.$row, $step['average_minutes'] === null ? null : $step['average_minutes'] / 60);
+            $bottlenecks->setCellValue('D'.$row, $step['completed_samples']);
+            $bottlenecks->setCellValue('E'.$row, $step['open']);
+            $bottlenecks->setCellValue('F'.$row, $step['overdue']);
+            $bottlenecks->setCellValue('G'.$row, $step['oldest_open_minutes'] === null ? null : $step['oldest_open_minutes'] / 60);
             $row++;
         }
 
@@ -180,14 +179,12 @@ final class AnalyticsExportService
         $row = 2;
 
         foreach ($report['slowest_active'] as $workflow) {
-            $active->fromArray([[
-                $workflow['reference'],
-                $workflow['title'],
-                $workflow['step'],
-                Date::PHPToExcel($workflow['started_at']),
-                $workflow['elapsed_minutes'] / 60,
-                $workflow['overdue'] ? 'Overdue' : 'Within SLA',
-            ]], null, 'A'.$row, true);
+            $this->setStringCell($active, 'A'.$row, $workflow['reference']);
+            $this->setStringCell($active, 'B'.$row, $workflow['title']);
+            $this->setStringCell($active, 'C'.$row, $workflow['step']);
+            $active->setCellValue('D'.$row, Date::PHPToExcel($workflow['started_at']));
+            $active->setCellValue('E'.$row, $workflow['elapsed_minutes'] / 60);
+            $active->setCellValue('F'.$row, $workflow['overdue'] ? 'Overdue' : 'Within SLA');
             $row++;
         }
 
@@ -199,6 +196,27 @@ final class AnalyticsExportService
         $this->styleSheet($active, 1, max(1, $row - 1), 6);
         foreach ([20, 42, 24, 20, 18, 16] as $index => $width) {
             $active->getColumnDimension(Coordinate::stringFromColumnIndex($index + 1))->setWidth($width);
+        }
+
+        if (($report['custom_fields'] ?? []) !== []) {
+            $fields = $workbook->createSheet();
+            $fields->setTitle('Request Fields');
+            $fields->fromArray(['Field', 'Value', 'Count'], null, 'A1', true);
+            $row = 2;
+
+            foreach ($report['custom_fields'] as $field) {
+                foreach ($field['values'] as $value) {
+                    $this->setStringCell($fields, 'A'.$row, $field['label']);
+                    $this->setStringCell($fields, 'B'.$row, $value['value']);
+                    $fields->setCellValue('C'.$row, $value['count']);
+                    $row++;
+                }
+            }
+
+            $this->styleSheet($fields, 1, max(1, $row - 1), 3);
+            foreach ([34, 42, 12] as $index => $width) {
+                $fields->getColumnDimension(Coordinate::stringFromColumnIndex($index + 1))->setWidth($width);
+            }
         }
 
         $temporary = tempnam(sys_get_temp_dir(), 'approvedesk-xlsx-');
@@ -239,6 +257,48 @@ final class AnalyticsExportService
         $document->getCanvas()->page_text(500, 812, 'Page {PAGE_NUM} of {PAGE_COUNT}', $font, 8, [0.35, 0.35, 0.4]);
 
         return $document->output();
+    }
+
+    /**
+     * @param  resource  $stream
+     * @param  list<mixed>  $row
+     */
+    private function writeCsvRow($stream, array $row): void
+    {
+        fputcsv($stream, array_map($this->csvCell(...), $row));
+    }
+
+    private function csvCell(mixed $value): mixed
+    {
+        if (! is_string($value)) {
+            return $value;
+        }
+
+        if ($this->isCsvFormula($value)) {
+            return "'".$value;
+        }
+
+        return $value;
+    }
+
+    private function isCsvFormula(string $value): bool
+    {
+        if ($value === '') {
+            return false;
+        }
+
+        $first = $value[0];
+
+        if (in_array($first, ['=', '+', '-', '@', "\t", "\r"], true)) {
+            return true;
+        }
+
+        return preg_match('/\A[\s]+[=+\-@]/', $value) === 1;
+    }
+
+    private function setStringCell(Worksheet $sheet, string $coordinate, mixed $value): void
+    {
+        $sheet->setCellValueExplicit($coordinate, (string) $value, DataType::TYPE_STRING);
     }
 
     private function styleSheet(Worksheet $sheet, int $headerRow, int $lastRow, int $lastColumn): void

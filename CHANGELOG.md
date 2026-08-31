@@ -6,6 +6,16 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ## [Unreleased]
 
+### Security
+
+- Role grants, including built-in roles, cannot exceed the editor's own access. A non-owner cannot change their own roles from user administration. Saving a person's profile leaves roles they already hold unchanged, including roles the editor cannot grant.
+- Web-push delivery pins destinations and does not follow redirects.
+- Reading one submission through the API requires the `submissions:read` ability in addition to model authorization.
+- User spreadsheet import refuses oversized or highly compressed workbooks before preview and accepts at most 5,000 data rows.
+- Analytics CSV and Excel exports keep text as text so spreadsheet applications do not treat request content as formulas.
+
+Installer ingress allow-listing and `storage/app/installed.lock` remain operational verification on the deployed host. They are not application findings closed by this patch. No migration or new configuration key is required.
+
 ## [2.8.1] - 2026-08-30
 
 ### Changed

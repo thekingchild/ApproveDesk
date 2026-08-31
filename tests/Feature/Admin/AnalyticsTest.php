@@ -2,10 +2,16 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Actions\RequestTypes\PublishRequestTypeVersionAction;
+use App\Actions\RequestTypes\StoreSubmissionFieldValuesAction;
+use App\Enums\RequestFieldType;
 use App\Enums\SubmissionStatus;
 use App\Enums\TimeoutCalendar;
 use App\Enums\WorkflowActionType;
 use App\Enums\WorkflowStatus;
+use App\Models\RequestFieldDefinition;
+use App\Models\RequestType;
+use App\Models\RequestTypeVersion;
 use App\Models\Setting;
 use App\Models\Submission;
 use App\Models\User;
@@ -18,6 +24,7 @@ use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Livewire\Livewire;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use Tests\TestCase;
 
@@ -234,6 +241,113 @@ class AnalyticsTest extends TestCase
             ->assertSessionHasErrors(['days', 'format']);
     }
 
+    public function test_csv_export_prefixes_formula_injection_payloads_with_an_apostrophe(): void
+    {
+        $payloads = $this->seedFormulaInjectionAnalytics();
+
+        $response = $this->actingAs($this->admin)
+            ->get(route('admin.analytics.export', ['days' => 30, 'format' => 'csv']));
+
+        $response->assertOk();
+        $csv = $response->getContent();
+        $this->assertIsString($csv);
+
+        $cells = $this->csvCells($csv);
+
+        foreach ($payloads['dangerous'] as $payload) {
+            $this->assertContains("'".$payload, $cells, 'CSV is missing prefixed formula payload: '.$this->visible($payload));
+            $this->assertNotContains($payload, $cells, 'CSV still contains a raw formula cell: '.$this->visible($payload));
+        }
+
+        $this->assertContains('Benign note', $cells);
+        $this->assertContains('ApproveDesk approval analytics', $cells);
+        $this->assertContains('Notes', $cells);
+        $this->assertNotContains("'Benign note", $cells);
+        $this->assertNotContains("'Notes", $cells);
+        $this->assertContains((string) $payloads['started'], $cells);
+        $this->assertNotContains("'".$payloads['started'], $cells);
+    }
+
+    public function test_xlsx_export_stores_formula_like_values_as_strings_not_formulas(): void
+    {
+        $payloads = $this->seedFormulaInjectionAnalytics();
+
+        $response = $this->actingAs($this->admin)
+            ->get(route('admin.analytics.export', ['days' => 30, 'format' => 'xlsx']));
+
+        $response->assertOk();
+        $contents = $response->getContent();
+        $this->assertIsString($contents);
+        $temporary = tempnam(sys_get_temp_dir(), 'analytics-formula-');
+        $this->assertNotFalse($temporary);
+
+        try {
+            file_put_contents($temporary, $contents);
+            $workbook = IOFactory::load($temporary);
+            $this->assertSame(['Summary', 'Daily Activity', 'Bottlenecks', 'Active Workflows', 'Request Fields'], $workbook->getSheetNames());
+
+            $seen = [];
+            $stringValues = [];
+            foreach ($workbook->getWorksheetIterator() as $sheet) {
+                foreach ($sheet->getRowIterator() as $row) {
+                    $iterator = $row->getCellIterator();
+                    $iterator->setIterateOnlyExistingCells(true);
+                    foreach ($iterator as $cell) {
+                        $this->assertNotSame(
+                            DataType::TYPE_FORMULA,
+                            $cell->getDataType(),
+                            $sheet->getTitle().' '.$cell->getCoordinate().' must not be a formula.',
+                        );
+
+                        $value = $cell->getValue();
+                        if (! is_string($value)) {
+                            continue;
+                        }
+
+                        $stringValues[] = $value;
+
+                        foreach ($payloads['dangerous'] as $payload) {
+                            $excelValue = str_replace(["\r\n", "\r"], "\n", $payload);
+                            if ($value === $excelValue || $value === "'".$excelValue) {
+                                $seen[$payload] = $cell;
+                                $this->assertSame(DataType::TYPE_STRING, $cell->getDataType(), $sheet->getTitle().' '.$cell->getCoordinate());
+                                $this->assertSame($excelValue, $value, $sheet->getTitle().' '.$cell->getCoordinate().' must keep the original visible text.');
+                            }
+                        }
+                    }
+                }
+            }
+
+            foreach ($payloads['dangerous'] as $payload) {
+                $this->assertArrayHasKey($payload, $seen, 'XLSX is missing formula payload: '.$this->visible($payload));
+                $this->assertNotContains("'".$payload, $stringValues, 'XLSX must not apostrophe-prefix: '.$this->visible($payload));
+            }
+
+            $this->assertContains('Benign purchase', $stringValues);
+            $this->assertContains('Notes', $stringValues);
+
+            $summary = $workbook->getSheetByName('Summary');
+            $this->assertNotNull($summary);
+            $this->assertSame(DataType::TYPE_NUMERIC, $summary->getCell('B5')->getDataType());
+            $this->assertSame($payloads['started'], $summary->getCell('B5')->getValue());
+            $this->assertSame('0.0%', $summary->getStyle('B10')->getNumberFormat()->getFormatCode());
+            $this->assertSame('0.0', $summary->getStyle('B11')->getNumberFormat()->getFormatCode());
+
+            $daily = $workbook->getSheetByName('Daily Activity');
+            $this->assertNotNull($daily);
+            $this->assertSame('yyyy-mm-dd', $daily->getStyle('A2')->getNumberFormat()->getFormatCode());
+
+            $active = $workbook->getSheetByName('Active Workflows');
+            $this->assertNotNull($active);
+            $this->assertSame('yyyy-mm-dd hh:mm', $active->getStyle('D2')->getNumberFormat()->getFormatCode());
+            $this->assertSame('0.0', $active->getStyle('E2')->getNumberFormat()->getFormatCode());
+
+            $workbook->disconnectWorksheets();
+        } finally {
+            unlink($temporary);
+        }
+    }
+
     private function resolvedWorkflow(
         WorkflowStatus $status,
         WorkflowActionType $action,
@@ -263,11 +377,147 @@ class AnalyticsTest extends TestCase
         return $instance;
     }
 
-    private function submission(SubmissionStatus $status, string $title = 'Purchase request'): Submission
+    private function submission(SubmissionStatus $status, string $title = 'Purchase request', ?int $requestTypeVersionId = null): Submission
     {
         return Submission::factory()->create([
             'status' => $status,
             'title' => $title,
+            ...($requestTypeVersionId === null ? [] : ['request_type_version_id' => $requestTypeVersionId]),
         ]);
+    }
+
+    /**
+     * @return array{dangerous: list<string>, started: int}
+     */
+    private function seedFormulaInjectionAnalytics(): array
+    {
+        $dangerous = [
+            '=HYPERLINK("http://evil.test","x")',
+            '=cmd',
+            '+cmd|',
+            '-cmd',
+            '@SUM(1+1)',
+            "\t=cmd",
+            "\r=cmd",
+            ' =HYPERLINK("http://evil.test","padded")',
+            ' +cmd',
+            ' -cmd',
+            ' @SUM(1)',
+            "\n=cmd",
+            "\x0b=cmd",
+        ];
+        $named = array_slice($dangerous, 0, 8);
+
+        $type = RequestType::factory()->create(['name' => 'Injection type']);
+        $version = RequestTypeVersion::factory()->for($type)->create();
+        RequestFieldDefinition::factory()->for($version)->create([
+            'key' => 'notes',
+            'label' => 'Notes',
+            'type' => RequestFieldType::ShortText,
+            'position' => 0,
+            'is_reportable' => true,
+        ]);
+        foreach ($dangerous as $index => $payload) {
+            RequestFieldDefinition::factory()->for($version)->create([
+                'key' => 'inject_'.$index,
+                'label' => $payload,
+                'type' => RequestFieldType::ShortText,
+                'position' => $index + 1,
+                'is_reportable' => true,
+            ]);
+        }
+        app(PublishRequestTypeVersionAction::class)->execute($version);
+
+        $fieldValues = ['notes' => 'Benign note'];
+        foreach ($dangerous as $index => $payload) {
+            $fieldValues['inject_'.$index] = $payload;
+        }
+
+        $activeTemplate = null;
+        $activeStep = null;
+
+        foreach ($named as $index => $payload) {
+            $template = WorkflowTemplate::factory()->create(['name' => $payload]);
+            $step = WorkflowTemplateStep::factory()->forTemplate($template, 1)->create([
+                'name' => $payload,
+                'timeout_hours' => 24,
+                'assignee_ids' => [$this->actor->id],
+            ]);
+            $resolved = $this->submission(
+                SubmissionStatus::Approved,
+                'Purchase request',
+                $index === 0 ? $version->id : null,
+            );
+            if ($index === 0) {
+                app(StoreSubmissionFieldValuesAction::class)->execute($resolved, $fieldValues);
+            }
+            $instance = WorkflowInstance::factory()->create([
+                'submission_id' => $resolved->id,
+                'template_id' => $template->id,
+                'current_step_id' => null,
+                'status' => WorkflowStatus::Completed,
+                'started_at' => '2026-08-10 08:00:00',
+                'step_started_at' => '2026-08-10 08:00:00',
+                'completed_at' => '2026-08-10 12:00:00',
+            ]);
+            WorkflowAction::factory()->create([
+                'instance_id' => $instance->id,
+                'step_id' => $step->id,
+                'actor_id' => $this->actor->id,
+                'action' => WorkflowActionType::Approve,
+                'created_at' => '2026-08-10 12:00:00',
+            ]);
+
+            if ($index === 0) {
+                $activeTemplate = $template;
+                $activeStep = $step;
+            }
+        }
+
+        $this->assertNotNull($activeTemplate);
+        $this->assertNotNull($activeStep);
+        foreach ([...$named, 'Benign purchase'] as $title) {
+            $active = $this->submission(SubmissionStatus::InReview, $title);
+            WorkflowInstance::factory()->create([
+                'submission_id' => $active->id,
+                'template_id' => $activeTemplate->id,
+                'current_step_id' => $activeStep->id,
+                'status' => WorkflowStatus::Active,
+                'started_at' => '2026-08-15 00:00:00',
+                'step_started_at' => '2026-08-15 00:00:00',
+            ]);
+        }
+
+        return [
+            'dangerous' => $dangerous,
+            'started' => count($named) * 2 + 1,
+        ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function csvCells(string $csv): array
+    {
+        $cells = [];
+        $stream = fopen('php://temp', 'r+b');
+        $this->assertNotFalse($stream);
+        fwrite($stream, $csv);
+        rewind($stream);
+
+        while (($row = fgetcsv($stream)) !== false) {
+            foreach ($row as $cell) {
+                $cells[] = (string) $cell;
+            }
+        }
+
+        fclose($stream);
+
+        return $cells;
+    }
+
+    private function visible(string $payload): string
+    {
+        return str_replace(["\t", "\r", "\n"], ['\\t', '\\r', '\\n'], $payload);
     }
 }
