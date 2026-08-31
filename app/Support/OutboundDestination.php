@@ -36,6 +36,7 @@ final class OutboundDestination
         ['2001:2::', 48],      // Benchmarking
         ['2001:10::', 28],     // Deprecated ORCHID
         ['2001:20::', 28],     // ORCHIDv2
+        ['2001::', 23],         // IETF protocol assignments aggregate
         ['2001:db8::', 32],    // Documentation
         ['2002::', 16],        // Deprecated 6to4
         ['3fff::', 20],        // Documentation
@@ -73,7 +74,12 @@ final class OutboundDestination
             throw new InvalidArgumentException(__('The destination cannot include a username or password.'));
         }
 
-        $host = $this->normalizeHost((string) ($parts['host'] ?? ''));
+        $rawHost = (string) ($parts['host'] ?? '');
+        if (str_ends_with($rawHost, '.')) {
+            throw new InvalidArgumentException(__('The destination must be a valid URL.'));
+        }
+
+        $host = $this->normalizeHost($rawHost);
         $port = isset($parts['port']) ? (int) $parts['port'] : 443;
 
         if ($port !== 443 && ! $allowNonstandardPort) {
@@ -162,7 +168,7 @@ final class OutboundDestination
             }
         }
 
-        return true;
+        return strlen($binary) === 4 || $this->hasPrefix($binary, '2000::', 3);
     }
 
     private function hasPrefix(string $address, string $network, int $prefixLength): bool

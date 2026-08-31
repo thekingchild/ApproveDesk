@@ -27,11 +27,11 @@ class WebPushFactoryTest extends TestCase
                 ['93.184.216.34', '1.1.1.1'],
             ),
             new OutboundPin(
-                'https://updates.example.test/push',
-                'updates.example.test',
+                'https://push.example.test/other',
+                'push.example.test',
                 443,
                 '8.8.8.8',
-                ['8.8.8.8'],
+                ['1.1.1.1', '8.8.8.8'],
             ),
         ];
         $keys = VAPID::createVapidKeys();
@@ -48,9 +48,7 @@ class WebPushFactoryTest extends TestCase
         $this->assertTrue($client->getConfig('verify'));
         $this->assertFalse($client->getConfig('allow_redirects'));
         $this->assertSame([
-            'push.example.test:443:93.184.216.34',
-            'push.example.test:443:1.1.1.1',
-            'updates.example.test:443:8.8.8.8',
+            'push.example.test:443:93.184.216.34,1.1.1.1,8.8.8.8',
         ], $client->getConfig('curl')[CURLOPT_RESOLVE]);
     }
 
@@ -96,5 +94,19 @@ class WebPushFactoryTest extends TestCase
     {
         $this->expectException(RuntimeException::class);
         (new WebPushFactory)->clientOptions([]);
+    }
+
+    public function test_factory_fails_closed_when_a_pin_has_no_validated_addresses(): void
+    {
+        $pin = new OutboundPin(
+            'https://push.example.test/push',
+            'push.example.test',
+            443,
+            '',
+            [],
+        );
+
+        $this->expectException(RuntimeException::class);
+        (new WebPushFactory)->clientOptions($pin);
     }
 }

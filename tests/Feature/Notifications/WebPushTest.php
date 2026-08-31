@@ -43,6 +43,19 @@ class WebPushTest extends TestCase
         $this->assertDatabaseMissing('push_subscriptions', ['id' => $private->id]);
     }
 
+    public function test_trailing_dot_subscription_is_deleted_without_creating_an_unpinned_client(): void
+    {
+        $user = User::factory()->create();
+        $subscription = $this->storeSubscription($user, 'https://push.example.test./push');
+        $factory = Mockery::mock(WebPushFactory::class);
+        $factory->shouldNotReceive('make');
+
+        $user->load('pushSubscriptions');
+        (new WebPushService($factory, app(OutboundDestination::class)))->send($user, $this->notification());
+
+        $this->assertDatabaseMissing('push_subscriptions', ['id' => $subscription->id]);
+    }
+
     public function test_mixed_subscriptions_delete_invalid_and_queue_only_valid_with_its_pin(): void
     {
         $user = User::factory()->create();

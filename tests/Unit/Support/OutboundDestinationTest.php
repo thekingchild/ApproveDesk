@@ -33,6 +33,27 @@ class OutboundDestinationTest extends TestCase
         $destination->validate('https://printer.local/hooks');
     }
 
+    public function test_dns_hostname_with_trailing_dot_is_rejected_before_it_can_be_pinned(): void
+    {
+        $destination = new OutboundDestination(new ArrayDnsResolver([
+            'push-pin.invalid' => ['93.184.216.34'],
+        ], []));
+
+        $this->expectException(InvalidArgumentException::class);
+        $destination->validate('https://push-pin.invalid./push');
+    }
+
+    public function test_bracketed_global_ipv6_literal_is_not_treated_as_a_trailing_dot_hostname(): void
+    {
+        $ip = '2606:4700:4700::1111';
+        $destination = new OutboundDestination(new ArrayDnsResolver([], []));
+
+        $pin = $destination->validate("https://[{$ip}]/push");
+
+        $this->assertSame($ip, $pin->host);
+        $this->assertSame("https://[{$ip}]/push", $pin->url);
+    }
+
     public function test_public_hostname_whose_lookup_is_private_is_rejected(): void
     {
         $resolver = new ArrayDnsResolver([
@@ -231,6 +252,47 @@ class OutboundDestinationTest extends TestCase
             try {
                 $destination->validate("https://{$host}/push");
                 $this->fail("Expected hostname resolving to ORCHID IPv6 {$ip} to be rejected.");
+            } catch (InvalidArgumentException) {
+                $this->addToAssertionCount(1);
+            }
+        }
+    }
+
+    public function test_ipv6_addresses_outside_known_global_unicast_or_in_reserved_aggregates_are_rejected(): void
+    {
+        $destination = new OutboundDestination(new ArrayDnsResolver([], []));
+
+        foreach ([
+            '100:0:0:1::1',
+            '2001:100::1',
+            '4000::1',
+            '8000::1',
+            'f000::1',
+        ] as $ip) {
+            try {
+                $destination->validate("https://[{$ip}]/push");
+                $this->fail("Expected non-global or reserved IPv6 literal {$ip} to be rejected.");
+            } catch (InvalidArgumentException) {
+                $this->addToAssertionCount(1);
+            }
+        }
+    }
+
+    public function test_dns_results_outside_known_global_unicast_or_in_reserved_aggregates_are_rejected(): void
+    {
+        foreach ([
+            '100:0:0:1::1',
+            '2001:100::1',
+            '4000::1',
+            '8000::1',
+            'f000::1',
+        ] as $index => $ip) {
+            $host = "reserved-{$index}.example.test";
+            $destination = new OutboundDestination(new ArrayDnsResolver([$host => [$ip]], []));
+
+            try {
+                $destination->validate("https://{$host}/push");
+                $this->fail("Expected hostname resolving to non-global or reserved IPv6 {$ip} to be rejected.");
             } catch (InvalidArgumentException) {
                 $this->addToAssertionCount(1);
             }
