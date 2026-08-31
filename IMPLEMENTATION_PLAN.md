@@ -162,7 +162,7 @@ Locked product decision for Phase 8.2. It does not reopen Phase 8.1. Design: [do
 | SH-LP275 | v2.7.5 | Optional public landing page with login-first default | Complete |
 | SH-COM280/SH-THM280 | v2.8.0 | Owner announcements and selectable application themes | Complete |
 | SH-UX281 | v2.8.1 | Dashboard announcements, company identity, printable branding, and collapsible navigation | Complete |
-| SH-SEC282 | v2.8.2 | Security assessment remediation: role ceilings, web-push SSRF, API scope, bounded imports, safe exports | In progress |
+| SH-SEC282 | v2.8.2 | Security assessment remediation: role ceilings, web-push SSRF, API scope, bounded imports, safe exports | Complete |
 | 10 | v3.0.0 | SaaS multi-tenancy foundation | Not started |
 | 11 | v3.1.0 | Paystack and Flutterwave subscriptions | Not started |
 | 12 | v3.2.0 | SaaS onboarding, entitlements, and commercial operations | Not started |
@@ -1288,7 +1288,7 @@ This is a supplementary self-hosted patch release. It does not change announceme
 
 ---
 
-## Phase SH-SEC282 — Security assessment remediation — In progress
+## Phase SH-SEC282 — Security assessment remediation — Complete (2026-08-31)
 
 **Goal:** close the five validated findings from the v2.7.2 repository security assessment on the self-hosted line: permission ceilings on role assignment (including self-service), web-push request pinning and redirect denial, `submissions:read` on the submission detail API, bounded spreadsheet import, and formula-safe analytics exports.
 
@@ -1310,7 +1310,7 @@ This is a supplementary self-hosted patch release. It does not add schema, does 
 ### SH-SEC282.3 — Help and release
 
 - **SH-SEC282-DOC-01 — Complete (2026-08-31):** Help/OpenAPI/DEPLOYMENT/changelog
-- **SH-SEC282-REL-01:** full gates, PR, annotated v2.8.2 tag, two-checkout sync
+- **SH-SEC282-REL-01 — Complete (2026-08-31):** full gates, PR, annotated v2.8.2 tag, two-checkout sync
 
 **Phase demo:** a delegated user editor cannot grant Department head or change their own roles; web-push delivery pins DNS, refuses redirects, and drops documentation-range destinations; a write-only API token cannot read submission detail; a hostile XLSX is rejected before spreadsheet load; analytics CSV/XLSX exports treat attacker-controlled `=` prefixes as text.
 

@@ -6,6 +6,8 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ## [Unreleased]
 
+## [2.8.2] - 2026-08-31
+
 ### Security
 
 - Role grants, including built-in roles, cannot exceed the editor's own access. A non-owner cannot change their own roles from user administration. Saving a person's profile leaves roles they already hold unchanged, including roles the editor cannot grant.
@@ -15,6 +17,10 @@ All notable changes to ApproveDesk are documented here. The project follows
 - Analytics CSV and Excel exports keep text as text so spreadsheet applications do not treat request content as formulas.
 
 Installer ingress allow-listing and `storage/app/installed.lock` remain operational verification on the deployed host. They are not application findings closed by this patch. No migration or new configuration key is required.
+
+### Changed
+
+- README, `.env.example` `APP_VERSION`, and this changelog treat **v2.8.2** as the current single-company release.
 
 ## [2.8.1] - 2026-08-30
 
