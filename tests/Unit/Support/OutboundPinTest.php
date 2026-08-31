@@ -114,7 +114,9 @@ class OutboundPinTest extends TestCase
         $debug = stream_get_contents($verbose);
 
         $this->assertIsString($debug);
-        $this->assertStringContainsString('IPv4: 127.0.0.1, 127.0.0.2', $debug);
+        $this->assertStringContainsString('Added multi-address.example.test:9:127.0.0.1,127.0.0.2 to DNS cache', $debug);
+        $this->assertStringContainsString('Trying 127.0.0.1:9', $debug);
+        $this->assertStringContainsString('Trying 127.0.0.2:9', $debug);
         $this->assertStringNotContainsString('old addresses discarded', $debug);
     }
 
