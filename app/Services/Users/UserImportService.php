@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Reader\IReader;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use RuntimeException;
 
 /**
@@ -19,7 +21,7 @@ use RuntimeException;
  * per-row status so one bad line never aborts the batch. Passwords are
  * generated (never imported) and emails are case-insensitively unique.
  */
-final class UserImportService
+class UserImportService
 {
     public const HEADER = ['name', 'email', 'department', 'manager_email', 'phone', 'roles'];
 
@@ -29,6 +31,7 @@ final class UserImportService
         private readonly GrantableRoleService $roles,
         private readonly RoleAssignmentService $assignments,
         private readonly ActiveUserLimitService $limits,
+        private readonly UserSpreadsheetImportGuard $spreadsheetGuard,
     ) {}
 
     /**
@@ -323,17 +326,50 @@ final class UserImportService
     /** @return list<array<string, string>> */
     private function spreadsheetRows(string $path): array
     {
-        $spreadsheet = IOFactory::load($path);
-        $sheet = $spreadsheet->getActiveSheet();
-        $matrix = $sheet->toArray(null, true, true, false);
+        $this->spreadsheetGuard->assertSafe($path);
 
-        if ($matrix === []) {
-            return [];
+        $reader = IOFactory::createReaderForFile($path);
+        $reader->setReadDataOnly(true);
+        $reader->setReadFilter(new UserImportReadFilter);
+
+        $spreadsheet = null;
+        try {
+            $spreadsheet = $this->loadSpreadsheet($reader, $path);
+            $sheet = $spreadsheet->getActiveSheet();
+            $highestRow = min((int) $sheet->getHighestDataRow(), UserSpreadsheetImportGuard::MAX_ROWS);
+            if ($highestRow < 1) {
+                return [];
+            }
+
+            $header = [];
+            $rows = [];
+            for ($row = 1; $row <= $highestRow; $row++) {
+                $data = [];
+                foreach (['A', 'B', 'C', 'D', 'E', 'F'] as $column) {
+                    $data[] = $sheet->getCell($column.$row)->getValue();
+                }
+
+                if ($row === 1) {
+                    $header = array_map(fn ($cell): string => mb_strtolower(trim((string) $cell)), $data);
+
+                    continue;
+                }
+
+                $rows[] = $this->combine($header, $data);
+            }
+
+            return $rows;
+        } finally {
+            $spreadsheet?->disconnectWorksheets();
         }
+    }
 
-        $header = array_map(fn ($cell): string => mb_strtolower(trim((string) $cell)), array_shift($matrix));
-
-        return array_map(fn (array $data): array => $this->combine($header, $data), $matrix);
+    /**
+     * Test seam: overridden to prove rejected files never reach Reader::load().
+     */
+    protected function loadSpreadsheet(IReader $reader, string $path): Spreadsheet
+    {
+        return $reader->load($path);
     }
 
     /**

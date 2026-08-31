@@ -2,8 +2,14 @@
 
 namespace Tests\Unit\Services\Users;
 
+use App\Services\Roles\RoleAssignmentService;
+use App\Services\Users\ActiveUserLimitService;
+use App\Services\Users\GrantableRoleService;
+use App\Services\Users\UserImportService;
 use App\Services\Users\UserSpreadsheetImportGuard;
+use PhpOffice\PhpSpreadsheet\Reader\IReader;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xls;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use RuntimeException;
 use Tests\TestCase;
@@ -12,11 +18,11 @@ use ZipArchive;
 class UserSpreadsheetImportGuardTest extends TestCase
 {
     /** @var list<string> */
-    private array $tempFiles = [];
+    private array $temps = [];
 
     protected function tearDown(): void
     {
-        foreach ($this->tempFiles as $path) {
+        foreach ($this->temps as $path) {
             if (is_file($path)) {
                 unlink($path);
             }
@@ -25,211 +31,302 @@ class UserSpreadsheetImportGuardTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_xlsx_with_more_than_512_zip_entries_is_rejected(): void
+    public function test_valid_xlsx_is_accepted(): void
     {
-        $path = $this->tempPath();
-        $zip = new ZipArchive;
-        $this->assertTrue($zip->open($path, ZipArchive::CREATE | ZipArchive::OVERWRITE) === true);
-
-        for ($i = 0; $i < 513; $i++) {
-            $zip->addFromString('pad'.$i.'.xml', 'x');
-        }
-
-        $zip->close();
-
-        $this->expectException(RuntimeException::class);
-        UserSpreadsheetImportGuard::assertSafe($path);
-    }
-
-    public function test_xlsx_with_more_than_eight_worksheets_is_rejected(): void
-    {
-        $spreadsheet = new Spreadsheet;
-        $spreadsheet->getActiveSheet()->setTitle('Sheet1');
-        $spreadsheet->getActiveSheet()->fromArray([[
-            'name', 'email', 'department', 'manager_email', 'phone', 'roles',
-        ]]);
-
-        for ($i = 2; $i <= 9; $i++) {
-            $spreadsheet->createSheet()->setTitle('Sheet'.$i);
-        }
-
-        $path = $this->tempPath();
-        (new Xlsx($spreadsheet))->save($path);
-
-        $this->expectException(RuntimeException::class);
-        UserSpreadsheetImportGuard::assertSafe($path);
-    }
-
-    public function test_xlsx_with_dimension_beyond_row_or_column_limit_is_rejected(): void
-    {
-        $spreadsheet = new Spreadsheet;
-        $sheet = $spreadsheet->getActiveSheet();
-        $sheet->fromArray([
+        $path = $this->writePhpSpreadsheetXlsx([
             ['name', 'email', 'department', 'manager_email', 'phone', 'roles'],
-            ['Ada Okonkwo', 'ada@example.com', '', '', '', ''],
-        ]);
-        $sheet->setCellValue('AG5002', 'x');
-
-        $path = $this->tempPath();
-        (new Xlsx($spreadsheet))->save($path);
-
-        $this->expectException(RuntimeException::class);
-        UserSpreadsheetImportGuard::assertSafe($path);
-    }
-
-    public function test_xlsx_with_excessive_compression_ratio_is_rejected(): void
-    {
-        $payload = str_repeat('x', 100);
-        $path = $this->writeRawZip([
-            [
-                'name' => 'xl/bomb.xml',
-                'data' => $payload,
-                'size' => 33_554_432,
-                'comp_size' => 100,
-            ],
+            ['Ada Admin', 'ada@corp.example', '', '', '', 'submitter'],
         ]);
 
-        $zip = new ZipArchive;
-        $this->assertTrue($zip->open($path) === true);
-        $stat = $zip->statIndex(0);
-        $zip->close();
-        $this->assertIsArray($stat);
-        $this->assertSame(100, $stat['comp_size']);
-        $this->assertSame(33_554_432, $stat['size']);
-
-        $this->expectException(RuntimeException::class);
-        UserSpreadsheetImportGuard::assertSafe($path);
+        app(UserSpreadsheetImportGuard::class)->assertSafe($path);
+        $this->addToAssertionCount(1);
     }
 
-    public function test_xlsx_with_duplicate_entry_names_is_rejected(): void
+    public function test_valid_xls_is_accepted(): void
     {
-        $path = $this->writeRawZip([
-            ['name' => 'xl/workbook.xml', 'data' => 'a'],
-            ['name' => 'xl/workbook.xml', 'data' => 'b'],
-        ]);
-
-        $this->expectException(RuntimeException::class);
-        UserSpreadsheetImportGuard::assertSafe($path);
-    }
-
-    public function test_xlsx_with_path_traversal_entry_name_is_rejected(): void
-    {
-        $path = $this->writeRawZip([
-            ['name' => '../xl/workbook.xml', 'data' => 'x'],
-        ]);
-
-        $this->expectException(RuntimeException::class);
-        UserSpreadsheetImportGuard::assertSafe($path);
-    }
-
-    public function test_xlsx_with_nul_in_entry_name_is_rejected(): void
-    {
-        $path = $this->writeRawZip([
-            ['name' => "xl/sheet\0.xml", 'data' => 'x'],
-        ]);
-
-        $this->expectException(RuntimeException::class);
-        UserSpreadsheetImportGuard::assertSafe($path);
-    }
-
-    public function test_valid_boundary_workbook_is_allowed(): void
-    {
+        $path = $this->tempPath('xls');
         $spreadsheet = new Spreadsheet;
         $spreadsheet->getActiveSheet()->fromArray([
             ['name', 'email', 'department', 'manager_email', 'phone', 'roles'],
-            ['Ada Okonkwo', 'ada@example.com', 'Finance', '', '', 'submitter'],
+            ['Xls Xavier', 'xavier@corp.example', '', '', '', 'submitter'],
         ]);
+        (new Xls($spreadsheet))->save($path);
 
-        $path = $this->tempPath();
-        (new Xlsx($spreadsheet))->save($path);
+        app(UserSpreadsheetImportGuard::class)->assertSafe($path);
+        $this->addToAssertionCount(1);
 
-        UserSpreadsheetImportGuard::assertSafe($path);
-
-        $this->assertFileExists($path);
+        $rows = app(UserImportService::class)->rows($path, 'xls');
+        $this->assertSame('Xls Xavier', $rows[0]['name']);
+        $this->assertSame('xavier@corp.example', $rows[0]['email']);
     }
 
-    private function tempPath(string $suffix = '.xlsx'): string
+    public function test_too_many_zip_entries_are_rejected(): void
     {
-        $path = sys_get_temp_dir().'/usig-'.bin2hex(random_bytes(8)).$suffix;
-        $this->tempFiles[] = $path;
+        $path = $this->tempPath('xlsx');
+        $zip = new ZipArchive;
+        $this->assertSame(true, $zip->open($path, ZipArchive::CREATE | ZipArchive::OVERWRITE) === true);
+        for ($i = 0; $i <= UserSpreadsheetImportGuard::MAX_ZIP_ENTRIES; $i++) {
+            $zip->addFromString('e'.$i.'.xml', '');
+        }
+        $zip->close();
+
+        $this->assertRejected($path);
+    }
+
+    public function test_high_compression_ratio_is_rejected(): void
+    {
+        $path = $this->tempPath('xlsx');
+        $zip = new ZipArchive;
+        $this->assertSame(true, $zip->open($path, ZipArchive::CREATE | ZipArchive::OVERWRITE) === true);
+        $zip->addFromString('xl/workbook.xml', str_repeat('A', 50_000));
+        $zip->close();
+
+        $this->assertRejected($path);
+    }
+
+    public function test_claimed_oversized_entry_is_rejected(): void
+    {
+        $path = $this->rawZip([
+            'xl/workbook.xml' => ['content' => '<workbook/>', 'uncompressed' => UserSpreadsheetImportGuard::MAX_ENTRY + 1],
+        ]);
+
+        $this->assertRejected($path);
+    }
+
+    public function test_encrypted_package_is_rejected(): void
+    {
+        $path = $this->rawZip([
+            'EncryptedPackage' => ['content' => 'cipher'],
+            'EncryptionInfo' => ['content' => 'hdr'],
+        ]);
+
+        $this->assertRejected($path);
+    }
+
+    public function test_path_traversal_and_duplicate_names_are_rejected(): void
+    {
+        $this->assertRejected($this->rawZip([
+            ['name' => '../xl/workbook.xml', 'content' => '<workbook/>'],
+        ]));
+
+        $this->assertRejected($this->rawZip([
+            ['name' => 'xl/workbook.xml', 'content' => '<workbook/>'],
+            ['name' => 'xl/workbook.xml', 'content' => '<workbook/>'],
+        ]));
+    }
+
+    public function test_too_many_sheets_are_rejected(): void
+    {
+        $sheets = '';
+        for ($i = 1; $i <= UserSpreadsheetImportGuard::MAX_SHEETS + 1; $i++) {
+            $sheets .= '<sheet name="S'.$i.'" sheetId="'.$i.'" r:id="rId'.$i.'"/>';
+        }
+
+        $path = $this->minimalXlsx(
+            workbook: '<?xml version="1.0"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>'.$sheets.'</sheets></workbook>',
+        );
+
+        $this->assertRejected($path);
+    }
+
+    public function test_oversized_worksheet_dimension_is_rejected(): void
+    {
+        $path = $this->minimalXlsx(
+            sheet: '<?xml version="1.0"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><dimension ref="A1:A5002"/><sheetData/></worksheet>',
+        );
+
+        $this->assertRejected($path);
+    }
+
+    public function test_too_many_shared_strings_are_rejected(): void
+    {
+        $count = UserSpreadsheetImportGuard::MAX_SHARED_STRINGS + 1;
+        $path = $this->minimalXlsx(
+            extra: [
+                'xl/sharedStrings.xml' => '<?xml version="1.0"?><sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="'.$count.'" uniqueCount="'.$count.'"></sst>',
+            ],
+        );
+
+        $this->assertRejected($path);
+    }
+
+    public function test_rejected_zip_never_reaches_spreadsheet_load(): void
+    {
+        $path = $this->rawZip([
+            'EncryptedPackage' => ['content' => 'cipher'],
+        ]);
+
+        $loads = 0;
+        $service = new class(app(GrantableRoleService::class), app(RoleAssignmentService::class), app(ActiveUserLimitService::class), app(UserSpreadsheetImportGuard::class), function () use (&$loads): void {
+            $loads++;
+        },
+        ) extends UserImportService {
+
+            public function __construct(
+                GrantableRoleService $roles,
+                RoleAssignmentService $assignments,
+                ActiveUserLimitService $limits,
+                UserSpreadsheetImportGuard $spreadsheetGuard,
+                private readonly \Closure $onLoad,
+            ) {
+                parent::__construct($roles, $assignments, $limits, $spreadsheetGuard);
+            }
+
+            protected function loadSpreadsheet(IReader $reader, string $path): Spreadsheet
+            {
+                ($this->onLoad)();
+
+                return parent::loadSpreadsheet($reader, $path);
+            }
+        };
+
+        try {
+            $service->rows($path, 'xlsx');
+            $this->fail('Rejected workbook should not be loaded.');
+        } catch (RuntimeException $exception) {
+            $this->assertSame(__('This spreadsheet cannot be imported.'), $exception->getMessage());
+        }
+
+        $this->assertSame(0, $loads);
+    }
+
+    public function test_service_reads_xlsx_rows_without_to_array(): void
+    {
+        $path = $this->writePhpSpreadsheetXlsx([
+            ['name', 'email', 'department', 'manager_email', 'phone', 'roles'],
+            ['Exel Ella', 'ella@corp.example', '', '', '', 'submitter'],
+        ]);
+
+        $rows = app(UserImportService::class)->rows($path, 'xlsx');
+
+        $this->assertSame('Exel Ella', $rows[0]['name']);
+        $this->assertSame('ella@corp.example', $rows[0]['email']);
+        $this->assertSame('submitter', $rows[0]['roles']);
+    }
+
+    private function assertRejected(string $path): void
+    {
+        try {
+            app(UserSpreadsheetImportGuard::class)->assertSafe($path);
+            $this->fail('Expected spreadsheet to be rejected.');
+        } catch (RuntimeException $exception) {
+            $this->assertSame(__('This spreadsheet cannot be imported.'), $exception->getMessage());
+        }
+    }
+
+    /**
+     * @param  list<list<string>>  $rows
+     */
+    private function writePhpSpreadsheetXlsx(array $rows): string
+    {
+        $path = $this->tempPath('xlsx');
+        $spreadsheet = new Spreadsheet;
+        $spreadsheet->getActiveSheet()->fromArray($rows);
+        (new Xlsx($spreadsheet))->save($path);
 
         return $path;
     }
 
     /**
-     * @param  list<array{name: string, data?: string, size?: int, comp_size?: int, method?: int, crc?: int}>  $files
+     * @param  array<string, string>  $extra
      */
-    private function writeRawZip(array $files): string
+    private function minimalXlsx(?string $workbook = null, ?string $sheet = null, array $extra = []): string
     {
+        $workbook ??= '<?xml version="1.0"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Sheet1" sheetId="1" r:id="rId1"/></sheets></workbook>';
+        $sheet ??= '<?xml version="1.0"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><dimension ref="A1:F2"/><sheetData/></worksheet>';
+
+        $files = [
+            '[Content_Types].xml' => '<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"></Types>',
+            'xl/workbook.xml' => $workbook,
+            'xl/worksheets/sheet1.xml' => $sheet,
+            ...$extra,
+        ];
+
+        $entries = [];
+        foreach ($files as $name => $content) {
+            $entries[] = ['name' => $name, 'content' => $content];
+        }
+
+        return $this->rawZip($entries);
+    }
+
+    /**
+     * Stored ZIP with optional claimed uncompressed sizes so tests stay tiny.
+     *
+     * @param  list<array{name?: string, content: string, uncompressed?: int}>|array<string, array{content: string, uncompressed?: int}>  $files
+     */
+    private function rawZip(array $files): string
+    {
+        $path = $this->tempPath('xlsx');
         $local = '';
         $central = '';
         $offset = 0;
         $count = 0;
 
-        foreach ($files as $file) {
-            $name = $file['name'];
-            $data = $file['data'] ?? '';
-            $method = $file['method'] ?? 0;
-            $crc = $file['crc'] ?? crc32($data);
-            $compSize = $file['comp_size'] ?? strlen($data);
-            $uncompSize = $file['size'] ?? strlen($data);
-            $nameLen = strlen($name);
+        foreach ($files as $key => $spec) {
+            $name = $spec['name'] ?? (is_string($key) ? $key : '');
+            $content = $spec['content'];
+            $crc = crc32($content) & 0xFFFFFFFF;
+            $length = strlen($content);
+            $uncompressed = $spec['uncompressed'] ?? $length;
+            $nameLength = strlen($name);
 
-            $localHeader = pack(
-                'VvvvvvVVVvv',
-                0x04034B50,
-                20,
-                0,
-                $method,
-                0,
-                0,
-                $crc,
-                $compSize,
-                $uncompSize,
-                $nameLen,
-                0,
-            );
-            $cd = pack(
-                'VvvvvvvVVVvvvvvVV',
-                0x02014B50,
-                20,
-                20,
-                0,
-                $method,
-                0,
-                0,
-                $crc,
-                $compSize,
-                $uncompSize,
-                $nameLen,
-                0,
-                0,
-                0,
-                0,
-                0,
-                $offset,
-            );
+            $localHeader = "PK\x03\x04"
+                .pack('v', 20)
+                .pack('v', 0)
+                .pack('v', 0)
+                .pack('v', 0)
+                .pack('v', 0)
+                .pack('V', $crc)
+                .pack('V', $length)
+                .pack('V', $uncompressed)
+                .pack('v', $nameLength)
+                .pack('v', 0)
+                .$name
+                .$content;
 
-            $local .= $localHeader.$name.$data;
-            $central .= $cd.$name;
-            $offset += strlen($localHeader) + $nameLen + strlen($data);
+            $central .= "PK\x01\x02"
+                .pack('v', 20)
+                .pack('v', 20)
+                .pack('v', 0)
+                .pack('v', 0)
+                .pack('v', 0)
+                .pack('v', 0)
+                .pack('V', $crc)
+                .pack('V', $length)
+                .pack('V', $uncompressed)
+                .pack('v', $nameLength)
+                .pack('v', 0)
+                .pack('v', 0)
+                .pack('v', 0)
+                .pack('v', 0)
+                .pack('V', 0)
+                .pack('V', $offset)
+                .$name;
+
+            $offset += strlen($localHeader);
+            $local .= $localHeader;
             $count++;
         }
 
-        $eocd = pack(
-            'VvvvvVVv',
-            0x06054B50,
-            0,
-            0,
-            $count,
-            $count,
-            strlen($central),
-            $offset,
-            0,
-        );
+        $eocd = "PK\x05\x06"
+            .pack('v', 0)
+            .pack('v', 0)
+            .pack('v', $count)
+            .pack('v', $count)
+            .pack('V', strlen($central))
+            .pack('V', strlen($local))
+            .pack('v', 0);
 
-        $path = $this->tempPath();
         file_put_contents($path, $local.$central.$eocd);
+
+        return $path;
+    }
+
+    private function tempPath(string $suffix): string
+    {
+        $path = sys_get_temp_dir().'/ad-ss-'.uniqid('', true).'.'.$suffix;
+        $this->temps[] = $path;
 
         return $path;
     }

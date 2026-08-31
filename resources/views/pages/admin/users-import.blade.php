@@ -124,7 +124,7 @@ new #[Title('Import users')] class extends Component {
 
                 <flux:input type="file" wire:model="file" accept=".csv,.xlsx,.xls,text/csv" />
                 <flux:error name="file" />
-                <p class="text-xs text-zinc-500 dark:text-zinc-400">{{ __('CSV or Excel · max 10 MB · nothing is written until you confirm the import below.') }}</p>
+                <p class="text-xs text-zinc-500 dark:text-zinc-400">{{ __('CSV or Excel · max 10 MiB · at most 5,000 data rows · oversized or highly compressed workbooks are refused · nothing is written until you confirm the import below.') }}</p>
 
                 <div class="grid gap-4 sm:grid-cols-2">
                     <flux:select wire:model="duplicateMode" :label="__('If an email already exists')" dusk="duplicate-mode">
