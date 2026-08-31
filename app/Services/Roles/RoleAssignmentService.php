@@ -25,6 +25,30 @@ final class RoleAssignmentService
             }
 
             $existing = $locked->roles()->lockForUpdate()->pluck('roles.id')->map(fn ($id): int => (int) $id)->all();
+            $existingRoles = Role::query()->whereIn('id', $existing)->orderBy('id')->lockForUpdate()->get();
+            $ceiling = $this->permissions->ceiling($actor);
+
+            if (! $actor->isSystemOwner()) {
+                foreach ($existingRoles as $existingRole) {
+                    if ($resolved->contains('id', $existingRole->id)) {
+                        continue;
+                    }
+
+                    $profile = RoleProfile::query()->where('role_id', $existingRole->id)->lockForUpdate()->first();
+                    $cannotRemove = in_array($existingRole->name, ['admin', 'super-admin'], true)
+                        || $profile === null
+                        || $profile->is_archived
+                        || ($profile->is_builtin && ! $actor->can('users.manage') && ! $actor->can('users.update'))
+                        || (! $profile->is_builtin && ! $actor->can('roles.assign.custom'))
+                        || array_diff($existingRole->permissions()->pluck('name')->all(), $ceiling) !== [];
+
+                    if ($cannotRemove) {
+                        $resolved->push($existingRole);
+                    }
+                }
+            }
+
+            $resolved = $resolved->unique('id')->values();
             $new = $resolved->pluck('id')->map(fn ($id): int => (int) $id)->unique()->values()->all();
             sort($existing);
             sort($new);
@@ -36,7 +60,6 @@ final class RoleAssignmentService
                 throw ValidationException::withMessages(['roles' => __('Assign at least one role.')]);
             }
 
-            $ceiling = $this->permissions->ceiling($actor);
             foreach ($resolved as $role) {
                 if ($role->name === 'super-admin') {
                     throw ValidationException::withMessages(['roles' => __('The internal System owner role cannot be assigned.')]);

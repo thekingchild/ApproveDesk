@@ -7,6 +7,7 @@ use App\DTOs\UserData;
 use App\Models\Role;
 use App\Models\SystemOwner;
 use App\Models\User;
+use App\Policies\UserPolicy;
 use App\Services\Roles\RoleAssignmentService;
 use App\Services\Roles\RolePermissionService;
 use App\Services\Users\UserImportService;
@@ -171,6 +172,38 @@ class RolePermissionCeilingTest extends TestCase
 
         $this->assertTrue($editor->fresh()->hasRole('viewer'));
         $this->assertFalse($editor->fresh()->hasRole('approver'));
+    }
+
+    public function test_non_owner_cannot_remove_one_of_their_own_roles_via_assignment_service(): void
+    {
+        $editor = User::factory()->create()->assignRole(['viewer', 'approver']);
+        $editor->givePermissionTo(['users.update', 'users.view']);
+
+        try {
+            app(RoleAssignmentService::class)->sync($editor, $editor, ['viewer']);
+            $this->fail('Expected self-removal validation failure.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('roles', $exception->errors());
+        }
+
+        $editor->refresh();
+        $this->assertTrue($editor->hasRole('viewer'));
+        $this->assertTrue($editor->hasRole('approver'));
+    }
+
+    public function test_assign_roles_policy_preserves_owner_bypass_and_blocks_non_owner_self_or_owner_targets(): void
+    {
+        $owner = $this->owner();
+        $editor = User::factory()->create();
+        $editor->givePermissionTo('users.update');
+        $target = User::factory()->create();
+        $policy = app(UserPolicy::class);
+
+        $this->assertTrue($policy->assignRoles($owner, $owner));
+        $this->assertTrue($policy->assignRoles($owner, $target));
+        $this->assertFalse($policy->assignRoles($editor, $editor));
+        $this->assertFalse($policy->assignRoles($editor, $owner));
+        $this->assertTrue($policy->assignRoles($editor, $target));
     }
 
     public function test_non_owner_self_profile_edit_cannot_change_roles_via_update_action(): void
