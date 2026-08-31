@@ -28,9 +28,11 @@ final class OutboundDestination
     /** @var list<array{string, int}> */
     private const BLOCKED_IPV6_CIDRS = [
         ['::', 96],            // Unspecified, loopback, and IPv4-compatible space
-        ['::ffff:0:0', 96],     // IPv4-mapped (classified recursively below)
+        ['::ffff:0:0', 96],     // IPv4-mapped
         ['100::', 64],         // Discard-only
+        ['64:ff9b::', 96],      // Well-known IPv4/IPv6 translation
         ['64:ff9b:1::', 48],    // Local-use IPv4/IPv6 translation
+        ['2001::', 32],         // Teredo
         ['2001:2::', 48],      // Benchmarking
         ['2001:10::', 28],     // Deprecated ORCHID
         ['2001:20::', 28],     // ORCHIDv2
@@ -151,12 +153,6 @@ final class OutboundDestination
         $binary = @inet_pton($ip);
         if ($binary === false) {
             return false;
-        }
-
-        if (strlen($binary) === 16 && substr($binary, 0, 12) === str_repeat("\0", 10)."\xff\xff") {
-            $mapped = inet_ntop(substr($binary, 12));
-
-            return is_string($mapped) && $this->isPublicIp($mapped);
         }
 
         $cidrs = strlen($binary) === 4 ? self::BLOCKED_IPV4_CIDRS : self::BLOCKED_IPV6_CIDRS;

@@ -161,11 +161,16 @@ class OutboundDestinationTest extends TestCase
 
         foreach ([
             '64:ff9b:1::1',
+            '64:ff9b::5db8:d822',
+            '64:ff9b::a00:1',
+            '64:ff9b::7f00:1',
             'fec0::1',
+            '2001::1',
             '2002:0a00:0001::',
             '3fff::1',
             '5f00::1',
             '::ffff:10.0.0.1',
+            '::ffff:93.184.216.34',
         ] as $ip) {
             try {
                 $destination->validate("https://[{$ip}]/push");
@@ -180,11 +185,16 @@ class OutboundDestinationTest extends TestCase
     {
         foreach ([
             '64:ff9b:1::1',
+            '64:ff9b::5db8:d822',
+            '64:ff9b::a00:1',
+            '64:ff9b::7f00:1',
             'fec0::1',
+            '2001::1',
             '2002:0a00:0001::',
             '3fff::1',
             '5f00::1',
             '::ffff:10.0.0.1',
+            '::ffff:93.184.216.34',
         ] as $index => $ip) {
             $host = "blocked-{$index}.example.test";
             $destination = new OutboundDestination(new ArrayDnsResolver([$host => [$ip]], []));
@@ -227,17 +237,20 @@ class OutboundDestinationTest extends TestCase
         }
     }
 
-    public function test_legitimate_global_ipv6_literal_and_hostname_are_allowed(): void
+    public function test_ordinary_public_ipv4_and_legitimate_global_ipv6_are_allowed(): void
     {
-        $ip = '2606:4700:4700::1111';
+        $ipv4 = '93.184.216.34';
+        $ipv6 = '2606:4700:4700::1111';
         $destination = new OutboundDestination(new ArrayDnsResolver([
-            'push.example.test' => [$ip],
+            'push.example.test' => [$ipv6],
         ], []));
 
-        $literal = $destination->validate("https://[{$ip}]/push");
+        $ipv4Literal = $destination->validate("https://{$ipv4}/push");
+        $ipv6Literal = $destination->validate("https://[{$ipv6}]/push");
         $hostname = $destination->validate('https://push.example.test/push');
 
-        $this->assertSame($ip, $literal->ip);
-        $this->assertSame($ip, $hostname->ip);
+        $this->assertSame($ipv4, $ipv4Literal->ip);
+        $this->assertSame($ipv6, $ipv6Literal->ip);
+        $this->assertSame($ipv6, $hostname->ip);
     }
 }
