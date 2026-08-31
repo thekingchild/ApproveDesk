@@ -9,6 +9,7 @@ use App\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Spatie\Permission\Models\Permission;
 
 final class RoleAssignmentService
 {
@@ -23,9 +24,15 @@ final class RoleAssignmentService
                 throw ValidationException::withMessages(['roles' => __('The System owner’s roles cannot be changed.')]);
             }
 
-            $existing = $locked->roles()->lockForUpdate()->pluck('roles.id')->map(fn ($id): int => (int) $id)->all();
-            $existingRoles = Role::query()->whereIn('id', $existing)->orderBy('id')->lockForUpdate()->get();
-            $resolved = $this->resolve($roles);
+            $existing = array_values(DB::table(config('permission.table_names.model_has_roles'))
+                ->where(config('permission.column_names.model_morph_key'), $locked->id)
+                ->where('model_type', $locked->getMorphClass())
+                ->orderBy('role_id')
+                ->lockForUpdate()
+                ->pluck('role_id')
+                ->map(fn ($id): int => (int) $id)
+                ->all());
+            [$existingRoles, $resolved] = $this->resolveAndLock($existing, $roles);
             $ceiling = $this->permissions->ceiling($actor);
 
             if (! $actor->isSystemOwner()) {
@@ -34,13 +41,13 @@ final class RoleAssignmentService
                         continue;
                     }
 
-                    $profile = RoleProfile::query()->where('role_id', $existingRole->id)->lockForUpdate()->first();
+                    $profile = $existingRole->profile;
                     $cannotRemove = in_array($existingRole->name, ['admin', 'super-admin'], true)
                         || $profile === null
                         || $profile->is_archived
                         || ($profile->is_builtin && ! $actor->can('users.manage') && ! $actor->can('users.update'))
                         || (! $profile->is_builtin && ! $actor->can('roles.assign.custom'))
-                        || array_diff($existingRole->permissions()->pluck('name')->all(), $ceiling) !== [];
+                        || array_diff($existingRole->permissions->pluck('name')->all(), $ceiling) !== [];
 
                     if ($cannotRemove) {
                         $resolved->push($existingRole);
@@ -75,7 +82,7 @@ final class RoleAssignmentService
                     continue;
                 }
 
-                $profile = RoleProfile::query()->where('role_id', $role->id)->first();
+                $profile = $role->profile;
                 if ($profile === null) {
                     throw ValidationException::withMessages(['roles' => __('That role has no managed profile.')]);
                 }
@@ -91,7 +98,7 @@ final class RoleAssignmentService
                         throw ValidationException::withMessages(['roles' => __('You are not allowed to assign custom roles.')]);
                     }
 
-                    if (array_diff($role->permissions()->pluck('name')->all(), $ceiling) !== []) {
+                    if (array_diff($role->permissions->pluck('name')->all(), $ceiling) !== []) {
                         throw ValidationException::withMessages(['roles' => __('A role cannot contain permissions above your permission ceiling.')]);
                     }
                 }
@@ -116,24 +123,54 @@ final class RoleAssignmentService
     }
 
     /**
+     * @param  list<int>  $existingIds
      * @param  list<string>  $identifiers
-     * @return Collection<int, Role>
+     * @return array{Collection<int, Role>, Collection<int, Role>}
      */
-    private function resolve(array $identifiers): Collection
+    private function resolveAndLock(array $existingIds, array $identifiers): array
     {
-        $profiles = RoleProfile::query()->whereIn('slug', $identifiers)->pluck('role_id');
-        $roles = Role::query()
-            ->where(function ($query) use ($identifiers, $profiles): void {
+        $requestedIds = Role::query()
+            ->where(function ($query) use ($identifiers): void {
                 $query->whereIn('name', $identifiers);
-                if ($profiles->isNotEmpty()) {
-                    $query->orWhereIn('id', $profiles);
-                }
+                $query->orWhereHas('profile', fn ($profile) => $profile->whereIn('slug', $identifiers));
             })
-            ->get();
-        if ($roles->count() !== count(array_unique($identifiers))) {
+            ->pluck('id')
+            ->map(fn ($id): int => (int) $id)
+            ->all();
+
+        $roleIds = collect([...$existingIds, ...$requestedIds])->unique()->sort()->values();
+        $roles = Role::query()->whereIn('id', $roleIds)->orderBy('id')->lockForUpdate()->get();
+        $profiles = RoleProfile::query()->whereIn('role_id', $roleIds)->orderBy('id')->lockForUpdate()->get();
+
+        $pivotTable = (string) config('permission.table_names.role_has_permissions');
+        $permissionKey = (string) (config('permission.column_names.permission_pivot_key') ?: 'permission_id');
+        $roleKey = (string) (config('permission.column_names.role_pivot_key') ?: 'role_id');
+        $pivots = DB::table($pivotTable)
+            ->whereIn($roleKey, $roleIds)
+            ->orderBy($roleKey)
+            ->orderBy($permissionKey)
+            ->lockForUpdate()
+            ->get([$roleKey, $permissionKey]);
+        $permissionIds = $pivots->pluck($permissionKey)->map(fn ($id): int => (int) $id)->unique()->sort()->values();
+        $permissions = Permission::query()->whereIn('id', $permissionIds)->orderBy('id')->lockForUpdate()->get();
+
+        $profilesByRole = $profiles->keyBy('role_id');
+        $permissionsById = $permissions->keyBy('id');
+        $permissionIdsByRole = $pivots->groupBy($roleKey);
+        foreach ($roles as $role) {
+            $role->setRelation('profile', $profilesByRole->get($role->id));
+            $role->setRelation('permissions', collect($permissionIdsByRole->get($role->id, []))
+                ->map(fn (object $pivot) => $permissionsById->get($pivot->{$permissionKey}))
+                ->filter()
+                ->values());
+        }
+
+        $existingRoles = $roles->whereIn('id', $existingIds)->values();
+        $requestedRoles = $roles->whereIn('id', $requestedIds)->values();
+        if ($requestedRoles->count() !== count(array_unique($identifiers))) {
             throw ValidationException::withMessages(['roles' => __('One or more selected roles do not exist.')]);
         }
 
-        return $roles;
+        return [$existingRoles, $requestedRoles];
     }
 }

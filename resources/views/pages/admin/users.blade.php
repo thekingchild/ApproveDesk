@@ -125,6 +125,19 @@ new #[Title('User management')] class extends Component {
             ->get();
     }
 
+    /** @return \Illuminate\Support\Collection<string, string> */
+    #[Computed]
+    public function roleLabels(): \Illuminate\Support\Collection
+    {
+        return Role::query()
+            ->whereIn('name', $this->roles)
+            ->with('profile')
+            ->get()
+            ->mapWithKeys(fn (Role $role): array => [
+                $role->name => $role->profile?->label ?? str($role->name)->replace('-', ' ')->title()->toString(),
+            ]);
+    }
+
     public function updatedSearch(): void
     {
         $this->resetPage();
@@ -424,7 +437,7 @@ new #[Title('User management')] class extends Component {
                         <p class="text-sm font-medium">{{ __('Roles') }}</p>
                         <div class="mt-2 flex flex-wrap gap-1" data-test="self-roles-read-only">
                             @foreach ($roles as $role)
-                                <flux:badge color="zinc">{{ str($role)->replace('-', ' ')->title() }}</flux:badge>
+                                <flux:badge color="zinc">{{ $this->roleLabels->get($role, str($role)->replace('-', ' ')->title()) }}</flux:badge>
                             @endforeach
                         </div>
                         <p class="mt-1 text-sm text-zinc-500">{{ __('You cannot change your own roles.') }}</p>
@@ -440,7 +453,7 @@ new #[Title('User management')] class extends Component {
                                 <p class="text-sm text-zinc-500">{{ __('Roles you cannot remove:') }}</p>
                                 <div class="mt-1 flex flex-wrap gap-1">
                                     @foreach ($preservedRoles as $role)
-                                        <flux:badge color="zinc">{{ str($role)->replace('-', ' ')->title() }}</flux:badge>
+                                        <flux:badge color="zinc">{{ $this->roleLabels->get($role, str($role)->replace('-', ' ')->title()) }}</flux:badge>
                                     @endforeach
                                 </div>
                             </div>

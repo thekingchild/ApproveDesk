@@ -12,7 +12,9 @@ use App\Services\Roles\RoleAssignmentService;
 use App\Services\Roles\RolePermissionService;
 use App\Services\Users\UserImportService;
 use Database\Seeders\RolesAndPermissionsSeeder;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
@@ -87,6 +89,39 @@ class RolePermissionCeilingTest extends TestCase
         app(RolePermissionService::class)->archive($manager, $role);
         $this->expectException(ValidationException::class);
         app(RoleAssignmentService::class)->sync($manager, $target, [$role->name, 'admin']);
+    }
+
+    public function test_assignment_locks_requested_authorization_state_in_deterministic_order_on_mysql(): void
+    {
+        if (DB::getDriverName() !== 'mysql') {
+            $this->markTestSkipped('SQLite does not emit SELECT ... FOR UPDATE; the CI MySQL job exercises these row-lock assertions.');
+        }
+
+        $owner = $this->owner();
+        $target = User::factory()->create()->assignRole('viewer');
+        $requested = app(RolePermissionService::class)->create($owner, 'Locked reviewer', null, ['reports.view']);
+        $requestedPermissionId = $requested->permissions()->where('name', 'reports.view')->value('permissions.id');
+        $queries = [];
+        DB::listen(function (QueryExecuted $query) use (&$queries): void {
+            $queries[] = ['sql' => strtolower($query->sql), 'bindings' => $query->bindings];
+        });
+
+        app(RoleAssignmentService::class)->sync($owner, $target, [$requested->name]);
+
+        $assertLocked = function (string $table, string $order, int $binding) use ($queries): void {
+            $matches = collect($queries)->filter(fn (array $query): bool => str_contains($query['sql'], "from `{$table}`")
+                && str_contains($query['sql'], 'for update')
+                && str_contains($query['sql'], $order)
+                && in_array($binding, $query['bindings'], true));
+
+            $this->assertNotEmpty($matches, "Expected a locked {$table} query ordered by {$order} containing binding {$binding}.");
+        };
+
+        $assertLocked('roles', 'order by `id` asc', $requested->id);
+        $assertLocked('role_profiles', 'order by `id` asc', $requested->id);
+        $assertLocked('role_has_permissions', 'order by `role_id` asc, `permission_id` asc', $requested->id);
+        $assertLocked('permissions', 'order by `id` asc', (int) $requestedPermissionId);
+        $this->assertTrue($target->fresh()->hasRole($requested));
     }
 
     public function test_import_create_rejects_roles_the_actor_cannot_grant(): void

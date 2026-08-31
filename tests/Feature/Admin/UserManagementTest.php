@@ -3,8 +3,10 @@
 namespace Tests\Feature\Admin;
 
 use App\Models\Department;
+use App\Models\RoleProfile;
 use App\Models\SystemOwner;
 use App\Models\User;
+use App\Services\Roles\RolePermissionService;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -216,5 +218,38 @@ class UserManagementTest extends TestCase
 
         $this->assertTrue($target->fresh()->hasRole('viewer'));
         $this->assertFalse($target->fresh()->hasRole('department-head'));
+    }
+
+    public function test_self_edit_renders_profile_role_labels_and_status_as_read_only(): void
+    {
+        RoleProfile::query()->where('slug', 'viewer')->update(['label' => 'Read only viewer']);
+        $editor = User::factory()->create()->assignRole('viewer');
+        $editor->givePermissionTo(['users.update', 'users.view']);
+
+        Livewire::actingAs($editor)
+            ->test('pages::admin.users')
+            ->call('editUser', $editor->id)
+            ->assertSee('Read only viewer')
+            ->assertSee('You cannot change your own roles.')
+            ->assertSee('You cannot change your own account status.')
+            ->assertSeeHtml('data-test="self-roles-read-only"')
+            ->assertSeeHtml('data-test="self-active-read-only"');
+    }
+
+    public function test_preserved_ungrantable_role_uses_its_profile_label(): void
+    {
+        $owner = User::factory()->create()->assignRole('super-admin');
+        SystemOwner::query()->create(['id' => SystemOwner::SINGLETON_ID, 'user_id' => $owner->id]);
+        $preserved = app(RolePermissionService::class)->create($owner, 'Quarter close reviewer', null, ['reports.view']);
+        $editor = User::factory()->create();
+        $editor->givePermissionTo(['users.update', 'users.view']);
+        $target = User::factory()->create()->assignRole($preserved);
+
+        Livewire::actingAs($editor)
+            ->test('pages::admin.users')
+            ->call('editUser', $target->id)
+            ->assertSee('Roles you cannot remove:')
+            ->assertSee('Quarter close reviewer')
+            ->assertSeeHtml('data-test="preserved-roles-read-only"');
     }
 }
