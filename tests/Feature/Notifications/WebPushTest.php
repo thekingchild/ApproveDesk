@@ -212,9 +212,14 @@ class WebPushTest extends TestCase
         $this->assertArrayHasKey('x', $details['ec']);
         $this->assertArrayHasKey('y', $details['ec']);
 
+        $publicKey = "\x04"
+            .str_pad($details['ec']['x'], 32, "\x00", STR_PAD_LEFT)
+            .str_pad($details['ec']['y'], 32, "\x00", STR_PAD_LEFT);
+        $this->assertSame(65, strlen($publicKey));
+
         return $user->pushSubscriptions()->create([
             'endpoint' => $endpoint,
-            'public_key' => $this->base64UrlEncode("\x04".$details['ec']['x'].$details['ec']['y']),
+            'public_key' => $this->base64UrlEncode($publicKey),
             'auth_token' => $this->base64UrlEncode(random_bytes(16)),
             'content_encoding' => 'aes128gcm',
         ]);
