@@ -9,6 +9,7 @@ use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Livewire\Livewire;
+use PHPUnit\Framework\ExpectationFailedException;
 use Tests\TestCase;
 
 class UserManagementTest extends TestCase
@@ -177,5 +178,43 @@ class UserManagementTest extends TestCase
             ->assertRedirect(route('login'));
 
         $this->assertGuest();
+    }
+
+    public function test_non_owner_cannot_forge_a_self_role_change_through_livewire(): void
+    {
+        $editor = User::factory()->create()->assignRole('viewer');
+        $editor->givePermissionTo(['users.update', 'users.view']);
+
+        $component = Livewire::actingAs($editor)
+            ->test('pages::admin.users')
+            ->call('editUser', $editor->id)
+            ->set('roles', ['approver'])
+            ->call('save');
+
+        try {
+            $component->assertHasErrors(['roles']);
+        } catch (ExpectationFailedException) {
+            $component->assertForbidden();
+        }
+
+        $this->assertTrue($editor->fresh()->hasRole('viewer'));
+        $this->assertFalse($editor->fresh()->hasRole('approver'));
+    }
+
+    public function test_users_update_actor_cannot_assign_department_head_through_livewire(): void
+    {
+        $editor = User::factory()->create();
+        $editor->givePermissionTo(['users.update', 'users.view']);
+        $target = User::factory()->create()->assignRole('viewer');
+
+        Livewire::actingAs($editor)
+            ->test('pages::admin.users')
+            ->call('editUser', $target->id)
+            ->set('roles', ['department-head'])
+            ->call('save')
+            ->assertHasErrors(['roles']);
+
+        $this->assertTrue($target->fresh()->hasRole('viewer'));
+        $this->assertFalse($target->fresh()->hasRole('department-head'));
     }
 }

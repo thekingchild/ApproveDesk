@@ -115,4 +115,43 @@ class OutboundDestinationTest extends TestCase
         $this->assertSame('10.0.0.5', $pin->ip);
         $this->assertSame(9000, $pin->port);
     }
+
+    public function test_documentation_ipv4_203_0_113_10_is_rejected(): void
+    {
+        $destination = new OutboundDestination(new ArrayDnsResolver([], []));
+
+        $this->expectException(InvalidArgumentException::class);
+        $destination->validate('https://203.0.113.10/push');
+    }
+
+    public function test_documentation_range_hostname_lookup_is_rejected(): void
+    {
+        $resolver = new ArrayDnsResolver([
+            'example.test' => ['203.0.113.10'],
+        ], []);
+        $destination = new OutboundDestination($resolver);
+
+        $this->expectException(InvalidArgumentException::class);
+        $destination->validate('https://example.test/push');
+    }
+
+    public function test_link_local_multicast_and_unique_local_addresses_are_rejected(): void
+    {
+        $destination = new OutboundDestination(new ArrayDnsResolver([], []));
+
+        foreach ([
+            'https://169.254.1.1/push',
+            'https://224.0.0.1/push',
+            'https://[fd00::1]/push',
+            'https://[fe80::1]/push',
+            'https://[::1]/push',
+        ] as $url) {
+            try {
+                $destination->validate($url);
+                $this->fail("Expected {$url} to be rejected.");
+            } catch (InvalidArgumentException) {
+                // expected
+            }
+        }
+    }
 }

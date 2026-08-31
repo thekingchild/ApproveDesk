@@ -140,6 +140,91 @@ class RolePermissionCeilingTest extends TestCase
         app(RolePermissionService::class)->create($owner, 'Code editor', null, ['branding.manage', 'branding.custom_code.manage']);
     }
 
+    public function test_users_update_actor_cannot_assign_department_head_above_ceiling(): void
+    {
+        $editor = User::factory()->create();
+        $editor->givePermissionTo(['users.update', 'users.view']);
+        $target = User::factory()->create()->assignRole('viewer');
+
+        try {
+            app(RoleAssignmentService::class)->sync($editor, $target, ['department-head']);
+            $this->fail('Expected permission ceiling validation failure.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('roles', $exception->errors());
+        }
+
+        $this->assertTrue($target->fresh()->hasRole('viewer'));
+        $this->assertFalse($target->fresh()->hasRole('department-head'));
+    }
+
+    public function test_non_owner_cannot_add_or_remove_own_roles_via_assignment_service(): void
+    {
+        $editor = User::factory()->create()->assignRole('viewer');
+        $editor->givePermissionTo(['users.update', 'users.view']);
+
+        try {
+            app(RoleAssignmentService::class)->sync($editor, $editor, ['viewer', 'approver']);
+            $this->fail('Expected self-assignment validation failure.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('roles', $exception->errors());
+        }
+
+        $this->assertTrue($editor->fresh()->hasRole('viewer'));
+        $this->assertFalse($editor->fresh()->hasRole('approver'));
+    }
+
+    public function test_non_owner_self_profile_edit_cannot_change_roles_via_update_action(): void
+    {
+        $editor = User::factory()->create()->assignRole('viewer');
+        $editor->givePermissionTo(['users.update']);
+
+        try {
+            app(UpdateUserAction::class)->execute(
+                $editor,
+                new UserData(
+                    name: $editor->name,
+                    email: $editor->email,
+                    phone: $editor->phone,
+                    departmentId: $editor->department_id,
+                    roles: ['approver'],
+                    isActive: true,
+                ),
+                $editor,
+            );
+            $this->fail('Expected self-assignment validation failure.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('roles', $exception->errors());
+        }
+
+        $this->assertTrue($editor->fresh()->hasRole('viewer'));
+        $this->assertFalse($editor->fresh()->hasRole('approver'));
+    }
+
+    public function test_import_create_rejects_department_head_when_actor_ceiling_is_users_update_only(): void
+    {
+        $importer = User::factory()->create();
+        $importer->givePermissionTo(['users.import', 'users.create', 'users.update', 'users.view']);
+
+        try {
+            app(UserImportService::class)->commit([
+                [
+                    'status' => 'ready',
+                    'name' => 'Pat Head',
+                    'email' => 'pat.head@example.com',
+                    'department' => '',
+                    'manager_email' => '',
+                    'phone' => '',
+                    'roles' => 'department-head',
+                ],
+            ], $importer);
+            $this->fail('Expected permission ceiling validation failure.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('roles', $exception->errors());
+        }
+
+        $this->assertDatabaseMissing('users', ['email' => 'pat.head@example.com']);
+    }
+
     private function owner(): User
     {
         $owner = User::factory()->create()->assignRole('super-admin');

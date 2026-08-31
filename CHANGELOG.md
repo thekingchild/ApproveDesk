@@ -6,6 +6,10 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ## [Unreleased]
 
+### Security
+
+- Remediation in progress for the five validated findings in the v2.7.2 repository security assessment.
+
 ## [2.8.1] - 2026-08-30
 
 ### Changed
