@@ -30,6 +30,7 @@ paths:
   /submissions:
     get:
       security: [{ bearerAuth: [] }]
+      description: List and detail both require submissions:read and remain subject to model-level visibility.
       parameters:
         - in: query
           name: cursor
@@ -50,6 +51,17 @@ paths:
           schema: { type: string }
       responses:
         "201": { description: Created }
+  /submissions/{id}:
+    get:
+      security: [{ bearerAuth: [] }]
+      description: One accessible submission. Requires submissions:read and remains subject to model-level visibility.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200": { description: One submission }
   /openapi.json:
     get:
       responses:

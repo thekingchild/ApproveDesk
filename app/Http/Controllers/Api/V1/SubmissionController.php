@@ -7,13 +7,13 @@ use App\Actions\Submissions\SubmitSubmissionAction;
 use App\DTOs\SubmissionData;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\IndexSubmissionRequest;
+use App\Http\Requests\Api\V1\ShowSubmissionRequest;
 use App\Http\Requests\Api\V1\StoreSubmissionRequest;
 use App\Http\Resources\Api\V1\SubmissionResource;
 use App\Models\Submission;
 use App\Services\Workflow\AssignedStepConstraint;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
-use Illuminate\Support\Facades\Gate;
 
 class SubmissionController extends Controller
 {
@@ -72,10 +72,8 @@ class SubmissionController extends Controller
             ->setStatusCode(201);
     }
 
-    public function show(Submission $submission): SubmissionResource
+    public function show(ShowSubmissionRequest $request, Submission $submission): SubmissionResource
     {
-        Gate::authorize('view', $submission);
-
         return new SubmissionResource($submission->load($this->relations(withActions: true)));
     }
 
