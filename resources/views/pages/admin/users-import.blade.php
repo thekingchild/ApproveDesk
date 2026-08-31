@@ -49,8 +49,8 @@ new #[Title('Import users')] class extends Component {
             $this->preview = $service->analyze($rows, auth()->user());
             $this->analyzed = true;
             $this->result = null;
-        } catch (\RuntimeException|\PhpOffice\PhpSpreadsheet\Exception $exception) {
-            $this->addError('file', $exception->getMessage());
+        } catch (\RuntimeException|\PhpOffice\PhpSpreadsheet\Exception) {
+            $this->addError('file', __('This spreadsheet cannot be imported.'));
         }
     }
 

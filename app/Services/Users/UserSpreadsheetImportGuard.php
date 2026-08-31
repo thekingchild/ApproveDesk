@@ -80,6 +80,8 @@ final class UserSpreadsheetImportGuard
         try {
             $names = $this->inspectZipStats($zip);
             $this->inspectXlsxXml($zip, $names);
+        } catch (\Throwable) {
+            $this->reject();
         } finally {
             $zip->close();
         }
@@ -285,15 +287,21 @@ final class UserSpreadsheetImportGuard
                 $this->reject();
             }
 
-            $reader = new XMLReader;
-            if ($reader->open($uri, null, LIBXML_NONET | LIBXML_COMPACT) !== true) {
-                $this->reject();
-            }
-
+            $previous = libxml_use_internal_errors(true);
             try {
-                $consume($reader);
+                $reader = new XMLReader;
+                if ($reader->open($uri, null, LIBXML_NONET | LIBXML_COMPACT) !== true) {
+                    $this->reject();
+                }
+
+                try {
+                    $consume($reader);
+                } finally {
+                    $reader->close();
+                }
             } finally {
-                $reader->close();
+                libxml_clear_errors();
+                libxml_use_internal_errors($previous);
             }
         } finally {
             fclose($tmp);

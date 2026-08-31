@@ -73,13 +73,20 @@ class UserSpreadsheetImportGuardTest extends TestCase
         $this->assertRejected($path);
     }
 
-    public function test_high_compression_ratio_is_rejected(): void
+    public function test_claimed_hundred_to_one_compression_ratio_is_rejected(): void
     {
-        $path = $this->tempPath('xlsx');
-        $zip = new ZipArchive;
-        $this->assertSame(true, $zip->open($path, ZipArchive::CREATE | ZipArchive::OVERWRITE) === true);
-        $zip->addFromString('xl/workbook.xml', str_repeat('A', 50_000));
-        $zip->close();
+        $workbook = '<?xml version="1.0"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Sheet1" sheetId="1" r:id="rId1"/></sheets></workbook>';
+        $sheet = '<?xml version="1.0"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><dimension ref="A1:F2"/><sheetData/></worksheet>';
+        $types = '<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"></Types>';
+
+        $path = $this->rawZip([
+            '[Content_Types].xml' => ['content' => $types],
+            'xl/workbook.xml' => [
+                'content' => $workbook,
+                'uncompressed' => (strlen($workbook) * UserSpreadsheetImportGuard::MAX_RATIO) + 1,
+            ],
+            'xl/worksheets/sheet1.xml' => ['content' => $sheet],
+        ]);
 
         $this->assertRejected($path);
     }
@@ -150,6 +157,23 @@ class UserSpreadsheetImportGuardTest extends TestCase
         $this->assertRejected($path);
     }
 
+    public function test_malformed_workbook_xml_is_rejected_with_generic_message(): void
+    {
+        $path = $this->minimalXlsx(
+            workbook: '<?xml version="1.0"?><workbook><sheets><sheet name="Sheet1"',
+        );
+
+        $this->assertRejected($path);
+
+        try {
+            app(UserImportService::class)->rows($path, 'xlsx');
+            $this->fail('Malformed workbook XML should not be imported.');
+        } catch (\Throwable $exception) {
+            $this->assertInstanceOf(RuntimeException::class, $exception);
+            $this->assertSame(__('This spreadsheet cannot be imported.'), $exception->getMessage());
+        }
+    }
+
     public function test_rejected_zip_never_reaches_spreadsheet_load(): void
     {
         $path = $this->rawZip([
@@ -209,7 +233,8 @@ class UserSpreadsheetImportGuardTest extends TestCase
         try {
             app(UserSpreadsheetImportGuard::class)->assertSafe($path);
             $this->fail('Expected spreadsheet to be rejected.');
-        } catch (RuntimeException $exception) {
+        } catch (\Throwable $exception) {
+            $this->assertInstanceOf(RuntimeException::class, $exception);
             $this->assertSame(__('This spreadsheet cannot be imported.'), $exception->getMessage());
         }
     }
