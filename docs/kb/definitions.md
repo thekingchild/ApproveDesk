@@ -4,11 +4,11 @@ Short meanings for the words used on ApproveDesk screens. Open a term’s name t
 
 ## [Announcement](/help/announcements)
 
-An in-app message published by the System owner to all active users or to selected roles. It appears on the signed-in Dashboard and is separate from approval notifications and email or chat delivery.
+An in-app message shown to all eligible active users or to people with selected roles. It appears on the signed-in Dashboard and is separate from approval notifications and email or chat delivery.
 
 ## [Sticky announcement](/help/announcements)
 
-An announcement that stays on every eligible signed-in page until the System owner archives it. A user cannot dismiss it.
+An announcement that stays on every eligible signed-in page until it is ended. A user cannot dismiss it.
 
 ## [Application theme](/help/application-themes)
 
@@ -290,17 +290,9 @@ Putting a verified snapshot back onto this copy. Type the snapshot number to con
 
 The administrator screen for this copy’s version and for applying waiting database changes after a deploy. It is not the first-time setup wizard.
 
-## [System owner](/help/users-and-roles)
+## [System owner](system-owner-controls.md)
 
-The first account created during setup. That person can grant administrators, recover another account, and set the active-user limit. Other people do not see this account in user lists or new assignment pickers. Decisions they already recorded stay visible on those requests.
-
-## [Account recovery](/help/users-and-roles)
-
-Owner-only actions on a person that invalidate a password and email a reset link, or remove that person’s authenticator, recovery codes, and passkeys. Both sign the person out everywhere.
-
-## [Active-user limit](/help/users-and-roles)
-
-The optional maximum number of accounts that can sign in. Inactive accounts do not count. The System owner is included. Off (unlimited) until the System owner sets a number.
+The protected account established during first-time setup. It is not shown in ordinary user lists or assignment pickers. Decisions previously recorded by that person remain visible on requests.
 
 ## [Custom role](/help/users-and-roles)
 
@@ -308,7 +300,7 @@ A feature-based set of permissions created from Administration → Roles & permi
 
 ## [Role manager](/help/users-and-roles)
 
-A person explicitly trusted by the System owner to manage custom roles. They cannot grant permissions above their own access, appoint another role manager, grant Administrator, or obtain System-owner powers.
+A person trusted to manage custom roles within their own permission ceiling. Protected roles and protected permissions remain unavailable.
 
 ## [Scheduler heartbeat](/help/operations)
 

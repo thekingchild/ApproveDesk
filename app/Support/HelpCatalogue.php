@@ -4,7 +4,6 @@ namespace App\Support;
 
 use App\Models\User;
 use Illuminate\Support\Collection;
-use Spatie\Permission\Exceptions\PermissionDoesNotExist;
 
 final class HelpCatalogue
 {
@@ -98,8 +97,10 @@ final class HelpCatalogue
                 summary: 'Grant access, assign roles, import users from a spreadsheet, and deactivate accounts without locking out the last super admin.',
                 icon: 'users',
                 group: 'Administration',
-                audience: 'admin',
+                audience: 'permission',
+                requiredPermissions: ['users.view', 'roles.view'],
                 screenRoute: 'admin.users.index',
+                screenPermission: 'users.view',
             ),
             new HelpArticle(
                 slug: 'departments',
@@ -107,8 +108,10 @@ final class HelpCatalogue
                 summary: 'Group people, assign managers, and use departments in routing.',
                 icon: 'building-office',
                 group: 'Administration',
-                audience: 'admin',
+                audience: 'permission',
+                requiredPermissions: ['departments.view'],
                 screenRoute: 'admin.departments.index',
+                screenPermission: 'departments.view',
             ),
             new HelpArticle(
                 slug: 'workflow-templates',
@@ -116,8 +119,10 @@ final class HelpCatalogue
                 summary: 'Build approval chains, choose assignees, and publish frozen versions.',
                 icon: 'arrows-right-left',
                 group: 'Administration',
-                audience: 'admin',
+                audience: 'permission',
+                requiredPermissions: ['workflows.view'],
                 screenRoute: 'admin.workflow-templates.index',
+                screenPermission: 'workflows.view',
             ),
             new HelpArticle(
                 slug: 'request-types',
@@ -125,8 +130,10 @@ final class HelpCatalogue
                 summary: 'Design versioned forms, assign a workflow, and add selection rules for form values.',
                 icon: 'document-text',
                 group: 'Administration',
-                audience: 'admin',
+                audience: 'permission',
+                requiredPermissions: ['request_types.view'],
                 screenRoute: 'admin.request-types.index',
+                screenPermission: 'request_types.view',
             ),
             new HelpArticle(
                 slug: 'analytics',
@@ -134,8 +141,10 @@ final class HelpCatalogue
                 summary: 'Read cycle time, bottlenecks, workload, and export a report.',
                 icon: 'chart-bar',
                 group: 'Administration',
-                audience: 'admin',
+                audience: 'permission',
+                requiredPermissions: ['reports.view'],
                 screenRoute: 'admin.analytics.index',
+                screenPermission: 'reports.view',
             ),
             new HelpArticle(
                 slug: 'webhooks',
@@ -143,8 +152,10 @@ final class HelpCatalogue
                 summary: 'Send signed workflow events to another system. Destinations must be public HTTPS.',
                 icon: 'rss',
                 group: 'Administration',
-                audience: 'admin',
+                audience: 'permission',
+                requiredPermissions: ['webhooks.manage'],
                 screenRoute: 'admin.webhooks.index',
+                screenPermission: 'webhooks.manage',
             ),
             new HelpArticle(
                 slug: 'integrations',
@@ -152,17 +163,32 @@ final class HelpCatalogue
                 summary: 'Connect Teams, Slack, Drive, SharePoint, mail, or HTTP and run post-approval actions.',
                 icon: 'puzzle-piece',
                 group: 'Administration',
-                audience: 'admin',
+                audience: 'permission',
+                requiredPermissions: ['integrations.manage'],
                 screenRoute: 'admin.integrations.index',
+                screenPermission: 'integrations.manage',
             ),
             new HelpArticle(
                 slug: 'organization-settings',
-                title: 'Organization settings',
-                summary: 'Company identity and printable branding, login appearance, optional public landing page, self-registration, owner-only custom code, approval links, calendars, and notification channels.',
-                icon: 'cog-6-tooth',
+                title: 'Branding and public access',
+                summary: 'Company identity, printable branding, login appearance, optional public landing page, and self-registration.',
+                icon: 'paint-brush',
                 group: 'Administration',
-                audience: 'admin',
+                audience: 'permission',
+                requiredPermissions: ['branding.manage'],
                 screenRoute: 'settings.branding',
+                screenPermission: 'branding.manage',
+            ),
+            new HelpArticle(
+                slug: 'approval-settings',
+                title: 'Approval settings',
+                summary: 'Signed-link identity checks, business calendars, deadlines, and reminder quiet hours.',
+                icon: 'clock',
+                group: 'Administration',
+                audience: 'permission',
+                requiredPermissions: ['approval_settings.manage'],
+                screenRoute: 'settings.approvals',
+                screenPermission: 'approval_settings.manage',
             ),
             new HelpArticle(
                 slug: 'notification-channels',
@@ -170,8 +196,10 @@ final class HelpCatalogue
                 summary: 'Keep in-app and email on; optionally enable Teams, Slack, WhatsApp, and Telegram without putting tokens on personal settings.',
                 icon: 'bell',
                 group: 'Administration',
-                audience: 'admin',
+                audience: 'permission',
+                requiredPermissions: ['notification_channels.manage'],
                 screenRoute: 'settings.notification-channels',
+                screenPermission: 'notification_channels.manage',
             ),
             new HelpArticle(
                 slug: 'audit-trail',
@@ -179,7 +207,8 @@ final class HelpCatalogue
                 summary: 'What is immutable, how evidence packs work, and how to read history.',
                 icon: 'shield-check',
                 group: 'Administration',
-                audience: 'admin',
+                audience: 'permission',
+                requiredPermissions: ['audit.view'],
             ),
             new HelpArticle(
                 slug: 'records',
@@ -187,8 +216,10 @@ final class HelpCatalogue
                 summary: 'Auditor access, legal holds, retention, disposition, and pack verification.',
                 icon: 'archive-box',
                 group: 'Administration',
-                audience: 'admin',
+                audience: 'permission',
+                requiredPermissions: ['audit.view'],
                 screenRoute: 'admin.records.index',
+                screenPermission: 'settings.manage',
             ),
             new HelpArticle(
                 slug: 'security-and-privacy',
@@ -196,8 +227,10 @@ final class HelpCatalogue
                 summary: 'Sensitive fields, download stamps, devices, required second factor, bot protection, rate limits, and account anonymization.',
                 icon: 'lock-closed',
                 group: 'Administration',
-                audience: 'admin',
+                audience: 'permission',
+                requiredPermissions: ['security_settings.manage'],
                 screenRoute: 'settings.security-privacy',
+                screenPermission: 'security_settings.manage',
             ),
             new HelpArticle(
                 slug: 'operations',
@@ -205,8 +238,10 @@ final class HelpCatalogue
                 summary: 'Scheduled work, failed deliveries, stuck requests, and backup checks.',
                 icon: 'signal',
                 group: 'Administration',
-                audience: 'admin',
+                audience: 'permission',
+                requiredPermissions: ['operations.view'],
                 screenRoute: 'admin.operations.index',
+                screenPermission: 'operations.view',
             ),
             new HelpArticle(
                 slug: 'backups',
@@ -214,8 +249,10 @@ final class HelpCatalogue
                 summary: 'Separate database and file snapshots, destinations, and promote after a check that the copy is still the one that was taken.',
                 icon: 'circle-stack',
                 group: 'Administration',
-                audience: 'admin',
+                audience: 'permission',
+                requiredPermissions: ['backups.view'],
                 screenRoute: 'admin.backups.index',
+                screenPermission: 'backups.view',
             ),
             new HelpArticle(
                 slug: 'updates',
@@ -223,8 +260,18 @@ final class HelpCatalogue
                 summary: 'See this copy’s version and apply waiting database changes after a deploy.',
                 icon: 'arrow-path',
                 group: 'Administration',
-                audience: 'admin',
+                audience: 'permission',
+                requiredPermissions: ['updates.view'],
                 screenRoute: 'admin.updates.index',
+                screenPermission: 'updates.view',
+            ),
+            new HelpArticle(
+                slug: 'system-owner-controls',
+                title: 'System owner controls',
+                summary: 'Protected account recovery, administrator grants, capacity, announcements, themes, and custom code.',
+                icon: 'key',
+                group: 'System owner',
+                audience: 'owner',
             ),
         ]);
     }
@@ -251,32 +298,32 @@ final class HelpCatalogue
      */
     public function menuArticles(User $user): Collection
     {
-        $slugs = self::isAdministrator($user)
-            ? ['definitions', 'users-and-roles', 'request-types', 'workflow-templates', 'analytics', 'requests', 'approvals']
-            : ['definitions', 'requests', 'approvals', 'collaboration', 'account-settings'];
+        $visible = $this->visibleFor($user);
+        $administration = $visible
+            ->filter(fn (HelpArticle $article): bool => $article->group === 'Administration')
+            ->take(5)
+            ->pluck('slug')
+            ->all();
+        $owner = $user->isSystemOwner() ? ['system-owner-controls'] : [];
+        $slugs = array_values(array_unique([
+            'definitions',
+            ...$owner,
+            ...$administration,
+            'requests',
+            'approvals',
+            'collaboration',
+            'account-settings',
+        ]));
 
-        return $this->visibleFor($user)
+        return $visible
             ->filter(fn (HelpArticle $article): bool => in_array($article->slug, $slugs, true))
             ->sortBy(fn (HelpArticle $article): int => (int) array_search($article->slug, $slugs, true))
             ->values();
     }
 
-    public static function isAdministrator(User $user): bool
+    public function hasAdministrationHelp(User $user): bool
     {
-        if ($user->hasRole(['super-admin', 'admin'])) {
-            return true;
-        }
-
-        try {
-            foreach (['users.manage', 'users.view', 'roles.view', 'departments.manage', 'templates.manage', 'settings.manage', 'reports.view', 'webhooks.manage', 'integrations.manage', 'audit.view', 'backups.view', 'operations.view'] as $permission) {
-                if ($user->can($permission)) {
-                    return true;
-                }
-            }
-        } catch (PermissionDoesNotExist) {
-            return false;
-        }
-
-        return false;
+        return $this->visibleFor($user)
+            ->contains(fn (HelpArticle $article): bool => $article->group === 'Administration');
     }
 }

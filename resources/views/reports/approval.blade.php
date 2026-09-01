@@ -23,7 +23,12 @@
         h3 { font-size: 15px; margin: 0; }
         p { margin: 5px 0; }
         .heading-row { align-items: flex-start; display: flex; gap: 18px; justify-content: space-between; }
-        .status { background: var(--soft); border-left: 4px solid var(--accent); font-weight: 700; margin-top: 20px; padding: 8px 12px; text-transform: capitalize; white-space: nowrap; }
+        .approval-status-stamp { background: #eff6ff; border: 3px double currentColor; border-radius: 5px; color: #1d4ed8; flex: 0 0 auto; font-size: 15px; font-weight: 800; letter-spacing: .12em; line-height: 1; margin-top: 20px; padding: 9px 13px 8px; text-align: center; text-transform: uppercase; transform: rotate(-2deg); white-space: nowrap; }
+        .status-draft, .status-withdrawn { background: #f4f4f5; color: #52525b; }
+        .status-approved { background: #f0fdf4; color: #166534; }
+        .status-rejected { background: #fef2f2; color: #991b1b; }
+        .status-returned { background: #fffbeb; color: #92400e; }
+        .status-pending, .status-in-review, .status-awaiting-information { background: #eff6ff; color: #1d4ed8; }
         .reference { color: var(--muted); font-size: 12px; }
         .summary, .fields { display: grid; gap: 0 20px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .item { border-bottom: 1px solid #e4e4e7; padding: 8px 0; page-break-inside: avoid; overflow-wrap: anywhere; }
@@ -83,13 +88,21 @@
             </div>
         </header>
 
+        @php
+            $statusLabel = str($submission->status->value)->replace('_', ' ')->title()->toString();
+            $statusClass = 'status-'.str($submission->status->value)->replace('_', '-')->toString();
+        @endphp
         <div class="heading-row">
             <div>
                 <h1>{{ __('Approval report') }}</h1>
                 <h3>{{ $submission->title }}</h3>
                 <p class="reference">{{ __('Reference') }}: {{ $submission->reference_number }}</p>
             </div>
-            <div class="status">{{ str($submission->status->value)->replace('_', ' ')->title() }}</div>
+            <div
+                class="approval-status-stamp {{ $statusClass }}"
+                data-test="approval-status-stamp"
+                aria-label="{{ __('Approval status: :status', ['status' => $statusLabel]) }}"
+            >{{ $statusLabel }}</div>
         </div>
 
         <section>

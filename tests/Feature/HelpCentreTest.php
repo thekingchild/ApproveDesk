@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\SystemOwner;
 use App\Models\User;
 use App\Support\HelpCatalogue;
 use Database\Seeders\RolesAndPermissionsSeeder;
@@ -67,6 +68,135 @@ class HelpCentreTest extends TestCase
 
         $this->actingAs($submitter)
             ->get(route('help.show', 'users-and-roles'))
+            ->assertForbidden();
+    }
+
+    public function test_custom_role_sees_only_help_for_its_actual_capabilities(): void
+    {
+        $backupViewer = User::factory()->create();
+        $backupViewer->givePermissionTo('backups.view');
+
+        $this->actingAs($backupViewer)
+            ->get(route('help'))
+            ->assertOk()
+            ->assertSee('Backups')
+            ->assertDontSee('Users and roles')
+            ->assertDontSee('Workflow templates')
+            ->assertDontSee('Organization settings');
+
+        $this->actingAs($backupViewer)
+            ->get(route('help.show', 'backups'))
+            ->assertOk();
+
+        $this->actingAs($backupViewer)
+            ->get(route('help.show', 'users-and-roles'))
+            ->assertForbidden();
+    }
+
+    public function test_unrelated_administration_permission_does_not_unlock_all_admin_help(): void
+    {
+        $userViewer = User::factory()->create();
+        $userViewer->givePermissionTo('users.view');
+
+        $dashboard = $this->actingAs($userViewer)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('data-test="help-menu-users-and-roles"', false)
+            ->assertDontSee('data-test="help-menu-request-types"', false);
+
+        $this->assertStringNotContainsString('help-menu-backups', $dashboard->getContent());
+
+        $this->actingAs($userViewer)
+            ->get(route('help.show', 'backups'))
+            ->assertForbidden();
+    }
+
+    public function test_article_does_not_offer_a_screen_the_reader_cannot_open(): void
+    {
+        $roleViewer = User::factory()->create();
+        $roleViewer->givePermissionTo('roles.view');
+
+        $this->actingAs($roleViewer)
+            ->get(route('help.show', 'users-and-roles'))
+            ->assertOk()
+            ->assertSee('Users and roles')
+            ->assertDontSee('Open this screen');
+    }
+
+    public function test_system_owner_help_is_owner_only_and_direct_access_fails_closed(): void
+    {
+        $owner = User::factory()->create();
+        SystemOwner::query()->create(['id' => SystemOwner::SINGLETON_ID, 'user_id' => $owner->id]);
+        $admin = User::factory()->create()->assignRole('admin');
+
+        $this->actingAs($owner)
+            ->get(route('help'))
+            ->assertOk()
+            ->assertSee('System owner controls');
+
+        $this->actingAs($owner)
+            ->get(route('help.show', 'system-owner-controls'))
+            ->assertOk()
+            ->assertSee('Account recovery')
+            ->assertSee('Manage the theme catalogue')
+            ->assertSee('Publish an announcement')
+            ->assertSee('Analytics and custom code');
+
+        $this->actingAs($admin)
+            ->get(route('help'))
+            ->assertOk()
+            ->assertDontSee('System owner controls');
+
+        $this->actingAs($admin)
+            ->get(route('help.show', 'system-owner-controls'))
+            ->assertForbidden()
+            ->assertDontSee('Account recovery');
+    }
+
+    public function test_shared_help_does_not_publish_owner_only_procedures(): void
+    {
+        $admin = User::factory()->create()->assignRole('admin');
+        $catalogue = app(HelpCatalogue::class);
+
+        foreach (['users-and-roles', 'organization-settings', 'announcements', 'application-themes'] as $slug) {
+            $html = $catalogue->find($slug)?->html($admin) ?? '';
+
+            foreach (['Invalidate password and email reset link', 'Analytics and custom code', 'Save announcement', 'Save custom theme'] as $ownerProcedure) {
+                $this->assertStringNotContainsStringIgnoringCase($ownerProcedure, $html, $slug.' exposes '.$ownerProcedure);
+            }
+        }
+
+        $this->assertStringNotContainsString(
+            'href="/help/system-owner-controls"',
+            $catalogue->find('users-and-roles')?->html($admin) ?? '',
+        );
+    }
+
+    public function test_approval_settings_help_is_separate_from_branding_help(): void
+    {
+        $brandingManager = User::factory()->create();
+        $brandingManager->givePermissionTo('branding.manage');
+        $approvalManager = User::factory()->create();
+        $approvalManager->givePermissionTo('approval_settings.manage');
+
+        $this->actingAs($brandingManager)
+            ->get(route('help.show', 'organization-settings'))
+            ->assertOk()
+            ->assertSee('Show public landing page')
+            ->assertDontSee('Require sign-in and a second factor');
+
+        $this->actingAs($brandingManager)
+            ->get(route('help.show', 'approval-settings'))
+            ->assertForbidden();
+
+        $this->actingAs($approvalManager)
+            ->get(route('help.show', 'approval-settings'))
+            ->assertOk()
+            ->assertSee('Require sign-in and a second factor')
+            ->assertSee('Business calendar');
+
+        $this->actingAs($approvalManager)
+            ->get(route('help.show', 'organization-settings'))
             ->assertForbidden();
     }
 
@@ -209,38 +339,35 @@ class HelpCentreTest extends TestCase
             ->assertSee('Business hours use organization working days, office hours, and holidays');
     }
 
-    public function test_organization_settings_article_explains_office_hours(): void
+    public function test_branding_article_explains_public_access_without_other_admin_controls(): void
     {
         $admin = User::factory()->create()->assignRole('admin');
 
         $this->actingAs($admin)
             ->get(route('help.show', 'organization-settings'))
             ->assertOk()
-            ->assertSee('optional office hours')
-            ->assertSee('do not enter 00:00–23:59')
-            ->assertSee('life-ring on Approval settings')
             ->assertSee('Application logo')
             ->assertSee('Favicon')
             ->assertSee('Meta description')
-            ->assertSee('Notification channels')
-            ->assertSee('Security & privacy')
-            ->assertSee('installation timezone')
+            ->assertSee('Show public landing page')
+            ->assertSee('Allow self-registration')
             ->assertSee('Google or Microsoft')
-            ->assertSee('Only the System owner can change this')
-            ->assertDontSee('application timezone (UTC)')
+            ->assertDontSee('optional office hours')
+            ->assertDontSee('Analytics and custom code')
             ->assertDontSee('APP_TIMEZONE')
             ->assertDontSee('.env');
     }
 
-    public function test_users_and_roles_article_keeps_custom_code_off_custom_roles(): void
+    public function test_users_and_roles_article_omits_protected_owner_procedures(): void
     {
         $admin = User::factory()->create()->assignRole('admin');
 
         $this->actingAs($admin)
             ->get(route('help.show', 'users-and-roles'))
             ->assertOk()
-            ->assertSee('or the ability to add analytics and custom code')
-            ->assertSee('or add analytics and custom code');
+            ->assertSee('Protected procedures are kept in System owner controls')
+            ->assertDontSee('Invalidate password and email reset link')
+            ->assertDontSee('analytics and custom code');
     }
 
     public function test_notification_channels_article_explains_optional_delivery(): void

@@ -6,6 +6,24 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ## [Unreleased]
 
+## [2.8.3] - 2026-09-01
+
+### Added
+
+- The optional public landing page now ships the completed static ApproveDesk marketing design, including server-injected account actions, responsive styling, supplied brand artwork, favicon and social-sharing assets, SEO metadata, and production footer links. It remains a build-free `website/` drop-in and stays disabled by default.
+- Printable approval reports show the persisted request status as an accessible, status-colored stamp in the upper-right heading area. The marker remains visible in preview, browser print, and PDF without covering report evidence.
+
+### Security
+
+- Help articles now use explicit signed-in, permission-based, or singleton System-owner audiences instead of a broad administrator heuristic. Index cards, direct routes, compact menus, Markdown links, related links, contextual links, and screen actions enforce the same decision.
+- Protected recovery, capacity, owner-grant, announcement/theme management, and custom-code procedures now live in a System-owner-only guide. Shared guides no longer expose those procedures to delegated administrators or ordinary users.
+- Branding and approval settings have separate guides so a custom role can read only the procedure for the screen it is allowed to open.
+
+### Changed
+
+- README, `.env.example` `APP_VERSION`, the Updates-page fallback, application configuration, and this changelog treat **v2.8.3** as the current single-company release.
+- No database migration or new configuration key is required.
+
 ## [2.8.2] - 2026-08-31
 
 ### Security

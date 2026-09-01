@@ -2,17 +2,17 @@
 
 Open **Administration → Users** to create accounts, change roles, attach a department, and deactivate people who should no longer sign in.
 
-The account created during first-time setup is the **System owner**. That person is hidden from other people on this screen and cannot be edited, deactivated, or anonymized. Only the System owner can grant the Administrator role or recover another person’s password or second factor.
+The account created during first-time setup is the protected **System owner**. That account is hidden from other people on this screen and cannot be edited, deactivated, or anonymized. Controls that are not shown to your account are outside your authority; ask the System owner to perform the action rather than trying to work around the restriction. Protected procedures are kept in [System owner controls](system-owner-controls.md), which is available only to that account.
 
 ## Roles
 
-Built-in roles are protected defaults. The System owner can open **Administration → Roles & permissions**, clone a built-in role, and create, edit, archive, or restore custom roles. A custom role combines the selected feature permissions; a person with several roles receives the union of all of them.
+Built-in roles are protected defaults. People with **Manage custom roles** can open **Administration → Roles & permissions** and create, edit, archive, or restore custom roles within their own permission ceiling. A custom role combines selected feature permissions; a person with several roles receives the union of all of them.
 
-The owner may appoint a role manager. A role manager can work only with custom roles and cannot grant permissions above their own access. They cannot grant Administrator, role-manager authority, account recovery, active-user capacity, System-owner authority, or the ability to add analytics and custom code.
+A role manager can work only with custom roles and cannot grant permissions above their own access. Protected roles and protected permissions remain unavailable.
 
 | Role | What it is for |
 |---|---|
-| Administrator | Users, departments, workflows, request types, branding, webhooks, and sensitive fields. Cannot grant another Administrator, recover passwords, or add analytics and custom code. |
+| Administrator | Built-in broad administration for users, departments, workflows, request types, branding, webhooks, and sensitive fields. |
 | Department head | Department work, plus create and view submissions. |
 | Approver | Act on assigned steps. |
 | Submitter | Create, edit own drafts, and withdraw own requests. |
@@ -21,22 +21,9 @@ The owner may appoint a role manager. A role manager can work only with custom r
 
 A person can hold more than one role. Mixed roles add up — they receive every ability those roles include.
 
-When you grant roles on **Administration → Users**, every role you assign — including built-in roles — must stay within your own access. The System owner is not limited this way. A non-owner cannot change their own roles from this screen. Saving name, email, department, phone, or other profile fields does not change the roles the person already holds, including roles you cannot grant.
+When you grant roles on **Administration → Users**, every role you assign must stay within your own access. A non-owner cannot change their own roles from this screen. Saving name, email, department, phone, or other profile fields does not change the roles the person already holds, including roles you cannot grant.
 
-Only the System owner can grant or remove the Administrator role. Built-in roles can be cloned but not edited or deleted. Archive a custom role to stop new assignments without removing it from people who already hold it.
-
-## Account recovery
-
-If someone loses their authenticator, passkeys, and recovery codes, the System owner opens that person and uses **Account recovery**.
-
-- **Invalidate password and email reset link** signs them out everywhere and sends a one-use reset email. The owner never sees their new password.
-- **Remove authenticator, recovery codes, and passkeys** signs them out everywhere and lets them sign in with their password to add a new second factor.
-
-These actions do not change roles, request history, or whether the account is active.
-
-## Active-user capacity
-
-The System owner can set a maximum number of **active** accounts on this same screen, or leave it unlimited. The System owner counts as one active user. Inactive accounts do not count. Existing people can still sign in when the limit is full; new active accounts are refused until someone is deactivated.
+Built-in roles can be cloned but not edited or deleted. Archive a custom role to stop new assignments without removing it from people who already hold it.
 
 ## Inactive accounts
 
