@@ -48,22 +48,18 @@ class ReferenceNumberGenerator
             $maxExisting = 0;
             if ($counter->current_value === 0) {
                 $expectedLength = strlen($prefix) + $digitLength;
-                foreach (Submission::withTrashed()
+                $maxExisting = Submission::withTrashed()
                     ->where('reference_number', 'like', $prefix.'%')
-                    ->select('reference_number')
-                    ->cursor() as $row) {
-                    $reference = (string) $row->reference_number;
-                    if (strlen($reference) !== $expectedLength) {
-                        continue;
-                    }
+                    ->pluck('reference_number')
+                    ->filter(function (string $reference) use ($prefix, $expectedLength): bool {
+                        if (strlen($reference) !== $expectedLength) {
+                            return false;
+                        }
 
-                    $suffix = substr($reference, strlen($prefix));
-                    if (! ctype_digit($suffix)) {
-                        continue;
-                    }
-
-                    $maxExisting = max($maxExisting, (int) $suffix);
-                }
+                        return ctype_digit(substr($reference, strlen($prefix)));
+                    })
+                    ->map(fn (string $reference): int => (int) substr($reference, strlen($prefix)))
+                    ->max() ?? 0;
             }
 
             $next = max((int) $counter->current_value, $maxExisting) + 1;
