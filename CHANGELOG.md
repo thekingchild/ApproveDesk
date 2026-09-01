@@ -6,6 +6,8 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ## [Unreleased]
 
+## [2.8.4] - 2026-09-01
+
 ### Added
 
 - System owners can configure the approval ID prefix, separator, year/month patterns, digit length, and sequential or random generation from Approval settings; the backward-compatible default remains `SUB-YYYY-00001`.
@@ -16,6 +18,7 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 - Printable approval reports and downloaded PDFs now use the eight supplied status-specific image stamps for Draft, Pending, In review, Approved, Rejected, Returned, Awaiting information, and Withdrawn instead of the generated text stamp.
 - Approval settings Help now documents owner-only ID formatting, sequence resets, random generation, unchanged historical IDs, and printable status-stamp behavior.
+- README, `.env.example` `APP_VERSION`, the Updates-page fallback, application configuration, and this changelog treat **v2.8.4** as the current single-company release.
 
 ## [2.8.3] - 2026-09-01
 

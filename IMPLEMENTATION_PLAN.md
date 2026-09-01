@@ -164,7 +164,7 @@ Locked product decision for Phase 8.2. It does not reopen Phase 8.1. Design: [do
 | SH-UX281 | v2.8.1 | Dashboard announcements, company identity, printable branding, and collapsible navigation | Complete |
 | SH-SEC282 | v2.8.2 | Security assessment remediation: role ceilings, web-push SSRF, API scope, bounded imports, safe exports | Complete |
 | SH-UX283 | v2.8.3 | Public landing page refresh, capability-scoped Help, and printable status stamp | Complete |
-| SH-ID284/SH-PRN284 | v2.8.4 | Configurable approval IDs and supplied image status stamps | In progress |
+| SH-ID284/SH-PRN284 | v2.8.4 | Configurable approval IDs and supplied image status stamps | Complete |
 | 10 | v3.0.0 | SaaS multi-tenancy foundation | Not started |
 | 11 | v3.1.0 | Paystack and Flutterwave subscriptions | Not started |
 | 12 | v3.2.0 | SaaS onboarding, entitlements, and commercial operations | Not started |
@@ -1363,7 +1363,7 @@ This is a supplementary self-hosted patch release on `feature/sh-ux283-landing-h
 
 ---
 
-## Phase SH-ID284 / SH-PRN284 — Configurable approval IDs and supplied status stamps — In progress
+## Phase SH-ID284 / SH-PRN284 — Configurable approval IDs and supplied status stamps — Complete (2026-09-01)
 
 **Goal:** let the singleton System owner define the identifier format used for newly created approvals and replace the generated text marker on printable approval records with the eight supplied status-specific stamp images. Target release is **v2.8.4**.
 
@@ -1404,13 +1404,13 @@ This is a supplementary self-hosted patch release on `feature/sh-id284-approval-
 - **SH-PRN284-RPT-01:** Have the report service select and embed the correct status image as a local data URI; replace the CSS-generated text stamp with a bounded image while retaining an accessible `Approval status: …` label. — Complete (2026-09-01)
 - **SH-PRN284-RPT-02:** Verify HTML preview, A4 browser-print CSS, and Dompdf output keep the stamp visible, proportionate, non-obstructive, and independent of remote resources. — Complete (2026-09-01)
 
-### SH-ID284 / SH-PRN284 — Tests, Help, and release — In progress
+### SH-ID284 / SH-PRN284 — Tests, Help, and release — Complete (2026-09-01)
 
 - **SH-ID284-TEST-01:** Failing-first unit/feature coverage proves backward-compatible default IDs; every year/month/separator option; sequential reset/resume and fixed digit length; secure random format/collision retry; historical explicit IDs unchanged; and no duplicate allocation under the supported database locking path. — Complete (2026-09-01)
 - **SH-ID284-TEST-02:** Failing-first Livewire/action coverage proves owner visibility/save, validation and preview, delegated-manager and role-only-super-admin denial, and that non-owner saves preserve owner-only settings. — Complete (2026-09-01)
 - **SH-PRN284-TEST-01:** Failing-first report coverage proves all eight status-to-image mappings, embedded PNG data URIs, accessible status labels, removal of the old text-stamp treatment, PDF generation, and print-safe bounded CSS. — Complete (2026-09-01)
-- **SH-ID284-DOC-01:** Update Approval settings, Approvals, definitions if needed, Help catalogue summaries, `CHANGELOG.md`, README, and this plan in end-user language. Record the additive migration and unchanged historical IDs.
-- **SH-ID284-REL-01:** Back up the live SQLite database; prove fresh and upgrade migrations; run focused tests, full parallel SQLite tests, Pint, PHPStan, asset build, PDF/print smoke checks, and required GitHub `php`, `mysql`, and `assets` jobs; independently review the diff; merge through a PR; publish and verify annotated **v2.8.4**; sync both checkouts; migrate/clear caches locally; and verify `/up`, `/login`, owner settings, generated IDs, and a stamped PDF.
+- **SH-ID284-DOC-01:** Update Approval settings, Approvals, definitions if needed, Help catalogue summaries, `CHANGELOG.md`, README, and this plan in end-user language. Record the additive migration and unchanged historical IDs. — Complete (2026-09-01)
+- **SH-ID284-REL-01:** focused and parallel tests, Pint, PHPStan, PR #16 (php/mysql/assets green; browser non-blocking), merge, annotated v2.8.4 tag, two-checkout sync — Complete (2026-09-01)
 
 **Phase demo:** the System owner changes the preview from `SUB-2026-00001` to `APR/26/09/000001`, saves sequential generation, and creates two approvals with distinct increasing IDs. Switching to random produces a correctly sized numeric tail without altering prior requests. Printing each request status shows its supplied image stamp in the upper-right without covering evidence.
 

@@ -26,7 +26,7 @@ new #[Title('Updates')] class extends Component
     #[Computed]
     public function version(): string
     {
-        return (string) config('app.version', '2.8.3');
+        return (string) config('app.version', '2.8.4');
     }
 
     /**
