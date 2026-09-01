@@ -163,7 +163,7 @@ Locked product decision for Phase 8.2. It does not reopen Phase 8.1. Design: [do
 | SH-COM280/SH-THM280 | v2.8.0 | Owner announcements and selectable application themes | Complete |
 | SH-UX281 | v2.8.1 | Dashboard announcements, company identity, printable branding, and collapsible navigation | Complete |
 | SH-SEC282 | v2.8.2 | Security assessment remediation: role ceilings, web-push SSRF, API scope, bounded imports, safe exports | Complete |
-| SH-UX283 | v2.8.3 | Public landing page refresh, capability-scoped Help, and printable status stamp | In progress |
+| SH-UX283 | v2.8.3 | Public landing page refresh, capability-scoped Help, and printable status stamp | Complete |
 | 10 | v3.0.0 | SaaS multi-tenancy foundation | Not started |
 | 11 | v3.1.0 | Paystack and Flutterwave subscriptions | Not started |
 | 12 | v3.2.0 | SaaS onboarding, entitlements, and commercial operations | Not started |
@@ -1319,7 +1319,7 @@ This is a supplementary self-hosted patch release. It does not add schema, does 
 
 ---
 
-## Phase SH-UX283 — Public landing page, role-safe Help, and report status stamp — In progress
+## Phase SH-UX283 — Public landing page, role-safe Help, and report status stamp — Complete (2026-09-01)
 
 **Goal:** ship the completed static marketing page through the existing `website/` drop-in, make Help visibility match each person’s real application authority, and make printed approval records immediately recognizable by status without obscuring evidence. Target release is **v2.8.3**.
 
@@ -1354,7 +1354,7 @@ This is a supplementary self-hosted patch release on `feature/sh-ux283-landing-h
 
 - **SH-UX283-TEST-01 — Complete (2026-09-01):** Add failing-first feature coverage for website replacement/auth injection, permission-specific Help visibility, System-owner-only content, direct-route denial, link unwrapping, and report status stamps across representative statuses.
 - **SH-UX283-DOC-01 — Complete (2026-09-01):** Update affected end-user Help, Help catalogue summaries, website contract notes, `CHANGELOG.md`, README, and this plan without exposing deployment internals in Help.
-- **SH-UX283-REL-01:** Run focused tests, full parallel SQLite tests, Pint, PHPStan/lint, asset build, PDF smoke checks, independent review, and required GitHub Quality jobs; merge through a green PR, update every version surface to 2.8.3, publish annotated tag and GitHub release **v2.8.3**, synchronize both checkouts, clear local caches, and verify the local server.
+- **SH-UX283-REL-01 — Complete (2026-09-01):** focused and parallel tests, Pint, PHPStan, PR #15 (php/mysql/assets green; browser non-blocking), merge, annotated v2.8.3 tag, two-checkout sync
 
 **Phase demo:** an administrator enables the public landing page and visitors see the completed static site with server-injected account actions; a custom role sees only Help guides matching its permissions while only the singleton System owner can read protected owner procedures; an approval report displays a clear status stamp without covering its title, company identity, fields, workflow steps, actions, or footer.
 
