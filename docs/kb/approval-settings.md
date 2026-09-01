@@ -1,6 +1,27 @@
 # Approval settings
 
-Open **Settings → Approval settings** to control signed approval links, deadline calendars, and reminder quiet hours. Use these controls when organization-wide approval timing or identity requirements change.
+Open **Settings → Approval settings** to control approval IDs, signed approval links, deadline calendars, and reminder quiet hours. Use these controls when organization-wide approval timing or identity requirements change.
+
+## Approval ID format
+
+The **System owner** can choose the format used for new approval IDs. Other administrators who can manage approval settings can still manage link and calendar options, but they cannot see or change this owner-only card.
+
+Choose:
+
+- a letters-and-numbers **prefix** of up to 12 characters;
+- a hyphen, slash, or no separator;
+- a four-digit year, two-digit year, or no year;
+- a two-digit month, three-letter month, or no month;
+- between 4 and 12 number digits; and
+- **Sequential** or **Random** generation.
+
+The preview shows the next ID shape before you use it. The original default remains `SUB-YYYY-00001`, so updating an existing installation does not silently change its numbering.
+
+Sequential numbers restart when an included year or month changes. If neither date part is included, the sequence is continuous. Returning to an earlier format or date period resumes its protected counter. Changing the number of digits starts a separate counter. Random IDs retry collisions and always use the selected number of digits. If a sequential format runs out of numbers of that length, ApproveDesk stops issuing IDs rather than making them longer.
+
+A format change affects only approvals created after the save. Existing IDs, links, reports, and audit history remain unchanged. Avoid changing the format during a high-volume intake window unless everyone who records IDs has been told.
+
+Printed approval reports and downloaded PDFs display the supplied image stamp for the approval's current status in the report heading. The stamp is evidence of the status when the report was generated; it does not change the stored workflow history.
 
 ## Approval email links
 

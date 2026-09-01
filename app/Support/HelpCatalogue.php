@@ -182,7 +182,7 @@ final class HelpCatalogue
             new HelpArticle(
                 slug: 'approval-settings',
                 title: 'Approval settings',
-                summary: 'Signed-link identity checks, business calendars, deadlines, and reminder quiet hours.',
+                summary: 'Owner-controlled approval IDs, printable status stamps, signed-link identity checks, calendars, and quiet hours.',
                 icon: 'clock',
                 group: 'Administration',
                 audience: 'permission',

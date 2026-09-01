@@ -1,10 +1,12 @@
 <?php
 
+use App\Actions\Settings\UpdateApprovalReferenceSchemaAction;
 use App\Actions\Settings\UpdateApprovalSettingsAction;
 use App\Actions\Settings\UpdateEmailApprovalSecurityAction;
 use App\Actions\Settings\UpdateNudgeSettingsAction;
 use App\Services\Collaboration\QuietHours;
 use App\Services\Workflow\BusinessCalendar;
+use App\Support\ApprovalReferenceSchema;
 use App\Support\EmailApprovalLinks;
 use Flux\Flux;
 use Livewire\Attributes\Title;
@@ -12,6 +14,18 @@ use Livewire\Component;
 
 new #[Title('Approval settings')] class extends Component {
     public int $emailLinkExpirationHours = EmailApprovalLinks::DEFAULT_EXPIRATION_HOURS;
+
+    public string $referencePrefix = ApprovalReferenceSchema::DEFAULT_PREFIX;
+
+    public string $referenceSeparator = ApprovalReferenceSchema::DEFAULT_SEPARATOR;
+
+    public string $referenceYearPattern = ApprovalReferenceSchema::DEFAULT_YEAR_PATTERN;
+
+    public string $referenceMonthPattern = ApprovalReferenceSchema::DEFAULT_MONTH_PATTERN;
+
+    public int $referenceDigitLength = ApprovalReferenceSchema::DEFAULT_DIGIT_LENGTH;
+
+    public string $referenceGenerationMode = ApprovalReferenceSchema::DEFAULT_GENERATION_MODE;
 
     public bool $emailApprovalSecondFactorRequired = false;
 
@@ -32,6 +46,15 @@ new #[Title('Approval settings')] class extends Component {
     {
         $this->authorize('approval_settings.manage');
         $this->emailLinkExpirationHours = EmailApprovalLinks::expirationHours();
+        if (auth()->user()?->isSystemOwner()) {
+            $schema = app(ApprovalReferenceSchema::class);
+            $this->referencePrefix = $schema->prefix();
+            $this->referenceSeparator = $schema->separator();
+            $this->referenceYearPattern = $schema->yearPattern();
+            $this->referenceMonthPattern = $schema->monthPattern();
+            $this->referenceDigitLength = $schema->digitLength();
+            $this->referenceGenerationMode = $schema->generationMode();
+        }
         $this->emailApprovalSecondFactorRequired = EmailApprovalLinks::requiresSecondFactor();
         $calendar = app(BusinessCalendar::class);
         $this->workingDays = $calendar->workingDays();
@@ -42,6 +65,55 @@ new #[Title('Approval settings')] class extends Component {
         $quiet = app(QuietHours::class)->window();
         $this->quietHoursStart = $quiet['start'] ?? '';
         $this->quietHoursEnd = $quiet['end'] ?? '';
+    }
+
+    public function referencePreview(): string
+    {
+        $parts = [strtoupper($this->referencePrefix)];
+
+        if ($this->referenceYearPattern === 'yy') {
+            $parts[] = now()->format('y');
+        } elseif ($this->referenceYearPattern === 'yyyy') {
+            $parts[] = now()->format('Y');
+        }
+
+        if ($this->referenceMonthPattern === 'mm') {
+            $parts[] = now()->format('m');
+        } elseif ($this->referenceMonthPattern === 'mmm') {
+            $parts[] = strtoupper(now()->format('M'));
+        }
+
+        $parts[] = str_pad('1', max(4, min(12, $this->referenceDigitLength)), '0', STR_PAD_LEFT);
+
+        return implode($this->referenceSeparator, $parts);
+    }
+
+    public function saveReferenceSchema(UpdateApprovalReferenceSchemaAction $action): void
+    {
+        if (! auth()->user()?->isSystemOwner()) {
+            throw new \Illuminate\Auth\Access\AuthorizationException('Only the System owner can change the approval ID format.');
+        }
+
+        $validated = $this->validate([
+            'referencePrefix' => ['required', 'string', 'max:12', 'regex:/^[A-Za-z0-9]+$/'],
+            'referenceSeparator' => ['present', 'string', 'in:,-,/'],
+            'referenceYearPattern' => ['required', 'in:none,yy,yyyy'],
+            'referenceMonthPattern' => ['required', 'in:none,mm,mmm'],
+            'referenceDigitLength' => ['required', 'integer', 'between:4,12'],
+            'referenceGenerationMode' => ['required', 'in:sequential,random'],
+        ]);
+
+        $saved = $action->execute(auth()->user(), [
+            'prefix' => $validated['referencePrefix'],
+            'separator' => $validated['referenceSeparator'],
+            'year_pattern' => $validated['referenceYearPattern'],
+            'month_pattern' => $validated['referenceMonthPattern'],
+            'digit_length' => $validated['referenceDigitLength'],
+            'generation_mode' => $validated['referenceGenerationMode'],
+        ]);
+
+        $this->referencePrefix = $saved['prefix'];
+        Flux::toast('Approval ID format saved.');
     }
 
     public function save(
@@ -127,6 +199,72 @@ new #[Title('Approval settings')] class extends Component {
     <div class="mb-4 flex items-center gap-1">
         <x-ui.help-link article="approval-settings" />
     </div>
+
+    @if (auth()->user()?->isSystemOwner())
+        <flux:card class="mb-6 space-y-4" data-test="approval-reference-schema-card">
+            <div>
+                <flux:heading size="sm">{{ __('Approval ID format') }}</flux:heading>
+                <flux:text class="mt-1">
+                    {{ __('Choose how new approval IDs are generated. Existing IDs are never changed.') }}
+                </flux:text>
+            </div>
+
+            <form wire:submit="saveReferenceSchema" class="space-y-4">
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <flux:input
+                        wire:model.live="referencePrefix"
+                        :label="__('Prefix')"
+                        maxlength="12"
+                        description="Letters and numbers only."
+                        required
+                    />
+
+                    <flux:select wire:model.live="referenceSeparator" :label="__('Separator')">
+                        <flux:select.option value="-">{{ __('Hyphen (-)') }}</flux:select.option>
+                        <flux:select.option value="/">{{ __('Slash (/)') }}</flux:select.option>
+                        <flux:select.option value="">{{ __('No separator') }}</flux:select.option>
+                    </flux:select>
+
+                    <flux:select wire:model.live="referenceYearPattern" :label="__('Year')">
+                        <flux:select.option value="yyyy">{{ __('Four digits (YYYY)') }}</flux:select.option>
+                        <flux:select.option value="yy">{{ __('Two digits (YY)') }}</flux:select.option>
+                        <flux:select.option value="none">{{ __('Omit year') }}</flux:select.option>
+                    </flux:select>
+
+                    <flux:select wire:model.live="referenceMonthPattern" :label="__('Month')">
+                        <flux:select.option value="none">{{ __('Omit month') }}</flux:select.option>
+                        <flux:select.option value="mm">{{ __('Number (MM)') }}</flux:select.option>
+                        <flux:select.option value="mmm">{{ __('Short name (MMM)') }}</flux:select.option>
+                    </flux:select>
+
+                    <flux:input
+                        wire:model.live="referenceDigitLength"
+                        type="number"
+                        min="4"
+                        max="12"
+                        :label="__('ID digit length')"
+                        required
+                    />
+
+                    <flux:select wire:model.live="referenceGenerationMode" :label="__('Generation')">
+                        <flux:select.option value="sequential">{{ __('Sequential') }}</flux:select.option>
+                        <flux:select.option value="random">{{ __('Random') }}</flux:select.option>
+                    </flux:select>
+                </div>
+
+                <flux:callout icon="information-circle">
+                    <flux:callout.heading>{{ __('Preview') }}</flux:callout.heading>
+                    <flux:callout.text data-test="approval-reference-preview">
+                        <span class="font-mono">{{ $this->referencePreview() }}</span>
+                        <span class="block">{{ __('Sequential numbers restart only when an included year or month changes. Random IDs retry collisions automatically.') }}</span>
+                    </flux:callout.text>
+                </flux:callout>
+
+                <flux:button type="submit" variant="primary">{{ __('Save approval ID format') }}</flux:button>
+            </form>
+        </flux:card>
+    @endif
+
     <form wire:submit="save" class="space-y-6">
         <flux:input
             wire:model="emailLinkExpirationHours"

@@ -6,6 +6,17 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ## [Unreleased]
 
+### Added
+
+- System owners can configure the approval ID prefix, separator, year/month patterns, digit length, and sequential or random generation from Approval settings; the backward-compatible default remains `SUB-YYYY-00001`.
+- Sequential approval IDs use locked period and digit-length counters. Random IDs reserve a candidate before assignment and retry collisions, including IDs from deleted requests. Sequential generation stops instead of overflowing the chosen digit length.
+- An additive `approval_reference_counters` table stores those counters. Existing `reference_number` values are never rewritten.
+
+### Changed
+
+- Printable approval reports and downloaded PDFs now use the eight supplied status-specific image stamps for Draft, Pending, In review, Approved, Rejected, Returned, Awaiting information, and Withdrawn instead of the generated text stamp.
+- Approval settings Help now documents owner-only ID formatting, sequence resets, random generation, unchanged historical IDs, and printable status-stamp behavior.
+
 ## [2.8.3] - 2026-09-01
 
 ### Added

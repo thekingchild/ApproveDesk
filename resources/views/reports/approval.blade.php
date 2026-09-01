@@ -22,13 +22,9 @@
         h2 { border-bottom: 1px solid var(--line); font-size: 16px; margin: 20px 0 10px; padding-bottom: 6px; break-after: avoid; page-break-after: avoid; }
         h3 { font-size: 15px; margin: 0; }
         p { margin: 5px 0; }
-        .heading-row { align-items: flex-start; display: flex; gap: 18px; justify-content: space-between; }
-        .approval-status-stamp { background: #eff6ff; border: 3px double currentColor; border-radius: 5px; color: #1d4ed8; flex: 0 0 auto; font-size: 15px; font-weight: 800; letter-spacing: .12em; line-height: 1; margin-top: 20px; padding: 9px 13px 8px; text-align: center; text-transform: uppercase; transform: rotate(-2deg); white-space: nowrap; }
-        .status-draft, .status-withdrawn { background: #f4f4f5; color: #52525b; }
-        .status-approved { background: #f0fdf4; color: #166534; }
-        .status-rejected { background: #fef2f2; color: #991b1b; }
-        .status-returned { background: #fffbeb; color: #92400e; }
-        .status-pending, .status-in-review, .status-awaiting-information { background: #eff6ff; color: #1d4ed8; }
+        .heading-row { min-height: 120px; position: relative; }
+        .heading-row > div { padding-right: 130px; }
+        .approval-status-stamp { display: block; height: 112px; margin-top: 0; max-height: 112px; max-width: 112px; object-fit: contain; position: absolute; right: 0; top: 8px; width: 112px; }
         .reference { color: var(--muted); font-size: 12px; }
         .summary, .fields { display: grid; gap: 0 20px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .item { border-bottom: 1px solid #e4e4e7; padding: 8px 0; page-break-inside: avoid; overflow-wrap: anywhere; }
@@ -90,7 +86,6 @@
 
         @php
             $statusLabel = str($submission->status->value)->replace('_', ' ')->title()->toString();
-            $statusClass = 'status-'.str($submission->status->value)->replace('_', '-')->toString();
         @endphp
         <div class="heading-row">
             <div>
@@ -98,11 +93,14 @@
                 <h3>{{ $submission->title }}</h3>
                 <p class="reference">{{ __('Reference') }}: {{ $submission->reference_number }}</p>
             </div>
-            <div
-                class="approval-status-stamp {{ $statusClass }}"
+            <img
+                class="approval-status-stamp"
+                src="{{ $status_stamp_data_uri }}"
+                alt="{{ $statusLabel }}"
                 data-test="approval-status-stamp"
+                data-status-stamp="{{ $status_stamp_key }}"
                 aria-label="{{ __('Approval status: :status', ['status' => $statusLabel]) }}"
-            >{{ $statusLabel }}</div>
+            >
         </div>
 
         <section>
@@ -110,8 +108,9 @@
             <table class="summary-table">
                 <tbody>
                     <tr><th>{{ __('Request type') }}</th><td>{{ $request_type }}</td><th>{{ __('Requested by') }}</th><td>{{ $submission->submitter->name }}</td></tr>
-                    <tr><th>{{ __('Department') }}</th><td>{{ $submission->department?->name ?? '—' }}</td><th>{{ __('Priority') }}</th><td>{{ str($submission->priority->value)->title() }}</td></tr>
-                    <tr><th>{{ __('Created') }}</th><td>{{ $submission->created_at?->timezone($timezone)->format('d M Y H:i') ?? '—' }}</td><th>{{ __('Due date') }}</th><td>{{ $submission->due_date?->format('d M Y') ?? '—' }}</td></tr>
+                    <tr><th>{{ __('Status') }}</th><td>{{ $statusLabel }}</td><th>{{ __('Department') }}</th><td>{{ $submission->department?->name ?? '—' }}</td></tr>
+                    <tr><th>{{ __('Priority') }}</th><td>{{ str($submission->priority->value)->title() }}</td><th>{{ __('Created') }}</th><td>{{ $submission->created_at?->timezone($timezone)->format('d M Y H:i') ?? '—' }}</td></tr>
+                    <tr><th>{{ __('Due date') }}</th><td>{{ $submission->due_date?->format('d M Y') ?? '—' }}</td><th></th><td></td></tr>
                 </tbody>
             </table>
         </section>

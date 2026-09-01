@@ -9,11 +9,16 @@ use App\Models\User;
 use App\Models\WorkflowAction;
 use App\Models\WorkflowTemplateVersion;
 use App\Services\Workflow\StepOutcomes;
+use App\Support\ApprovalStatusStamp;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 
 final class ApprovalReportService
 {
+    public function __construct(
+        private readonly ApprovalStatusStamp $statusStamp,
+    ) {}
+
     /** @return array<string, mixed> */
     public function build(Submission $submission, User $viewer, ?Carbon $generatedAt = null): array
     {
@@ -93,6 +98,8 @@ final class ApprovalReportService
             'submission' => $submission,
             'body' => app(RichTextSanitizer::class)->sanitize((string) $submission->body),
             'logo_data_uri' => $this->logoDataUri(),
+            'status_stamp_key' => $this->statusStamp->key($submission->status),
+            'status_stamp_data_uri' => $this->statusStamp->dataUri($submission->status),
             'request_type' => $requestType->name,
             'fields' => $fields,
             'workflow_steps' => $steps,

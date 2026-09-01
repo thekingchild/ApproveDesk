@@ -22,7 +22,7 @@ Reject, return, escalate, request information, and approve with conditions need 
 
 Keyboard shortcuts move to the next or previous request and open the approve or reject dialog. Destructive actions still need confirmation.
 
-For a document-ready copy, choose **Approval report** on the request. The preview and downloadable PDF include the request information you are allowed to see, workflow steps, recorded decisions, decision comments, and the attachment list. See [Requests](requests.md) for printing, sensitive-field, and signature guidance.
+For a document-ready copy, choose **Approval report** on the request. The preview and downloadable PDF include the request information you are allowed to see, workflow steps, recorded decisions, decision comments, the attachment list, and a compact image stamp showing the current Draft, Pending, In review, Approved, Rejected, Returned, Awaiting information, or Withdrawn status. The stamp records the status displayed when the copy was generated; workflow history remains the authority. See [Requests](requests.md) for printing, sensitive-field, and signature guidance.
 
 ## Batch approve
 

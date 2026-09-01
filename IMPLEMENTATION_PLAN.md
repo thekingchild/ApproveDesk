@@ -1385,30 +1385,30 @@ This is a supplementary self-hosted patch release on `feature/sh-id284-approval-
 - Render the stamp in the existing bounded upper-right heading area at a print-safe maximum size, preserve aspect ratio, and keep the textual status in an accessible label and request summary semantics. The image must not cover the title, reference, evidence sections, or running footer.
 - Replace the previous CSS-generated text stamp; do not layer both markers or recolor the supplied artwork.
 
-### SH-ID284.1 — Plan, storage, and owner authority
+### SH-ID284.1 — Plan, storage, and owner authority — Complete (2026-09-01)
 
 - **SH-ID284-PLAN-01:** Add the v2.8.4 release-map row, scope, defaults, validation, concurrency contract, supplied-image mapping, tests, demo, and exit gate before production code. — Complete (2026-09-01)
-- **SH-ID284-DATA-01:** Add a portable approval-reference counter table keyed by schema/period scope. Existing submission rows and their unique `reference_number` index remain unchanged.
-- **SH-ID284-SEC-01:** Only the singleton System owner may view or save the approval-ID schema card. A delegated approval-settings manager and a legacy role-only `super-admin` cannot read or change these owner controls.
+- **SH-ID284-DATA-01:** Add a portable approval-reference counter table keyed by schema/period scope. Existing submission rows and their unique `reference_number` index remain unchanged. — Complete (2026-09-01)
+- **SH-ID284-SEC-01:** Only the singleton System owner may view or save the approval-ID schema card. A delegated approval-settings manager and a legacy role-only `super-admin` cannot read or change these owner controls. — Complete (2026-09-01)
 
-### SH-ID284.2 — Schema, generator, and settings experience
+### SH-ID284.2 — Schema, generator, and settings experience — Complete (2026-09-01)
 
-- **SH-ID284-RULE-01:** Add one cache-backed schema support object with backward-compatible defaults, normalization, validation, date-part formatting, preview, and scope/fingerprint generation.
-- **SH-ID284-RULE-02:** Refactor `ReferenceNumberGenerator` to generate the configured format, allocate sequential values atomically, create secure random numeric values with bounded collision retries, include soft-deleted rows in collision checks, and fail clearly rather than silently emitting a value outside the configured digit length.
-- **SH-ID284-UI-01:** Add an owner-only **Approval ID format** card to **Settings → Approval settings** with prefix, separator, year, month, digit length, mode, explanatory copy, live preview, validation states, and an explicit note that existing IDs do not change.
-- **SH-ID284-UI-02:** Save the schema through a dedicated owner-authorized Action. Saving ordinary approval settings as a delegated administrator must never create, change, or clear owner-only approval-ID keys.
+- **SH-ID284-RULE-01:** Add one cache-backed schema support object with backward-compatible defaults, normalization, validation, date-part formatting, preview, and scope/fingerprint generation. — Complete (2026-09-01)
+- **SH-ID284-RULE-02:** Refactor `ReferenceNumberGenerator` to generate the configured format, allocate sequential values atomically, create secure random numeric values with bounded collision retries, include soft-deleted rows in collision checks, and fail clearly rather than silently emitting a value outside the configured digit length. — Complete (2026-09-01)
+- **SH-ID284-UI-01:** Add an owner-only **Approval ID format** card to **Settings → Approval settings** with prefix, separator, year, month, digit length, mode, explanatory copy, live preview, validation states, and an explicit note that existing IDs do not change. — Complete (2026-09-01)
+- **SH-ID284-UI-02:** Save the schema through a dedicated owner-authorized Action. Saving ordinary approval settings as a delegated administrator must never create, change, or clear owner-only approval-ID keys. — Complete (2026-09-01)
 
-### SH-PRN284 — Supplied image stamps
+### SH-PRN284 — Supplied image stamps — Complete (2026-09-01)
 
-- **SH-PRN284-ASSET-01:** Add the eight supplied 2000×2000 transparent RGBA PNG files under a stable application asset path with status-key filenames and no runtime image dependency.
-- **SH-PRN284-RPT-01:** Have the report service select and embed the correct status image as a local data URI; replace the CSS-generated text stamp with a bounded image while retaining an accessible `Approval status: …` label.
-- **SH-PRN284-RPT-02:** Verify HTML preview, A4 browser-print CSS, and Dompdf output keep the stamp visible, proportionate, non-obstructive, and independent of remote resources.
+- **SH-PRN284-ASSET-01:** Add print-ready 448×448 transparent RGBA derivatives of the eight supplied 2000×2000 PNGs under a stable application asset path with status-key filenames and no runtime image dependency. Preserve the supplied artwork, wording, colors, distressing, and transparency while avoiding multi-megabyte report payloads. — Complete (2026-09-01)
+- **SH-PRN284-RPT-01:** Have the report service select and embed the correct status image as a local data URI; replace the CSS-generated text stamp with a bounded image while retaining an accessible `Approval status: …` label. — Complete (2026-09-01)
+- **SH-PRN284-RPT-02:** Verify HTML preview, A4 browser-print CSS, and Dompdf output keep the stamp visible, proportionate, non-obstructive, and independent of remote resources. — Complete (2026-09-01)
 
-### SH-ID284 / SH-PRN284 — Tests, Help, and release
+### SH-ID284 / SH-PRN284 — Tests, Help, and release — In progress
 
-- **SH-ID284-TEST-01:** Failing-first unit/feature coverage proves backward-compatible default IDs; every year/month/separator option; sequential reset/resume and fixed digit length; secure random format/collision retry; historical explicit IDs unchanged; and no duplicate allocation under the supported database locking path.
-- **SH-ID284-TEST-02:** Failing-first Livewire/action coverage proves owner visibility/save, validation and preview, delegated-manager and role-only-super-admin denial, and that non-owner saves preserve owner-only settings.
-- **SH-PRN284-TEST-01:** Failing-first report coverage proves all eight status-to-image mappings, embedded PNG data URIs, accessible status labels, removal of the old text-stamp treatment, PDF generation, and print-safe bounded CSS.
+- **SH-ID284-TEST-01:** Failing-first unit/feature coverage proves backward-compatible default IDs; every year/month/separator option; sequential reset/resume and fixed digit length; secure random format/collision retry; historical explicit IDs unchanged; and no duplicate allocation under the supported database locking path. — Complete (2026-09-01)
+- **SH-ID284-TEST-02:** Failing-first Livewire/action coverage proves owner visibility/save, validation and preview, delegated-manager and role-only-super-admin denial, and that non-owner saves preserve owner-only settings. — Complete (2026-09-01)
+- **SH-PRN284-TEST-01:** Failing-first report coverage proves all eight status-to-image mappings, embedded PNG data URIs, accessible status labels, removal of the old text-stamp treatment, PDF generation, and print-safe bounded CSS. — Complete (2026-09-01)
 - **SH-ID284-DOC-01:** Update Approval settings, Approvals, definitions if needed, Help catalogue summaries, `CHANGELOG.md`, README, and this plan in end-user language. Record the additive migration and unchanged historical IDs.
 - **SH-ID284-REL-01:** Back up the live SQLite database; prove fresh and upgrade migrations; run focused tests, full parallel SQLite tests, Pint, PHPStan, asset build, PDF/print smoke checks, and required GitHub `php`, `mysql`, and `assets` jobs; independently review the diff; merge through a PR; publish and verify annotated **v2.8.4**; sync both checkouts; migrate/clear caches locally; and verify `/up`, `/login`, owner settings, generated IDs, and a stamped PDF.
 
