@@ -20,6 +20,7 @@ use App\Models\WorkflowAction;
 use App\Models\WorkflowTemplate;
 use App\Models\WorkflowTemplateStep;
 use App\Models\WorkflowTemplateVersion;
+use App\Services\ApprovalReportService;
 use App\Services\WorkflowEngine;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -171,25 +172,44 @@ class ApprovalReportTest extends TestCase
         }
     }
 
-    public function test_report_displays_every_current_status_as_a_non_obstructive_stamp(): void
+    public function test_report_embeds_the_supplied_image_for_every_current_status(): void
     {
+        $filenames = [
+            SubmissionStatus::Draft->value => 'draft.png',
+            SubmissionStatus::Pending->value => 'pending.png',
+            SubmissionStatus::InReview->value => 'in-review.png',
+            SubmissionStatus::Approved->value => 'approved.png',
+            SubmissionStatus::Rejected->value => 'rejected.png',
+            SubmissionStatus::Returned->value => 'returned.png',
+            SubmissionStatus::AwaitingInformation->value => 'awaiting-information.png',
+            SubmissionStatus::Withdrawn->value => 'withdrawn.png',
+        ];
+
         foreach (SubmissionStatus::cases() as $status) {
             $this->submission->update(['status' => $status]);
-            $label = str($status->value)->replace('_', ' ')->title()->toString();
-            $class = str($status->value)->replace('_', '-')->toString();
+            $report = app(ApprovalReportService::class)->build($this->submission->fresh(), $this->owner);
+            $path = public_path('images/approval-status-stamps/'.$filenames[$status->value]);
 
-            $response = $this->actingAs($this->owner)
-                ->get(route('submissions.approval-report.show', $this->submission));
-
-            $response
-                ->assertOk()
-                ->assertSee('data-test="approval-status-stamp"', false)
-                ->assertSee('aria-label="Approval status: '.$label.'"', false)
-                ->assertSee('approval-status-stamp status-'.$class, false)
-                ->assertSee('>'.$label.'</div>', false)
-                ->assertSee('border: 3px double currentColor', false)
-                ->assertSee('transform: rotate(-2deg)', false);
+            $this->assertFileExists($path);
+            $expected = 'data:image/png;base64,'.base64_encode((string) file_get_contents($path));
+            $this->assertSame($status->value, $report['status_stamp_key']);
+            $this->assertSame($expected, $report['status_stamp_data_uri']);
         }
+
+        $this->submission->update(['status' => SubmissionStatus::Approved]);
+        $this->actingAs($this->owner)
+            ->get(route('submissions.approval-report.show', $this->submission))
+            ->assertOk()
+            ->assertSee('data-test="approval-status-stamp"', false)
+            ->assertSee('data-status-stamp="approved"', false)
+            ->assertSee('aria-label="Approval status: Approved"', false)
+            ->assertSee('>Status</th>', false)
+            ->assertSee('>Approved</td>', false)
+            ->assertSee('data:image/png;base64,', false)
+            ->assertSee('max-height: 112px', false)
+            ->assertSee('max-width: 112px', false)
+            ->assertDontSee('border: 3px double currentColor', false)
+            ->assertDontSee('transform: rotate(-2deg)', false);
     }
 
     public function test_report_lists_workflow_steps_and_append_only_actions_in_the_installation_timezone(): void

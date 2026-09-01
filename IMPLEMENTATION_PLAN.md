@@ -164,6 +164,7 @@ Locked product decision for Phase 8.2. It does not reopen Phase 8.1. Design: [do
 | SH-UX281 | v2.8.1 | Dashboard announcements, company identity, printable branding, and collapsible navigation | Complete |
 | SH-SEC282 | v2.8.2 | Security assessment remediation: role ceilings, web-push SSRF, API scope, bounded imports, safe exports | Complete |
 | SH-UX283 | v2.8.3 | Public landing page refresh, capability-scoped Help, and printable status stamp | Complete |
+| SH-ID284/SH-PRN284 | v2.8.4 | Configurable approval IDs and supplied image status stamps | In progress |
 | 10 | v3.0.0 | SaaS multi-tenancy foundation | Not started |
 | 11 | v3.1.0 | Paystack and Flutterwave subscriptions | Not started |
 | 12 | v3.2.0 | SaaS onboarding, entitlements, and commercial operations | Not started |
@@ -1359,6 +1360,61 @@ This is a supplementary self-hosted patch release on `feature/sh-ux283-landing-h
 **Phase demo:** an administrator enables the public landing page and visitors see the completed static site with server-injected account actions; a custom role sees only Help guides matching its permissions while only the singleton System owner can read protected owner procedures; an approval report displays a clear status stamp without covering its title, company identity, fields, workflow steps, actions, or footer.
 
 **Out of scope:** editing marketing content inside ApproveDesk, changing the landing-page enable/default behavior, disclosing operator deployment material in Help, replacing screen policies with Help checks, adding signatures or seals that imply legal certification, changing submission statuses, modifying append-only workflow history, adding schema, or starting ApproveDesk SaaS.
+
+---
+
+## Phase SH-ID284 / SH-PRN284 — Configurable approval IDs and supplied status stamps — In progress
+
+**Goal:** let the singleton System owner define the identifier format used for newly created approvals and replace the generated text marker on printable approval records with the eight supplied status-specific stamp images. Target release is **v2.8.4**.
+
+This is a supplementary self-hosted patch release on `feature/sh-id284-approval-ids-status-stamps`, based on GitHub v2.8.3 plus the current `main` copy correction. It does not rename or rewrite existing approval IDs, alter submission statuses, change workflow decisions, modify append-only `workflow_actions`, start Phase 10 SaaS work, or treat a visual stamp as a signature or legal certification. “Superadmin” maps to the singleton **System owner**, not merely possession of the legacy `super-admin` role.
+
+**Approval-ID contract**
+
+- Existing installs keep the current `SUB-YYYY-00001` format until the System owner saves a different schema.
+- The schema controls: alphanumeric prefix, separator (`-`, `/`, or none), year pattern (four digits, two digits, or omitted), month pattern (two digits, three-letter abbreviation, or omitted), numeric digit length (4–12), and generation mode (sequential or random).
+- Preview the resulting format before save. Changes apply only to approvals created afterward; historical IDs and links remain unchanged.
+- Sequential counters are isolated by the complete schema and active year/month period. They allocate atomically from an additive counter table so concurrent requests cannot receive the same value. Switching away and back resumes that schema/period counter; failed creates may leave harmless gaps.
+- Random mode uses cryptographically secure numeric digits and checks the existing unique approval-ID index before return. The database unique constraint remains the final guard.
+- Prefixes are normalized to uppercase and limited to ASCII letters and digits. Empty components are omitted without doubled separators. Date parts use the installation timezone.
+
+**Printable-stamp contract**
+
+- Map the supplied transparent PNGs exactly to Draft, Pending, In review, Approved, Rejected, Returned, Awaiting information, and Withdrawn.
+- Embed each image locally as a data URI so browser preview, print, and Dompdf need no public or remote resource access.
+- Render the stamp in the existing bounded upper-right heading area at a print-safe maximum size, preserve aspect ratio, and keep the textual status in an accessible label and request summary semantics. The image must not cover the title, reference, evidence sections, or running footer.
+- Replace the previous CSS-generated text stamp; do not layer both markers or recolor the supplied artwork.
+
+### SH-ID284.1 — Plan, storage, and owner authority — Complete (2026-09-01)
+
+- **SH-ID284-PLAN-01:** Add the v2.8.4 release-map row, scope, defaults, validation, concurrency contract, supplied-image mapping, tests, demo, and exit gate before production code. — Complete (2026-09-01)
+- **SH-ID284-DATA-01:** Add a portable approval-reference counter table keyed by schema/period scope. Existing submission rows and their unique `reference_number` index remain unchanged. — Complete (2026-09-01)
+- **SH-ID284-SEC-01:** Only the singleton System owner may view or save the approval-ID schema card. A delegated approval-settings manager and a legacy role-only `super-admin` cannot read or change these owner controls. — Complete (2026-09-01)
+
+### SH-ID284.2 — Schema, generator, and settings experience — Complete (2026-09-01)
+
+- **SH-ID284-RULE-01:** Add one cache-backed schema support object with backward-compatible defaults, normalization, validation, date-part formatting, preview, and scope/fingerprint generation. — Complete (2026-09-01)
+- **SH-ID284-RULE-02:** Refactor `ReferenceNumberGenerator` to generate the configured format, allocate sequential values atomically, create secure random numeric values with bounded collision retries, include soft-deleted rows in collision checks, and fail clearly rather than silently emitting a value outside the configured digit length. — Complete (2026-09-01)
+- **SH-ID284-UI-01:** Add an owner-only **Approval ID format** card to **Settings → Approval settings** with prefix, separator, year, month, digit length, mode, explanatory copy, live preview, validation states, and an explicit note that existing IDs do not change. — Complete (2026-09-01)
+- **SH-ID284-UI-02:** Save the schema through a dedicated owner-authorized Action. Saving ordinary approval settings as a delegated administrator must never create, change, or clear owner-only approval-ID keys. — Complete (2026-09-01)
+
+### SH-PRN284 — Supplied image stamps — Complete (2026-09-01)
+
+- **SH-PRN284-ASSET-01:** Add print-ready 448×448 transparent RGBA derivatives of the eight supplied 2000×2000 PNGs under a stable application asset path with status-key filenames and no runtime image dependency. Preserve the supplied artwork, wording, colors, distressing, and transparency while avoiding multi-megabyte report payloads. — Complete (2026-09-01)
+- **SH-PRN284-RPT-01:** Have the report service select and embed the correct status image as a local data URI; replace the CSS-generated text stamp with a bounded image while retaining an accessible `Approval status: …` label. — Complete (2026-09-01)
+- **SH-PRN284-RPT-02:** Verify HTML preview, A4 browser-print CSS, and Dompdf output keep the stamp visible, proportionate, non-obstructive, and independent of remote resources. — Complete (2026-09-01)
+
+### SH-ID284 / SH-PRN284 — Tests, Help, and release — In progress
+
+- **SH-ID284-TEST-01:** Failing-first unit/feature coverage proves backward-compatible default IDs; every year/month/separator option; sequential reset/resume and fixed digit length; secure random format/collision retry; historical explicit IDs unchanged; and no duplicate allocation under the supported database locking path. — Complete (2026-09-01)
+- **SH-ID284-TEST-02:** Failing-first Livewire/action coverage proves owner visibility/save, validation and preview, delegated-manager and role-only-super-admin denial, and that non-owner saves preserve owner-only settings. — Complete (2026-09-01)
+- **SH-PRN284-TEST-01:** Failing-first report coverage proves all eight status-to-image mappings, embedded PNG data URIs, accessible status labels, removal of the old text-stamp treatment, PDF generation, and print-safe bounded CSS. — Complete (2026-09-01)
+- **SH-ID284-DOC-01:** Update Approval settings, Approvals, definitions if needed, Help catalogue summaries, `CHANGELOG.md`, README, and this plan in end-user language. Record the additive migration and unchanged historical IDs.
+- **SH-ID284-REL-01:** Back up the live SQLite database; prove fresh and upgrade migrations; run focused tests, full parallel SQLite tests, Pint, PHPStan, asset build, PDF/print smoke checks, and required GitHub `php`, `mysql`, and `assets` jobs; independently review the diff; merge through a PR; publish and verify annotated **v2.8.4**; sync both checkouts; migrate/clear caches locally; and verify `/up`, `/login`, owner settings, generated IDs, and a stamped PDF.
+
+**Phase demo:** the System owner changes the preview from `SUB-2026-00001` to `APR/26/09/000001`, saves sequential generation, and creates two approvals with distinct increasing IDs. Switching to random produces a correctly sized numeric tail without altering prior requests. Printing each request status shows its supplied image stamp in the upper-right without covering evidence.
+
+**Out of scope:** renumbering existing approvals, editable arbitrary format templates, alphabetic random tails, per-request-type or per-department sequences, tenant-specific IDs, custom stamp uploads, changing supplied artwork, cryptographic signatures, status changes, workflow-engine changes, or ApproveDesk SaaS.
 
 ---
 
