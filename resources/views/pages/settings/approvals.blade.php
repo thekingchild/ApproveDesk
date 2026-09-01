@@ -125,7 +125,7 @@ new #[Title('Approval settings')] class extends Component {
 
 <x-pages::settings.layout :heading="__('Approval settings')" :subheading="__('Configure email approval links and the business calendar used by workflow deadlines.')">
     <div class="mb-4 flex items-center gap-1">
-        <x-ui.help-link article="organization-settings" />
+        <x-ui.help-link article="approval-settings" />
     </div>
     <form wire:submit="save" class="space-y-6">
         <flux:input

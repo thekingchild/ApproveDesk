@@ -7,6 +7,7 @@ use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class PublicWebsiteTest extends TestCase
@@ -27,17 +28,46 @@ class PublicWebsiteTest extends TestCase
             ->assertRedirect(route('login'));
     }
 
-    public function test_guest_home_serves_the_static_site_when_landing_page_is_enabled(): void
+    public function test_guest_home_serves_the_completed_static_site_when_landing_page_is_enabled(): void
     {
         Setting::put('brand.landing_page_enabled', 'true');
 
-        $this->get(route('home'))
+        $response = $this->get(route('home'))
             ->assertOk()
             ->assertSee('data-approvedesk-auth', false)
-            ->assertSee('Stop chasing approvals in chat threads')
+            ->assertSee('Every approval, finally in sync.')
+            ->assertSee('Space for ApprovalDesk Deployed Service')
+            ->assertSee('images/logo-white.png', false)
+            ->assertSee('width="183" height="55"', false)
             ->assertSee('Log in')
             ->assertSee('Sign up')
+            ->assertDontSee('Stop chasing approvals in chat threads')
             ->assertDontSee("Let's get started");
+
+        $this->assertSame(1, substr_count($response->getContent(), 'data-approvedesk-auth'));
+    }
+
+    #[DataProvider('completedSiteAssetProvider')]
+    public function test_completed_static_site_assets_are_served_with_expected_types(string $path, string $contentType): void
+    {
+        Setting::put('brand.landing_page_enabled', 'true');
+
+        $this->get($path)
+            ->assertOk()
+            ->assertHeaderContains('Content-Type', $contentType);
+    }
+
+    /** @return array<string, array{string, string}> */
+    public static function completedSiteAssetProvider(): array
+    {
+        return [
+            'stylesheet' => ['/css/app.css', 'text/css'],
+            'auth fallback script' => ['/js/waitlist.js', 'javascript'],
+            'logo' => ['/images/logo-white.png', 'image/png'],
+            'background' => ['/images/background-design.svg', 'image/svg+xml'],
+            'avatar' => ['/images/avatar-1.webp', 'image/webp'],
+            'favicon' => ['/favicon.ico', 'image/x-icon'],
+        ];
     }
 
     public function test_authenticated_home_redirects_to_dashboard_when_landing_page_is_off(): void
@@ -95,7 +125,7 @@ class PublicWebsiteTest extends TestCase
 
         $this->get('/index.html')
             ->assertOk()
-            ->assertSee('Stop chasing approvals in chat threads');
+            ->assertSee('Every approval, finally in sync.');
     }
 
     public function test_dashboard_is_still_the_application(): void

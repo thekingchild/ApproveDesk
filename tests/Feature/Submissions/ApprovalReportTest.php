@@ -5,6 +5,7 @@ namespace Tests\Feature\Submissions;
 use App\Actions\RequestTypes\PublishRequestTypeVersionAction;
 use App\Actions\RequestTypes\StoreSubmissionFieldValuesAction;
 use App\Enums\RequestFieldType;
+use App\Enums\SubmissionStatus;
 use App\Enums\WorkflowActionType;
 use App\Enums\WorkflowTemplateVersionStatus;
 use App\Models\RequestFieldDefinition;
@@ -167,6 +168,27 @@ class ApprovalReportTest extends TestCase
                 ->assertSee('Approval report')
                 ->assertSee('Quarterly equipment approval')
                 ->assertSee('REQ-2026-0042');
+        }
+    }
+
+    public function test_report_displays_every_current_status_as_a_non_obstructive_stamp(): void
+    {
+        foreach (SubmissionStatus::cases() as $status) {
+            $this->submission->update(['status' => $status]);
+            $label = str($status->value)->replace('_', ' ')->title()->toString();
+            $class = str($status->value)->replace('_', '-')->toString();
+
+            $response = $this->actingAs($this->owner)
+                ->get(route('submissions.approval-report.show', $this->submission));
+
+            $response
+                ->assertOk()
+                ->assertSee('data-test="approval-status-stamp"', false)
+                ->assertSee('aria-label="Approval status: '.$label.'"', false)
+                ->assertSee('approval-status-stamp status-'.$class, false)
+                ->assertSee('>'.$label.'</div>', false)
+                ->assertSee('border: 3px double currentColor', false)
+                ->assertSee('transform: rotate(-2deg)', false);
         }
     }
 

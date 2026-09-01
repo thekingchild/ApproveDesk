@@ -21,7 +21,7 @@ Do not put landing-page files in `public/`, `resources/views/`, or the Vite tree
 
 ## Auth hook
 
-`index.html` (and any other HTML that should show account buttons) must include exactly one empty element in the header:
+`index.html` (and any other HTML that should show account buttons) must include exactly one empty element in its intended account-action area. The shipped v2.8.3 landing page places it in the hero action column:
 
 ```html
 <nav data-approvedesk-auth></nav>

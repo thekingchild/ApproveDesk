@@ -11,7 +11,7 @@
         />
 
         <x-ui.page-header :title="$article->title" :description="$article->summary">
-            @if ($article->screenRoute && \Illuminate\Support\Facades\Route::has($article->screenRoute))
+            @if ($article->canOpenScreen(auth()->user()) && \Illuminate\Support\Facades\Route::has($article->screenRoute))
                 <x-slot:actions>
                     <flux:button :href="route($article->screenRoute)" variant="primary" wire:navigate>
                         {{ __('Open this screen') }}

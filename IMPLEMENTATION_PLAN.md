@@ -163,6 +163,7 @@ Locked product decision for Phase 8.2. It does not reopen Phase 8.1. Design: [do
 | SH-COM280/SH-THM280 | v2.8.0 | Owner announcements and selectable application themes | Complete |
 | SH-UX281 | v2.8.1 | Dashboard announcements, company identity, printable branding, and collapsible navigation | Complete |
 | SH-SEC282 | v2.8.2 | Security assessment remediation: role ceilings, web-push SSRF, API scope, bounded imports, safe exports | Complete |
+| SH-UX283 | v2.8.3 | Public landing page refresh, capability-scoped Help, and printable status stamp | In progress |
 | 10 | v3.0.0 | SaaS multi-tenancy foundation | Not started |
 | 11 | v3.1.0 | Paystack and Flutterwave subscriptions | Not started |
 | 12 | v3.2.0 | SaaS onboarding, entitlements, and commercial operations | Not started |
@@ -1315,6 +1316,49 @@ This is a supplementary self-hosted patch release. It does not add schema, does 
 **Phase demo:** a delegated user editor cannot grant Department head or change their own roles; web-push delivery pins DNS, refuses redirects, and drops documentation-range destinations; a write-only API token cannot read submission detail; a hostile XLSX is rejected before spreadsheet load; analytics CSV/XLSX exports treat attacker-controlled `=` prefixes as text.
 
 **Out of scope:** Phase 10 tenancy, installer takeover, CSP nonces, SaaS branches, and version bumps before the CI release push.
+
+---
+
+## Phase SH-UX283 — Public landing page, role-safe Help, and report status stamp — In progress
+
+**Goal:** ship the completed static marketing page through the existing `website/` drop-in, make Help visibility match each person’s real application authority, and make printed approval records immediately recognizable by status without obscuring evidence. Target release is **v2.8.3**.
+
+This is a supplementary self-hosted patch release on `feature/sh-ux283-landing-help-report-stamp`, based on GitHub v2.8.2. It does not add schema, change workflow state, alter the protected System-owner model, start Phase 10 SaaS work, or change the optional landing-page toggle. “Superadmin” in the request maps to the singleton **System owner**, not merely possession of the legacy `super-admin` role.
+
+**Security recommendation and working contract**
+
+- Help uses least privilege: `all` articles remain available to every signed-in person; administration articles require the same capability as their linked screen; owner articles require `User::isSystemOwner()`.
+- A broad role label or one unrelated administration permission must not unlock the full Administration Help group. Custom roles see only guides for capabilities they actually hold.
+- Mixed guides must not disclose owner-only controls. Owner procedures move into a separate **System owner controls** guide; shared guides may state that a control is owner-only but must not describe its procedure, recovery flow, or sensitive configuration.
+- Direct `/help/{slug}` access, Help index cards, menu entries, sibling links, Markdown links, and **Open this screen** actions must all enforce the same audience decision and fail closed.
+- The approval-report stamp uses the persisted submission status, is text (not a signature), appears in a bounded upper-right area, and remains non-obstructive in browser preview, browser print, and Dompdf output.
+
+### SH-UX283.1 — Plan and landing-page drop-in — Complete (2026-09-01)
+
+- **SH-UX283-PLAN-01 — Complete (2026-09-01):** Add the v2.8.3 release-map row, security recommendation, scope, tasks, demo, and exit gate before production changes.
+- **SH-UX283-WEB-01 — Complete (2026-09-01):** Replace the shipped `website/` marketing files with the completed static landing page, retaining exactly one empty `<nav data-approvedesk-auth></nav>`, relative assets, the 55px wordmark, favicon set, SEO metadata, and external footer links.
+- **SH-UX283-WEB-02 — Complete (2026-09-01):** Prove guest Login/Sign up injection, signed-in Dashboard injection, registration-closed behavior, CSS/JS/image/favicon serving, no standalone waitlist submission, and no dependency on Vite, Blade, Livewire, or runtime Node.
+
+### SH-UX283.2 — Capability- and owner-scoped Help — Complete (2026-09-01)
+
+- **SH-UX283-HELP-01 — Complete (2026-09-01):** Replace the broad administrator audience check with explicit article access rules: signed-in, one-or-more required permissions, or singleton System owner. Keep role names out of authorization decisions.
+- **SH-UX283-HELP-02 — Complete (2026-09-01):** Assign every administration guide to its screen capability, add a System-owner-only guide for protected owner controls, and remove procedural owner-only content from guides available to delegated administrators or ordinary users.
+- **SH-UX283-HELP-03 — Complete (2026-09-01):** Enforce the same rules on the index, direct article route, compact Help menu, related-guide links, Markdown link rewriting, contextual links, and screen actions; unauthorized direct requests return 403 without rendering article content.
+
+### SH-UX283.3 — Printable approval-status stamp — Complete (2026-09-01)
+
+- **SH-UX283-PRN-01 — Complete (2026-09-01):** Add an accessible, stamp-like status marker to approval reports using the persisted submission status label and status-appropriate restrained styling. Keep the existing company identity and textual status semantics.
+- **SH-UX283-PRN-02 — Complete (2026-09-01):** Position and size the marker so it does not cover headings or evidence, avoid invented signatures or decision claims, and verify the marker survives HTML preview, A4 browser print, and Dompdf PDF text extraction.
+
+### SH-UX283.4 — Tests, Help, and release
+
+- **SH-UX283-TEST-01 — Complete (2026-09-01):** Add failing-first feature coverage for website replacement/auth injection, permission-specific Help visibility, System-owner-only content, direct-route denial, link unwrapping, and report status stamps across representative statuses.
+- **SH-UX283-DOC-01 — Complete (2026-09-01):** Update affected end-user Help, Help catalogue summaries, website contract notes, `CHANGELOG.md`, README, and this plan without exposing deployment internals in Help.
+- **SH-UX283-REL-01:** Run focused tests, full parallel SQLite tests, Pint, PHPStan/lint, asset build, PDF smoke checks, independent review, and required GitHub Quality jobs; merge through a green PR, update every version surface to 2.8.3, publish annotated tag and GitHub release **v2.8.3**, synchronize both checkouts, clear local caches, and verify the local server.
+
+**Phase demo:** an administrator enables the public landing page and visitors see the completed static site with server-injected account actions; a custom role sees only Help guides matching its permissions while only the singleton System owner can read protected owner procedures; an approval report displays a clear status stamp without covering its title, company identity, fields, workflow steps, actions, or footer.
+
+**Out of scope:** editing marketing content inside ApproveDesk, changing the landing-page enable/default behavior, disclosing operator deployment material in Help, replacing screen policies with Help checks, adding signatures or seals that imply legal certification, changing submission statuses, modifying append-only workflow history, adding schema, or starting ApproveDesk SaaS.
 
 ---
 

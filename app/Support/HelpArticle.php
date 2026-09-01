@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Models\User;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
+use Spatie\Permission\Exceptions\PermissionDoesNotExist;
 
 final readonly class HelpArticle
 {
@@ -15,7 +16,10 @@ final readonly class HelpArticle
         public string $icon,
         public string $group,
         public string $audience,
+        /** @var list<string> */
+        public array $requiredPermissions = [],
         public ?string $screenRoute = null,
+        public ?string $screenPermission = null,
     ) {}
 
     public function path(): string
@@ -25,7 +29,36 @@ final readonly class HelpArticle
 
     public function visibleTo(User $user): bool
     {
-        return $this->audience === 'all' || HelpCatalogue::isAdministrator($user);
+        return match ($this->audience) {
+            'all' => true,
+            'owner' => $user->isSystemOwner(),
+            'permission' => $user->isSystemOwner() || $this->hasAnyPermission($user, $this->requiredPermissions),
+            default => false,
+        };
+    }
+
+    public function canOpenScreen(User $user): bool
+    {
+        return $this->screenRoute !== null
+            && ($this->screenPermission === null
+                || $user->isSystemOwner()
+                || $this->hasAnyPermission($user, [$this->screenPermission]));
+    }
+
+    /** @param list<string> $permissions */
+    private function hasAnyPermission(User $user, array $permissions): bool
+    {
+        try {
+            foreach ($permissions as $permission) {
+                if ($user->can($permission)) {
+                    return true;
+                }
+            }
+        } catch (PermissionDoesNotExist) {
+            return false;
+        }
+
+        return false;
     }
 
     public function html(?User $user = null): string

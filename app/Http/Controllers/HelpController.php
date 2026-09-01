@@ -20,7 +20,7 @@ class HelpController extends Controller
         return view('pages.help.index', [
             'articles' => $articles,
             'groups' => $articles->groupBy(fn (HelpArticle $article): string => $article->group),
-            'isAdministrator' => HelpCatalogue::isAdministrator($user),
+            'hasAdministrationHelp' => $catalogue->hasAdministrationHelp($user),
         ]);
     }
 

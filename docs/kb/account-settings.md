@@ -8,7 +8,7 @@ Update your name and email from Profile. Appearance switches light and dark them
 
 ## Security
 
-Change your password from Security. You can add passkeys and turn on two-factor authentication with recovery codes. Keep those codes offline. If you lose the device and the codes, ask the System owner to restore access from **Administration → Users**. They can invalidate your password and email a reset link, or remove your authenticator and passkeys.
+If you lose access to every second-factor method and its recovery codes, contact the System owner. Verify your identity using your organization's approved support process; do not send passwords or recovery codes in a message.
 
 If an administrator turns on **Require a second factor**, you must confirm an authenticator or add a passkey before you can open the rest of ApproveDesk. You will stay on **Settings → Security** until you do.
 

@@ -76,7 +76,7 @@
             </section>
         @endforeach
 
-        @if ($isAdministrator)
+        @if ($hasAdministrationHelp)
             <x-ui.alert variant="info" :title="__('Looking for a screen?')">
                 {{ __('Start with Feature definitions for the words used in ApproveDesk, then open the guide that matches the screen you are on.') }}
             </x-ui.alert>
