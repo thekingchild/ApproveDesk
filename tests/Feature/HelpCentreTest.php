@@ -385,6 +385,25 @@ class HelpCentreTest extends TestCase
             ->assertSee('does not keep an always-on chat connection');
     }
 
+    public function test_notification_channels_article_includes_whatsapp_templates_and_mappings_for_every_kind(): void
+    {
+        $admin = User::factory()->create()->assignRole('admin');
+
+        $response = $this->actingAs($admin)
+            ->get(route('help.show', 'notification-channels'))
+            ->assertOk()
+            ->assertSee('WhatsApp template text is separate from email copy')
+            ->assertSee('Create the wording in WhatsApp Manager')
+            ->assertSee('Enter binding lines in the same order as the placeholders')
+            ->assertSee('recipient_name=1')
+            ->assertSee('approval_url=5')
+            ->assertSee('count=2');
+
+        foreach (['Action required', 'Decision', 'Reminder', 'Mention', 'Comment', 'Follower update', 'Delegation', 'Digest'] as $kind) {
+            $response->assertSee($kind);
+        }
+    }
+
     public function test_records_article_explains_auditor_access_and_holds(): void
     {
         $admin = User::factory()->create()->assignRole('admin');

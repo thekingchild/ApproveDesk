@@ -84,7 +84,7 @@ Organisation-owned subject and body for a notification kind. Generic copy is the
 
 ## [WhatsApp template mapping](/help/notification-channels)
 
-A link from an ApproveDesk notification kind to an approved WhatsApp Business template name, language, and placeholders. Unmapped or unapproved templates skip WhatsApp; ApproveDesk does not send free-form WhatsApp.
+A link from an ApproveDesk notification kind to an approved WhatsApp Business template name, language, and numbered placeholders. The message wording is created and approved in WhatsApp Manager; ApproveDesk fills the mapped values when sending. Unmapped or unapproved templates skip WhatsApp, and ApproveDesk does not send free-form WhatsApp messages.
 
 ## [Telegram bot](/help/notification-channels)
 

@@ -193,7 +193,7 @@ final class HelpCatalogue
             new HelpArticle(
                 slug: 'notification-channels',
                 title: 'Notification channels',
-                summary: 'Keep in-app and email on; optionally enable Teams, Slack, WhatsApp, and Telegram without putting tokens on personal settings.',
+                summary: 'Configure optional chat delivery, with step-by-step WhatsApp setup, sample Meta templates, and matching placeholder bindings.',
                 icon: 'bell',
                 group: 'Administration',
                 audience: 'permission',
