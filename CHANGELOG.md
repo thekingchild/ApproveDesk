@@ -6,6 +6,10 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ## [Unreleased]
 
+### Changed
+
+- Notification channels Help now separates ApproveDesk email copy from Meta-owned WhatsApp wording and provides setup steps, sample Meta templates, and matching placeholder bindings for every supported notification kind.
+
 ## [2.8.4] - 2026-09-01
 
 ### Added
