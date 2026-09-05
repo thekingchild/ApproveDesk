@@ -746,7 +746,27 @@ new #[Title('Submission')] class extends Component {
                         @if (is_array($revision->before))
                             <div class="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
                                 @foreach ($revision->before as $field => $old)
-                                    <div>{{ str_replace('_', ' ', $field) }}: {{ $old }} → {{ $revision->after[$field] ?? '' }}</div>
+                                    @if ($field === 'body')
+                                        @php
+                                            $beforeBody = app(\App\Services\RichTextSanitizer::class)->sanitize((string) ($old ?? ''));
+                                            $afterBody = app(\App\Services\RichTextSanitizer::class)->sanitize((string) ($revision->after[$field] ?? ''));
+                                        @endphp
+                                        <details class="mt-2" wire:key="body-revision-{{ $revision->id }}">
+                                            <summary class="cursor-pointer font-medium">{{ __('View body changes') }}</summary>
+                                            <dl class="mt-3 grid min-w-0 gap-4 sm:grid-cols-2">
+                                                <div class="min-w-0">
+                                                    <dt class="font-medium">{{ __('Before') }}</dt>
+                                                    <dd class="prose prose-sm mt-1 max-w-none overflow-x-auto break-words dark:prose-invert" data-test="body-before">{!! $beforeBody !== '' ? $beforeBody : e(__('No body')) !!}</dd>
+                                                </div>
+                                                <div class="min-w-0">
+                                                    <dt class="font-medium">{{ __('After') }}</dt>
+                                                    <dd class="prose prose-sm mt-1 max-w-none overflow-x-auto break-words dark:prose-invert" data-test="body-after">{!! $afterBody !== '' ? $afterBody : e(__('No body')) !!}</dd>
+                                                </div>
+                                            </dl>
+                                        </details>
+                                    @else
+                                        <div>{{ str_replace('_', ' ', $field) }}: {{ $old }} → {{ $revision->after[$field] ?? '' }}</div>
+                                    @endif
                                 @endforeach
                             </div>
                         @endif
