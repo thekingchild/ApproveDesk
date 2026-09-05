@@ -6,7 +6,7 @@ On a request you will see who acted, what they did, and when. Automatic steps an
 
 Comment edits write the previous text into an append-only revision list. Manual reminders are stored as new rows and are not rewritten.
 
-Request field and file changes also appear on **Request history**, with a short before-and-after summary. Those history rows cannot be edited.
+Request field and file changes also appear on **Request history**, with a short before-and-after summary. Body revisions stay collapsed so the full request text is not repeated throughout the history. Select **View body changes** to compare the formatted **Before** and **After** versions; **No body** means that version was empty. The **Body** section shows the current request text. Those history rows cannot be edited.
 
 ## Evidence pack
 

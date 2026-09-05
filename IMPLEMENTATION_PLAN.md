@@ -1419,6 +1419,10 @@ This is a supplementary self-hosted patch release on `feature/sh-id284-approval-
 
 ---
 
+## Request history body display correction — Complete (2026-09-05)
+
+- **SH-HIST-01 — Complete (2026-09-05):** Replace raw inline body HTML comparisons with collapsed, sanitized Before/After rich-text views. Preserve all revision records, actor/timestamps, and ordinary field/file history. Add HTTP regressions for formatting, default collapse, unsafe historical HTML, and empty bodies; update Audit trail Help and changelog.
+
 ## Phase SH-PLAT285 — Branded PWA, governed user identity, revision access, and system settings — Complete (2026-09-05)
 
 **Goal:** keep the installed app consistently company-branded, prevent unreviewed display-name impersonation, let people use safe profile photographs, guarantee submitters can answer returned/information-requested approvals, and let authorized administrators configure outbound email, browser sessions, and supported social sign-in without editing server files. Target release is **v2.8.5**.
