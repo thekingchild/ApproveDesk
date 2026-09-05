@@ -165,7 +165,7 @@ Locked product decision for Phase 8.2. It does not reopen Phase 8.1. Design: [do
 | SH-SEC282 | v2.8.2 | Security assessment remediation: role ceilings, web-push SSRF, API scope, bounded imports, safe exports | Complete |
 | SH-UX283 | v2.8.3 | Public landing page refresh, capability-scoped Help, and printable status stamp | Complete |
 | SH-ID284/SH-PRN284 | v2.8.4 | Configurable approval IDs and supplied image status stamps | Complete |
-| SH-PLAT285 | v2.8.5 | Branded PWA, governed user identity, revision access, and system delivery/authentication settings | In progress |
+| SH-PLAT285 | v2.8.5 | Branded PWA, governed user identity, revision access, and system delivery/authentication settings | Complete |
 | 10 | v3.0.0 | SaaS multi-tenancy foundation | Not started |
 | 11 | v3.1.0 | Paystack and Flutterwave subscriptions | Not started |
 | 12 | v3.2.0 | SaaS onboarding, entitlements, and commercial operations | Not started |
@@ -1419,7 +1419,7 @@ This is a supplementary self-hosted patch release on `feature/sh-id284-approval-
 
 ---
 
-## Phase SH-PLAT285 — Branded PWA, governed user identity, revision access, and system settings — In progress
+## Phase SH-PLAT285 — Branded PWA, governed user identity, revision access, and system settings — Complete (2026-09-05)
 
 **Goal:** keep the installed app consistently company-branded, prevent unreviewed display-name impersonation, let people use safe profile photographs, guarantee submitters can answer returned/information-requested approvals, and let authorized administrators configure outbound email, browser sessions, and supported social sign-in without editing server files. Target release is **v2.8.5**.
 
@@ -1471,7 +1471,7 @@ This is a supplementary self-hosted patch release on `feature/sh-platform285-ide
 - **SH-PLAT285-TEST-01 — Complete (2026-09-05):** Failing-first unit/feature tests cover PWA branding/fallbacks/cache invalidation; name request submit/replace/cancel/approve/reject/self-approval/owner protection/races; profile-image validation/re-encoding/privacy/replacement/removal; and returned/information response authorization and transitions.
 - **SH-PLAT285-TEST-02 — Complete (2026-09-05):** Failing-first tests cover capability gates, encrypted and masked secrets, environment fallback/override/removal, every supported mail transport, redacted/rate-limited test mail, session settings/cookies, and Google/Microsoft/GitHub OAuth enablement and callbacks.
 - **SH-PLAT285-DOC-01 — Complete (2026-09-05):** Update Profile, Users and roles, Requests, Approvals, Organization/System settings, definitions, Help catalogue, `CHANGELOG.md`, README, deployment/CI docs, and this plan. Keep credentials and deployment internals out of end-user Help.
-- **SH-PLAT285-REL-01:** Preserve and verify the local SQLite database, run focused tests and sabotage checks, full parallel SQLite suite, MySQL parity, Pint, PHPStan, dependency audit, asset build, installer/upgrade checks, `/up` and `/login` smoke tests; independent security review; PR/green CI/merge; release metadata; annotated `v2.8.5`; GitHub release/artifact verification; two-checkout sync and local-server migration/cache update.
+- **SH-PLAT285-REL-01 — Complete (2026-09-05):** Preserve and verify the local SQLite database, run focused tests and sabotage checks, full parallel SQLite suite, MySQL parity, Pint, PHPStan, dependency audit, asset build, installer/upgrade checks, `/up` and `/login` smoke tests; independent security review; PR/green CI/merge; release metadata; annotated `v2.8.5`; GitHub release/artifact verification; two-checkout sync and local-server migration/cache update.
 
 **Migration and rollback:** additive tables/columns only. Before local or production migration, take a verified database and files backup. Rolling application code back keeps the new identity records and image metadata inert; do not roll back schema destructively. Mail/session/OAuth overrides can be removed to restore environment-backed values. Removing deployment workflows requires no runtime migration and can be reversed by restoring workflow files in a later reviewed commit.
 

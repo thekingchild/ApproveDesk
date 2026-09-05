@@ -6,6 +6,8 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ## [Unreleased]
 
+## [2.8.5] - 2026-09-05
+
 ### Added
 
 - Administrators can configure outbound mail (SMTP, Amazon SES, Postmark, Resend, Sendmail), session lifetime, expire-on-close, and Google, Microsoft, or GitHub sign-in from **Settings → System**. Secrets are encrypted, masked, and submitted outside Livewire.
@@ -20,6 +22,7 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 - GitHub Actions no longer deploys to staging or production. Quality CI remains; tags publish a GitHub Release only.
 - Notification channels Help now separates ApproveDesk email copy from Meta-owned WhatsApp wording and provides setup steps, sample Meta templates, and matching placeholder bindings for every supported notification kind.
+- README, `.env.example` `APP_VERSION`, the Updates-page fallback, application configuration, and this changelog treat **v2.8.5** as the current single-company release.
 
 ## [2.8.4] - 2026-09-01
 
