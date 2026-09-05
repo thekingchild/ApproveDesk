@@ -8,8 +8,7 @@ final class OAuthProviders
 {
     public static function enabled(OAuthProvider $provider): bool
     {
-        return filled(config("services.oauth.{$provider->value}.client_id"))
-            && filled(config("services.oauth.{$provider->value}.client_secret"));
+        return SystemSettings::oauthEnabled($provider->value);
     }
 
     /** @return array<int, OAuthProvider> */

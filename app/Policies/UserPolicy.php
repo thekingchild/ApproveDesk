@@ -34,6 +34,11 @@ class UserPolicy
         return $actor->isSystemOwner() || ($actor->can('users.update') && ! $actor->is($target) && ! $target->isSystemOwner());
     }
 
+    public function viewProfileImage(User $user, User $target): bool
+    {
+        return $user->is($target) || $user->can('users.view');
+    }
+
     public function anonymize(User $user, User $target): bool
     {
         return $user->can('users.anonymize') && $this->update($user, $target) && ! $user->is($target);

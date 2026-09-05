@@ -4,7 +4,11 @@ Open Settings from your name at the bottom of the sidebar.
 
 ## Profile and appearance
 
-Update your name and email from Profile. Appearance switches light and dark theme for your session.
+Update your email from Profile. A new display name is sent for review: your current name stays in use until a different administrator approves the change. You can cancel a pending request from Profile.
+
+Upload a JPEG, PNG, or WebP photo from Profile. ApproveDesk stores a re-encoded copy; SVG files are not accepted. The photo is visible to people who can see your account in the app.
+
+Appearance switches light and dark theme for your session.
 
 ## Security
 

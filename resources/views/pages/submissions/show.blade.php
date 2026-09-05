@@ -686,7 +686,7 @@ new #[Title('Submission')] class extends Component {
                 <flux:button :href="route('submissions.evidence.download', $submission)" variant="ghost" data-test="download-evidence">{{ __('Download evidence pack') }}</flux:button>
             @endcan
             @can('update', $submission)
-                <flux:button :href="$submission->requestTypeVersion->requestType->is_system ? route('submissions.edit', $submission) : route('submissions.custom.edit', $submission)" variant="primary" wire:navigate>{{ __('Edit draft') }}</flux:button>
+                <flux:button :href="$submission->requestTypeVersion->requestType->is_system ? route('submissions.edit', $submission) : route('submissions.custom.edit', $submission)" variant="primary" wire:navigate>{{ $submission->status === \App\Enums\SubmissionStatus::Draft ? __('Edit draft') : __('Edit and respond') }}</flux:button>
             @endcan
             <flux:badge color="{{ ['draft' => 'zinc', 'in_review' => 'blue', 'approved' => 'lime', 'rejected' => 'red', 'returned' => 'amber', 'awaiting_information' => 'amber', 'withdrawn' => 'zinc', 'pending' => 'blue'][$submission->status->value] ?? 'zinc' }}">
                 {{ str_replace('_', ' ', $submission->status->value) }}

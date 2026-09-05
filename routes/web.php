@@ -15,12 +15,16 @@ use App\Http\Controllers\InstallController;
 use App\Http\Controllers\IntegrationCredentialController;
 use App\Http\Controllers\NotificationChannelCredentialController;
 use App\Http\Controllers\OAuthController;
+use App\Http\Controllers\ProfileImageController;
 use App\Http\Controllers\PublicWebsiteController;
 use App\Http\Controllers\PushSubscriptionController;
+use App\Http\Controllers\PwaIconController;
 use App\Http\Controllers\SlackInteractionsController;
 use App\Http\Controllers\SubmissionFileDownloadController;
+use App\Http\Controllers\SystemSettingsController;
 use App\Http\Controllers\TeamsActionsController;
 use App\Http\Controllers\TelegramWebhookController;
+use App\Http\Controllers\TestSystemMailController;
 use App\Http\Controllers\TestTurnstileController;
 use App\Http\Controllers\TurnstileCredentialController;
 use App\Support\Branding;
@@ -39,11 +43,15 @@ Route::get('manifest.webmanifest', function () {
         'background_color' => '#0a0a0b',
         'theme_color' => Branding::accentColor(),
         'icons' => [
-            ['src' => '/apple-touch-icon.png', 'sizes' => '180x180', 'type' => 'image/png'],
-            ['src' => '/favicon.svg', 'sizes' => 'any', 'type' => 'image/svg+xml', 'purpose' => 'any'],
+            ['src' => '/pwa/icon-192.png', 'sizes' => '192x192', 'type' => 'image/png', 'purpose' => 'any maskable'],
+            ['src' => '/pwa/icon-512.png', 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'any maskable'],
         ],
     ])->header('Content-Type', 'application/manifest+json');
 })->name('manifest');
+
+Route::get('pwa/icon-{size}.png', PwaIconController::class)
+    ->whereIn('size', ['32', '180', '192', '512'])
+    ->name('pwa.icon');
 
 Route::get('branding/assets/{file}', BrandingAssetController::class)
     ->where('file', '[A-Za-z0-9._-]+')
@@ -145,6 +153,13 @@ Route::middleware(['auth', 'verified', 'can:notification_channels.manage'])->gro
     Route::post('settings/notification-channels/credentials', NotificationChannelCredentialController::class)
         ->name('settings.notification-channels.credentials');
 });
+Route::middleware(['auth', 'verified', 'can:system_settings.manage', 'password.confirm'])->group(function (): void {
+    Route::view('settings/system', 'pages.settings.system')->name('settings.system');
+    Route::post('settings/system', SystemSettingsController::class)->name('settings.system.update');
+    Route::post('settings/system/test-mail', TestSystemMailController::class)
+        ->middleware('throttle:system-mail-test')
+        ->name('settings.system.test-mail');
+});
 
 Route::middleware(['auth', 'verified', 'can:viewAny,App\Models\Announcement'])->group(function (): void {
     Route::livewire('admin/announcements', 'pages::admin.announcements')->name('admin.announcements.index');
@@ -208,6 +223,7 @@ Route::middleware(['auth', 'verified', 'can:reports.view'])->prefix('admin')->na
 });
 
 Route::middleware(['auth', 'verified'])->group(function (): void {
+    Route::get('profile-images/{user}', ProfileImageController::class)->name('profile-image.show');
     Route::post('settings/push-subscriptions', [PushSubscriptionController::class, 'store'])->name('settings.push-subscriptions.store');
     Route::delete('settings/push-subscriptions', [PushSubscriptionController::class, 'destroy'])->name('settings.push-subscriptions.destroy');
 

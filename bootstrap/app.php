@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\ApplySystemRuntimeConfig;
 use App\Http\Middleware\CorrelateRequests;
 use App\Http\Middleware\EnsureAppConfigured;
 use App\Http\Middleware\EnsureEmailApprovalSecondFactor;
@@ -23,6 +24,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->prepend(ApplySystemRuntimeConfig::class);
         $middleware->prepend(PrepareFirstRunEnvironment::class);
         $middleware->append(SecurityHeaders::class);
         $middleware->append(CorrelateRequests::class);

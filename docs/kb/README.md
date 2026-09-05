@@ -50,6 +50,7 @@ Administration:
 - [Integration hub](integrations.md)
 - [Organization settings](organization-settings.md)
 - [Notification channels](notification-channels.md)
+- [System settings](system-settings.md)
 - [Audit trail](audit-trail.md)
 - [Records](records.md)
 - [Security and privacy](security-and-privacy.md)

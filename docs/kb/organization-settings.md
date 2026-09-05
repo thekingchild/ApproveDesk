@@ -8,7 +8,7 @@ The **Application identity** card affects signed-in pages, Login, and printable 
 
 - **Company name** is shown in the browser tab, navigation, Login, and approval reports. Leave it blank to use ApproveDesk.
 - **Meta description** is optional text for search engines and link previews.
-- **Application logo** accepts PNG, JPG, or WebP up to 1 MB. It appears in navigation, Login, and approval reports.
+- **Application logo** accepts PNG, JPG, or WebP up to 1 MB. It appears in navigation, Login, approval reports, and the installed app (PWA) icon. When no logo is saved, ApproveDesk uses its own icon rather than a Laravel mark.
 - **Favicon** accepts ICO, PNG, JPG, or WebP up to 512 KB.
 - **Show public landing page** is off by default. Off sends guests to Login and signed-in people to Dashboard. On shows the installed public marketing page. The switch does not edit that page.
 

@@ -115,4 +115,6 @@ return [
         'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'Laravel')),
     ],
 
+    'allow_log_transport' => in_array(env('APP_ENV', 'production'), ['local', 'testing'], true),
+
 ];

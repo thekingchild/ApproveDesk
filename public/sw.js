@@ -3,7 +3,7 @@ const OFFLINE_URL = '/offline.html';
 
 self.addEventListener('install', (event) => {
     event.waitUntil(
-        caches.open(CACHE).then((cache) => cache.addAll([OFFLINE_URL, '/favicon.svg'])),
+        caches.open(CACHE).then((cache) => cache.addAll([OFFLINE_URL, '/pwa/icon-192.png'])),
     );
     self.skipWaiting();
 });

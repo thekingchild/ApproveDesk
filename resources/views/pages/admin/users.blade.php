@@ -1,12 +1,14 @@
 <?php
 
 use App\Actions\Users\CreateUserAction;
+use App\Actions\Users\DecideDisplayNameChangeAction;
 use App\Actions\Users\UpdateUserAction;
 use App\Actions\Privacy\AnonymizeUserAction;
 use App\Actions\Settings\UpdateActiveUserLimitAction;
 use App\Concerns\PasswordValidationRules;
 use App\DTOs\UserData;
 use App\Models\Department;
+use App\Models\DisplayNameChange;
 use App\Models\Role;
 use App\Models\User;
 use App\Services\Users\ActiveUserLimitService;
@@ -78,6 +80,35 @@ new #[Title('User management')] class extends Component {
             })
             ->orderBy('name')
             ->paginate(15);
+    }
+
+    #[Computed]
+    public function pendingNameChanges(): \Illuminate\Database\Eloquent\Collection
+    {
+        return DisplayNameChange::query()
+            ->where('status', 'pending')
+            ->with('user')
+            ->latest()
+            ->get();
+    }
+
+    public function approveNameChange(int $changeId): void
+    {
+        app(DecideDisplayNameChangeAction::class)->approve(Auth::user(), DisplayNameChange::query()->findOrFail($changeId));
+        unset($this->pendingNameChanges, $this->users);
+        Flux::toast(__('Display name approved.'), variant: 'success');
+    }
+
+    public function rejectNameChange(int $changeId, ?string $reason = null): void
+    {
+        $reason = trim((string) $reason);
+        if ($reason === '' || mb_strlen($reason) > 1000) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['decisionReason' => __('Give a reason of no more than 1000 characters.')]);
+        }
+
+        app(DecideDisplayNameChangeAction::class)->reject(Auth::user(), DisplayNameChange::query()->findOrFail($changeId), $reason);
+        unset($this->pendingNameChanges);
+        Flux::toast(__('Display name rejected.'), variant: 'success');
     }
 
     #[Computed]
@@ -317,6 +348,29 @@ new #[Title('User management')] class extends Component {
 
     @if (session('recovery-status'))
         <p class="text-sm text-emerald-700 dark:text-emerald-400" data-test="recovery-status">{{ session('recovery-status') }}</p>
+    @endif
+
+    @if ($this->pendingNameChanges->isNotEmpty())
+        <flux:card class="space-y-4" data-test="display-name-review">
+            <div>
+                <flux:heading size="sm">{{ __('Display-name review') }}</flux:heading>
+                <flux:text>{{ __('Names remain unchanged until a different authorized reviewer approves them.') }}</flux:text>
+            </div>
+            @foreach ($this->pendingNameChanges as $change)
+                <div class="grid gap-3 border-t border-zinc-200 pt-4 md:grid-cols-[1fr_1fr_auto] dark:border-zinc-700" wire:key="name-change-{{ $change->id }}">
+                    <div><div class="font-medium">{{ $change->user->name }}</div><div class="text-xs text-zinc-500">{{ $change->user->email }}</div></div>
+                    <div><div class="text-xs text-zinc-500">{{ __('Requested name') }}</div><div class="font-medium">{{ $change->proposed_name }}</div></div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        @if (! Auth::user()->is($change->user) && Auth::user()->can('update', $change->user))
+                            <flux:button size="xs" variant="primary" wire:click="approveNameChange({{ $change->id }})">{{ __('Approve') }}</flux:button>
+                            <flux:button size="xs" variant="danger" wire:click="rejectNameChange({{ $change->id }}, prompt('Reason for rejection'))">{{ __('Reject') }}</flux:button>
+                        @else
+                            <flux:badge color="amber">{{ __('Another authorized reviewer must decide') }}</flux:badge>
+                        @endif
+                    </div>
+                </div>
+            @endforeach
+        </flux:card>
     @endif
 
     @if (Auth::user()?->isSystemOwner())

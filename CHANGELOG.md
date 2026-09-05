@@ -6,8 +6,19 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ## [Unreleased]
 
+### Added
+
+- Administrators can configure outbound mail (SMTP, Amazon SES, Postmark, Resend, Sendmail), session lifetime, expire-on-close, and Google, Microsoft, or GitHub sign-in from **Settings → System**. Secrets are encrypted, masked, and submitted outside Livewire.
+- Profile display-name changes wait for a different administrator’s approval. People can upload a re-encoded JPEG, PNG, or WebP profile photo.
+- Installed-app (PWA) icons follow the company logo, with an ApproveDesk-owned fallback instead of the Laravel starter mark.
+
+### Fixed
+
+- The original submitter can edit a Returned request and respond to an Awaiting information request, including files when asked.
+
 ### Changed
 
+- GitHub Actions no longer deploys to staging or production. Quality CI remains; tags publish a GitHub Release only.
 - Notification channels Help now separates ApproveDesk email copy from Meta-owned WhatsApp wording and provides setup steps, sample Meta templates, and matching placeholder bindings for every supported notification kind.
 
 ## [2.8.4] - 2026-09-01

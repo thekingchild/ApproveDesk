@@ -76,8 +76,9 @@
                 @endif
             </div>
 
-            <!-- Remember Me -->
-            <flux:checkbox name="remember" :label="__('Remember me')" :checked="old('remember')" />
+            @unless (\App\Support\SystemSettings::expireOnClose())
+                <flux:checkbox name="remember" :label="__('Remember me')" :checked="old('remember')" />
+            @endunless
 
             @include('partials.turnstile')
 

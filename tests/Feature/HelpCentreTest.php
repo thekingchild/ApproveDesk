@@ -200,6 +200,25 @@ class HelpCentreTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_system_settings_help_is_capability_gated(): void
+    {
+        $manager = User::factory()->create();
+        $manager->givePermissionTo('system_settings.manage');
+        $denied = User::factory()->create();
+
+        $this->actingAs($denied)
+            ->get(route('help.show', 'system-settings'))
+            ->assertForbidden();
+
+        $this->actingAs($manager)
+            ->get(route('help.show', 'system-settings'))
+            ->assertOk()
+            ->assertSee('Settings → System')
+            ->assertSee('Amazon SES')
+            ->assertDontSee('APP_KEY')
+            ->assertDontSee('.env');
+    }
+
     public function test_administrator_can_read_markdown_article(): void
     {
         $admin = User::factory()->create()->assignRole('admin');

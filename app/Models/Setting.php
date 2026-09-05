@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Support\Installer;
+use App\Support\SystemSettings;
 use Database\Factories\SettingFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -46,5 +47,9 @@ class Setting extends Model
         static::query()->updateOrCreate(['key' => $key], ['value' => $value]);
 
         Cache::forget("settings.{$key}");
+
+        if (str_starts_with($key, 'system.')) {
+            SystemSettings::flush();
+        }
     }
 }

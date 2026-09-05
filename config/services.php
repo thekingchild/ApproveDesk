@@ -66,6 +66,11 @@ return [
             'redirect' => env('MICROSOFT_REDIRECT_URI'),
             'tenant' => env('MICROSOFT_TENANT', 'common'),
         ],
+        'github' => [
+            'client_id' => env('GITHUB_CLIENT_ID'),
+            'client_secret' => env('GITHUB_CLIENT_SECRET'),
+            'redirect' => env('GITHUB_REDIRECT_URI'),
+        ],
     ],
 
 ];

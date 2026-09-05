@@ -30,7 +30,9 @@ Submit when the form is complete. That starts the workflow assigned to the reque
 
 Withdraw cancels an in-flight request that you own. Use it when the work is no longer needed.
 
-If an approver returns the request, status becomes Returned. Edit the form, answer the note, and submit again. The workflow continues from the return; it does not rewrite earlier decisions.
+If an approver returns the request, status becomes Returned. Open the request and choose Edit. Change the allowed fields or attachments, then submit again. The workflow continues from the return; it does not rewrite earlier decisions.
+
+If an approver asks for information, status becomes Awaiting information. Open the request, supply the answer or files they asked for, and send the response. Only the original submitter can complete that response.
 
 ## Lists and saved views
 

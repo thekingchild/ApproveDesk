@@ -31,6 +31,9 @@ class OAuthAuthenticationTest extends TestCase
             'services.oauth.microsoft.client_secret' => 'microsoft-secret',
             'services.oauth.microsoft.redirect' => 'https://approvedesk.example.test/auth/microsoft/callback',
             'services.oauth.microsoft.tenant' => 'organizations',
+            'services.oauth.github.client_id' => 'github-client',
+            'services.oauth.github.client_secret' => 'github-secret',
+            'services.oauth.github.redirect' => 'https://approvedesk.example.test/auth/github/callback',
         ]);
     }
 
@@ -256,11 +259,51 @@ class OAuthAuthenticationTest extends TestCase
         $this->assertSame(1, User::query()->where('email', 'person@gmail.com')->count());
     }
 
+    public function test_github_callback_fetches_primary_verified_email_when_profile_email_is_absent(): void
+    {
+        $user = User::factory()->create(['email' => 'github@example.com']);
+        $this->get(route('oauth.redirect', 'github'));
+        $attempt = session('oauth.github');
+
+        Http::fake([
+            'https://github.com/login/oauth/access_token' => Http::response(['access_token' => 'github-token']),
+            'https://api.github.com/user' => Http::response([
+                'id' => 9876,
+                'name' => 'GitHub Person',
+                'login' => 'github-person',
+                'email' => null,
+                'avatar_url' => 'https://avatars.example.test/9876.png',
+            ]),
+            'https://api.github.com/user/emails' => Http::response([
+                ['email' => 'other@example.com', 'primary' => false, 'verified' => true],
+                ['email' => 'github@example.com', 'primary' => true, 'verified' => true],
+            ]),
+        ]);
+
+        $this->get(route('oauth.callback', ['provider' => 'github', 'state' => $attempt['state'], 'code' => 'auth-code']))
+            ->assertRedirect(route('dashboard', absolute: false));
+
+        $this->assertAuthenticatedAs($user);
+        $this->assertDatabaseHas('oauth_identities', [
+            'provider' => 'github',
+            'provider_user_id' => '9876',
+            'email' => 'github@example.com',
+        ]);
+    }
+
+    public function test_settings_backed_provider_enable_switch_can_disable_environment_credentials(): void
+    {
+        Setting::put('system.oauth.google.enabled', '0');
+
+        $this->get(route('login'))->assertDontSee('Continue with Google');
+        $this->get(route('oauth.redirect', 'google'))->assertNotFound();
+    }
+
     public function test_disabled_or_unknown_provider_is_not_exposed(): void
     {
         config(['services.oauth.google.client_secret' => null]);
 
         $this->get(route('oauth.redirect', 'google'))->assertNotFound();
-        $this->get(route('oauth.redirect', 'github'))->assertNotFound();
+        $this->get(route('oauth.redirect', 'unknown'))->assertNotFound();
     }
 }

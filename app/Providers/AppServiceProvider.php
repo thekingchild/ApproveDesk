@@ -46,11 +46,13 @@ use App\Support\CloudflareRocketLoader;
 use App\Support\CorrelationId;
 use App\Support\DnsResolver;
 use App\Support\FeaturePermission;
+use App\Support\Installer;
 use App\Support\OutboundDestination;
 use App\Support\PermissionCache;
 use App\Support\PermissionCatalogue;
 use App\Support\PhpDnsResolver;
 use App\Support\RateLimitProfiles;
+use App\Support\SystemSettings;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -67,6 +69,7 @@ use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use Throwable;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -119,6 +122,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureDefaults();
         $this->configureCloudflareCompatibility();
+        $this->configureSystemRuntime();
 
         PermissionCache::forgetIfReady();
 
@@ -164,6 +168,9 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('telegram-webhook', fn (Request $request): Limit => RateLimitProfiles::limit(
             'webhooks',
             (string) $request->ip(),
+        ));
+        RateLimiter::for('system-mail-test', fn (Request $request): Limit => Limit::perMinute(4)->by(
+            'system-mail-test:'.(string) ($request->user()?->getAuthIdentifier() ?? $request->ip()),
         ));
 
         foreach ([
@@ -263,5 +270,16 @@ class AppServiceProvider extends ServiceProvider
                 ->uncompromised()
             : null,
         );
+    }
+
+    private function configureSystemRuntime(): void
+    {
+        try {
+            if (app(Installer::class)->isInstalled()) {
+                SystemSettings::applyRuntimeConfig();
+            }
+        } catch (Throwable) {
+            // Settings table or cache may be unavailable during installer and test bootstrap.
+        }
     }
 }

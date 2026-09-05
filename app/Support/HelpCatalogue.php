@@ -202,6 +202,17 @@ final class HelpCatalogue
                 screenPermission: 'notification_channels.manage',
             ),
             new HelpArticle(
+                slug: 'system-settings',
+                title: 'System settings',
+                summary: 'Outbound email, session lifetime, expire-on-close, and Google, Microsoft, or GitHub sign-in.',
+                icon: 'cog-6-tooth',
+                group: 'Administration',
+                audience: 'permission',
+                requiredPermissions: ['system_settings.manage'],
+                screenRoute: 'settings.system',
+                screenPermission: 'system_settings.manage',
+            ),
+            new HelpArticle(
                 slug: 'audit-trail',
                 title: 'Audit trail',
                 summary: 'What is immutable, how evidence packs work, and how to read history.',

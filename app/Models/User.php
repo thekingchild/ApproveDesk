@@ -55,7 +55,7 @@ use Spatie\Permission\Traits\HasRoles;
  * @property-read Collection<int, OutOfOffice> $outOfOffice
  * @property-read Collection<int, SubmissionWatcher> $watchedSubmissions
  */
-#[Fillable(['name', 'email', 'phone', 'password', 'department_id', 'manager_id', 'is_active', 'email_verified_at', 'notification_frequency', 'last_notification_digest_at', 'avatar', 'theme_id'])]
+#[Fillable(['name', 'email', 'phone', 'password', 'department_id', 'manager_id', 'is_active', 'email_verified_at', 'notification_frequency', 'last_notification_digest_at', 'avatar', 'profile_image_path', 'profile_image_mime', 'theme_id'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable implements PasskeyUser
 {
@@ -123,6 +123,12 @@ class User extends Authenticatable implements PasskeyUser
     public function oauthIdentities(): HasMany
     {
         return $this->hasMany(OAuthIdentity::class);
+    }
+
+    /** @return HasMany<DisplayNameChange, $this> */
+    public function displayNameChanges(): HasMany
+    {
+        return $this->hasMany(DisplayNameChange::class);
     }
 
     /** @return HasMany<SubmissionSavedView, $this> */
