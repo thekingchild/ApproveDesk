@@ -58,7 +58,11 @@ class SubmissionPolicy
     public function update(User $user, Submission $submission): bool
     {
         return $submission->submitter_id === $user->id
-            && $submission->status === SubmissionStatus::Draft;
+            && in_array($submission->status, [
+                SubmissionStatus::Draft,
+                SubmissionStatus::Returned,
+                SubmissionStatus::AwaitingInformation,
+            ], true);
     }
 
     public function submit(User $user, Submission $submission): bool

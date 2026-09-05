@@ -26,6 +26,7 @@ final class SubmitSubmissionAction
                 $instance = $this->engine->initialize($submission);
                 DB::afterCommit(fn () => event(new SubmissionCreated($submission, $instance)));
             } else {
+                activity()->performedOn($submission)->causedBy($submission->submitter)->event('submission-revised')->log('Submitter revised and resubmitted the request');
                 $this->engine->resume($instance);
             }
 

@@ -24,6 +24,8 @@ class ProfileUpdateTest extends TestCase
 
         $this->actingAs($user);
 
+        $originalName = $user->name;
+
         $response = Livewire::test('pages::settings.profile')
             ->set('name', 'Test User')
             ->set('email', 'test@example.com')
@@ -33,7 +35,12 @@ class ProfileUpdateTest extends TestCase
 
         $user->refresh();
 
-        $this->assertEquals('Test User', $user->name);
+        $this->assertEquals($originalName, $user->name);
+        $this->assertDatabaseHas('display_name_changes', [
+            'user_id' => $user->id,
+            'proposed_name' => 'Test User',
+            'status' => 'pending',
+        ]);
         $this->assertEquals('test@example.com', $user->email);
         $this->assertNull($user->email_verified_at);
     }
