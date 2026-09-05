@@ -3,7 +3,6 @@
 namespace App\Support;
 
 use App\Models\Setting;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -14,15 +13,19 @@ final class SystemSettings
 
     public static function value(string $key, mixed $fallback = null): mixed
     {
-        $sentinel = '__approvedesk_no_system_override__';
-        $value = Setting::get('system.'.$key, $sentinel);
+        $full = 'system.'.$key;
+        $overrides = self::overrides();
 
-        return $value === $sentinel ? $fallback : $value;
+        if (! array_key_exists($full, $overrides)) {
+            return $fallback;
+        }
+
+        return $overrides[$full];
     }
 
     public static function hasOverride(string $key): bool
     {
-        return self::value($key, null) !== null;
+        return array_key_exists('system.'.$key, self::overrides());
     }
 
     public static function secret(string $name, ?string $fallback = null): ?string
@@ -54,12 +57,14 @@ final class SystemSettings
     public static function put(string $key, string|int|bool|null $value): void
     {
         Setting::put('system.'.$key, is_bool($value) ? ($value ? '1' : '0') : ($value === null ? null : (string) $value));
+        self::flush();
     }
 
     public static function forget(string $key): void
     {
         Setting::query()->where('key', 'system.'.$key)->delete();
-        Cache::forget('settings.system.'.$key);
+        cache()->forget('settings.system.'.$key);
+        self::flush();
     }
 
     public static function putSecret(string $name, string $value): void
@@ -70,6 +75,13 @@ final class SystemSettings
     public static function forgetSecret(string $name): void
     {
         self::forget('secret.'.$name);
+    }
+
+    public static function flush(): void
+    {
+        if (app()->bound('approvedesk.systemSettings')) {
+            app()->forgetInstance('approvedesk.systemSettings');
+        }
     }
 
     public static function mailTransport(): string
@@ -105,13 +117,20 @@ final class SystemSettings
 
     public static function oauthEnabled(string $provider): bool
     {
-        $configured = filled(config("services.oauth.{$provider}.client_id")) && filled(config("services.oauth.{$provider}.client_secret"));
+        $configured = filled(config("services.oauth.{$provider}.client_id"))
+            && filled(config("services.oauth.{$provider}.client_secret"));
 
         return self::value("oauth.{$provider}.enabled", $configured ? '1' : '0') === '1' && $configured;
     }
 
     public static function applyRuntimeConfig(): void
     {
+        $overrides = self::overrides();
+
+        if ($overrides === []) {
+            return;
+        }
+
         $transport = self::mailTransport();
         config([
             'mail.default' => $transport,
@@ -141,5 +160,29 @@ final class SystemSettings
             ]);
         }
         config(['services.oauth.microsoft.tenant' => self::value('oauth.microsoft.tenant', config('services.oauth.microsoft.tenant', 'common'))]);
+    }
+
+    /** @return array<string, string|null> */
+    private static function overrides(): array
+    {
+        if (app()->bound('approvedesk.systemSettings')) {
+            /** @var array<string, string|null> $bound */
+            $bound = app('approvedesk.systemSettings');
+
+            return $bound;
+        }
+
+        try {
+            $loaded = Setting::query()
+                ->where('key', 'like', 'system.%')
+                ->pluck('value', 'key')
+                ->all();
+        } catch (Throwable) {
+            $loaded = [];
+        }
+
+        app()->instance('approvedesk.systemSettings', $loaded);
+
+        return $loaded;
     }
 }
