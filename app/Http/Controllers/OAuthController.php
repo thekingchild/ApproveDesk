@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Actions\Auth\ResolveOAuthUserAction;
 use App\Enums\OAuthProvider;
 use App\Services\OAuthClient;
+use App\Support\SystemSettings;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -40,7 +41,7 @@ class OAuthController extends Controller
             ]);
         }
 
-        Auth::login($user, remember: true);
+        Auth::login($user, remember: ! SystemSettings::expireOnClose());
         $request->session()->regenerate();
 
         return redirect()->intended(route('dashboard', absolute: false));

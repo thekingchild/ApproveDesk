@@ -21,8 +21,10 @@ use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\PwaIconController;
 use App\Http\Controllers\SlackInteractionsController;
 use App\Http\Controllers\SubmissionFileDownloadController;
+use App\Http\Controllers\SystemSettingsController;
 use App\Http\Controllers\TeamsActionsController;
 use App\Http\Controllers\TelegramWebhookController;
+use App\Http\Controllers\TestSystemMailController;
 use App\Http\Controllers\TestTurnstileController;
 use App\Http\Controllers\TurnstileCredentialController;
 use App\Support\Branding;
@@ -150,6 +152,13 @@ Route::middleware(['auth', 'verified', 'can:notification_channels.manage'])->gro
     Route::livewire('settings/notification-channels', 'pages::settings.notification-channels')->name('settings.notification-channels');
     Route::post('settings/notification-channels/credentials', NotificationChannelCredentialController::class)
         ->name('settings.notification-channels.credentials');
+});
+Route::middleware(['auth', 'verified', 'can:system_settings.manage', 'password.confirm'])->group(function (): void {
+    Route::view('settings/system', 'pages.settings.system')->name('settings.system');
+    Route::post('settings/system', SystemSettingsController::class)->name('settings.system.update');
+    Route::post('settings/system/test-mail', TestSystemMailController::class)
+        ->middleware('throttle:system-mail-test')
+        ->name('settings.system.test-mail');
 });
 
 Route::middleware(['auth', 'verified', 'can:viewAny,App\Models\Announcement'])->group(function (): void {
