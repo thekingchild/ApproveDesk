@@ -91,7 +91,7 @@ new #[Title('Profile settings')] class extends Component {
     <x-pages::settings.layout :heading="__('Profile')" :subheading="__('Update your photo and email, or request a reviewed display-name change')">
         @php($pendingName = auth()->user()->displayNameChanges()->where('status', 'pending')->latest()->first())
         @if($pendingName)
-            <flux:callout color="amber" icon="clock">{{ __('Name change to “:name” is awaiting review.', ['name' => $pendingName->proposed_name]) }} <flux:button size="xs" variant="ghost" wire:click="cancelNameChange">{{ __('Cancel') }}</flux:button></flux:callout>
+            <flux:callout variant="warning" icon="clock">{{ __('Name change to “:name” is awaiting review.', ['name' => $pendingName->proposed_name]) }} <flux:button size="sm" variant="ghost" wire:click="cancelNameChange">{{ __('Cancel') }}</flux:button></flux:callout>
         @endif
         <form wire:submit="uploadPhoto" class="my-6 space-y-3">
             @if(auth()->user()->profile_image_path)<img class="size-20 rounded-full object-cover" src="{{ route('profile-image.show', auth()->user()) }}" alt="{{ __('Profile photo') }}">@endif
