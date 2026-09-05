@@ -18,7 +18,8 @@ final class StoreProfileImageAction
         $bytes = file_get_contents($file->getRealPath());
         $info = @getimagesizefromstring((string) $bytes);
         $allowed = ['image/jpeg', 'image/png', 'image/webp'];
-        if (! is_array($info) || ! in_array($info['mime'] ?? '', $allowed, true) || $info[0] < 1 || $info[1] < 1 || $info[0] > 8192 || $info[1] > 8192 || $info[0] * $info[1] > 20_000_000 || ! $this->hasExactContainerLength((string) $bytes, $info['mime'])) {
+        $mime = is_array($info) ? $info['mime'] : '';
+        if (! is_array($info) || ! in_array($mime, $allowed, true) || $info[0] < 1 || $info[1] < 1 || $info[0] > 8192 || $info[1] > 8192 || $info[0] * $info[1] > 20_000_000 || ! $this->hasExactContainerLength((string) $bytes, $mime)) {
             throw ValidationException::withMessages(['photo' => __('Use a valid JPEG, PNG, or WebP image with safe dimensions.')]);
         }
         $source = @imagecreatefromstring((string) $bytes);
@@ -65,11 +66,19 @@ final class StoreProfileImageAction
         return match ($mime) {
             'image/png' => str_ends_with($bytes, "\x00\x00\x00\x00IEND\xAE\x42\x60\x82"),
             'image/jpeg' => str_ends_with($bytes, "\xFF\xD9"),
-            'image/webp' => strlen($bytes) >= 12
-                && substr($bytes, 0, 4) === 'RIFF'
-                && substr($bytes, 8, 4) === 'WEBP'
-                && unpack('V', substr($bytes, 4, 4))[1] + 8 === strlen($bytes),
+            'image/webp' => $this->webpHasExactRiffLength($bytes),
             default => false,
         };
+    }
+
+    private function webpHasExactRiffLength(string $bytes): bool
+    {
+        if (strlen($bytes) < 12 || substr($bytes, 0, 4) !== 'RIFF' || substr($bytes, 8, 4) !== 'WEBP') {
+            return false;
+        }
+
+        $length = unpack('V', substr($bytes, 4, 4));
+
+        return is_array($length) && isset($length[1]) && strlen($bytes) === $length[1] + 8;
     }
 }
