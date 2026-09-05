@@ -92,7 +92,7 @@ An optional chat bot. People link their Telegram account; ApproveDesk sends a me
 
 ## [Branding](/help/organization-settings)
 
-The organisation identity administrators set under **Settings → Branding**: company name, meta description, logo, favicon, login tagline, accent colour, and login background. The company name and logo appear after sign-in and on printable approval records; the background is the public login screen.
+The organisation identity administrators set under **Settings → Branding**: company name, meta description, logo, favicon, login tagline, accent colour, and login background. The company name and logo appear after sign-in, on printable approval records, and as the installed app icon; the background is the public login screen.
 
 ## [Company name](/help/organization-settings)
 
@@ -237,6 +237,18 @@ A zip of your profile, requests, comments, and sign-in history from **Settings �
 ## [Account anonymization](/help/users-and-roles)
 
 An administrator action that removes a person’s name and email, blocks sign-in, and keeps their request history.
+
+## [Display-name request](/help/account-settings)
+
+A proposed new name from **Settings → Profile**. The current name stays until a different administrator approves the request. You cannot approve your own change.
+
+## [Profile photo](/help/account-settings)
+
+A JPEG, PNG, or WebP image a person uploads from Profile. ApproveDesk re-encodes it before storage and does not accept SVG.
+
+## [System settings](/help/system-settings)
+
+Administrator controls for outbound email, session lifetime, expire-on-close, and Google, Microsoft, or GitHub sign-in. Secrets are masked after save.
 
 ## [Operations](/help/operations)
 

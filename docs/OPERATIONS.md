@@ -114,7 +114,7 @@ Do not run `php artisan migrate:rollback` in production. `workflow_actions` is a
 ## 8. Release rollback
 
 1. Keep the previous release tag and its `public/build` assets.
-2. Redeploy that tag (`release_ref` on Deploy Production, or rsync the previous bundle).
+2. Restore the previous release files from that tag or from a backup zip (rsync or the panel file manager). Do not expect GitHub Actions to deploy the previous tag.
 3. Do **not** `migrate:rollback`. If the new release added tables, leave them; they are unused. If it added a required column, ship a forward corrective migration on a hotfix tag instead of rolling the schema back.
 4. `php artisan migrate:preflight` then `php artisan migrate --force` only for the hotfix.
 5. `php artisan optimize:clear` then `config:cache`, `route:cache`, `view:cache`.

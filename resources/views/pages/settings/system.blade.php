@@ -3,6 +3,9 @@
         @include('partials.settings-heading')
 
         <x-pages::settings.layout :heading="__('System settings')" :subheading="__('Outbound email, browser sessions, and social sign-in.')" :wide="true">
+            <div class="mb-4">
+                <x-ui.help-link article="system-settings" />
+            </div>
             @if (session('status'))
                 <flux:callout variant="success" class="mb-6">{{ session('status') }}</flux:callout>
             @endif
