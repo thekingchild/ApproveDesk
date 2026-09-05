@@ -165,6 +165,7 @@ Locked product decision for Phase 8.2. It does not reopen Phase 8.1. Design: [do
 | SH-SEC282 | v2.8.2 | Security assessment remediation: role ceilings, web-push SSRF, API scope, bounded imports, safe exports | Complete |
 | SH-UX283 | v2.8.3 | Public landing page refresh, capability-scoped Help, and printable status stamp | Complete |
 | SH-ID284/SH-PRN284 | v2.8.4 | Configurable approval IDs and supplied image status stamps | Complete |
+| SH-PLAT285 | v2.8.5 | Branded PWA, governed user identity, revision access, and system delivery/authentication settings | In progress |
 | 10 | v3.0.0 | SaaS multi-tenancy foundation | Not started |
 | 11 | v3.1.0 | Paystack and Flutterwave subscriptions | Not started |
 | 12 | v3.2.0 | SaaS onboarding, entitlements, and commercial operations | Not started |
@@ -1415,6 +1416,68 @@ This is a supplementary self-hosted patch release on `feature/sh-id284-approval-
 **Phase demo:** the System owner changes the preview from `SUB-2026-00001` to `APR/26/09/000001`, saves sequential generation, and creates two approvals with distinct increasing IDs. Switching to random produces a correctly sized numeric tail without altering prior requests. Printing each request status shows its supplied image stamp in the upper-right without covering evidence.
 
 **Out of scope:** renumbering existing approvals, editable arbitrary format templates, alphabetic random tails, per-request-type or per-department sequences, tenant-specific IDs, custom stamp uploads, changing supplied artwork, cryptographic signatures, status changes, workflow-engine changes, or ApproveDesk SaaS.
+
+---
+
+## Phase SH-PLAT285 — Branded PWA, governed user identity, revision access, and system settings — In progress
+
+**Goal:** keep the installed app consistently company-branded, prevent unreviewed display-name impersonation, let people use safe profile photographs, guarantee submitters can answer returned/information-requested approvals, and let authorized administrators configure outbound email, browser sessions, and supported social sign-in without editing server files. Target release is **v2.8.5**.
+
+This is a supplementary self-hosted patch release on `feature/sh-platform285-identity-config-pwa`, based on GitHub v2.8.4 plus the current Help-copy correction on `main`. It is additive except for removing automated staging/production deployment workflows at the user's direction. It does not alter append-only `workflow_actions`, weaken current-step authorization, expose stored credentials, rename historical actors, start Phase 10 tenancy, or add SAML/SCIM. “Superadmin” maps to the singleton **System owner**; ordinary administrators act through explicit capabilities and never through a role-name check.
+
+**Security and compatibility contract**
+
+- Company branding is the PWA/application identity source. The manifest, install icons, Apple touch icon, login layouts, signed-in navigation, and default metadata use saved branding when present and an ApproveDesk-owned fallback otherwise; no Laravel starter-kit mark or `Laravel` product name remains on user-visible surfaces.
+- A person may request a new display name, but their current name remains authoritative until a different authorized user approves it. A requester cannot approve their own change, duplicate pending requests are replaced rather than stacked, decisions are audited, and rejected/cancelled values never alter historical records.
+- Profile photos accept small raster images only, are decoded and re-encoded server-side to strip metadata/polyglot payloads, stored under generated private paths, served only through an authenticated policy-checked endpoint, and old objects are removed on replacement/deletion. SVG and original filenames are not served.
+- Returned and awaiting-information submissions remain bound to the original submitter. The submitter can open the request, revise allowed content/attachments or supply the requested information, and resubmit through existing domain/engine transitions; other users cannot claim that response path.
+- System delivery/authentication settings use encrypted-at-rest secrets, password-confirmed capability-gated writes, masked existing values, explicit keep/replace/remove semantics, safe validation, and redacted test failures. Environment values remain the fallback until an in-app override is saved.
+- Supported mail transports are SMTP, Amazon SES, Postmark, Resend, Sendmail, and Log (diagnostic only), limited to transports installed by this release. Sessions support a bounded idle lifetime and expire-on-browser-close. Social sign-in supports Google, Microsoft, and GitHub with provider enable switches, client credentials, redirect guidance, Microsoft tenant control, and the existing allowed-domain gate.
+- Runtime configuration is applied before mail/auth/session consumers resolve it and remains compatible with cached configuration, queue workers, the installer, SQLite tests, and shared hosting. Saving changes clears only relevant caches/services and tells the administrator when long-lived workers must be restarted.
+- GitHub Actions keeps quality CI and release publication, but checked-in staging and production deployment workflows are removed. Tags no longer deploy application files or require deployment secrets; operators update self-hosted installations through the existing updater/manual deployment procedures.
+
+### SH-PLAT285.1 — Plan and branded application shell
+
+- **SH-PLAT285-PLAN-01 — Complete (2026-09-05):** Add this v2.8.5 release-map row, threat model, scope, acceptance tests, migration/rollback notes, demo, and exit gate before production code.
+- **SH-PLAT285-PWA-01:** Make the dynamic manifest and install surfaces use the saved company logo through safe same-origin raster icon endpoints with required PWA sizes; use an ApproveDesk-owned icon set when no valid saved logo exists.
+- **SH-PLAT285-PWA-02:** Replace every remaining Laravel starter-kit logo/name fallback in authentication layouts, navigation, favicon/touch metadata, offline shell, and related user-visible application surfaces; changing/removing branding invalidates the relevant caches.
+
+### SH-PLAT285.2 — Governed display names and profile photographs
+
+- **SH-PLAT285-ID-01:** Add an additive pending display-name change record with requester, normalized proposed name, status, decision actor/time/reason, and one-pending-request-per-user enforcement. Applying an approval updates `users.name` transactionally; historical audit/action actor snapshots and IDs remain unchanged.
+- **SH-PLAT285-ID-02:** Change Profile so a different valid name creates/replaces a pending request rather than immediately changing the account. Show pending status and allow cancellation; unchanged-name saves and email verification continue to work.
+- **SH-PLAT285-ID-03:** Add an Administration review queue authorized by `users.update`; prevent self-approval, protect the System owner from non-owner decisions, record approve/reject/cancel audit events without logging sensitive image data, and notify the requester of the result.
+- **SH-PLAT285-IMG-01:** Add nullable generated profile-image storage metadata and a dedicated upload/remove action. Accept JPEG/PNG/WebP raster input within bounded dimensions/bytes, verify by decode, auto-orient where supported, crop/resize, re-encode, strip metadata, and reject SVG, animated or undecodable content.
+- **SH-PLAT285-IMG-02:** Serve profile images from private storage through authenticated authorization with non-guessable/current-user-or-directory-authorized access, safe response headers, and initials fallback. Render the image consistently in user menus and permitted user-directory surfaces.
+
+### SH-PLAT285.3 — Returned and information-request response access
+
+- **SH-PLAT285-REV-01:** Add failing-first regression coverage for the original submitter opening and editing a Returned request and responding to an Awaiting information request, including custom fields and attachments where supported, while unrelated users remain denied.
+- **SH-PLAT285-REV-02:** Align `SubmissionPolicy`, route/component visibility, editable-field rules, and response controls with engine state so the submitter can complete the requested response. Continue all state transitions through `WorkflowEngine` under its existing transaction/current-step guarantees and append a revision/evidence record rather than rewriting workflow history.
+- **SH-PLAT285-REV-03:** Present clear requester copy for what may be changed, preserve immutable reference/requester/history data, and notify the current approver(s) after a successful resubmission/information response.
+
+### SH-PLAT285.4 — Mail, session, and social sign-in settings
+
+- **SH-PLAT285-CFG-01:** Add explicit `system_settings.manage` capability (System owner implicit; Administrator/custom role only when granted) and a password-confirmed Administration → System settings screen. Secrets never become Livewire public properties and are never returned after save.
+- **SH-PLAT285-MAIL-01:** Add settings-backed mail transport/from-address configuration for SMTP, Amazon SES, Postmark, Resend, Sendmail, and Log with per-driver validation, encrypted credentials, environment fallback, keep/replace/remove controls, and a rate-limited test-email action whose errors are redacted.
+- **SH-PLAT285-SES-01:** Include required Symfony transport dependencies for supported API mailers, keep shared-host compatibility, and verify SMTP/SES/API driver configuration with framework transports faked in automated tests.
+- **SH-PLAT285-SES-02:** Add bounded session lifetime and expire-on-browser-close settings. Apply them before session middleware starts; changes affect newly issued/next-request cookies without weakening HttpOnly, SameSite, or Secure behavior.
+- **SH-PLAT285-SSO-01:** Extend the existing OAuth flow to GitHub and settings-backed Google/Microsoft/GitHub enablement and credentials. Preserve state/PKCE where supported, exact callback validation, account-link collision protection, active-user capacity, email/domain controls, and a password sign-in fallback.
+
+### SH-PLAT285.5 — CI simplification, tests, Help, and release
+
+- **SH-PLAT285-CI-01:** Delete staging and production deployment workflows; retain `ci.yml` SQLite/MySQL/static/assets quality gates and add/retain a tag-triggered GitHub Release artifact workflow with no host deployment or environment secrets.
+- **SH-PLAT285-CI-02:** Update contributor/operator/release documentation and repository instructions so they no longer claim `main` or tags deploy to staging/production. Preserve manual updater/shared-host rollback and smoke-check guidance outside end-user Help.
+- **SH-PLAT285-TEST-01:** Failing-first unit/feature tests cover PWA branding/fallbacks/cache invalidation; name request submit/replace/cancel/approve/reject/self-approval/owner protection/races; profile-image validation/re-encoding/privacy/replacement/removal; and returned/information response authorization and transitions.
+- **SH-PLAT285-TEST-02:** Failing-first tests cover capability gates, encrypted and masked secrets, environment fallback/override/removal, every supported mail transport, redacted/rate-limited test mail, session settings/cookies, and Google/Microsoft/GitHub OAuth enablement and callbacks.
+- **SH-PLAT285-DOC-01:** Update Profile, Users and roles, Requests, Approvals, Organization/System settings, definitions, Help catalogue, `CHANGELOG.md`, README, deployment/CI docs, and this plan. Keep credentials and deployment internals out of end-user Help.
+- **SH-PLAT285-REL-01:** Preserve and verify the local SQLite database, run focused tests and sabotage checks, full parallel SQLite suite, MySQL parity, Pint, PHPStan, dependency audit, asset build, installer/upgrade checks, `/up` and `/login` smoke tests; independent security review; PR/green CI/merge; release metadata; annotated `v2.8.5`; GitHub release/artifact verification; two-checkout sync and local-server migration/cache update.
+
+**Migration and rollback:** additive tables/columns only. Before local or production migration, take a verified database and files backup. Rolling application code back keeps the new identity records and image metadata inert; do not roll back schema destructively. Mail/session/OAuth overrides can be removed to restore environment-backed values. Removing deployment workflows requires no runtime migration and can be reversed by restoring workflow files in a later reviewed commit.
+
+**Phase demo:** a branded installation is added to a phone and displays the company logo instead of Laravel artwork; a user uploads a safe profile photo and requests a new display name that remains pending until a different authorized administrator approves it; the same requester edits and resubmits a returned request and answers an information request; an authorized administrator configures and tests SMTP or SES, changes session expiry, enables Google/Microsoft/GitHub sign-in, and confirms GitHub Actions runs quality/release publication without deploying to staging or production.
+
+**Out of scope:** arbitrary SVG avatars, public profile-image URLs, administrator impersonation, automatic/own name approval, rewriting historical actor names or workflow actions, changing an approval decision without an engine transition, SAML/OIDC discovery/SCIM/LDAP, per-user session policies, inbound mail, storing credentials in `.env` from the browser, managed cloud deployment, Phase 10 tenancy, or ApproveDesk SaaS.
 
 ---
 
