@@ -27,7 +27,7 @@
                 <flux:navlist.item :href="route('settings.notification-channels')" wire:navigate>{{ __('Notification channels') }}</flux:navlist.item>
             @endcan
             @can('system_settings.manage')
-                <flux:navlist.item :href="route('settings.system')" wire:navigate>{{ __('System') }}</flux:navlist.item>
+                <flux:navlist.item :href="route('settings.system')" wire:navigate>{{ __('System settings') }}</flux:navlist.item>
             @endcan
         </flux:navlist>
     </div>
