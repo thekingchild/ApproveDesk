@@ -69,16 +69,33 @@ class CreateSubmissionTest extends TestCase
         Notification::assertNotSentTo([$this->secondApprover], ActionRequiredNotification::class);
     }
 
-    public function test_autosave_persists_a_draft_without_starting_the_workflow(): void
+    public function test_general_request_form_does_not_autosave(): void
+    {
+        $page = Livewire::actingAs($this->submitter)
+            ->test('pages::submissions.create')
+            ->assertSee('Save draft')
+            ->assertDontSee('Changes autosave every 30 seconds.')
+            ->assertDontSee('Drafts auto-save every 30 seconds while you type.')
+            ->assertDontSee('Autosave failed.')
+            ->assertDontSee('wire:poll.30s="autosave"', false)
+            ->assertDontSee('data-test="autosave-status"', false);
+
+        $this->assertFalse(
+            method_exists($page->instance(), 'autosave'),
+            'General Request must not expose an autosave action.',
+        );
+
+        $this->assertSame(0, Submission::query()->count());
+    }
+
+    public function test_save_draft_persists_without_starting_the_workflow(): void
     {
         Livewire::actingAs($this->submitter)
             ->test('pages::submissions.create')
             ->set('title', 'Half-finished thought')
-            ->call('autosave')
+            ->call('saveDraft')
             ->assertHasNoErrors()
-            ->assertSet('autosaveState', 'saved')
-            ->assertNotSet('lastSavedAt', null)
-            ->assertSee('Saved at');
+            ->assertRedirect(route('submissions.index'));
 
         $draft = Submission::first();
 
@@ -89,15 +106,13 @@ class CreateSubmissionTest extends TestCase
         Notification::assertNothingSent();
     }
 
-    public function test_failed_autosave_is_visible_and_can_be_retried(): void
+    public function test_save_draft_rejects_an_invalid_title(): void
     {
         Livewire::actingAs($this->submitter)
             ->test('pages::submissions.create')
             ->set('title', str_repeat('x', 501))
-            ->call('autosave')
-            ->assertSet('autosaveState', 'failed')
-            ->assertSee('Autosave failed.')
-            ->assertSee('Retry');
+            ->call('saveDraft')
+            ->assertHasErrors(['title']);
 
         $this->assertSame(0, Submission::query()->count());
     }

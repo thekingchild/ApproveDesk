@@ -1419,6 +1419,10 @@ This is a supplementary self-hosted patch release on `feature/sh-id284-approval-
 
 ---
 
+## General Request save-draft only — Complete (2026-09-06)
+
+- **SH-DRAFT-01 — Complete (2026-09-06):** Remove the 30-second autosave poll, status, and action from the General Request wizard. Persist text and files only through **Save draft** or submit. Keep the browser offline-copy conflict. Update Requests Help and changelog.
+
 ## Request history body display correction — Complete (2026-09-05)
 
 - **SH-HIST-01 — Complete (2026-09-05):** Replace raw inline body HTML comparisons with collapsed, sanitized Before/After rich-text views. Preserve all revision records, actor/timestamps, and ordinary field/file history. Add HTTP regressions for formatting, default collapse, unsafe historical HTML, and empty bodies; update Audit trail Help and changelog.
