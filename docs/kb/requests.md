@@ -8,9 +8,9 @@ Choose **New submission**. If more than one request type is published, pick the 
 
 Custom forms show the fields an administrator published. Required fields, help text, and file types come from that published version.
 
-## Drafts and autosave
+## Drafts
 
-You can leave a request as a draft. The form saves while you work. Status text shows Saving, Saved at, or a retry prompt if the save failed.
+You can leave a request as a draft. Choose **Save draft** when you want ApproveDesk to keep the form without submitting it. The form does not save in the background while you type.
 
 If you go offline, the banner says the form is not being saved to ApproveDesk. This device still keeps a local copy. When you come back, if that copy differs from the saved draft, choose **Keep this device** or **Keep saved draft**. Approvals and submit still need a live connection.
 
