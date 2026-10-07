@@ -6,9 +6,12 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ## [Unreleased]
 
+## [2.8.6] - 2026-10-07
+
 ### Changed
 
 - General Request no longer autosaves every 30 seconds. Use **Save draft** to keep work without submitting.
+- README, `.env.example` `APP_VERSION`, the Updates-page fallback, application configuration, and this changelog treat **v2.8.6** as the current single-company release.
 
 ### Security
 
