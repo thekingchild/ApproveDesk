@@ -4,6 +4,9 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ __('Approval report') }} · {{ $submission->reference_number }}</title>
+    @if ($icon = ($favicon_data_uri ?? $logo_data_uri))
+        <link rel="icon" href="{{ $icon }}">
+    @endif
     <style>
         @page { size: A4 portrait; margin: 16mm 14mm 20mm; }
         :root { --accent: {{ \App\Support\Branding::accentColor() }}; --ink: #18181b; --muted: #52525b; --line: #d4d4d8; --soft: #f4f4f5; }
@@ -76,6 +79,8 @@
             <div class="brand-identity" data-test="report-company-identity">
                 @if ($logo_data_uri)
                     <img class="brand-logo" src="{{ $logo_data_uri }}" alt="">
+                @elseif ($favicon_data_uri)
+                    <img class="brand-logo" src="{{ $favicon_data_uri }}" alt="">
                 @endif
                 <div>
                     <div class="brand-name">{{ \App\Support\Branding::name() }}</div>

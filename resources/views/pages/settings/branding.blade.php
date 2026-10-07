@@ -9,6 +9,7 @@ use App\Support\SecondFactorAssurance;
 use Flux\Flux;
 use Livewire\Attributes\Title;
 use Livewire\Component;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
 
 new #[Title('Branding settings')] class extends Component {
@@ -65,6 +66,10 @@ new #[Title('Branding settings')] class extends Component {
         $this->overlay = (int) Setting::get('brand.login_background_overlay', '40');
         $this->custom_css = (string) Setting::get('brand.custom_css', '');
         $this->custom_code = (string) Setting::get('brand.custom_code', '');
+        $pendingCode = session('branding.pending_custom_code');
+        if (is_string($pendingCode) && $pendingCode !== '' && $this->canManageCustomCode()) {
+            $this->custom_code = $pendingCode;
+        }
         $this->allow_registration = Setting::get('auth.allow_registration', 'true') !== 'false';
         $this->landing_page_enabled = Setting::get('brand.landing_page_enabled', 'false') === 'true';
         $this->meta_title = (string) Setting::get('brand.meta_title', '');
@@ -142,7 +147,9 @@ new #[Title('Branding settings')] class extends Component {
 
         if ($submittedCode !== $existingCode) {
             if ($this->canManageCustomCode()) {
-                $this->ensureCustomCodeSaveAuthorized();
+                if (! $this->ensureCustomCodeSaveAuthorized()) {
+                    return;
+                }
             } else {
                 $submittedCode = $existingCode;
                 $this->custom_code = (string) ($existingCode ?? '');
@@ -169,6 +176,8 @@ new #[Title('Branding settings')] class extends Component {
             removeFavicon: $this->remove_favicon,
         ), auth()->user());
 
+        session()->forget('branding.pending_custom_code');
+
         $this->current_background = Setting::get('brand.login_background');
         $this->current_logo = Setting::get('brand.logo');
         $this->current_favicon = Setting::get('brand.favicon');
@@ -187,7 +196,7 @@ new #[Title('Branding settings')] class extends Component {
         return auth()->user()?->can('branding.custom_code.manage') === true;
     }
 
-    private function ensureCustomCodeSaveAuthorized(): void
+    private function ensureCustomCodeSaveAuthorized(): bool
     {
         $this->authorize('branding.custom_code.manage');
 
@@ -198,12 +207,20 @@ new #[Title('Branding settings')] class extends Component {
 
         $confirmedAt = session('auth.password_confirmed_at');
         if (! is_numeric($confirmedAt)) {
-            abort(403);
+            session()->put('url.intended', route('settings.branding'));
+            session()->put('branding.pending_custom_code', $this->custom_code);
+            $this->redirect(route('password.confirm'));
+
+            return false;
         }
 
         if (! $user->hasSatisfiedSecondFactor() || ! app(SecondFactorAssurance::class)->satisfied(request(), $user)) {
-            abort(403);
+            $this->addError('custom_code', __('Confirm an authenticator or passkey in this session before saving analytics code.'));
+
+            return false;
         }
+
+        return true;
     }
 
     public function previewStyle(): string
@@ -222,10 +239,20 @@ new #[Title('Branding settings')] class extends Component {
 
     public function previewLogoUrl(): ?string
     {
-        return $this->logo?->temporaryUrl()
-            ?? ($this->current_logo && ! $this->remove_logo
-                ? Branding::urlFor($this->current_logo)
-                : null);
+        return $this->previewUploadUrl($this->logo, $this->current_logo, $this->remove_logo);
+    }
+
+    public function previewUploadUrl($upload, ?string $stored, bool $removing): ?string
+    {
+        if ($upload instanceof TemporaryUploadedFile) {
+            return $upload->isPreviewable() ? $upload->temporaryUrl() : null;
+        }
+
+        if (is_string($stored) && $stored !== '' && ! $removing) {
+            return Branding::urlFor($stored);
+        }
+
+        return null;
     }
 } ?>
 
@@ -288,7 +315,7 @@ new #[Title('Branding settings')] class extends Component {
                                 <p class="mb-2 text-sm font-medium">{{ __('Favicon') }}</p>
                                 <div class="flex items-center gap-4 rounded-xl border border-dashed border-zinc-300 p-3 dark:border-zinc-700">
                                     <div class="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-800">
-                                        @if ($faviconPreviewUrl = ($favicon?->temporaryUrl() ?? (($current_favicon && ! $remove_favicon) ? \App\Support\Branding::urlFor($current_favicon) : null)))
+                                        @if ($faviconPreviewUrl = $this->previewUploadUrl($favicon, $current_favicon, $remove_favicon))
                                             <img src="{{ $faviconPreviewUrl }}" alt="" class="h-full w-full object-contain p-1" />
                                         @else
                                             <span class="text-xs font-semibold text-zinc-400">{{ __('None') }}</span>
@@ -456,7 +483,7 @@ new #[Title('Branding settings')] class extends Component {
                     <div x-show="tab === 'browser'" x-cloak class="mt-3 space-y-3">
                         <div class="rounded-lg border border-zinc-200 dark:border-zinc-700">
                             <div class="flex items-center gap-2 border-b border-zinc-200 px-3 py-2 dark:border-zinc-700">
-                                @if ($favPrev = ($favicon?->temporaryUrl() ?? (($current_favicon && ! $remove_favicon) ? \App\Support\Branding::urlFor($current_favicon) : null)))
+                                @if ($favPrev = $this->previewUploadUrl($favicon, $current_favicon, $remove_favicon))
                                     <img src="{{ $favPrev }}" alt="" class="h-4 w-4 rounded-sm object-contain" />
                                 @else
                                     <span class="inline-block h-4 w-4 rounded-sm bg-zinc-300 dark:bg-zinc-600"></span>

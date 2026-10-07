@@ -37,12 +37,19 @@ final class SecondFactorAssurance
 
     public function satisfied(Request $request, User $user): bool
     {
-        if (! $request->hasSession()) {
-            return false;
+        if ($request->hasSession() && $this->markerSatisfies($request->session()->get(self::SESSION_KEY), $user)) {
+            return true;
         }
 
-        $marker = $request->session()->get(self::SESSION_KEY);
+        try {
+            return $this->markerSatisfies(session()->get(self::SESSION_KEY), $user);
+        } catch (\Throwable) {
+            return false;
+        }
+    }
 
+    private function markerSatisfies(mixed $marker, User $user): bool
+    {
         if (! is_array($marker)
             || array_keys($marker) !== ['user_id', 'verified_at', 'method']
             || ! is_string($marker['user_id'])

@@ -10,9 +10,15 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 - General Request no longer autosaves every 30 seconds. Use **Save draft** to keep work without submitting.
 
+### Security
+
+- Laravel, CommonMark, and Flysystem are updated so the release passes Composer’s security audit.
+
 ### Fixed
 
 - Request history no longer displays raw HTML tags or expands repeated body text for every edit. Body comparisons are collapsed by default, with safely formatted Before/After versions available under **View body changes**; existing audit records remain unchanged.
+- System owners can save **Settings → Branding → Advanced: analytics and custom code**. Missing password confirmation now opens the confirmation page and keeps the snippet instead of failing silently.
+- Uploaded favicons appear on the approval report preview (browser tab, and as the report mark when no logo is saved). ICO favicons no longer break the Branding preview.
 
 ## [2.8.5] - 2026-09-05
 

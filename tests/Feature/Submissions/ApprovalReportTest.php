@@ -78,6 +78,22 @@ class ApprovalReportTest extends TestCase
             ->assertDontSee('/branding/assets/report-logo.png', false);
     }
 
+    public function test_report_embeds_configured_favicon_as_a_data_uri(): void
+    {
+        Storage::fake('public');
+        Storage::disk('public')->put('branding/report-favicon.png', 'local-favicon-bytes');
+        Setting::put('brand.favicon', 'branding/report-favicon.png');
+
+        $faviconUri = 'data:image/png;base64,'.base64_encode('local-favicon-bytes');
+
+        $this->actingAs($this->owner)
+            ->get("/submissions/{$this->submission->id}/approval-report")
+            ->assertOk()
+            ->assertSee('<link rel="icon" href="'.$faviconUri.'">', false)
+            ->assertSee('<img class="brand-logo" src="'.$faviconUri.'"', false)
+            ->assertDontSee('/branding/assets/report-favicon.png', false);
+    }
+
     public function test_report_always_prints_wrapped_company_name_beside_the_logo(): void
     {
         Storage::fake('public');

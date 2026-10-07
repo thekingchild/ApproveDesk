@@ -44,7 +44,7 @@ Sensitive form fields stay hidden from people who are not allowed to see them, i
 
 An approval report is a document-ready record of one request. Use it when you need a presentable copy for a meeting, filing, an audit response, or an email attachment.
 
-Open the request and choose **Approval report**. The preview shows the organization identity, request summary, request details, visible form fields, workflow progress, recorded decisions and comments, and an attachment list. The request's current status appears as a colored stamp at the upper-right so it is easy to identify without covering report content. Choose **Print** for the browser print dialog, or **Download PDF** for a file you can store or send. Times use the installation timezone shown in the report footer.
+Open the request and choose **Approval report**. The preview shows the organization identity (company name, logo, and favicon), request summary, request details, visible form fields, workflow progress, recorded decisions and comments, and an attachment list. The request's current status appears as a colored stamp at the upper-right so it is easy to identify without covering report content. Choose **Print** for the browser print dialog, or **Download PDF** for a file you can store or send. Times use the installation timezone shown in the report footer.
 
 The report follows the same access rules as the request. A sensitive field you cannot open on the request is not revealed in the preview or PDF. Opening an authorized sensitive value is recorded. Attachment names are listed, but the report does not place the attachment contents inside the PDF.
 
