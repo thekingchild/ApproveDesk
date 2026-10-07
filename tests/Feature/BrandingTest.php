@@ -16,6 +16,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
+use Livewire\Features\SupportFileUploads\FileUploadConfiguration;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -291,6 +293,21 @@ class BrandingTest extends TestCase
         $this->get(route('branding.asset', $file))->assertOk();
     }
 
+    public function test_ico_favicon_preview_does_not_call_temporary_url(): void
+    {
+        $admin = User::factory()->create()->assignRole('admin');
+        $filename = 'probe.ico';
+        FileUploadConfiguration::storage()->put(
+            FileUploadConfiguration::path($filename),
+            str_repeat('ico-bytes', 20),
+        );
+        $upload = new TemporaryUploadedFile($filename, FileUploadConfiguration::disk());
+
+        $this->assertFalse($upload->isPreviewable());
+        $component = Livewire::actingAs($admin)->test('pages::settings.branding');
+        $this->assertNull($component->instance()->previewUploadUrl($upload, null, false));
+    }
+
     public function test_logo_and_favicon_upload_appear_on_login_and_in_the_app(): void
     {
         $admin = User::factory()->create()->assignRole('admin');
@@ -445,9 +462,30 @@ class BrandingTest extends TestCase
             ->test('pages::settings.branding')
             ->set('custom_code', '<script src="https://owner.test/tracker.js"></script>')
             ->call('save')
-            ->assertForbidden();
+            ->assertRedirect(route('password.confirm'));
 
         $this->assertTrue(blank(Setting::get('brand.custom_code')));
+        $this->assertSame(
+            '<script src="https://owner.test/tracker.js"></script>',
+            session('branding.pending_custom_code'),
+        );
+    }
+
+    public function test_system_owner_can_save_custom_code_after_reauthentication(): void
+    {
+        $owner = $this->owner();
+        $snippet = '<script src="https://owner.test/tracker.js"></script>';
+
+        $this->actingAs($owner);
+        session($this->ownerSession($owner));
+
+        Livewire::actingAs($owner)
+            ->test('pages::settings.branding')
+            ->set('custom_code', $snippet)
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertSame($snippet, Setting::get('brand.custom_code'));
     }
 
     public function test_system_owner_sees_custom_code_editor(): void

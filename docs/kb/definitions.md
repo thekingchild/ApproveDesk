@@ -92,7 +92,7 @@ An optional chat bot. People link their Telegram account; ApproveDesk sends a me
 
 ## [Branding](/help/organization-settings)
 
-The organisation identity administrators set under **Settings → Branding**: company name, meta description, logo, favicon, login tagline, accent colour, and login background. The company name and logo appear after sign-in, on printable approval records, and as the installed app icon; the background is the public login screen.
+The organisation identity administrators set under **Settings → Branding**: company name, meta description, logo, favicon, login tagline, accent colour, and login background. The company name and logo appear after sign-in, on printable approval records, and as the installed app icon; the favicon appears in browser tabs, including the approval report preview, and as the report mark when no logo is saved; the background is the public login screen.
 
 ## [Company name](/help/organization-settings)
 

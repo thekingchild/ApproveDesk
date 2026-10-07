@@ -166,6 +166,7 @@ Locked product decision for Phase 8.2. It does not reopen Phase 8.1. Design: [do
 | SH-UX283 | v2.8.3 | Public landing page refresh, capability-scoped Help, and printable status stamp | Complete |
 | SH-ID284/SH-PRN284 | v2.8.4 | Configurable approval IDs and supplied image status stamps | Complete |
 | SH-PLAT285 | v2.8.5 | Branded PWA, governed user identity, revision access, and system delivery/authentication settings | Complete |
+| SH-FIX286 | v2.8.6 | Custom-code branding save and approval-report favicon | Complete |
 | 10 | v3.0.0 | SaaS multi-tenancy foundation | Not started |
 | 11 | v3.1.0 | Paystack and Flutterwave subscriptions | Not started |
 | 12 | v3.2.0 | SaaS onboarding, entitlements, and commercial operations | Not started |
@@ -1486,6 +1487,18 @@ This is a supplementary self-hosted patch release on `feature/sh-platform285-ide
 **Phase demo:** a branded installation is added to a phone and displays the company logo instead of Laravel artwork; a user uploads a safe profile photo and requests a new display name that remains pending until a different authorized administrator approves it; the same requester edits and resubmits a returned request and answers an information request; an authorized administrator configures and tests SMTP or SES, changes session expiry, enables Google/Microsoft/GitHub sign-in, and confirms GitHub Actions runs quality/release publication without deploying to staging or production.
 
 **Out of scope:** arbitrary SVG avatars, public profile-image URLs, administrator impersonation, automatic/own name approval, rewriting historical actor names or workflow actions, changing an approval decision without an engine transition, SAML/OIDC discovery/SCIM/LDAP, per-user session policies, inbound mail, storing credentials in `.env` from the browser, managed cloud deployment, Phase 10 tenancy, or ApproveDesk SaaS.
+
+---
+
+## Phase SH-FIX286 — Custom-code branding save and approval-report favicon — Complete (2026-10-07)
+
+**Goal:** let the System owner save analytics/custom code from Branding, and show the uploaded favicon on the approval report preview. Target release is **v2.8.6**.
+
+- **SH-FIX286-01 — Complete (2026-10-07):** Saving **Advanced: analytics and custom code** no longer returns a silent Livewire 403. Missing password confirmation stores the snippet and opens password confirmation; a current second-factor session is required to persist the code. Second-factor assurance also reads the application session when the Livewire request has no usable session.
+- **SH-FIX286-02 — Complete (2026-10-07):** Approval report preview embeds the saved favicon as a data URI in the document icon and uses it as the report mark when no logo is saved. ICO uploads no longer call a non-previewable temporary URL on Branding.
+- **SH-FIX286-DOC-01 — Complete (2026-10-07):** Update Branding, System owner, Requests Help, changelog, and this plan. No schema change.
+
+**Migration and rollback:** no migration. Rolling application code back restores the previous 403-on-save and report-without-favicon behaviour.
 
 ---
 

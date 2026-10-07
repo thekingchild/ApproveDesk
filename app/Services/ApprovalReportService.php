@@ -97,7 +97,8 @@ final class ApprovalReportService
         return [
             'submission' => $submission,
             'body' => app(RichTextSanitizer::class)->sanitize((string) $submission->body),
-            'logo_data_uri' => $this->logoDataUri(),
+            'logo_data_uri' => $this->assetDataUri(Setting::get('brand.logo')),
+            'favicon_data_uri' => $this->assetDataUri(Setting::get('brand.favicon')),
             'status_stamp_key' => $this->statusStamp->key($submission->status),
             'status_stamp_data_uri' => $this->statusStamp->dataUri($submission->status),
             'request_type' => $requestType->name,
@@ -115,15 +116,13 @@ final class ApprovalReportService
         ];
     }
 
-    private function logoDataUri(): ?string
+    private function assetDataUri(?string $path): ?string
     {
-        $storedPath = Setting::get('brand.logo');
-
-        if ($storedPath === null || $storedPath === '') {
+        if ($path === null || $path === '') {
             return null;
         }
 
-        $file = basename($storedPath);
+        $file = basename($path);
         $extension = strtolower(pathinfo($file, PATHINFO_EXTENSION));
         $mime = match ($extension) {
             'png' => 'image/png',
@@ -131,6 +130,7 @@ final class ApprovalReportService
             'gif' => 'image/gif',
             'svg' => 'image/svg+xml',
             'webp' => 'image/webp',
+            'ico' => 'image/x-icon',
             default => null,
         };
 
@@ -139,13 +139,13 @@ final class ApprovalReportService
         }
 
         $disk = Storage::disk('public');
-        $path = 'branding/'.$file;
+        $stored = 'branding/'.$file;
 
-        if (! $disk->exists($path)) {
+        if (! $disk->exists($stored)) {
             return null;
         }
 
-        return 'data:'.$mime.';base64,'.base64_encode($disk->get($path));
+        return 'data:'.$mime.';base64,'.base64_encode($disk->get($stored));
     }
 
     private function outcomeLabel(WorkflowAction $action, ?WorkflowTemplateVersion $version): string
