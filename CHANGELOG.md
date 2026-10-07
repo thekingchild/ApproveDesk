@@ -10,6 +10,10 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 - General Request no longer autosaves every 30 seconds. Use **Save draft** to keep work without submitting.
 
+### Security
+
+- Laravel, CommonMark, and Flysystem are updated so the release passes Composer’s security audit.
+
 ### Fixed
 
 - Request history no longer displays raw HTML tags or expands repeated body text for every edit. Body comparisons are collapsed by default, with safely formatted Before/After versions available under **View body changes**; existing audit records remain unchanged.
