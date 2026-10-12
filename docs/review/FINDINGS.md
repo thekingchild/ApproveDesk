@@ -35,7 +35,7 @@ Query count must stay flat as rows grow. Pages marked ✗ grow with data (row-le
 
 ### Large dataset
 
-`database/seeders/PerformanceSeeder.php` (local-only, not in `DatabaseSeeder`) drives every transition through `WorkflowEngine`. Throughput ≈ 0.4 s/submission on SQLite, so the plan's 20k target takes hours; Wave 0 seeds 300 users / 3,000 submissions into `database/perf.sqlite`:
+`database/seeders/PerformanceSeeder.php` (local-only, not in `DatabaseSeeder`) drives every transition through `WorkflowEngine`. Throughput ≈ 0.2 s/submission on SQLite, so the plan's 20k target takes over an hour. The Wave 0 dataset in `database/perf.sqlite` holds **312 users, 2,857 submissions, 4,230 workflow actions, 2,117 comments** (run stopped at a 10-minute tool limit; the last submission may lack a workflow instance):
 
 ```bash
 touch database/perf.sqlite
