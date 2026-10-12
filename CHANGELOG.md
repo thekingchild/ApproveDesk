@@ -6,6 +6,16 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ## [Unreleased]
 
+### Added
+
+- CI runs the test suite on MariaDB 10.6 as well as MySQL 8.
+- `PerformanceSeeder` builds a large local dataset for performance review. It never runs outside the `local` environment.
+- Code review plan (`REVIEW_PLAN.md`) and findings register (`docs/review/FINDINGS.md`).
+
+### Fixed
+
+- The test suite refuses to run when configuration or routes are cached, or when the database is not an isolated test database. Previously a cached config made tests run against, and reset, the local development database.
+
 ## [2.8.6] - 2026-10-07
 
 ### Changed
