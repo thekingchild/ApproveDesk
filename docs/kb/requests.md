@@ -26,7 +26,7 @@ Comments stay on the request and are part of the record. You can reply to a top-
 
 Followers can open the request even if they are not on the workflow. Unfollow yourself from the Followers card. Reminders go to the current approver from the same page.
 
-After you submit, the workflow card shows the current step, the expected next step, and an estimated due time when the step has a timeout. See [Collaboration](collaboration.md).
+After you submit, the workflow card shows the current step, the expected next step, and an estimated due time when the step has a timeout. See [Collaboration](collaboration.md). The step list on the request page shows the workflow version the request started on. If an administrator publishes a changed chain later, your request keeps its own steps and names.
 
 ## Submit, withdraw, revise
 
@@ -36,7 +36,7 @@ If ApproveDesk cannot send the request for approval (for example nobody can appr
 
 Withdraw cancels an in-flight request that you own. Use it when the work is no longer needed. The withdrawal is recorded in the request history. If an approver finishes the request at the same moment, their decision stands and the request can no longer be withdrawn.
 
-If an approver returns the request, status becomes Returned. Open the request and choose Edit. Change the allowed fields or attachments, then submit again. The workflow continues from the return; it does not rewrite earlier decisions.
+If an approver returns the request, status becomes Returned. Open the request and choose Edit. Change the allowed fields or attachments, then submit again. The workflow continues from the return; it does not rewrite earlier decisions. Editing a draft or a returned General Request keeps the department it was raised under, even if your own department has changed since. If nobody can act on the step it returns to (for example your manager has left), the request stays Returned and the reason is shown; ask an administrator to fix the assignment, then submit again.
 
 If an approver asks for information, status becomes Awaiting information. Open the request, supply the answer or files they asked for, and send the response. A written answer is required. Only the original submitter can complete that response. If the request cannot go back for approval, your answer is not posted and the reason is shown under it.
 
