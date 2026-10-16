@@ -50,7 +50,7 @@ Anyone can open **Settings → Privacy** and choose **Download my data**. The zi
 
 On **Administration → Users**, edit the person and choose **Anonymize account**. Their name becomes “Former user”, the email is replaced, and they cannot sign in. Decisions they already recorded stay on those requests. You cannot anonymize yourself or the System owner.
 
-People can delete their own account only when they have no request or decision history. Otherwise they download their data and ask an administrator to anonymize.
+People can delete their own account only when they have no request or decision history (requests, decisions, delegations, or comments). Otherwise they download their data and ask an administrator to anonymize.
 
 ## What not to do
 

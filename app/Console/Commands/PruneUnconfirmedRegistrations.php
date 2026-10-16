@@ -20,11 +20,21 @@ class PruneUnconfirmedRegistrations extends Command
         $hours = max(1, (int) $this->option('hours'));
         $cutoff = now()->subHours($hours);
 
-        $deleted = User::query()
+        $deleted = 0;
+        User::query()
             ->whereNull('email_verified_at')
             ->where('created_at', '<', $cutoff)
             ->whereDoesntHave('roles', fn ($query) => $query->where('name', 'super-admin'))
-            ->delete();
+            ->each(function (User $user) use (&$deleted): void {
+                // Unconfirmed accounts can still appear in request history (for
+                // example as a delegate); those are kept for the audit trail.
+                if ($user->hasPreservedAuditEvidence()) {
+                    return;
+                }
+
+                $user->delete();
+                $deleted++;
+            });
 
         $this->info("Pruned {$deleted} unconfirmed registration(s) older than {$hours} hours.");
 
