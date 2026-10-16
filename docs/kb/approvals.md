@@ -32,7 +32,11 @@ You can approve several requests at once only when they are the same workflow st
 
 Delegate hands your current step to another active user for a limited time. You can set a future start; until then you still decide. Escalate moves the work to the next step when policy allows. Request information pauses the step until the requester replies.
 
-Delegation is refused if the other person is out of office during that window, already holds a seat, or the window overlaps a grant you already made.
+Delegation is refused if the other person is out of office during that window, already holds a seat, is the requester (when separation of duties is on), or the window overlaps a grant you already made.
+
+## Your own requests
+
+When **Requesters cannot approve their own requests** is on in Approval settings, your own requests never appear in your approval queue, even if a step would otherwise include you. The request page tells you another approver must decide. You can still comment.
 
 A requester or watcher can send a reminder to the current approver. Quiet hours and rate limits apply; see [Collaboration](collaboration.md).
 

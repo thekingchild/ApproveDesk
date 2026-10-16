@@ -8,6 +8,7 @@ use App\Enums\RequestFieldType;
 use App\Models\Submission;
 use App\Models\User;
 use App\Models\WorkflowTemplateStep;
+use App\Support\SeparationOfDuties;
 use Illuminate\Database\Eloquent\Collection;
 use Spatie\Permission\Models\Role;
 
@@ -23,6 +24,23 @@ final class AssigneeResolver
      */
     public function resolve(WorkflowTemplateStep $step, ?Submission $submission = null): Collection
     {
+        $users = $this->candidates($step, $submission);
+
+        if ($submission !== null && SeparationOfDuties::enabled()) {
+            $users = $users->reject(fn (User $user): bool => (int) $user->id === (int) $submission->submitter_id);
+        }
+
+        return new Collection($users->values()->all());
+    }
+
+    /**
+     * Everyone the step's assignee rule selects, before separation of duties
+     * removes the requester.
+     *
+     * @return Collection<int, User>
+     */
+    public function candidates(WorkflowTemplateStep $step, ?Submission $submission = null): Collection
+    {
         $users = match ($step->assignee_type) {
             AssigneeType::User => $this->namedUsers($step->assignee_ids ?? []),
             AssigneeType::Role => $this->roleUsers($step->assignee_ids ?? []),
@@ -34,6 +52,20 @@ final class AssigneeResolver
         };
 
         return new Collection($users->unique('id')->values()->all());
+    }
+
+    /**
+     * True when the requester is the only person this step would otherwise resolve to.
+     */
+    public function onlyRequesterResolves(WorkflowTemplateStep $step, Submission $submission): bool
+    {
+        if (! SeparationOfDuties::enabled()) {
+            return false;
+        }
+
+        $ids = $this->candidates($step, $submission)->pluck('id')->map(fn ($id): int => (int) $id)->all();
+
+        return $ids === [(int) $submission->submitter_id];
     }
 
     /**

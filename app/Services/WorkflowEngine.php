@@ -24,8 +24,10 @@ use App\Models\WorkflowInstance;
 use App\Models\WorkflowSelectionRule;
 use App\Models\WorkflowTemplate;
 use App\Models\WorkflowTemplateStep;
+use App\Services\Workflow\AssigneeResolver;
 use App\Services\Workflow\StepOutcomes;
 use App\Services\Workflow\WorkflowTemplateSelector;
+use App\Support\SeparationOfDuties;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
@@ -248,6 +250,10 @@ class WorkflowEngine
             throw WorkflowException::actorNotAssigned($actor->email, 'none');
         }
 
+        if ($action !== WorkflowActionType::Comment && SeparationOfDuties::forbids($actor, $instance->submission)) {
+            throw WorkflowException::selfApprovalNotAllowed();
+        }
+
         $directlyAssigned = $step->assignedUsers($instance->submission)->contains($actor);
         $delegated = $this->hasActiveIncomingDelegation($instance, $step, $actor);
 
@@ -294,6 +300,10 @@ class WorkflowEngine
 
         if (! $delegate->is_active || $delegate->is($delegator)) {
             throw WorkflowException::delegationNotAllowed('select a different active user');
+        }
+
+        if (SeparationOfDuties::forbids($delegate, $instance->submission)) {
+            throw WorkflowException::selfDelegationNotAllowed();
         }
 
         if ($expiresAt->lessThanOrEqualTo(now())) {
@@ -564,6 +574,10 @@ class WorkflowEngine
             }
 
             if ($step->assignedUsers($instance->submission)->isEmpty()) {
+                if (app(AssigneeResolver::class)->onlyRequesterResolves($step, $instance->submission)) {
+                    throw WorkflowException::onlyApproverIsRequester($step->name);
+                }
+
                 throw WorkflowException::unresolvedAssignees($step->name);
             }
 

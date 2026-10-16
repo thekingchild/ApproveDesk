@@ -5,6 +5,7 @@ namespace App\Services\Workflow;
 use App\Enums\AssigneeType;
 use App\Models\User;
 use App\Models\WorkflowInstance;
+use App\Support\SeparationOfDuties;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 
@@ -19,6 +20,10 @@ final class AssignedStepConstraint
         $roleIds = $user->getRoleNames()->isEmpty()
             ? []
             : $user->roles()->pluck('id')->all();
+
+        if (SeparationOfDuties::enabled()) {
+            $query->whereHas('submission', fn (Builder $submission) => $submission->where('submitter_id', '!=', $user->id));
+        }
 
         return $query->where(function (Builder $eligible) use ($user, $roleIds): void {
             $eligible->whereHas('currentStep', function (Builder $step) use ($user, $roleIds): void {
