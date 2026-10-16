@@ -23,6 +23,7 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Security
 
+- Rich text (request bodies, announcements, and the API `body` field) can no longer carry script through legacy raw-text tags such as `<xmp>` or `<noembed>`. The sanitizer now rebuilds output from an allow-list, and stored content is re-sanitized when displayed.
 - The rich-text editor (Tiptap 3.32, ProseMirror) is updated to fix a paste-handling XSS and prototype-pollution issues reported by `npm audit`. Build tooling (`concurrently`) moved to development dependencies. `npm audit` reports no vulnerabilities.
 
 ## [2.8.6] - 2026-10-07

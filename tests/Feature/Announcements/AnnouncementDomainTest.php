@@ -208,4 +208,17 @@ class AnnouncementDomainTest extends TestCase
 
         return $owner;
     }
+
+    public function test_stored_message_is_re_sanitized_for_display(): void
+    {
+        // Content saved by the pre-RV-SEC-03 sanitizer could still hold live markup.
+        $announcement = Announcement::factory()->create();
+        $announcement->forceFill(['message' => '<p>Notice</p><img src=x onerror=alert(1)>'])->saveQuietly();
+
+        $html = $announcement->fresh()->safeMessage();
+
+        $this->assertStringContainsString('<p>Notice</p>', $html);
+        $this->assertStringNotContainsString('onerror', $html);
+        $this->assertStringNotContainsString('<img', $html);
+    }
 }

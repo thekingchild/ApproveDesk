@@ -37,7 +37,7 @@
                                     x-show="expanded"
                                     x-cloak
                                 >
-                                    {!! $announcement->message !!}
+                                    {!! $announcement->safeMessage() !!}
                                 </div>
                                 <button
                                     type="button"
@@ -53,7 +53,7 @@
                             </div>
                         @else
                             <div id="announcement-message-{{ $announcement->id }}" class="prose prose-sm mt-2 max-w-none dark:prose-invert">
-                                {!! $announcement->message !!}
+                                {!! $announcement->safeMessage() !!}
                             </div>
                         @endif
                         <p class="mt-2 text-xs text-zinc-600 dark:text-zinc-300">

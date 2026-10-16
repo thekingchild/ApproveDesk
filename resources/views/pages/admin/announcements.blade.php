@@ -241,7 +241,7 @@ new #[Title('Announcements')] class extends Component
                             @endif
                         </div>
                     </div>
-                    <div class="prose prose-sm mt-4 max-w-none dark:prose-invert">{!! $announcement->message !!}</div>
+                    <div class="prose prose-sm mt-4 max-w-none dark:prose-invert">{!! $announcement->safeMessage() !!}</div>
                     <p class="mt-3 text-xs text-zinc-500">
                         {{ __('Created by :name', ['name' => $announcement->creator->name]) }}
                         @if ($announcement->published_at)
