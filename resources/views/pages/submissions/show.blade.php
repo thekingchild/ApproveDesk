@@ -276,7 +276,7 @@ new #[Title('Submission')] class extends Component {
             ->whereKeyNot(Auth::id())
             ->whereNotIn('id', $excluded)
             ->orderBy('name')
-            ->get();
+            ->get(['id', 'name', 'email']);
     }
 
     /** The viewer's current or upcoming delegation on this step, if any (for "Take back"). */

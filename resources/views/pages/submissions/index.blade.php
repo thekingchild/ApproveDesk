@@ -89,7 +89,8 @@ new #[Title('My submissions')] class extends Component {
     #[\Livewire\Attributes\Computed]
     public function submitters(): \Illuminate\Database\Eloquent\Collection
     {
-        return User::query()->whereHas('submissions')->orderBy('name')->get();
+        // Only what the filter shows (RV-PERF-14); a searchable picker is Wave 4 work.
+        return User::query()->whereHas('submissions')->orderBy('name')->get(['id', 'name']);
     }
 
     #[\Livewire\Attributes\Computed]
