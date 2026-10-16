@@ -60,7 +60,7 @@ class GrantableRoleServiceTest extends TestCase
     public function test_delegated_editor_can_grant_a_built_in_role_only_when_every_permission_is_within_the_ceiling(): void
     {
         $editor = User::factory()->create();
-        $editor->givePermissionTo(['users.update', 'users.view', 'submissions.view.own']);
+        $editor->givePermissionTo(['users.update', 'users.view', 'submissions.view.own', 'comments.create', 'reminders.send']);
 
         $roles = app(GrantableRoleService::class)->for($editor);
 
@@ -80,7 +80,7 @@ class GrantableRoleServiceTest extends TestCase
         $outside = app(RolePermissionService::class)->create($owner, 'All submissions', null, ['submissions.view.all']);
 
         $editor = User::factory()->create();
-        $editor->givePermissionTo(['users.update', 'users.view', 'roles.assign.custom', 'submissions.view.own']);
+        $editor->givePermissionTo(['users.update', 'users.view', 'roles.assign.custom', 'submissions.view.own', 'comments.create', 'reminders.send']);
 
         $roles = app(GrantableRoleService::class)->for($editor);
 

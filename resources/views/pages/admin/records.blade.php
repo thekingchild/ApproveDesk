@@ -88,7 +88,7 @@ new #[Title('Records')] class extends Component
 
     public function grantAccess(GrantAuditorAccessAction $grant): void
     {
-        $this->authorize('settings.manage');
+        $this->authorize('audit.auditor_access.manage');
         $this->validate([
             'auditorUserId' => ['required', 'integer', 'exists:users,id'],
             'accessStartsAt' => ['required', 'date'],
@@ -114,7 +114,7 @@ new #[Title('Records')] class extends Component
 
     public function revokeAccess(int $accessId, RevokeAuditorAccessAction $revoke): void
     {
-        $this->authorize('settings.manage');
+        $this->authorize('audit.auditor_access.manage');
         $revoke->execute(Auth::user(), AuditorAccess::query()->findOrFail($accessId));
         unset($this->grants);
         Flux::toast('Auditor access revoked.', variant: 'success');
@@ -201,6 +201,10 @@ new #[Title('Records')] class extends Component
     <div class="mt-8 grid gap-8 lg:grid-cols-2">
         <flux:card>
             <flux:heading size="sm">{{ __('Auditor access') }}</flux:heading>
+            @cannot('audit.auditor_access.manage')
+                <flux:text class="mt-2 text-sm" data-test="auditor-access-read-only">{{ __('You can see current grants. Granting or revoking auditor access needs the Manage auditor access permission.') }}</flux:text>
+            @endcannot
+            @can('audit.auditor_access.manage')
             <div class="mt-4 space-y-3">
                 <flux:select wire:model="auditorUserId" :label="__('Auditor')">
                     <flux:select.option value="0">{{ __('Choose an auditor') }}</flux:select.option>
@@ -214,6 +218,7 @@ new #[Title('Records')] class extends Component
                 <flux:error name="accessReason" />
                 <flux:button variant="primary" wire:click="grantAccess">{{ __('Grant access') }}</flux:button>
             </div>
+            @endcan
             <ul class="mt-4 space-y-2 text-sm">
                 @forelse ($this->grants as $grant)
                     <li class="flex items-start justify-between gap-3">
@@ -223,7 +228,7 @@ new #[Title('Records')] class extends Component
                                 · {{ __('revoked') }}
                             @endif
                         </span>
-                        @if ($grant->revoked_at === null)
+                        @if ($grant->revoked_at === null && auth()->user()->can('audit.auditor_access.manage'))
                             <flux:button size="xs" variant="ghost" wire:click="revokeAccess({{ $grant->id }})">{{ __('Revoke') }}</flux:button>
                         @endif
                     </li>

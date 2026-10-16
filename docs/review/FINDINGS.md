@@ -212,7 +212,7 @@ Sources: three read-only reviews (engine/audit, authorization, input-output/file
 | RV-BUG-03 | S3 | Delegation window parsed in `APP_TIMEZONE`, not the user's | `submissions/show.blade.php:259-284` |
 | RV-SEC-09 | S3 | **Fix in review** (`feature/rv-s3-authz`) —  Mentions add watchers without `addWatcher`; mention list not locked | `PostCommentAction.php:58`, `FollowSubmissionAction.php:35` |
 | RV-SEC-12 | S3 | **Fix in review** (`feature/rv-s3-authz`) —  API submitters can choose any department, steering department-manager routing | `StoreSubmissionRequest.php:27` |
-| RV-SEC-13 | S3 | Permission catalogue keys with no enforcement (`submissions.withdraw`, `comments.create`, `reminders.send`, `submissions.view.own`, `audit.evidence.export`, `audit.auditor_access.manage`) | `app/Policies/SubmissionPolicy.php` and others |
+| RV-SEC-13 | S3 | **Fix in review** (`feature/rv-s3-permission-keys`; decided 2026-10-16: enforce + backfill. `submissions.view.own` intentionally does not gate a requester's own request — enforcing it locked people out of answering information requests and returns) — Permission catalogue keys with no enforcement (`submissions.withdraw`, `comments.create`, `reminders.send`, `submissions.view.own`, `audit.evidence.export`, `audit.auditor_access.manage`) | `app/Policies/SubmissionPolicy.php` and others |
 | RV-SEC-14 | S3 | Markdown link injection in notification emails via title/comment | `RendersNotificationCopy::mailFromCopy` |
 | RV-SEC-15 | S3 | CSP allows `unsafe-inline` and `unsafe-eval`, so it doesn't mitigate XSS | `app/Http/Middleware/SecurityHeaders.php:34` |
 | RV-SEC-16 | S3 | Custom-code save accepts a password confirmation of any age; second factor is login-time only | `settings/branding.blade.php:208-209` |

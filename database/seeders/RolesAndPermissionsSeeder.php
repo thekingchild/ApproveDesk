@@ -21,11 +21,11 @@ class RolesAndPermissionsSeeder extends Seeder
             'departments.manage', 'settings.manage', 'reports.view', 'webhooks.manage',
             'integrations.manage', 'submissions.fields.sensitive', 'audit.view',
         ],
-        'department-head' => ['submissions.view.all', 'approvals.act', 'submissions.create', 'submissions.view.own'],
-        'approver' => ['approvals.act'],
-        'submitter' => ['submissions.create', 'submissions.view.own', 'submissions.withdraw'],
-        'viewer' => ['submissions.view.own'],
-        'auditor' => ['audit.view'],
+        'department-head' => ['submissions.view.all', 'approvals.act', 'submissions.create', 'submissions.view.own', 'submissions.withdraw', 'comments.create', 'reminders.send', 'audit.evidence.export'],
+        'approver' => ['approvals.act', 'comments.create', 'reminders.send'],
+        'submitter' => ['submissions.create', 'submissions.view.own', 'submissions.withdraw', 'comments.create', 'reminders.send'],
+        'viewer' => ['submissions.view.own', 'comments.create', 'reminders.send'],
+        'auditor' => ['audit.view', 'audit.evidence.export'],
     ];
 
     public function run(): void

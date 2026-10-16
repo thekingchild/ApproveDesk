@@ -12,6 +12,8 @@ class SubmissionPolicy
 {
     public function view(User $user, Submission $submission): bool
     {
+        // Requesters always see their own requests (they must answer information
+        // requests and revise returns), so View own requests is not a gate here.
         if ($submission->submitter_id === $user->id || $user->can('submissions.view.all')) {
             return true;
         }
@@ -78,6 +80,7 @@ class SubmissionPolicy
     public function withdraw(User $user, Submission $submission): bool
     {
         return $submission->submitter_id === $user->id
+            && $user->can('submissions.withdraw')
             && in_array($submission->status, [
                 SubmissionStatus::Pending,
                 SubmissionStatus::InReview,
@@ -86,9 +89,12 @@ class SubmissionPolicy
             ], true);
     }
 
+    /** Requesters can always discuss their own request; others need Create comments. */
     public function comment(User $user, Submission $submission): bool
     {
-        return ! $user->isReadOnlyAuditor() && $this->view($user, $submission);
+        return ! $user->isReadOnlyAuditor()
+            && $this->view($user, $submission)
+            && ($submission->submitter_id === $user->id || $user->can('comments.create'));
     }
 
     public function follow(User $user, Submission $submission): bool
@@ -115,9 +121,12 @@ class SubmissionPolicy
             && $step->assignedUsers($instance->submission)->contains($user);
     }
 
+    /** Requesters can always remind on their own request; others need Send reminders. */
     public function nudge(User $user, Submission $submission): bool
     {
-        return ! $user->isReadOnlyAuditor() && $this->view($user, $submission);
+        return ! $user->isReadOnlyAuditor()
+            && $this->view($user, $submission)
+            && ($submission->submitter_id === $user->id || $user->can('reminders.send'));
     }
 
     public function downloadFiles(User $user, Submission $submission): bool
@@ -127,6 +136,10 @@ class SubmissionPolicy
 
     public function downloadEvidence(User $user, Submission $submission): bool
     {
+        if (! $user->can('audit.evidence.export')) {
+            return false;
+        }
+
         if ($user->can('settings.manage') || $user->can('submissions.view.all')) {
             return $this->view($user, $submission);
         }
