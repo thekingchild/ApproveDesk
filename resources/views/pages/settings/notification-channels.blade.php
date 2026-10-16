@@ -90,6 +90,7 @@ new #[Title('Notification channels')] class extends Component {
                 User::query()->assignable()->findOrFail($validated['mapping_user_id']),
                 NotificationChannelKey::from($validated['mapping_channel']),
                 $validated['mapping_external_id'] === '' ? null : $validated['mapping_external_id'],
+                \Illuminate\Support\Facades\Auth::user(),
             );
         } catch (\InvalidArgumentException $exception) {
             $this->addError('mapping_external_id', $exception->getMessage());

@@ -35,6 +35,8 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Security
 
+- Changing another person's Slack, Teams, or Telegram identity now follows the same rule as changing their email (administrators and people with more access only by the System owner), and every change is logged.
+- S3 backup destinations are pinned to the addresses that passed the outbound check, and virtual-hosted bucket names (`bucket.endpoint`) are checked too, so DNS changes cannot redirect backups to internal hosts.
 - Request titles, comments, and names in notification emails are shown as plain text, so they can no longer turn into links inside a genuine ApproveDesk email.
 - Saving owner analytics/custom code requires a password confirmation within the configured confirmation window, not one from any earlier point in the session.
 - Mentioning someone who cannot already open a request now requires permission to add followers, so followers can no longer share a request with anyone by mentioning them.
