@@ -83,6 +83,11 @@ class WorkflowException extends RuntimeException
         return new self("Step [{$step}] would be approved only by the requester, which separation of duties does not allow. An administrator must change who approves this step.");
     }
 
+    public static function staleStep(): self
+    {
+        return new self('This request has moved on since you opened it. Reload to see its current step.');
+    }
+
     public static function unknownOutcome(string $outcome): self
     {
         return new self("Workflow outcome [{$outcome}] is not defined for this version.");

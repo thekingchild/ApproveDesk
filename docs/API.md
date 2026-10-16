@@ -28,6 +28,8 @@ The machine-readable contract is at `GET /api/v1/openapi.json` (also stored in `
 
 Workflow actions accept `approve`, `reject`, `return`, `request_information`, `escalate`, and `comment`. The engine enforces the current step, delegation, duplicate-action, and comment requirements; the API never updates workflow state directly.
 
+Send the optional `step_id` (the `workflow_instance.current_step_id` you read before deciding). If the request has moved to another step in the meantime, the action is refused with a 422 instead of being applied to the new step. Clients that retry requests should always send it.
+
 ## Outbound webhooks
 
 Administrators configure trusted HTTPS endpoints at **Administration → Webhooks**. Endpoints can subscribe to:

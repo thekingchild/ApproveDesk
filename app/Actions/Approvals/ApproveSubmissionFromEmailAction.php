@@ -11,13 +11,14 @@ final readonly class ApproveSubmissionFromEmailAction
 {
     public function __construct(private WorkflowEngine $engine) {}
 
-    public function execute(WorkflowInstance $instance, User $approver): WorkflowInstance
+    public function execute(WorkflowInstance $instance, User $approver, int $stepId): WorkflowInstance
     {
         return $this->engine->processAction(
             $instance,
             $approver,
             WorkflowActionType::Approve,
             'Approved through a secure email link.',
+            expectedStepId: $stepId,
         );
     }
 }

@@ -14,6 +14,7 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Fixed
 
+- A decision is applied only to the step the approver was looking at. Double-clicks, retried requests, and reused email or chat approvals no longer approve the next step when the same person is assigned to it. The API accepts an optional `step_id` for the same protection.
 - Approvers resolved dynamically (requester's manager, department manager, person picked on the form, connected system) now see the decision panel and delegation on the request page.
 - Fresh installs on MariaDB 10.6–10.9 no longer fail at the delegations migration, and required timestamp columns (for example a workflow's start time or a legal hold's placement time) are no longer silently reset on row updates on those versions. MySQL and SQLite schemas are unchanged.
 - The test suite refuses to run when configuration or routes are cached, or when the database is not an isolated test database. Previously a cached config made tests run against, and reset, the local development database.

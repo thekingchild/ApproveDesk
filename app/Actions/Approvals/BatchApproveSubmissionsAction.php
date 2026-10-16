@@ -48,7 +48,7 @@ class BatchApproveSubmissionsAction
             }
 
             foreach ($instances as $instance) {
-                $this->engine->processAction($instance, $approver, WorkflowActionType::Approve);
+                $this->engine->processAction($instance, $approver, WorkflowActionType::Approve, expectedStepId: (int) $instance->current_step_id);
             }
 
             return $instances->count();

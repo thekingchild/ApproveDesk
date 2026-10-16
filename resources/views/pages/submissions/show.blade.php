@@ -25,6 +25,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
@@ -68,6 +69,10 @@ new #[Title('Submission')] class extends Component {
 
     public ?int $previewFileId = null;
 
+    /** The workflow step this page showed; decisions are refused once the request has moved on. */
+    #[Locked]
+    public ?int $renderedStepId = null;
+
     public function mount(Submission $submission): void
     {
         $this->authorize('view', $submission);
@@ -86,6 +91,7 @@ new #[Title('Submission')] class extends Component {
             'submitter.department.manager',
             'department.manager',
         ]);
+        $this->renderedStepId = $this->submission->workflowInstance?->current_step_id;
 
         $mine = $this->submission->watchers->firstWhere('user_id', Auth::id());
         if ($mine) {
@@ -306,6 +312,7 @@ new #[Title('Submission')] class extends Component {
                 \Illuminate\Support\Carbon::parse($validated['delegationExpiresAt']),
                 $validated['delegationComment'] ?: null,
                 $startsAt,
+                $this->renderedStepId,
             );
         } catch (WorkflowException $exception) {
             $this->addError('delegateUserId', $exception->getMessage());
@@ -346,6 +353,7 @@ new #[Title('Submission')] class extends Component {
                 $actionType,
                 trim($this->actionComment) !== '' ? trim($this->actionComment) : null,
                 $outcome !== null ? $action : null,
+                $this->renderedStepId,
             );
         } catch (WorkflowException $exception) {
             Flux::toast($exception->getMessage(), variant: 'danger');

@@ -85,6 +85,10 @@ class WorkflowEngine
 
     /**
      * Validate, record, and apply an approver action against the current step.
+     *
+     * Every user-facing caller passes $expectedStepId (the step the person saw),
+     * so a replayed, double-submitted, or delayed request cannot decide a later
+     * step that happens to be assigned to the same actor (RV-ENG-02).
      */
     public function processAction(
         WorkflowInstance $instance,
@@ -92,14 +96,17 @@ class WorkflowEngine
         WorkflowActionType $action,
         ?string $comment = null,
         ?string $outcomeKey = null,
+        ?int $expectedStepId = null,
     ): WorkflowInstance {
-        $applied = DB::transaction(function () use ($instance, $actor, $action, $comment, $outcomeKey): WorkflowInstance {
+        $applied = DB::transaction(function () use ($instance, $actor, $action, $comment, $outcomeKey, $expectedStepId): WorkflowInstance {
             /** @var WorkflowInstance $instance */
             $instance = WorkflowInstance::query()
                 ->with(['currentStep', 'submission', 'templateVersion'])
                 ->whereKey($instance->getKey())
                 ->lockForUpdate()
                 ->firstOrFail();
+
+            $this->assertExpectedStep($instance, $expectedStepId);
 
             if ($outcomeKey !== null) {
                 $outcome = $this->outcomes->find($instance->templateVersion, $outcomeKey);
@@ -162,15 +169,18 @@ class WorkflowEngine
         CarbonInterface $expiresAt,
         ?string $comment = null,
         ?CarbonInterface $startsAt = null,
+        ?int $expectedStepId = null,
     ): Delegation {
         $startsAt ??= now();
 
-        $delegation = DB::transaction(function () use ($instance, $delegator, $delegate, $expiresAt, $comment, $startsAt): Delegation {
+        $delegation = DB::transaction(function () use ($instance, $delegator, $delegate, $expiresAt, $comment, $startsAt, $expectedStepId): Delegation {
             /** @var WorkflowInstance $instance */
             $instance = WorkflowInstance::query()
                 ->whereKey($instance->getKey())
                 ->lockForUpdate()
                 ->firstOrFail();
+
+            $this->assertExpectedStep($instance, $expectedStepId);
 
             $this->authorizeDelegation($instance, $delegator, $delegate, $expiresAt, $startsAt);
             $step = $instance->currentStep;
@@ -233,6 +243,16 @@ class WorkflowEngine
         $this->dispatchEvents($applied);
 
         return $applied;
+    }
+
+    /**
+     * @throws WorkflowException when the instance has moved past the step the caller acted on
+     */
+    private function assertExpectedStep(WorkflowInstance $instance, ?int $expectedStepId): void
+    {
+        if ($expectedStepId !== null && (int) $instance->current_step_id !== $expectedStepId) {
+            throw WorkflowException::staleStep();
+        }
     }
 
     /**
