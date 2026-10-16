@@ -10,7 +10,7 @@ Companion to [REVIEW_PLAN.md](../../REVIEW_PLAN.md). One entry per finding; form
 | Coverage (CI run 37644765296, v2.8.6) | `app/` **85.66%** (9,905/11,563) · `WorkflowEngine` **97.10%** (368/379) — gate 97% |
 | `composer types:check` (Larastan level 7) | Pass, 0 errors · **87 baseline entries** |
 | `pint --test` | Pass |
-| `composer audit --no-dev` | **Fail** — 4 advisories (1 high, 1 medium, 2 low) → RV-SEC-01 |
+| `composer audit --no-dev` | Reported 4 advisories, but **false positive**: plain `composer audit` checked a stale local `vendor/`. `composer audit --locked` on `main` is clean → RV-SEC-01 closed |
 | `npm audit --omit=dev` | **Fail** — 28 (2 critical, 3 high, 23 moderate) → RV-SEC-02 |
 | Routes | 145 (`route:list --json` snapshot used by the SEC track) |
 | CI browser/a11y job | **Failing on every `main` run since ≥ 2026-08-31**, masked by `continue-on-error` → RV-TEST-02 |
@@ -59,19 +59,21 @@ DB_DATABASE=$PWD/database/perf.sqlite PERF_USERS=300 PERF_SUBMISSIONS=3000 php a
 - Location: `.github/workflows/ci.yml` (`browser` job, `continue-on-error: true`), `tests/Browser/*`
 - Evidence: all 5 Dusk tests (`AccessibilityResponsiveTest` ×2, `RequesterApprovalFlowTest` ×3) fail with `TimeoutException` on every `main` run from 2026-08-31 to v2.8.6.
 - Impact: the plan's accessibility exit gate (IMPLEMENTATION_PLAN §3.1) and the wizard/approval-modal browser coverage (AGENTS.md) are effectively off.
-- Fix: Wave 1 — diagnose timeouts, make tests pass, then remove `continue-on-error`.
+- Diagnosis (2026-10-16): all 5 tests **pass locally** (Chrome/ChromeDriver 155, repeated runs), so the failure is CI-environment specific. In CI the login page renders, then every authenticated page times out, i.e. Dusk's `loginAs()` does not take effect on the server. `php artisan serve` blanks non-allowlisted environment variables for its workers when `.env` exists and restarts when Dusk swaps `.env`, so the server and test process can disagree on configuration. Separately, `test_requester_can_save_reopen_and_submit_a_draft` is flaky locally (≈3 in 9 runs: "element click intercepted" — fixed `pause()` waits).
+- Fix: Wave 1 — give the CI job one unambiguous database path and run the server with `--no-reload`, print the server log on failure, replace `pause()` waits with state waits, then remove `continue-on-error`.
 
-### RV-SEC-01 — Composer advisories; CI audit gate will fail on the next run
-- Severity: **S2** (CI-blocking; practical exploitability low) · Status: Open → v2.8.7
+### RV-SEC-01 — Composer advisories (false positive)
+- Severity: — · Status: **Closed — not a defect** (2026-10-16)
+- Resolution: `composer audit` without `--locked` audits installed packages. The local `vendor/` was behind `composer.lock`; the lock on `main` already contains CommonMark 2.10.3, Flysystem 3.36.0 and Laravel 13.35.0, and `composer audit --locked` reports nothing. CI installs from the lock, so CI was never affected. Lesson: baseline audits must use `--locked` (or run after `composer install`).
+- Original (incorrect) report follows for the record.
 - Evidence: `league/commonmark` ≤ 2.10.1 (high: GFM quadratic DoS; medium: `DisallowedRawHtml` bypass); `laravel/framework` < 13.30.0 (low: debug-page XSS); `league/flysystem` ≤ 3.35.2 (low: path normaliser bypass).
 - Impact: CommonMark only renders bundled Help Markdown (`App\Support\HelpArticle`), so untrusted input does not reach it today. CI runs `composer audit` as a required step, so every PR will fail until updated.
-- Fix: `composer update` for the three packages; full suite.
 
 ### RV-SEC-02 — npm advisories in browser-shipped editor and misplaced build tooling
-- Severity: **S2** · Status: Open → v2.8.7
+- Severity: **S2** · Status: **Fixed** (branch `feature/rv-sec-deps`, v2.8.7)
 - Evidence: `@tiptap/*` (high: `__proto__` merge, ReDoS) and `prosemirror-view` (high: XSS in paste handling) are bundled into the rich-text editor; `concurrently` → `shell-quote` (critical) and `source-map-js` (high) are build/dev tooling, but `concurrently` is listed under `dependencies`.
 - Impact: client-side XSS on paste into the editor (server-side sanitising still applies on save).
-- Fix: update Tiptap/ProseMirror; move `concurrently` to `devDependencies`; `npm audit` clean.
+- Fix: Tiptap 3.30.1 → 3.32.0 (with patched `prosemirror-view`); `concurrently` moved to `devDependencies`. `npm audit` (all deps) reports 0. Dusk suite 5/5 locally, repeated.
 
 ### RV-PERF-01 — Admin dashboard issues ~1 query per submission
 - Severity: S3 · Status: Open · Location: `resources/views/pages/dashboard.blade.php` · Evidence: 43 → 70 queries for 3 → 30 submissions.
@@ -101,7 +103,20 @@ DB_DATABASE=$PWD/database/perf.sqlite PERF_USERS=300 PERF_SUBMISSIONS=3000 php a
 - Severity: S3 · Status: Open — **decision pending** (REVIEW_PLAN §11 Q4) · Evidence: 97.10% vs a 97% gate; AGENTS.md states 100%.
 
 ### RV-DATA-01 — MariaDB 10.6 is supported but untested
-- Severity: S2 · Status: **Fixed** (CI job added; first results on this branch's PR) · Location: `.github/workflows/ci.yml` (`mariadb` job)
+- Severity: S2 · Status: **Fixed** (CI job added in PR #23) · Location: `.github/workflows/ci.yml` (`mariadb` job)
+- First run: 882 of 949 tests fail, all from one cause → RV-DATA-02.
+
+### RV-DATA-02 — Migrations fail or silently corrupt timestamps on MariaDB 10.6–10.9
+- Severity: **S1** · Status: Open — **decision needed** (fix requires editing released migrations)
+- Location: 10 `Schema::create` blocks with `NOT NULL TIMESTAMP` columns (`timestamp('x')` with no `nullable`/`useCurrent`/`default`).
+- Evidence: CI `mariadb` job — `1067 Invalid default value for 'expires_at'` on `create table delegations`. MariaDB < 10.10 defaults to `explicit_defaults_for_timestamp=OFF` (global-only, not settable per session before 10.10), so:
+  - the **first** such column in a table silently becomes `DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`;
+  - any **second** one gets a zero-date default, which Laravel's strict mode rejects.
+- Impact:
+  - **Install-breaking (2+ columns):** `delegations` (starts_at, expires_at), `user_out_of_office` (starts_at, ends_at), `auditor_accesses` (starts_at, ends_at). A fresh install on MariaDB 10.6–10.9 — common on cPanel — stops at `2026_08_17_120000`.
+  - **Silent overwrite (1 column):** `workflow_instances.started_at`, `workflow_actions.created_at`, `submission_nudges.scheduled_for`, `registration_otp_codes.expires_at`, `legal_holds.placed_at`, `ops_snapshots.recorded_at`, `ops_backup_verifications.verified_at` would be reset to "now" on every row update — e.g. `started_at` on every approval step, `placed_at` when a hold is released. Audit-evidence corruption.
+  - No working MariaDB < 10.10 installation can exist today (installs fail at `delegations`), so changing these migrations creates no drift for real installs. MySQL 8, MariaDB ≥ 10.10 and SQLite are unaffected.
+- Proposed fix: in the affected create migrations, give these columns an explicit definition that disables the implicit behaviour only when the server is MariaDB with `explicit_defaults_for_timestamp=OFF` (schema on MySQL/SQLite unchanged); add an installer requirements check that reports the setting; regression test that asserts no `NOT NULL TIMESTAMP` column is declared without an explicit default.
 
 ---
 
