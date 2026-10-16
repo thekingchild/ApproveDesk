@@ -36,6 +36,7 @@ final class ApproveSubmissionFromChatAction
             $approver,
             WorkflowActionType::Approve,
             'Approved through a signed chat action.',
+            expectedStepId: (int) $claims['step_id'],
         );
     }
 }

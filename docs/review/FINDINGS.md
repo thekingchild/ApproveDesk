@@ -138,7 +138,7 @@ Sources: three read-only reviews (engine/audit, authorization, input-output/file
 - Fix: snapshot before dropping; load into a scratch schema and swap with `RENAME TABLE`; stay in maintenance until verified; record the live-vs-snapshot `workflow_actions` delta.
 
 ### RV-ENG-02 — Replayed or double-submitted actions approve the *next* step
-- Severity: **S2** · Status: Open
+- Severity: **S2** · Status: **Fix in review** (branch `feature/rv-eng-stale-step`; also closes RV-ENG-02's batch variant). `expectedStepId` is optional on the engine for backward compatibility; every production caller passes it. API clients opt in with `step_id`
 - Evidence (probe): `processAction()` takes no expected step and acts on whatever `current_step_id` is after the lock. Pre-lock checks in `EmailApprovalController:60` and `ApproveSubmissionFromChatAction:190` race; API, Livewire `act()` and `BatchApproveSubmissionsAction:112-133` don't check at all. A user on steps 1 and 2 completes both with one double-click/retry.
 - Fix: required `expectedStepId` on `processAction()`/`delegate()`, checked after the lock; pass it from every caller.
 
@@ -222,6 +222,7 @@ Sources: three read-only reviews (engine/audit, authorization, input-output/file
 | RV-BUG-04 | S4 | Double submit of a draft returns a 500 (unique constraint) | `SubmitSubmissionAction` |
 | RV-SEC-18 | S4 | Minor: optional Telegram webhook secret; CSV formula escaping in two exports; unsanitized download filename header; VAPID key in plaintext; inline `svg` mapping; CSV import row cap; Sanctum tokens never expire; role-name checks in dashboard/auditor; hidden owner name via tampered mentions | various |
 | RV-FEAT-01 | — | Follow-up feature: administrator "reassign step" for requests whose only approver is excluded (engine-recorded, audited, with Help) | — |
+| RV-DOC-01 | S4 | `docs/openapi-v1.yaml` is a 73-line stub that omits most endpoints (including `POST /submissions/{id}/actions`); `docs/API.md` is the only contract | `docs/openapi-v1.yaml` |
 | RV-ENG-10 | ? | Suspected: Escalate advances a group step on one assignee's action | `WorkflowEngine.php:421-433` |
 | RV-ENG-11 | ? | Suspected: “All” step can stall when its assignee set shrinks after others approved | `isStepSatisfied` |
 

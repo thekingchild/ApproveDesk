@@ -44,7 +44,7 @@ class EmailApprovalController extends Controller
         $this->authorizeLink($instance, $step, $approver);
 
         try {
-            $approveSubmission->execute($instance, $approver);
+            $approveSubmission->execute($instance, $approver, $step->id);
         } catch (WorkflowException $exception) {
             return redirect()->route('home')->withErrors(['approval' => $exception->getMessage()]);
         }
