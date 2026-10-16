@@ -173,7 +173,7 @@ Sources: three read-only reviews (engine/audit, authorization, input-output/file
 - Fix: driver-aware unquote (or Laravel's `->` JSON path); add a feature test so the MariaDB job guards it.
 
 ### RV-SEC-04 — Admins can take over or wipe higher-privileged accounts (email change, anonymize)
-- Severity: **S2** · Status: Open · Location: `app/Policies/UserPolicy.php:19-42`, `app/Actions/Users/UpdateUserAction.php:27,66`
+- Severity: **S2** · Status: **Fix in review** (branch `feature/rv-sec-user-ceiling`). New `UserPolicy::manageIdentity` (non-owner: target is not admin/super-admin and within the actor's permission ceiling) guards email changes, activation, and anonymization; ordinary edits keep the existing "Roles you cannot remove" design. Not done: notify the old address on email change (hardening backlog) · Location: `app/Policies/UserPolicy.php:19-42`, `app/Actions/Users/UpdateUserAction.php:27,66`
 - Evidence (probes): a non-owner admin (or custom role with `users.update`) changes the email of a user holding above-ceiling permissions, then resets the password; admin A anonymizes peer admin B (edit is refused, anonymize is not).
 - Fix: enforce the admin/permission-ceiling rule in `UserPolicy::update` (inherited by anonymize and name decisions); notify the old address and re-verify on email change.
 

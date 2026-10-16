@@ -25,6 +25,7 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Security
 
+- Administrators can no longer change the email of, deactivate, or anonymize peer administrators or anyone holding permissions above their own; only the System owner can. Previously an administrator could redirect a stronger account's email and reset its password.
 - Publishing from the workflow builder now requires the **Publish workflows** permission, as on the Workflow templates screen.
 - Custom outcome keys are limited to lowercase letters, numbers, and underscores, and are rendered safely, so a key can no longer inject script into the approver's decision buttons. Unknown decisions are refused instead of being recorded as Approve.
 - **Separation of duties:** requesters can no longer approve, decide, or be delegated their own requests. This is a new setting under **Settings → Approval settings**, on by default. If a step would be approved only by the requester, the request stops with a message naming the step until an administrator changes who approves it. Requests already in progress follow the rule immediately.

@@ -454,9 +454,16 @@ new #[Title('User management')] class extends Component {
                 <flux:subheading>{{ __('Assign at least one role. New users are marked email-verified.') }}</flux:subheading>
             </div>
 
+            @php($editingTarget = $editingUserId ? User::query()->find($editingUserId) : null)
+            @php($identityLocked = $editingTarget !== null && Auth::id() !== $editingTarget->id && ! Auth::user()?->can('manageIdentity', $editingTarget))
             <div class="grid gap-4 sm:grid-cols-2">
                 <flux:input wire:model="name" :label="__('Name')" required />
-                <flux:input wire:model="email" type="email" :label="__('Email')" required />
+                <div>
+                    <flux:input wire:model="email" type="email" :label="__('Email')" required :readonly="$identityLocked" data-test="user-email" />
+                    @if ($identityLocked)
+                        <p class="mt-1 text-sm text-zinc-500" data-test="email-locked">{{ __('Only the System owner can change this person’s email, because they have more access than you.') }}</p>
+                    @endif
+                </div>
                 <div class="sm:col-span-2">
                     <flux:input wire:model="phone" :label="__('Phone (international)')" placeholder="+2348012345678" data-test="user-phone" />
                     <p class="mt-1 text-sm text-zinc-500">{{ __('Optional. Use E.164, starting with + and country code. Used later for SMS and WhatsApp.') }}</p>
@@ -528,6 +535,12 @@ new #[Title('User management')] class extends Component {
                             {{ $isActive ? __('Active') : __('Inactive') }}
                         </flux:badge>
                         <p class="mt-1 text-sm text-zinc-500">{{ __('You cannot change your own account status.') }}</p>
+                    @elseif ($identityLocked)
+                        <p class="text-sm font-medium">{{ __('Account status') }}</p>
+                        <flux:badge class="mt-2" :color="$isActive ? 'lime' : 'red'" data-test="active-locked">
+                            {{ $isActive ? __('Active') : __('Inactive') }}
+                        </flux:badge>
+                        <p class="mt-1 text-sm text-zinc-500">{{ __('Only the System owner can change this person’s account status.') }}</p>
                     @else
                         <flux:checkbox wire:model="isActive" :label="__('Account is active')" />
                     @endif

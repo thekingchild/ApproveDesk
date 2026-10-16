@@ -4,6 +4,10 @@ Open **Administration → Users** to create accounts, change roles, attach a dep
 
 The account created during first-time setup is the protected **System owner**. That account is hidden from other people on this screen and cannot be edited, deactivated, or anonymized. Controls that are not shown to your account are outside your authority; ask the System owner to perform the action rather than trying to work around the restriction. Protected procedures are kept in [System owner controls](system-owner-controls.md), which is available only to that account.
 
+## People with more access than you
+
+You can still edit the name, phone, department, and line manager of someone whose roles go beyond what you could grant. Their **email address** and **account status** are read-only for you, and **Anonymize account** is not offered, because changing them could hand you control of a stronger account. Only the System owner can change these for administrators and for anyone holding permissions above yours.
+
 ## Roles
 
 Built-in roles are protected defaults. People with **Manage custom roles** can open **Administration → Roles & permissions** and create, edit, archive, or restore custom roles within their own permission ceiling. A custom role combines selected feature permissions; a person with several roles receives the union of all of them.
