@@ -70,6 +70,7 @@ app/
 
 **Do:**
 - Use PHP enums (backed by string values) for all status/type fields, with string DB columns + app-level validation. **Never use MySQL `ENUM` columns** — they break SQLite tests and are painful to alter.
+- Declare `NOT NULL` timestamp columns with `App\Support\SchemaTimestamps::required($table, 'column')`, never a bare `$table->timestamp('column')` — MariaDB < 10.10 otherwise adds `ON UPDATE CURRENT_TIMESTAMP` or rejects the table (ADR 0004).
 - Gate every controller/Livewire action with a Policy class. Never check role names directly in controllers ("`$user->hasRole('admin')`" in a controller is a bug; put it in a Policy).
 - Validate all input via Form Requests with strict types.
 - Sanitize rich-text HTML server-side before storage.

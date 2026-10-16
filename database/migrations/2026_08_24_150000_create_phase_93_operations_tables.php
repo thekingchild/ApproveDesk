@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\SchemaTimestamps;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -10,7 +11,7 @@ return new class extends Migration
     {
         Schema::create('ops_snapshots', function (Blueprint $table) {
             $table->id();
-            $table->timestamp('recorded_at');
+            SchemaTimestamps::required($table, 'recorded_at');
             $table->unsignedInteger('pending_jobs')->default(0);
             $table->unsignedInteger('failed_jobs')->default(0);
             $table->unsignedInteger('dead_letter_webhooks')->default(0);
@@ -24,7 +25,7 @@ return new class extends Migration
 
         Schema::create('ops_backup_verifications', function (Blueprint $table) {
             $table->id();
-            $table->timestamp('verified_at');
+            SchemaTimestamps::required($table, 'verified_at');
             $table->string('source', 20);
             $table->string('path')->nullable();
             $table->boolean('ok');

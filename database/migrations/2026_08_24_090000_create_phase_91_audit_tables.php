@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\SchemaTimestamps;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -23,8 +24,8 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->foreignId('granted_by')->constrained('users')->restrictOnDelete();
-            $table->timestamp('starts_at');
-            $table->timestamp('ends_at');
+            SchemaTimestamps::required($table, 'starts_at');
+            SchemaTimestamps::required($table, 'ends_at');
             $table->timestamp('revoked_at')->nullable();
             $table->foreignId('revoked_by')->nullable()->constrained('users')->nullOnDelete();
             $table->string('reason')->nullable();
@@ -45,7 +46,7 @@ return new class extends Migration
             $table->foreignId('submission_id')->constrained()->cascadeOnDelete();
             $table->foreignId('placed_by')->constrained('users')->restrictOnDelete();
             $table->string('reason');
-            $table->timestamp('placed_at');
+            SchemaTimestamps::required($table, 'placed_at');
             $table->timestamp('released_at')->nullable();
             $table->foreignId('released_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();

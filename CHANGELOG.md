@@ -14,6 +14,7 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Fixed
 
+- Fresh installs on MariaDB 10.6–10.9 no longer fail at the delegations migration, and required timestamp columns (for example a workflow's start time or a legal hold's placement time) are no longer silently reset on row updates on those versions. MySQL and SQLite schemas are unchanged.
 - The test suite refuses to run when configuration or routes are cached, or when the database is not an isolated test database. Previously a cached config made tests run against, and reset, the local development database.
 
 ## [2.8.6] - 2026-10-07

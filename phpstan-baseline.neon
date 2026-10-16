@@ -218,12 +218,6 @@ parameters:
 			path: app/Services/Audit/EvidencePackSigner.php
 
 		-
-			message: '#^Cannot call method isPast\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Services/Auth/RegistrationOtpService.php
-
-		-
 			message: '#^Method App\\Services\\Auth\\RegistrationOtpService\:\:resendThrottledUntil\(\) never returns Carbon\\Carbon so it can be removed from the return type\.$#'
 			identifier: return.unusedType
 			count: 1

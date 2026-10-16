@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\SchemaTimestamps;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -18,7 +19,7 @@ return new class extends Migration
             $table->foreignId('delegated_to')->nullable()->constrained('users')->nullOnDelete();
             $table->string('ip_address', 45)->nullable();
             $table->text('user_agent')->nullable();
-            $table->timestamp('created_at');
+            SchemaTimestamps::required($table, 'created_at');
 
             $table->index(['instance_id', 'actor_id']);
             $table->index(['step_id', 'actor_id']);

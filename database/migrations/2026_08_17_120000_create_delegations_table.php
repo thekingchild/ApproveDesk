@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\SchemaTimestamps;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -14,8 +15,8 @@ return new class extends Migration
             $table->foreignId('step_id')->constrained('workflow_template_steps');
             $table->foreignId('delegator_id')->constrained('users');
             $table->foreignId('delegate_id')->constrained('users');
-            $table->timestamp('starts_at');
-            $table->timestamp('expires_at');
+            SchemaTimestamps::required($table, 'starts_at');
+            SchemaTimestamps::required($table, 'expires_at');
             $table->timestamps();
 
             $table->index(['instance_id', 'step_id', 'delegate_id', 'expires_at'], 'delegations_active_delegate_index');
