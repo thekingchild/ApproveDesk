@@ -175,8 +175,25 @@ jobs:
           php artisan key:generate
 
       - name: Tests on MariaDB 10.6
-        # --debug prints each test as it starts, so a hang names the test.
-        run: vendor/bin/phpunit --debug
+        # Diagnostic (RV-DATA-01 follow-up): --debug names each test; a watchdog
+        # prints what the database is waiting on if the run stalls.
+        run: |
+          vendor/bin/phpunit --debug > phpunit-mariadb.log 2>&1 &
+          PID=$!
+          for minute in $(seq 1 25); do
+            sleep 60
+            kill -0 "$PID" 2>/dev/null || break
+            echo "== minute $minute: last events"
+            tail -n 4 phpunit-mariadb.log
+            if [ "$minute" -ge 4 ]; then
+              mysql -h 127.0.0.1 -uroot -ppassword -e "SHOW FULL PROCESSLIST; SELECT trx_id, trx_state, trx_started, trx_mysql_thread_id, trx_query FROM information_schema.INNODB_TRX;" || true
+            fi
+          done
+          set +e
+          wait "$PID"
+          status=$?
+          tail -n 60 phpunit-mariadb.log
+          exit $status
 
   assets:
     runs-on: ubuntu-latest

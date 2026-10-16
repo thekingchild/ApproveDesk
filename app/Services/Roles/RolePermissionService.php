@@ -138,6 +138,29 @@ final class RolePermissionService
         return $keys;
     }
 
+    /**
+     * True when the target holds any catalogue permission the actor could not
+     * grant, so the actor must not edit, anonymize, or deactivate them.
+     */
+    public function exceedsCeiling(User $actor, User $target): bool
+    {
+        if ($actor->isSystemOwner()) {
+            return false;
+        }
+
+        $held = $target->getAllPermissions()->pluck('name')->all();
+        $ceiling = $this->ceiling($actor);
+
+        foreach (PermissionCatalogue::all() as $entry) {
+            $holds = in_array($entry['key'], $held, true) || array_intersect($entry['legacy'], $held) !== [];
+            if ($holds && ! in_array($entry['key'], $ceiling, true)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /** @param list<string> $permissions */
     public function assertPermissionCeiling(User $actor, array $permissions): void
     {
