@@ -285,6 +285,31 @@ Sources: two read-only feature-area reviews with 43 probe tests (every listed CO
 | RV-BUG-37 | S3? | Stale builder save can publish over another admin's version (no version check; suspected) | Open |
 | RV-BUG-38 | S4 | Minor: mentions added by editing a comment are ignored; API docs field name/list scope/retry count; draft retention counts from creation; files-promote leftovers; builder preview parity; reference period read twice at boundaries | Open |
 
+## Wave 2 shared-hosting performance findings (2026-10-16)
+
+Measured on the Wave 0 performance dataset (2,857 submissions, 2,008 active workflows) with APP_ENV=production and file cache; SQLite, single core.
+
+| ID | Sev | Finding | Measured | Status |
+|---|---|---|---|---|
+| RV-PERF-07 | S2 | Global search (header, every page, live) scans all matching submissions and runs the view policy per row in PHP (`SubmissionSearchService.php:55-58`) | submitter typing "re": 11.9 s, 14,621 queries | Open |
+| RV-PERF-08 | S2 | Approvals inbox loads every active workflow and renders all items unpaginated; recomputed on every checkbox | busy approver: 4.8 s, 94 MB, 5.6 MB HTML | Open |
+| RV-PERF-09 | S2 | Request page runs the whole workbench on every render just for Previous/Next | busy approver: 4.4 s, 70 MB | Open |
+| RV-PERF-10 | S2 | Admin dashboard and analytics hydrate the whole 30-day cohort in PHP, uncached | 3.4 s, 60 MB | Open |
+| RV-PERF-11 | S2 | Out-of-office sweep is O(away users × active workflows × ~5 queries) every 15 min | 5 away × 2,008: 27.9 s, 50,247 queries | Open |
+| RV-OPS-01 | S2 | Scheduled `queue:work` has no `--max-time`, foreground, 24 h overlap lock (stale after a kill → no mail for a day); `retry_after` = `--timeout` | traced | Open |
+| RV-OPS-02 | S2 | `withoutOverlapping()` on `Schedule::job()` only guards the dispatch; copies pile up when the worker lags | traced | Open |
+| RV-PERF-12 | S2 | Evidence pack loads the whole `notification_deliveries` table (no submission_id column); attachments read fully into memory to hash | 100k deliveries: 9.0 s, 273 MB | Open |
+| RV-OPS-03 | S2 | Backups/promote/verify read whole files into memory and run inside the web request with no time limit; an OOM/timeout fatal skips `up`, leaving maintenance mode on | 173 MB dump → 333 MB peak | Open |
+| RV-OPS-04 | S2 | `ops_snapshots` gains a row every minute, never read or pruned (~525k rows/yr in every backup) | traced | Open |
+| RV-PERF-13 | S3 | Spatie permission cache flushed on every request and artisan command (`AppServiceProvider.php:128`) | ~22 ms + 3 queries + a file write per request | Open |
+| RV-PERF-14 | S3 | Unbounded full-model user dropdowns (submissions filter, delegate candidates, departments, create-custom) | ~75 B HTML/user | Open |
+| RV-PERF-15 | S3 | `NotifyCurrentApprovers` re-queries the submission per approver inside the approving request | traced | Open |
+| RV-PERF-16 | S3 | `ApplyRetentionJob` offset-chunks while soft-deleting (skips every other page); no job timeout | traced | Open |
+| RV-PERF-17 | S3 | Backups page loads 40 snapshots including full files manifests (suspected) | traced | Open |
+| RV-OPS-05 | S3 | Nothing prunes notifications, deliveries, failed jobs, activity log, or evidence-pack zips | traced | Open |
+| RV-PERF-18 | S3 | `RetryNotificationDeliveries` sends up to 50 external messages in one job (suspected) | traced | Open |
+| RV-PERF-19 | S4 | Minor: ~6 avoidable constant queries per page (system settings LIKE, owner, default theme, unread count twice); Tiptap is 99% of `app.js` but only used on one page; stamp PNGs inlined; builder undo history in Livewire state; heartbeat schema queries; file cache never garbage-collected | — | Open |
+
 ---
 
 ## Leads awaiting verification (from REVIEW_PLAN §4)
