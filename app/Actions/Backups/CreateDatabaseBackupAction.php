@@ -66,15 +66,21 @@ final class CreateDatabaseBackupAction
         fwrite($handle, "-- ApproveDesk database snapshot\n");
         fwrite($handle, $driver === 'sqlite' ? "PRAGMA foreign_keys=OFF;\n" : "SET FOREIGN_KEY_CHECKS=0;\n");
 
-        foreach ($this->tableNames() as $table) {
-            fwrite($handle, $this->createStatement($table)."\n");
-            $count = 0;
-            foreach (DB::table($table)->cursor() as $row) {
-                $count++;
-                fwrite($handle, $this->insertStatement($table, (array) $row)."\n");
+        // One read transaction for every table, so an approval committing mid-dump
+        // cannot leave an instance in the snapshot without the action that moved
+        // it (RV-DATA-04). InnoDB uses a repeatable-read snapshot; SQLite holds
+        // its read lock for the whole dump.
+        DB::transaction(function () use ($handle, &$tables): void {
+            foreach ($this->tableNames() as $table) {
+                fwrite($handle, $this->createStatement($table)."\n");
+                $count = 0;
+                foreach (DB::table($table)->cursor() as $row) {
+                    $count++;
+                    fwrite($handle, $this->insertStatement($table, (array) $row)."\n");
+                }
+                $tables[$table] = $count;
             }
-            $tables[$table] = $count;
-        }
+        });
 
         fwrite($handle, $driver === 'sqlite' ? "PRAGMA foreign_keys=ON;\n" : "SET FOREIGN_KEY_CHECKS=1;\n");
         fclose($handle);

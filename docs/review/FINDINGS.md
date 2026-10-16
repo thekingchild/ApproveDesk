@@ -207,8 +207,8 @@ Sources: three read-only reviews (engine/audit, authorization, input-output/file
 
 | ID | Sev | Finding | Location |
 |---|---|---|---|
-| RV-ENG-07 | S3 | Append-only guard is model-event only; builder/DB updates and FK actions bypass it | `app/Models/WorkflowAction.php:52-60` |
-| RV-DATA-04 | S3 | Database backups aren't a consistent snapshot (per-table cursors, no transaction) | `CreateDatabaseBackupAction.php:69-77` |
+| RV-ENG-07 | S3 | **Fix in review** (`feature/rv-s3-integrity`: `AppendOnlyBuilder` refuses bulk update/delete/upsert/increment; FK actions closed by RV-ENG-06; raw `DB::table()` writes and DB triggers out of scope — triggers need privileges shared hosts often lack) — Append-only guard is model-event only; builder/DB updates and FK actions bypass it | `app/Models/WorkflowAction.php:52-60` |
+| RV-DATA-04 | S3 | **Fix in review** (`feature/rv-s3-integrity`: whole dump in one read transaction) — Database backups aren't a consistent snapshot (per-table cursors, no transaction) | `CreateDatabaseBackupAction.php:69-77` |
 | RV-BUG-03 | S3 | Delegation window parsed in `APP_TIMEZONE`, not the user's | `submissions/show.blade.php:259-284` |
 | RV-SEC-09 | S3 | Mentions add watchers without `addWatcher`; mention list not locked | `PostCommentAction.php:58`, `FollowSubmissionAction.php:35` |
 | RV-SEC-12 | S3 | API submitters can choose any department, steering department-manager routing | `StoreSubmissionRequest.php:27` |
