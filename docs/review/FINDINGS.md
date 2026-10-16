@@ -194,7 +194,7 @@ Sources: three read-only reviews (engine/audit, authorization, input-output/file
 - Fix: require the `follow` policy; don't let watcher status outlive the basis that granted access.
 
 ### RV-SEC-10 — Teams/Slack one-click approval bypasses the second-factor requirement and isn't bound to the clicker
-- Severity: **S2** · Status: Open · Location: `ApproveSubmissionFromChatAction.php:32`, `TeamsActionsController`, `SlackInteractionsController`, `settings/notification-channels.blade.php:80-90`
+- Severity: **S2** · Status: **Fix in review** (branch `feature/rv-sec-chat-approve`): cards drop one-click Approve and the action refuses tokens while the second-factor setting is on; Slack clicker must match the approver's `slack_user_id`. **Residual (S3, open):** Teams requests are not Bot Framework JWT-verified (the HMAC token is the bearer credential), and `notification_channels.manage` holders can still remap other users' chat identities · Location: `ApproveSubmissionFromChatAction.php:32`, `TeamsActionsController`, `SlackInteractionsController`, `settings/notification-channels.blade.php:80-90`
 - Evidence (probe): with “require second factor” on, a chat token completes the workflow. Teams POSTs aren't JWT-verified; Slack clicker isn't matched to the approver; channel managers can remap another user's chat identity.
 - Fix: suppress chat approve (send the confirmation URL) when a second factor is required; verify Teams JWT and Slack user; single-use tokens; owner/re-auth for identity mapping.
 

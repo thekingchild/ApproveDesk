@@ -317,7 +317,7 @@ new #[Title('Approval settings')] class extends Component {
             />
             <flux:error name="emailApprovalSecondFactorRequired" />
             <flux:callout variant="warning" icon="exclamation-triangle">
-                {{ __('This applies immediately to valid links already sent. Turning it off makes those links usable without sign-in again. Direct Teams and Slack Approve buttons are separate and are not covered by this option.') }}
+                {{ __('This applies immediately to valid links already sent. Turning it off makes those links usable without sign-in again. While it is on, Teams and Slack cards open the confirmation page instead of approving in one click.') }}
             </flux:callout>
         </flux:card>
 

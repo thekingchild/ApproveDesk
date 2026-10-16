@@ -26,6 +26,16 @@ final class ChatCard
             return ['token' => null, 'confirmUrl' => $message->actionUrl, 'showApprove' => false];
         }
 
+        // When approval links require sign-in and a second factor, chat cards link to
+        // the confirmation page instead of approving in one click (RV-SEC-10).
+        if (EmailApprovalLinks::requiresSecondFactor()) {
+            return [
+                'token' => null,
+                'confirmUrl' => EmailApprovalLinks::confirmationUrl($instance, $instance->currentStep, $notifiable),
+                'showApprove' => false,
+            ];
+        }
+
         return [
             'token' => ChatActionToken::issue($instance, $instance->currentStep, $notifiable, WorkflowActionType::Approve),
             'confirmUrl' => EmailApprovalLinks::confirmationUrl($instance, $instance->currentStep, $notifiable),

@@ -41,7 +41,7 @@ class SlackInteractionsController extends Controller
         }
 
         try {
-            $approve->execute($token);
+            $approve->execute($token, (string) data_get($payload, 'user.id', ''));
         } catch (InvalidArgumentException|WorkflowException) {
             return response('This approval is no longer current.', 200);
         } catch (Throwable) {
