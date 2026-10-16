@@ -179,7 +179,7 @@ Sources: three read-only reviews (engine/audit, authorization, input-output/file
 - Fix: enforce the admin/permission-ceiling rule in `UserPolicy::update` (inherited by anonymize and name decisions); notify the old address and re-verify on email change.
 
 ### RV-SEC-06 — User import "update" mode rewrites any user without `users.update`
-- Severity: **S2** · Status: Open · Location: `app/Services/Users/UserImportService.php:233-243`; `pages/admin/users-import.blade.php` (`$preview` not locked)
+- Severity: **S2** · Status: **Fix in review** (branch `feature/rv-sec-import-update`; per-row `update` policy plus admin-only-by-owner rule; `$preview` is `#[Locked]`) · Location: `app/Services/Users/UserImportService.php:233-243`; `pages/admin/users-import.blade.php` (`$preview` not locked)
 - Evidence (probes): an importer sets a victim's `manager_id` to themselves and becomes approver of the victim's in-flight requester-manager steps.
 - Fix: authorize `update` per row (with RV-SEC-04's rule); lock `$preview` or re-analyse on commit.
 

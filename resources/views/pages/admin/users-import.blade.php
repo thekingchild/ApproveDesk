@@ -5,6 +5,7 @@ use App\Services\Users\UserImportService;
 use Flux\Flux;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Title;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
@@ -17,6 +18,8 @@ new #[Title('Import users')] class extends Component {
     public string $duplicateMode = 'skip';
 
     /** @var list<array<string, mixed>> */
+    /** Server-built analysis; locked so the browser cannot rewrite rows before commit (RV-SEC-06). */
+    #[Locked]
     public array $preview = [];
 
     public bool $analyzed = false;

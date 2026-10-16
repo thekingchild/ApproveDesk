@@ -231,6 +231,15 @@ class UserImportService
                         }
 
                         if ($duplicateMode === 'update') {
+                            // Same rules as editing on the Users screen (RV-SEC-06): importing
+                            // must not let someone change people they could not edit by hand.
+                            if (! Gate::forUser($actor)->allows('update', $existing)
+                                || (! $actor->isSystemOwner() && $existing->hasAnyRole(['admin', 'super-admin']))) {
+                                $counts['skipped']++;
+
+                                continue;
+                            }
+
                             if ($roles !== []) {
                                 $this->roles->assertCanSync($actor, $existing, $roles);
                             }
