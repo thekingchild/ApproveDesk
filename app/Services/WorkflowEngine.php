@@ -156,7 +156,8 @@ class WorkflowEngine
                 WorkflowActionType::AutoReject,
                 WorkflowActionType::ConditionMatched,
                 WorkflowActionType::ConditionNotMatched,
-                WorkflowActionType::Withdraw => throw WorkflowException::unsupportedStepType($action->value),
+                WorkflowActionType::Withdraw,
+                WorkflowActionType::DelegationRevoked => throw WorkflowException::unsupportedStepType($action->value),
             };
         });
 
@@ -214,6 +215,43 @@ class WorkflowEngine
         DB::afterCommit(fn () => event(new WorkflowDelegated($delegation)));
 
         return $delegation;
+    }
+
+    /**
+     * End a current or future delegation early and record it in the history, so
+     * the delegator regains the step (RV-ENG-12). The delegation row is kept as
+     * evidence; only its window is closed.
+     */
+    public function revokeDelegation(Delegation $delegation, User $actor, ?string $reason = null): Delegation
+    {
+        return DB::transaction(function () use ($delegation, $actor, $reason): Delegation {
+            WorkflowInstance::query()->whereKey($delegation->instance_id)->lockForUpdate()->firstOrFail();
+
+            /** @var Delegation $locked */
+            $locked = Delegation::query()->whereKey($delegation->getKey())->lockForUpdate()->firstOrFail();
+
+            if ($locked->expires_at->lessThanOrEqualTo(now())) {
+                return $locked;
+            }
+
+            $locked->forceFill([
+                'starts_at' => $locked->starts_at->greaterThan(now()) ? now() : $locked->starts_at,
+                'expires_at' => now(),
+            ])->save();
+
+            WorkflowAction::create([
+                'instance_id' => $locked->instance_id,
+                'step_id' => $locked->step_id,
+                'actor_id' => $actor->id,
+                'action' => WorkflowActionType::DelegationRevoked,
+                'comment' => $reason ?? 'Delegation ended early.',
+                'delegated_to' => $locked->delegate_id,
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+            ]);
+
+            return $locked;
+        });
     }
 
     public function processTimeout(WorkflowInstance $instance): WorkflowInstance
@@ -366,6 +404,10 @@ class WorkflowEngine
         WorkflowTemplateStep $step,
         User $user,
     ): ?int {
+        if (! $user->is_active) {
+            return null;
+        }
+
         $delegatorId = Delegation::query()->active()
             ->where('instance_id', $instance->id)
             ->where('step_id', $step->id)
@@ -380,10 +422,12 @@ class WorkflowEngine
         WorkflowTemplateStep $step,
         User $user,
     ): bool {
+        // A delegation to someone since deactivated no longer holds the step (RV-ENG-12).
         return Delegation::query()->active()
             ->where('instance_id', $instance->id)
             ->where('step_id', $step->id)
             ->where('delegator_id', $user->id)
+            ->whereHas('delegate', fn ($delegate) => $delegate->where('is_active', true))
             ->exists();
     }
 

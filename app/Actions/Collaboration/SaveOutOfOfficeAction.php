@@ -5,6 +5,7 @@ namespace App\Actions\Collaboration;
 use App\Exceptions\CollaborationException;
 use App\Models\OutOfOffice;
 use App\Models\User;
+use App\Services\Collaboration\EndOutOfOfficeDelegations;
 use App\Services\Collaboration\OutOfOfficeFallback;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
@@ -66,6 +67,12 @@ final class SaveOutOfOfficeAction
             $schedule = $existingId !== null
                 ? OutOfOffice::query()->where('user_id', $user->id)->whereKey($existingId)->firstOrFail()
                 : new OutOfOffice(['user_id' => $user->id]);
+
+            // Changing the window or fallback hands back steps delegated under the old
+            // one; current fallbacks are re-applied below for the new window (RV-ENG-12).
+            if ($schedule->exists && (! $schedule->ends_at->equalTo($endsAt) || $schedule->fallback_user_id !== $fallback?->id)) {
+                app(EndOutOfOfficeDelegations::class)->execute($schedule, $user);
+            }
 
             $schedule->fill([
                 'starts_at' => $startsAt,

@@ -104,9 +104,11 @@ final class NudgeApproversAction
      */
     private function recipients(int $instanceId, int $stepId, Collection $assignees, User $actor): Collection
     {
+        // A delegation to a deactivated person no longer covers the delegator (RV-ENG-12).
         $outgoing = Delegation::query()->active()
             ->where('instance_id', $instanceId)
             ->where('step_id', $stepId)
+            ->whereHas('delegate', fn ($delegate) => $delegate->where('is_active', true))
             ->pluck('delegator_id');
 
         $delegates = Delegation::query()->active()

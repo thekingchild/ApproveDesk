@@ -5,7 +5,6 @@ namespace Tests\Feature\Workflow;
 use App\Enums\WorkflowActionType;
 use App\Enums\WorkflowStatus;
 use App\Exceptions\WorkflowException;
-use App\Jobs\PurgeExpiredDelegations;
 use App\Models\Delegation;
 use App\Models\Submission;
 use App\Models\User;
@@ -155,7 +154,7 @@ class DelegationWorkflowTest extends TestCase
         $this->engine->delegate($this->instance, $this->approver, $otherAssigned, now()->addHour());
     }
 
-    public function test_purge_job_removes_only_expired_grants_and_preserves_audit(): void
+    public function test_expired_grants_are_kept_as_evidence_but_stop_being_active(): void
     {
         Carbon::setTestNow('2026-08-17 09:00:00');
         $this->engine->delegate($this->instance, $this->approver, $this->delegate, now()->addHour());
@@ -167,9 +166,10 @@ class DelegationWorkflowTest extends TestCase
         ]);
 
         Carbon::setTestNow('2026-08-17 10:00:01');
-        app(PurgeExpiredDelegations::class)->handle();
 
-        $this->assertSame(1, Delegation::query()->count());
+        // RV-DATA-05: expired delegations are kept as evidence; they simply stop being active.
+        $this->assertSame(2, Delegation::query()->count());
+        $this->assertSame(1, Delegation::query()->active()->count());
         $this->assertSame(1, WorkflowAction::query()->where('action', WorkflowActionType::Delegate)->count());
     }
 }

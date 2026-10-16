@@ -14,6 +14,9 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Fixed
 
+- **Delegations can be taken back.** The request page offers **Take back** to the person who delegated a step; deleting or shortening an out-of-office period hands its steps back; and a delegation to someone who is later deactivated no longer locks the original approver out. Each early end is recorded in the history.
+- Expired delegations are no longer deleted every night, so evidence packs keep who acted as delegate and when.
+- The nightly clean-up of unconfirmed sign-ups no longer deletes established accounts whose owners changed their email address; it only removes self-registrations that never confirmed their code.
 - **Editing a template on the Workflow templates list no longer weakens it.** Saving there used to reset each step's completion rule to its type's default (an "All assignees" step became "first response", so one approval completed the request) and removed custom outcomes. Both are now kept unless you change that step's type.
 - New database indexes for the unread-notification count, workflow step completion checks, and date-based request lists.
 - Faster dashboards, approval inbox, analytics, request page, and notifications: they no longer run extra database queries for every row (for example the notifications page went from 111 to 29 queries for 20 notifications). Settings are read from one cached entry per request instead of one per setting.

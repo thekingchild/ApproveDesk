@@ -2,7 +2,7 @@
 
 namespace Tests\Feature\Audit;
 
-use App\Jobs\PurgeExpiredDelegations;
+use App\Models\RegistrationOtpCode;
 use App\Models\Submission;
 use App\Models\User;
 use App\Models\WorkflowAction;
@@ -26,11 +26,9 @@ class AuditReferenceProtectionTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_a_delegate_only_user_counts_as_audit_evidence_after_the_delegation_is_purged(): void
+    public function test_a_delegate_only_user_counts_as_audit_evidence_after_the_delegation_expires(): void
     {
         [$approver, $delegate] = $this->delegatedOnce();
-
-        (new PurgeExpiredDelegations)->handle();
 
         $this->assertTrue($delegate->fresh()->hasPreservedAuditEvidence());
         $this->assertTrue($approver->fresh()->hasPreservedAuditEvidence());
@@ -39,7 +37,6 @@ class AuditReferenceProtectionTest extends TestCase
     public function test_database_refuses_to_null_the_delegate_on_a_history_row(): void
     {
         [, $delegate] = $this->delegatedOnce();
-        (new PurgeExpiredDelegations)->handle();
 
         try {
             $delegate->delete();
@@ -56,6 +53,9 @@ class AuditReferenceProtectionTest extends TestCase
         $approver = User::factory()->create();
         $unconfirmedDelegate = User::factory()->unverified()->create(['created_at' => now()->subDays(10)]);
         $unconfirmedStranger = User::factory()->unverified()->create(['created_at' => now()->subDays(10)]);
+        foreach ([$unconfirmedDelegate, $unconfirmedStranger] as $registrant) {
+            RegistrationOtpCode::query()->create(['email' => $registrant->email, 'code_hash' => 'x', 'expires_at' => now()->subDays(9), 'attempts' => 0]);
+        }
         WorkflowTemplate::factory()->default()->sequential([$approver])->create();
         $instance = app(WorkflowEngine::class)->initialize(Submission::factory()->create());
         app(WorkflowEngine::class)->delegate($instance, $approver, $unconfirmedDelegate, now()->addHour());

@@ -3,7 +3,6 @@
 use App\Jobs\ApplyOutOfOfficeFallbacksJob;
 use App\Jobs\ApplyRetentionJob;
 use App\Jobs\ProcessEscalation;
-use App\Jobs\PurgeExpiredDelegations;
 use App\Jobs\RetryNotificationDeliveries;
 use App\Jobs\SendNotificationDigests;
 use App\Support\BackupSettings;
@@ -23,7 +22,6 @@ Schedule::command('queue:work --stop-when-empty --tries=3 --timeout=90')
 
 Schedule::command('ops:heartbeat')->everyMinute()->withoutOverlapping();
 
-Schedule::job(new PurgeExpiredDelegations)->daily();
 Schedule::job(new SendNotificationDigests)->dailyAt('08:00');
 Schedule::job(new ProcessEscalation)->everyFifteenMinutes()->withoutOverlapping();
 Schedule::job(new ApplyOutOfOfficeFallbacksJob)->everyFifteenMinutes()->withoutOverlapping();

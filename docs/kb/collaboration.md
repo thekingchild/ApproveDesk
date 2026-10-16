@@ -38,7 +38,7 @@ Reminders are rate limited: one to the same person on the same request each hour
 
 Open **Settings → Out of office**. Set a start, an end, an optional fallback approver, and an optional note.
 
-While the schedule is active and the current step allows delegation, ApproveDesk hands that step to the fallback, the same way a manual delegation would. The fallback can decide. You cannot decide on that step until the grant ends.
+While the schedule is active and the current step allows delegation, ApproveDesk hands that step to the fallback, the same way a manual delegation would. The fallback can decide. You cannot decide on that step until the grant ends — unless you come back early: deleting or shortening the schedule hands those steps back to you, and the request page offers **Take back** on any step you delegated. If the person you delegated to is deactivated, the step returns to you automatically.
 
 Conflicts are rejected: overlapping periods on your own calendar, a fallback who is also away, a fallback who already falls back to you, or delegating a request to someone who is away during that window.
 
