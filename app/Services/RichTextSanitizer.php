@@ -2,10 +2,10 @@
 
 namespace App\Services;
 
-use DOMComment;
 use DOMDocument;
 use DOMElement;
 use DOMNode;
+use DOMText;
 
 final class RichTextSanitizer
 {
@@ -14,7 +14,7 @@ final class RichTextSanitizer
         'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'code', 'pre', 'a',
     ];
 
-    private const DROP_WITH_CONTENT = ['script', 'style', 'iframe', 'object', 'embed', 'svg', 'math'];
+    private const DROP_WITH_CONTENT = ['script', 'style', 'iframe', 'object', 'embed', 'svg', 'math', 'template', 'noscript'];
 
     public function sanitize(string $html): string
     {
@@ -36,26 +36,27 @@ final class RichTextSanitizer
             return '';
         }
 
-        $this->cleanChildren($root);
+        // Rebuild into a fresh document from the allow-list. Every text node is
+        // created anew, so content parsed inside raw-text elements (xmp, noembed,
+        // plaintext, ...) is always escaped on output (RV-SEC-03).
+        $output = new DOMDocument('1.0', 'UTF-8');
+        $container = $output->createElement('div');
+        $output->appendChild($container);
+        $this->copyChildren($root, $container, $output);
 
         $clean = '';
-        foreach ($root->childNodes as $child) {
-            $clean .= $document->saveHTML($child);
+        foreach ($container->childNodes as $child) {
+            $clean .= $output->saveHTML($child);
         }
 
         return trim($clean);
     }
 
-    private function cleanChildren(DOMNode $parent): void
+    private function copyChildren(DOMNode $source, DOMNode $target, DOMDocument $output): void
     {
-        $children = [];
-        foreach ($parent->childNodes as $child) {
-            $children[] = $child;
-        }
-
-        foreach ($children as $child) {
-            if ($child instanceof DOMComment) {
-                $parent->removeChild($child);
+        foreach ($source->childNodes as $child) {
+            if ($child instanceof DOMText) {
+                $target->appendChild($output->createTextNode($child->textContent));
 
                 continue;
             }
@@ -67,51 +68,39 @@ final class RichTextSanitizer
             $tag = strtolower($child->tagName);
 
             if (in_array($tag, self::DROP_WITH_CONTENT, true)) {
-                $parent->removeChild($child);
-
                 continue;
             }
-
-            $this->cleanChildren($child);
 
             if (! in_array($tag, self::ALLOWED_TAGS, true)) {
-                while ($child->firstChild !== null) {
-                    $parent->insertBefore($child->firstChild, $child);
-                }
-                $parent->removeChild($child);
+                $this->copyChildren($child, $target, $output);
 
                 continue;
             }
 
-            $this->cleanAttributes($child, $tag);
+            $element = $output->createElement($tag);
+            $this->copyAttributes($child, $element, $tag);
+            $target->appendChild($element);
+            $this->copyChildren($child, $element, $output);
         }
     }
 
-    private function cleanAttributes(DOMElement $element, string $tag): void
+    private function copyAttributes(DOMElement $source, DOMElement $element, string $tag): void
     {
-        $attributes = [];
-        foreach ($element->attributes as $attribute) {
-            $attributes[] = $attribute->name;
-        }
-
-        foreach ($attributes as $attribute) {
-            if ($tag !== 'a' || ! in_array($attribute, ['href', 'title', 'target'], true)) {
-                $element->removeAttribute($attribute);
-            }
-        }
-
         if ($tag !== 'a') {
             return;
         }
 
-        $href = trim($element->getAttribute('href'));
-        if ($href !== '' && ! $this->safeLink($href)) {
-            $element->removeAttribute('href');
+        $href = trim($source->getAttribute('href'));
+        if ($href !== '' && $this->safeLink($href)) {
+            $element->setAttribute('href', $href);
         }
 
-        if ($element->getAttribute('target') !== '_blank') {
-            $element->removeAttribute('target');
-        } else {
+        if ($source->hasAttribute('title')) {
+            $element->setAttribute('title', $source->getAttribute('title'));
+        }
+
+        if ($source->getAttribute('target') === '_blank') {
+            $element->setAttribute('target', '_blank');
             $element->setAttribute('rel', 'noopener noreferrer');
         }
     }

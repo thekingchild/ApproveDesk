@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\AnnouncementAudience;
 use App\Enums\AnnouncementDisplayMode;
 use App\Enums\AnnouncementStatus;
+use App\Services\RichTextSanitizer;
 use Carbon\CarbonImmutable;
 use Database\Factories\AnnouncementFactory;
 use Illuminate\Database\Eloquent\Collection;
@@ -44,6 +45,15 @@ class Announcement extends Model
             'published_at' => 'immutable_datetime',
             'archived_at' => 'immutable_datetime',
         ];
+    }
+
+    /**
+     * Message HTML for display. Re-sanitized on render so content stored
+     * before a sanitizer fix cannot reach the page (RV-SEC-03).
+     */
+    public function safeMessage(): string
+    {
+        return app(RichTextSanitizer::class)->sanitize((string) $this->message);
     }
 
     /** @return BelongsTo<User, $this> */

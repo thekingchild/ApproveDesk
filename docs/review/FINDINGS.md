@@ -118,19 +118,127 @@ DB_DATABASE=$PWD/database/perf.sqlite PERF_USERS=300 PERF_SUBMISSIONS=3000 php a
   - No working MariaDB < 10.10 installation can exist today (installs fail at `delegations`), so changing these migrations creates no drift for real installs. MySQL 8, MariaDB ≥ 10.10 and SQLite are unaffected.
 - Fix: `App\Support\SchemaTimestamps::required()` adds an explicit `DEFAULT CURRENT_TIMESTAMP` only on MariaDB with the setting off. The 7 released migrations were edited as a recorded exception (decision 2026-10-16, ADR 0004). Regression test `PortableTimestampColumnsTest` (static scan + MySQL/MariaDB column metadata). Closes when the `mariadb` CI job on PR #23 is green.
 
+## Wave 1 findings (2026-10-16)
+
+Sources: three read-only reviews (engine/audit, authorization, input-output/files/integrations), each backed by throwaway probe tests; every S1/S2 below was re-run or re-traced before logging. "Probe" = a failing-behaviour test reproduced it.
+
+### RV-SEC-03 — Stored XSS through raw-text elements in the rich-text sanitizer
+- Severity: **S1** · Status: **Fixed** (branch `feature/rv-sec-sanitizer`, `9facaa4`)
+- Evidence: `sanitize('<xmp><img src=x onerror=alert(1)></xmp>')` returned a live `<img onerror>`; `<xmp><noembed>…</noembed></xmp>` survived the save-time and render-time passes. Reproduced end to end: submitter's payload executed on the approver's submission page, inbox preview, and approval report.
+- Fix: rebuild output into a fresh DOM from the allow-list (all text nodes re-created, so always escaped); re-sanitize announcements and the API `body` on output. Tests for 10 raw-text payloads, idempotence, and stored announcements.
+
+### RV-ENG-01 — Requesters can approve their own requests (no separation of duties)
+- Severity: **S1** · Status: Open — **decided 2026-10-16**: new approval setting "Requesters cannot approve their own requests", **on by default**; reject self-approval and self-delegation in the engine; if the requester was a step's only approver, flag the step for an administrator.
+- Evidence (probes): submitter listed on a User/Role step; department manager submitting for their own department; FormField step where the submitter picks themselves; delegation to the submitter. `WorkflowEngine::authorize()` (`app/Services/WorkflowEngine.php:239-268`) and `AssigneeResolver` never compare the actor with `submitter_id`.
+
+### RV-DATA-03 — MySQL backup promote drops live tables before a non-atomic reload, with no pre-promote copy
+- Severity: **S1** (data loss; owner-initiated) · Status: Open
+- Location: `app/Actions/Backups/PromoteDatabaseBackupAction.php:182-200`
+- Evidence: `SET FOREIGN_KEY_CHECKS=0`, drop every table, `DB::unprepared($sql)`, then bring the app up and verify. A failure mid-load leaves a partial database; the SQLite path keeps a `.pre-promote` copy, the MySQL path does not. A successful promote silently discards newer `workflow_actions`, and the restore trail doesn't record how many.
+- Fix: snapshot before dropping; load into a scratch schema and swap with `RENAME TABLE`; stay in maintenance until verified; record the live-vs-snapshot `workflow_actions` delta.
+
+### RV-ENG-02 — Replayed or double-submitted actions approve the *next* step
+- Severity: **S2** · Status: Open
+- Evidence (probe): `processAction()` takes no expected step and acts on whatever `current_step_id` is after the lock. Pre-lock checks in `EmailApprovalController:60` and `ApproveSubmissionFromChatAction:190` race; API, Livewire `act()` and `BatchApproveSubmissionsAction:112-133` don't check at all. A user on steps 1 and 2 completes both with one double-click/retry.
+- Fix: required `expectedStepId` on `processAction()`/`delegate()`, checked after the lock; pass it from every caller.
+
+### RV-ENG-03 — One quorum/“All” seat counted twice (delegate + delegator)
+- Severity: **S2** · Status: Open · Location: `WorkflowEngine.php:481-489, 673-686`
+- Evidence (probe): quorum 2 of {A,B,C}; A delegates to D, D approves; after expiry A approves → step complete without B or C.
+- Fix: count approvals by seat (record on-behalf-of); treat “my delegate already decided” as a duplicate.
+
+### RV-ENG-04 — Approvals survive return-for-revision
+- Severity: **S2** · Status: Open · Location: `WorkflowEngine::resume()` (`:692-723`), `isStepSatisfied`
+- Evidence (probe): parallel {A,B}; A approves, B returns, submitter revises; B approves → complete. A never saw the revised content and is blocked as a duplicate.
+- Fix: append a `resubmitted` system action; count approvals/duplicates only after the latest return on that step.
+
+### RV-ENG-05 — Withdraw mutates the workflow instance outside the engine
+- Severity: **S2** · Status: Open · Location: `app/Actions/Submissions/WithdrawSubmissionAction.php:57-64`
+- Evidence: updates `workflow_instances` without a lock or an action row (breaks invariant 2); can overwrite a just-committed completion; locks submission→instance while the engine locks instance→submission (deadlock risk on MySQL).
+- Fix: `WorkflowEngine::withdraw()` with lock, status re-check, appended `withdraw` action.
+
+### RV-ENG-06 — Deleting a user rewrites `workflow_actions.delegated_to` via FK cascade
+- Severity: **S2** (audit tampering) · Status: Open
+- Evidence (probe): `delegated_to … nullOnDelete()`; `hasPreservedAuditEvidence()` ignores `delegated_to`; `users:prune-unconfirmed` bulk-deletes with no evidence check. `instance_id cascadeOnDelete` is latent risk.
+- Fix: new migration → `restrictOnDelete`; extend the evidence check; make prune skip users with evidence.
+
+### RV-BUG-01 — Manager / department / form-field approvers see no action buttons on the request page
+- Severity: **S2** · Status: Open · Location: `resources/views/pages/submissions/show.blade.php:171, 222, 239`
+- Evidence (probe): `$step->assignedUsers()` is called without the submission, so dynamic assignees resolve to nobody and `canAct` is false.
+- Fix: pass `$instance->submission`.
+
+### RV-BUG-02 — Form-field approvers missing from dashboard and API lists on MariaDB (lead L1)
+- Severity: **S2** · Status: Open · Location: `app/Services/Workflow/AssignedStepConstraint.php:71`
+- Evidence: MariaDB `JSON_EXTRACT` returns the quoted string, so `key = '"reviewer"'` never matches; SQLite/MySQL 8 match. No test covers this branch. The constraint also has no branch for `External` assignees on any database.
+- Fix: driver-aware unquote (or Laravel's `->` JSON path); add a feature test so the MariaDB job guards it.
+
+### RV-SEC-04 — Admins can take over or wipe higher-privileged accounts (email change, anonymize)
+- Severity: **S2** · Status: Open · Location: `app/Policies/UserPolicy.php:19-42`, `app/Actions/Users/UpdateUserAction.php:27,66`
+- Evidence (probes): a non-owner admin (or custom role with `users.update`) changes the email of a user holding above-ceiling permissions, then resets the password; admin A anonymizes peer admin B (edit is refused, anonymize is not).
+- Fix: enforce the admin/permission-ceiling rule in `UserPolicy::update` (inherited by anonymize and name decisions); notify the old address and re-verify on email change.
+
+### RV-SEC-06 — User import "update" mode rewrites any user without `users.update`
+- Severity: **S2** · Status: Open · Location: `app/Services/Users/UserImportService.php:233-243`; `pages/admin/users-import.blade.php` (`$preview` not locked)
+- Evidence (probes): an importer sets a victim's `manager_id` to themselves and becomes approver of the victim's in-flight requester-manager steps.
+- Fix: authorize `update` per row (with RV-SEC-04's rule); lock `$preview` or re-analyse on commit.
+
+### RV-SEC-07 — Workflow builder publishes without `workflows.publish`
+- Severity: **S2** · Status: Open · Location: `pages/admin/workflow-builder.blade.php:276-282`
+- Evidence (probe): `confirmPublish()` authorizes only `update`.
+- Fix: `authorize('publish')` in `requestPublish`/`confirmPublish` and inside `PublishWorkflowTemplateVersionAction`.
+
+### RV-SEC-08 — Time-limited auditor or delegate access becomes permanent by following
+- Severity: **S2** · Status: Open · Location: `app/Actions/Collaboration/FollowSubmissionAction.php:30-33`
+- Evidence (probe): self-follow checks `view`, not `follow`; watcher status grants view after the grant is revoked.
+- Fix: require the `follow` policy; don't let watcher status outlive the basis that granted access.
+
+### RV-SEC-10 — Teams/Slack one-click approval bypasses the second-factor requirement and isn't bound to the clicker
+- Severity: **S2** · Status: Open · Location: `ApproveSubmissionFromChatAction.php:32`, `TeamsActionsController`, `SlackInteractionsController`, `settings/notification-channels.blade.php:80-90`
+- Evidence (probe): with “require second factor” on, a chat token completes the workflow. Teams POSTs aren't JWT-verified; Slack clicker isn't matched to the approver; channel managers can remap another user's chat identity.
+- Fix: suppress chat approve (send the confirmation URL) when a second factor is required; verify Teams JWT and Slack user; single-use tokens; owner/re-auth for identity mapping.
+
+### RV-SEC-11 — Custom outcome key injected into a Livewire action expression
+- Severity: **S2** · Status: Open · Location: `submissions/show.blade.php:957`; `workflow-builder.blade.php:485-496`
+- Evidence (probe): an admin saves outcome key ``x');alert(document.domain);('``; it renders inside `wire:click="act('…')"` and executes for approvers.
+- Fix: validate keys `^[a-z0-9_]{1,40}$` server-side; render with `@js()`.
+
+### Further Wave 1 findings (S3/S4)
+
+| ID | Sev | Finding | Location |
+|---|---|---|---|
+| RV-ENG-07 | S3 | Append-only guard is model-event only; builder/DB updates and FK actions bypass it | `app/Models/WorkflowAction.php:52-60` |
+| RV-DATA-04 | S3 | Database backups aren't a consistent snapshot (per-table cursors, no transaction) | `CreateDatabaseBackupAction.php:69-77` |
+| RV-BUG-03 | S3 | Delegation window parsed in `APP_TIMEZONE`, not the user's | `submissions/show.blade.php:259-284` |
+| RV-SEC-09 | S3 | Mentions add watchers without `addWatcher`; mention list not locked | `PostCommentAction.php:58`, `FollowSubmissionAction.php:35` |
+| RV-SEC-12 | S3 | API submitters can choose any department, steering department-manager routing | `StoreSubmissionRequest.php:27` |
+| RV-SEC-13 | S3 | Permission catalogue keys with no enforcement (`submissions.withdraw`, `comments.create`, `reminders.send`, `submissions.view.own`, `audit.evidence.export`, `audit.auditor_access.manage`) | `app/Policies/SubmissionPolicy.php` and others |
+| RV-SEC-14 | S3 | Markdown link injection in notification emails via title/comment | `RendersNotificationCopy::mailFromCopy` |
+| RV-SEC-15 | S3 | CSP allows `unsafe-inline` and `unsafe-eval`, so it doesn't mitigate XSS | `app/Http/Middleware/SecurityHeaders.php:34` |
+| RV-SEC-16 | S3 | Custom-code save accepts a password confirmation of any age; second factor is login-time only | `settings/branding.blade.php:208-209` |
+| RV-SEC-17 | S3 | S3 backup endpoint validated but not pinned; virtual-host bucket name never validated (suspected) | `S3BackupTransport.php:71-77` |
+| RV-SEC-19 | S3 | Disposition review has no four-eyes or still-pending check | `ReviewDispositionAction` |
+| RV-ENG-08 | S4 | Unknown `act()` argument is treated as Approve | `submissions/show.blade.php:313` |
+| RV-ENG-09 | S4 | Escalate timeout on the last step fails and is logged every 15 min forever | `WorkflowEngine.php:428-430` |
+| RV-BUG-04 | S4 | Double submit of a draft returns a 500 (unique constraint) | `SubmitSubmissionAction` |
+| RV-SEC-18 | S4 | Minor: optional Telegram webhook secret; CSV formula escaping in two exports; unsanitized download filename header; VAPID key in plaintext; inline `svg` mapping; CSV import row cap; Sanctum tokens never expire; role-name checks in dashboard/auditor; hidden owner name via tampered mentions | various |
+| RV-ENG-10 | ? | Suspected: Escalate advances a group step on one assignee's action | `WorkflowEngine.php:421-433` |
+| RV-ENG-11 | ? | Suspected: “All” step can stall when its assignee set shrinks after others approved | `isStepSatisfied` |
+
+Checked and found correct in Wave 1 (summary): engine transactions/locks/duplicate checks; all 37 `lockForUpdate()` calls outside the engine run in transactions with id-ordered multi-row locks; timeout/escalation idempotency; signed file/report/backup downloads with per-user authorization; API scopes on every endpoint; global search filtering; theme CSS validation; Help Markdown; XLSX import guard; attachment serving; `OutboundDestination` SSRF guard with DNS pinning for webhooks/connectors/web push; Slack request signatures; secrets encrypted at rest and never re-sent.
+
 ---
 
 ## Leads awaiting verification (from REVIEW_PLAN §4)
 
 | Lead | Track | Wave | Status |
 |---|---|---|---|
-| L1 `json_extract` comparison in `AssignedStepConstraint` may never match on MariaDB | BUG/DATA | 1 | Open — the new MariaDB CI job should expose it if tests cover form-field assignees |
+| L1 `json_extract` comparison in `AssignedStepConstraint` may never match on MariaDB | BUG/DATA | 1 | Confirmed → RV-BUG-02 |
 | L2 Oversized Livewire page components | ARC | 3 | Open |
-| L3 Authorization only at route level in 26 pages; 12 `#[Locked]` properties | SEC | 1 | Open |
-| L4 13 raw `{!! !!}` outputs | SEC | 1 | Open |
-| L5 `hasRole` outside Policies (7 files) | ARC/SEC | 1 | Open |
+| L3 Authorization only at route level in 26 pages; 12 `#[Locked]` properties | SEC | 1 | Reviewed → RV-SEC-06, RV-SEC-07, RV-SEC-11; other pages authorize per action |
+| L4 13 raw `{!! !!}` outputs | SEC | 1 | Reviewed → RV-SEC-03 (fixed); theme CSS, Help, QR found safe |
+| L5 `hasRole` outside Policies (7 files) | ARC/SEC | 1 | Reviewed → RV-SEC-04, RV-SEC-18 |
 | L6 Per-key `rememberForever` settings on file cache | PERF | 2 | Open |
-| L7 40 `lockForUpdate()` calls outside the engine | ENG | 1 | Open |
+| L7 40 `lockForUpdate()` calls outside the engine | ENG | 1 | Reviewed: all transactional; inversions → RV-ENG-05 |
 | L8 Engine coverage target | TEST | — | → RV-TEST-04 |
 | L9 Missing ADRs | DOC | 3 | Open |
 | L10 Docker files vs shared-hosting constraint | ARC | 3 | Open |
