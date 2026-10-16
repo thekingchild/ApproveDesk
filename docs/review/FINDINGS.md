@@ -251,10 +251,10 @@ Sources: two read-only feature-area reviews with 43 probe tests (every listed CO
 | RV-BUG-09 | S2 | Builder resave turns `in`/`not_in` lists into a string that never matches | **Fix in review** (`feature/rv-bug-conditional-routing`) |
 | RV-BUG-10 | S2 | Builder publishes conditions on unknown fields; every submission on that template then fails | **Fix in review** (`feature/rv-bug-conditional-routing`) |
 | RV-BUG-11 | S2 | `metadata.*` selection rules/conditions never match real requests (nothing writes metadata), but Explain routing and simulation say they do | **Fix in review** (`feature/rv-bug-conditional-routing`) |
-| RV-DATA-06 | S2 | On a returned/awaiting-information request the submitter can hard-delete an attachment approvers already saw; no "removed" revision, ignores legal hold | Open |
+| RV-DATA-06 | S2 | On a returned/awaiting-information request the submitter can hard-delete an attachment approvers already saw; no "removed" revision, ignores legal hold | **Fix in review** (`feature/rv-data-attachments-references`) |
 | RV-BUG-12 | S2 | With two file fields, each field is linked to the other's uploads (`create-custom.blade.php:115`) | **Fix in review** (`feature/rv-bug-submit-failures`) |
 | RV-BUG-13 | S2 | Visibility/required rule on a multi-select source crashes the form ("Array to string conversion") | **Fix in review** (`feature/rv-bug-conditional-routing`) |
-| RV-BUG-14 | S2 | Returning to sequential numbering after random can collide and then block every new request (counter rollback) | Open |
+| RV-BUG-14 | S2 | Returning to sequential numbering after random can collide and then block every new request (counter rollback) | **Fix in review** (`feature/rv-data-attachments-references`) |
 | RV-BUG-15 | S3 | Chat send failures recorded as Sent (never retried/shown); unmapped WhatsApp kinds recorded Sent, not Skipped | Open |
 | RV-BUG-16 | S3 | Quiet-hours-deferred chat messages lose their copy and signed link; sent even if the step moved on | Open |
 | RV-BUG-17 | S3 | Decision emails show literal `{{comment}}` or a stale return comment on an Approved email | Open |

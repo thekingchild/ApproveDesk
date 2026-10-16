@@ -152,6 +152,16 @@ class Submission extends Model
     }
 
     /**
+     * Attachments the requester removed after submitting; kept as evidence (RV-DATA-06).
+     *
+     * @return HasMany<SubmissionFile, $this>
+     */
+    public function removedFiles(): HasMany
+    {
+        return $this->hasMany(SubmissionFile::class)->onlyTrashed()->latest('deleted_at');
+    }
+
+    /**
      * @return HasOne<WorkflowInstance, $this>
      */
     public function workflowInstance(): HasOne

@@ -89,7 +89,7 @@ new #[Title('Submission')] class extends Component {
 
     /** Relations the page renders; reloaded on every request because Livewire rehydrates the model without them. */
     private const RELATIONS = [
-            'submitter', 'department', 'files.uploader',
+            'submitter', 'department', 'files.uploader', 'removedFiles.remover:id,name',
             'requestTypeVersion.requestType', 'requestTypeVersion.fields',
             'fieldValues.field', 'fieldValues.userValue', 'fieldValues.departmentValue',
             'workflowInstance.template.steps',
@@ -1034,9 +1034,12 @@ new #[Title('Submission')] class extends Component {
         </flux:card>
     @endif
 
-    @if ($submission->files->isNotEmpty())
+    @if ($submission->files->isNotEmpty() || $submission->removedFiles->isNotEmpty())
         <flux:card>
             <flux:heading size="sm">{{ __('Attachments') }}</flux:heading>
+            @if ($submission->files->isEmpty())
+                <flux:text class="mt-3 text-sm">{{ __('No current attachments.') }}</flux:text>
+            @endif
             <ul class="mt-3 space-y-2 text-sm">
                 @foreach ($submission->files as $file)
                     <li class="flex items-center justify-between gap-3">
@@ -1050,6 +1053,21 @@ new #[Title('Submission')] class extends Component {
                     </li>
                 @endforeach
             </ul>
+            @if ($submission->removedFiles->isNotEmpty())
+                <flux:separator class="my-4" />
+                <p class="text-sm font-medium">{{ __('Removed by the requester') }}</p>
+                <p class="text-xs text-zinc-500">{{ __('Kept for the record because the request had already been submitted.') }}</p>
+                <ul class="mt-2 space-y-2 text-sm" data-test="removed-attachments">
+                    @foreach ($submission->removedFiles as $file)
+                        <li class="flex items-center justify-between gap-3 text-zinc-500">
+                            <span><span class="line-through">{{ $file->original_name }}</span> <span class="text-xs">· {{ __('removed by :name on :date', ['name' => $file->remover?->name ?? __('a former user'), 'date' => $file->deleted_at?->format('d M Y H:i')]) }}</span></span>
+                            @can('downloadFiles', $submission)
+                                <flux:link :href="$this->fileUrl($file)" target="_blank">{{ __('Download') }}</flux:link>
+                            @endcan
+                        </li>
+                    @endforeach
+                </ul>
+            @endif
         </flux:card>
 
         <flux:modal name="file-preview" class="w-full max-w-5xl">

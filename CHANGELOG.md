@@ -14,6 +14,8 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Fixed
 
+- **Attachments approvers relied on are kept.** Removing a file from a returned request or an information response no longer deletes it. It leaves the current attachments but stays on the request page under "Removed by the requester", stays downloadable to people who can download the request's files, appears in evidence packs with who removed it, and the removal is recorded in the file history. Files on a request under legal hold cannot be removed. Drafts that were never submitted still delete removed files. New nullable `submission_files.deleted_at` and `removed_by` columns.
+- Switching approval IDs from Random back to Sequential no longer blocks new requests when the next sequential number was already used by a random ID; those numbers are skipped.
 - **Condition branches follow their step.** In the workflow builder and on the Workflow templates list, moving or duplicating steps no longer re-points a condition's true/false branch at a different step, and deleting a branch's target asks for a new one instead of silently completing the workflow. The builder now shows the step each branch goes to, offers the operator list, and lists anything that blocks saving.
 - **Re-saving a template in the builder no longer breaks "in list" conditions.** Lists stay lists, and versions already damaged by the old behaviour (for example `high, urgent` stored as one value) route by the list again. Extra rules and the any/all mode of multi-rule conditions are kept.
 - Conditions and selection rules on unknown fields are refused when saved or published, instead of publishing and then failing every request that reaches them.
