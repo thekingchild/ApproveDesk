@@ -153,7 +153,7 @@ Sources: three read-only reviews (engine/audit, authorization, input-output/file
 - Fix: append a `resubmitted` system action; count approvals/duplicates only after the latest return on that step.
 
 ### RV-ENG-05 — Withdraw mutates the workflow instance outside the engine
-- Severity: **S2** · Status: Open · Location: `app/Actions/Submissions/WithdrawSubmissionAction.php:57-64`
+- Severity: **S2** · Status: **Fix in review** (branch `feature/rv-eng-withdraw`; `WorkflowEngine::withdraw()` locks the instance first, re-checks it is open, appends a `withdraw` action, then cancels instance and submission) · Location: `app/Actions/Submissions/WithdrawSubmissionAction.php:57-64`
 - Evidence: updates `workflow_instances` without a lock or an action row (breaks invariant 2); can overwrite a just-committed completion; locks submission→instance while the engine locks instance→submission (deadlock risk on MySQL).
 - Fix: `WorkflowEngine::withdraw()` with lock, status re-check, appended `withdraw` action.
 

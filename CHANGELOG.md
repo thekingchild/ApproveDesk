@@ -14,6 +14,7 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Fixed
 
+- Withdrawing a request now goes through the workflow engine. It is recorded in the request history, and it can no longer overwrite a decision that was completed at the same moment.
 - A delegate now fills the delegator's place on a step. On **All** and **Quorum** steps the two can no longer count as two approvals, and the request history and approval report show decisions made **on behalf of** someone. New nullable `workflow_actions.on_behalf_of_id` column; existing history is unchanged.
 - When a request is returned for revision and resubmitted, everyone on that step now decides again on the revised content. Approvals given before the return remain in the history but no longer complete the step.
 - A decision is applied only to the step the approver was looking at. Double-clicks, retried requests, and reused email or chat approvals no longer approve the next step when the same person is assigned to it. The API accepts an optional `step_id` for the same protection.
