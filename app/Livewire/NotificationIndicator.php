@@ -16,7 +16,7 @@ class NotificationIndicator extends Component
     public function render(): mixed
     {
         return view('livewire.notification-indicator', [
-            'unreadCount' => Auth::user()->unreadNotifications()->count(),
+            'unreadCount' => Auth::user()->unreadNotificationCount(),
         ]);
     }
 }

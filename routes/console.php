@@ -36,6 +36,7 @@ Schedule::job(new ApplyRetentionJob)->dailyAt('04:15')->withoutOverlapping();
 Schedule::command('approvedesk:fetch-whatsapp-templates')->dailyAt('03:15')->withoutOverlapping();
 Schedule::command('users:prune-unconfirmed')->dailyAt('03:45');
 Schedule::command('model:prune', ['--model' => [OpsSnapshot::class]])->dailyAt('03:30')->withoutOverlapping();
+Schedule::command('cache:prune-file-cache')->dailyAt('03:50')->withoutOverlapping();
 
 Schedule::command('backups:database')
     ->dailyAt(BackupSettings::databaseAt())

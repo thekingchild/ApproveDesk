@@ -171,11 +171,13 @@ final class SystemSettings
             return $bound;
         }
 
+        // Read from the one cached settings array instead of a LIKE query per request (RV-PERF-19).
         try {
-            $loaded = Setting::query()
-                ->where('key', 'like', 'system.%')
-                ->pluck('value', 'key')
-                ->all();
+            $loaded = array_filter(
+                Setting::cached(),
+                fn (string $key): bool => str_starts_with($key, 'system.'),
+                ARRAY_FILTER_USE_KEY,
+            );
         } catch (Throwable) {
             $loaded = [];
         }
