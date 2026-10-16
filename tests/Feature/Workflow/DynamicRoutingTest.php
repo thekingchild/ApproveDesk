@@ -25,8 +25,10 @@ use App\Models\Setting;
 use App\Models\Submission;
 use App\Models\SubmissionFieldValue;
 use App\Models\User;
+use App\Models\WorkflowInstance;
 use App\Models\WorkflowTemplate;
 use App\Models\WorkflowTemplateStep;
+use App\Services\Workflow\AssignedStepConstraint;
 use App\Services\Workflow\AssigneeResolver;
 use App\Services\Workflow\BusinessCalendar;
 use App\Services\Workflow\WorkflowTemplateSelector;
@@ -316,6 +318,34 @@ class DynamicRoutingTest extends TestCase
      * @param  array<int, int>  $ids
      * @param  array<string, mixed>|null  $config
      */
+    public function test_form_field_approver_is_found_by_the_assigned_work_query(): void
+    {
+        // RV-BUG-02: the SQL used by the dashboard and API must unquote the JSON
+        // field key on every driver (MariaDB returned it quoted).
+        $approver = User::factory()->create();
+        $type = $this->publishedTypeWithUserField();
+        $field = $type->publishedVersion->fields->firstWhere('key', 'reviewer');
+        $submission = Submission::factory()->create(['request_type_version_id' => $type->publishedVersion->id]);
+        SubmissionFieldValue::query()->create([
+            'submission_id' => $submission->id,
+            'request_field_definition_id' => $field->id,
+            'user_value_id' => $approver->id,
+        ]);
+        $step = $this->stepTemplate(AssigneeType::FormField, [], [$approver], ['field_key' => 'reviewer']);
+        WorkflowInstance::factory()->create([
+            'submission_id' => $submission->id,
+            'template_id' => $step->template_id,
+            'template_version_id' => $step->template_version_id,
+            'current_step_id' => $step->id,
+        ]);
+
+        $found = app(AssignedStepConstraint::class)->constrainInstances(WorkflowInstance::query(), $approver)->count();
+        $other = app(AssignedStepConstraint::class)->constrainInstances(WorkflowInstance::query(), User::factory()->create())->count();
+
+        $this->assertSame(1, $found);
+        $this->assertSame(0, $other);
+    }
+
     private function stepTemplate(AssigneeType $type, array $ids, array $users, ?array $config = null): WorkflowTemplateStep
     {
         $template = WorkflowTemplate::factory()->sequential($users)->create();

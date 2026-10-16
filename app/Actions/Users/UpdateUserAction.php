@@ -61,6 +61,11 @@ final class UpdateUserAction
             if ($user->is($actor) && ! $data->isActive) {
                 throw ValidationException::withMessages(['isActive' => __('You cannot deactivate your own account.')]);
             }
+            if (strcasecmp((string) $user->email, $data->email) !== 0
+                && ! $user->is($actor)
+                && ! Gate::forUser($actor)->allows('manageIdentity', $user)) {
+                throw ValidationException::withMessages(['email' => __('Only the System owner can change the email address of someone with more access than you.')]);
+            }
             $user->update([
                 'name' => $data->name,
                 'email' => $data->email,

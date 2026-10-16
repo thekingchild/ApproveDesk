@@ -293,6 +293,10 @@ class UserOnboardingTest extends TestCase
         $stale = User::factory()->create(['email_verified_at' => null]);
         DB::table('users')->where('id', $stale->id)->update(['created_at' => now()->subDays(5)]);
         $fresh = User::factory()->create(['email_verified_at' => null]);
+        // Self-registrations always have a confirmation code on record.
+        foreach ([$stale, $fresh] as $registrant) {
+            RegistrationOtpCode::query()->create(['email' => $registrant->email, 'code_hash' => 'x', 'expires_at' => now()->subDays(4), 'attempts' => 0]);
+        }
         $verified = User::factory()->create();
 
         $this->artisan('users:prune-unconfirmed')->assertSuccessful();
@@ -300,5 +304,16 @@ class UserOnboardingTest extends TestCase
         $this->assertDatabaseMissing('users', ['id' => $stale->id]);
         $this->assertDatabaseHas('users', ['id' => $fresh->id]);
         $this->assertDatabaseHas('users', ['id' => $verified->id]);
+    }
+
+    public function test_prune_never_deletes_a_long_standing_user_who_changed_their_email(): void
+    {
+        // RV-BUG-06: changing email on Profile clears email_verified_at.
+        $user = User::factory()->create(['created_at' => now()->subDays(30)])->assignRole('approver');
+        $user->forceFill(['email' => 'new-address@example.com', 'email_verified_at' => null])->save();
+
+        $this->artisan('users:prune-unconfirmed', ['--hours' => 72])->assertSuccessful();
+
+        $this->assertNotNull($user->fresh());
     }
 }

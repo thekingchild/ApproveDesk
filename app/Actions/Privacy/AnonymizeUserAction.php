@@ -2,6 +2,8 @@
 
 namespace App\Actions\Privacy;
 
+use App\Models\Comment;
+use App\Models\Delegation;
 use App\Models\User;
 use App\Models\WorkflowAction;
 use App\Services\Security\DeviceSessionManager;
@@ -83,9 +85,21 @@ final class AnonymizeUserAction
         });
     }
 
+    /**
+     * Anyone referenced by request history must be anonymized, never deleted:
+     * deleting would fail on (or, before RV-ENG-06, silently rewrite) audit rows.
+     */
     public static function hasPreservedAuditEvidence(User $user): bool
     {
         return $user->submissions()->exists()
-            || WorkflowAction::query()->where('actor_id', $user->id)->exists();
+            || WorkflowAction::query()
+                ->where(fn ($query) => $query->where('actor_id', $user->id)
+                    ->orWhere('delegated_to', $user->id)
+                    ->orWhere('on_behalf_of_id', $user->id))
+                ->exists()
+            || Delegation::query()
+                ->where(fn ($query) => $query->where('delegator_id', $user->id)->orWhere('delegate_id', $user->id))
+                ->exists()
+            || Comment::query()->where('author_id', $user->id)->exists();
     }
 }

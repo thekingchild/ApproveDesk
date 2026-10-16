@@ -12,6 +12,8 @@ class SubmissionPolicy
 {
     public function view(User $user, Submission $submission): bool
     {
+        // Requesters always see their own requests (they must answer information
+        // requests and revise returns), so View own requests is not a gate here.
         if ($submission->submitter_id === $user->id || $user->can('submissions.view.all')) {
             return true;
         }
@@ -20,34 +22,45 @@ class SubmissionPolicy
             return true;
         }
 
-        if ($submission->isWatchedBy($user)) {
+        if ($submission->grantsFollowerAccessTo($user)) {
             return true;
         }
 
         // Approvers: anyone who has acted on, or is assigned to the current
         // step of, this submission's workflow may view it.
-        $instance = $submission->workflowInstance()->first();
+        // Use the loaded relation when a page already has it (avoids a query per row).
+        $instance = $submission->workflowInstance;
 
         if ($instance === null) {
             return false;
         }
 
-        if ($instance->currentStep?->assignedUsers($instance->submission)->contains($user)) {
+        if ($instance->currentStep?->assignedUsers($submission)->contains($user)) {
             return true;
         }
 
-        if (Delegation::query()->active()
-            ->where('instance_id', $instance->id)
-            ->where('step_id', $instance->current_step_id)
-            ->where('delegate_id', $user->id)
-            ->exists()) {
+        // Lists that eager-load delegations/actions avoid two queries per row.
+        $delegated = $instance->relationLoaded('delegations')
+            ? $instance->delegations->contains(fn (Delegation $delegation): bool => $delegation->step_id === $instance->current_step_id
+                && $delegation->delegate_id === $user->id
+                && $delegation->starts_at <= now()
+                && $delegation->expires_at > now())
+            : Delegation::query()->active()
+                ->where('instance_id', $instance->id)
+                ->where('step_id', $instance->current_step_id)
+                ->where('delegate_id', $user->id)
+                ->exists();
+
+        if ($delegated) {
             return true;
         }
 
-        return WorkflowAction::query()
-            ->where('instance_id', $instance->id)
-            ->where('actor_id', $user->id)
-            ->exists();
+        return $instance->relationLoaded('actions')
+            ? $instance->actions->contains('actor_id', $user->id)
+            : WorkflowAction::query()
+                ->where('instance_id', $instance->id)
+                ->where('actor_id', $user->id)
+                ->exists();
     }
 
     public function create(User $user): bool
@@ -78,6 +91,7 @@ class SubmissionPolicy
     public function withdraw(User $user, Submission $submission): bool
     {
         return $submission->submitter_id === $user->id
+            && $user->can('submissions.withdraw')
             && in_array($submission->status, [
                 SubmissionStatus::Pending,
                 SubmissionStatus::InReview,
@@ -86,9 +100,12 @@ class SubmissionPolicy
             ], true);
     }
 
+    /** Requesters can always discuss their own request; others need Create comments. */
     public function comment(User $user, Submission $submission): bool
     {
-        return ! $user->isReadOnlyAuditor() && $this->view($user, $submission);
+        return ! $user->isReadOnlyAuditor()
+            && $this->view($user, $submission)
+            && ($submission->submitter_id === $user->id || $user->can('comments.create'));
     }
 
     public function follow(User $user, Submission $submission): bool
@@ -115,9 +132,12 @@ class SubmissionPolicy
             && $step->assignedUsers($instance->submission)->contains($user);
     }
 
+    /** Requesters can always remind on their own request; others need Send reminders. */
     public function nudge(User $user, Submission $submission): bool
     {
-        return ! $user->isReadOnlyAuditor() && $this->view($user, $submission);
+        return ! $user->isReadOnlyAuditor()
+            && $this->view($user, $submission)
+            && ($submission->submitter_id === $user->id || $user->can('reminders.send'));
     }
 
     public function downloadFiles(User $user, Submission $submission): bool
@@ -127,6 +147,10 @@ class SubmissionPolicy
 
     public function downloadEvidence(User $user, Submission $submission): bool
     {
+        if (! $user->can('audit.evidence.export')) {
+            return false;
+        }
+
         if ($user->can('settings.manage') || $user->can('submissions.view.all')) {
             return $this->view($user, $submission);
         }

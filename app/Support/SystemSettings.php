@@ -62,8 +62,7 @@ final class SystemSettings
 
     public static function forget(string $key): void
     {
-        Setting::query()->where('key', 'system.'.$key)->delete();
-        cache()->forget('settings.system.'.$key);
+        Setting::forget('system.'.$key);
         self::flush();
     }
 

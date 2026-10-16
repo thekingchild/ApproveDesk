@@ -205,8 +205,9 @@ new #[Title('Branding settings')] class extends Component {
             abort(403);
         }
 
+        // A confirmation older than auth.password_timeout no longer counts (RV-SEC-16).
         $confirmedAt = session('auth.password_confirmed_at');
-        if (! is_numeric($confirmedAt)) {
+        if (! is_numeric($confirmedAt) || time() - (int) $confirmedAt > (int) config('auth.password_timeout', 10800)) {
             session()->put('url.intended', route('settings.branding'));
             session()->put('branding.pending_custom_code', $this->custom_code);
             $this->redirect(route('password.confirm'));

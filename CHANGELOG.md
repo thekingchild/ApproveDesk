@@ -14,8 +14,51 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Fixed
 
+- **Delegations can be taken back.** The request page offers **Take back** to the person who delegated a step; deleting or shortening an out-of-office period hands its steps back; and a delegation to someone who is later deactivated no longer locks the original approver out. Each early end is recorded in the history.
+- Expired delegations are no longer deleted every night, so evidence packs keep who acted as delegate and when.
+- The nightly clean-up of unconfirmed sign-ups no longer deletes established accounts whose owners changed their email address; it only removes self-registrations that never confirmed their code.
+- **Editing a template on the Workflow templates list no longer weakens it.** Saving there used to reset each step's completion rule to its type's default (an "All assignees" step became "first response", so one approval completed the request) and removed custom outcomes. Both are now kept unless you change that step's type.
+- New database indexes for the unread-notification count, workflow step completion checks, and date-based request lists.
+- Faster dashboards, approval inbox, analytics, request page, and notifications: they no longer run extra database queries for every row (for example the notifications page went from 111 to 29 queries for 20 notifications). Settings are read from one cached entry per request instead of one per setting.
+- A missing setting no longer remembers the first default value any screen asked for.
+- Delegation, out-of-office, and auditor-access start and end times are now read in the viewer's own time zone (shown under the fields) instead of the server's, so windows no longer shift by hours for people in another zone.
+- Database backups are taken as one consistent point-in-time snapshot, so a decision recorded during a backup can no longer leave a request's status and its history out of step in the backup.
+- Bulk updates and deletes of workflow history are refused by the application, not only single-record changes.
+- **Database promote on MySQL/MariaDB is now recoverable.** ApproveDesk takes and verifies a safety backup first, stays in maintenance mode until the restored database passes its check, and automatically puts the safety backup back if the restore fails (staying in maintenance mode if even that fails). The confirmation warns how many later workflow actions will be removed, and Restore history records the safety backup and that count. New nullable `backup_restore_events` columns.
+- On MariaDB, requests waiting for an approver chosen in a form field now appear in that approver's dashboard and API lists.
+- Deleting a user can no longer alter workflow history. Request history references are now protected in the database, people who appear in delegations or comments count as having history (so they are anonymized rather than deleted), and the unconfirmed-registration clean-up skips anyone who appears in history.
+- Withdrawing a request now goes through the workflow engine. It is recorded in the request history, and it can no longer overwrite a decision that was completed at the same moment.
+- A delegate now fills the delegator's place on a step. On **All** and **Quorum** steps the two can no longer count as two approvals, and the request history and approval report show decisions made **on behalf of** someone. New nullable `workflow_actions.on_behalf_of_id` column; existing history is unchanged.
+- When a request is returned for revision and resubmitted, everyone on that step now decides again on the revised content. Approvals given before the return remain in the history but no longer complete the step.
+- A decision is applied only to the step the approver was looking at. Double-clicks, retried requests, and reused email or chat approvals no longer approve the next step when the same person is assigned to it. The API accepts an optional `step_id` for the same protection.
+- Approvers resolved dynamically (requester's manager, department manager, person picked on the form, connected system) now see the decision panel and delegation on the request page.
 - Fresh installs on MariaDB 10.6–10.9 no longer fail at the delegations migration, and required timestamp columns (for example a workflow's start time or a legal hold's placement time) are no longer silently reset on row updates on those versions. MySQL and SQLite schemas are unchanged.
 - The test suite refuses to run when configuration or routes are cached, or when the database is not an isolated test database. Previously a cached config made tests run against, and reset, the local development database.
+
+### Changed
+
+- The **Create comments**, **Send reminders**, **Withdraw requests**, **Export audit evidence**, and **Manage auditor access** permissions are now enforced. An upgrade migration grants them to every existing role that already had the ability, so nobody loses access; removing one from a role now removes that ability. Requesters can always comment on, remind about, and open their own requests.
+- Browser and accessibility tests now block merges in CI. They had been failing unnoticed since v2.8.3 because the CI server and test process used different databases.
+
+### Security
+
+- **Microsoft sign-in can no longer take over accounts ("nOAuth").** With a multi-tenant Microsoft setup (`common`/`organizations`), the email Microsoft reports is not verified, so ApproveDesk no longer uses it to create accounts or connect existing ones; already-connected accounts keep working. Pin the Microsoft tenant to your directory ID to allow creation and connection. Social sign-in now also requires the account's authenticator code, and passkey accounts must use their passkey.
+- Changing another person's Slack, Teams, or Telegram identity now follows the same rule as changing their email (administrators and people with more access only by the System owner), and every change is logged.
+- S3 backup destinations are pinned to the addresses that passed the outbound check, and virtual-hosted bucket names (`bucket.endpoint`) are checked too, so DNS changes cannot redirect backups to internal hosts.
+- Request titles, comments, and names in notification emails are shown as plain text, so they can no longer turn into links inside a genuine ApproveDesk email.
+- Saving owner analytics/custom code requires a password confirmation within the configured confirmation window, not one from any earlier point in the session.
+- Mentioning someone who cannot already open a request now requires permission to add followers, so followers can no longer share a request with anyone by mentioning them.
+- The API accepts only the requester's own department when creating a submission.
+- Disposition reviews are decided once, under a lock, and — while separation of duties is on — not by the person who opened them.
+- Teams and Slack one-click **Approve** now respects **Require sign-in and a second factor for approval links**: while it is on, cards open the confirmation page and older card buttons stop working. Slack approvals are accepted only from the approver's own linked Slack account.
+- Following a request no longer turns temporary access (an auditor grant or a delegation) into permanent access, and read-only auditors can no longer follow requests.
+- User import's **Update the existing account** mode now follows the same rules as editing a user by hand (Update users permission; administrators only by the System owner), and the analysed preview can no longer be altered in the browser before it is applied.
+- Administrators can no longer change the email of, deactivate, or anonymize peer administrators or anyone holding permissions above their own; only the System owner can. Previously an administrator could redirect a stronger account's email and reset its password.
+- Publishing from the workflow builder now requires the **Publish workflows** permission, as on the Workflow templates screen.
+- Custom outcome keys are limited to lowercase letters, numbers, and underscores, and are rendered safely, so a key can no longer inject script into the approver's decision buttons. Unknown decisions are refused instead of being recorded as Approve.
+- **Separation of duties:** requesters can no longer approve, decide, or be delegated their own requests. This is a new setting under **Settings → Approval settings**, on by default. If a step would be approved only by the requester, the request stops with a message naming the step until an administrator changes who approves it. Requests already in progress follow the rule immediately.
+- Rich text (request bodies, announcements, and the API `body` field) can no longer carry script through legacy raw-text tags such as `<xmp>` or `<noembed>`. The sanitizer now rebuilds output from an allow-list, and stored content is re-sanitized when displayed.
+- The rich-text editor (Tiptap 3.32, ProseMirror) is updated to fix a paste-handling XSS and prototype-pollution issues reported by `npm audit`. Build tooling (`concurrently`) moved to development dependencies. `npm audit` reports no vulnerabilities.
 
 ## [2.8.6] - 2026-10-07
 

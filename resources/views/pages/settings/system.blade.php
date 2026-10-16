@@ -217,7 +217,7 @@
                                         <flux:input
                                             name="microsoft_tenant"
                                             :label="__('Microsoft tenant')"
-                                            :description="__('Use common for any Microsoft account, or organizations for work accounts only. A directory ID restricts sign-in to one tenant.')"
+                                            :description="__('Enter your directory ID to let Microsoft sign-in create and connect accounts. With common or organizations, Microsoft emails are unverified, so only already-connected accounts can sign in.')"
                                             :value="old('microsoft_tenant', \App\Support\SystemSettings::value('oauth.microsoft.tenant', config('services.oauth.microsoft.tenant', 'common')))"
                                         />
                                     @endif

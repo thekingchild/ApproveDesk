@@ -24,6 +24,7 @@ class SubmissionActionController extends Controller
                 $request->user(),
                 WorkflowActionType::from($request->string('action')->toString()),
                 $request->string('comment')->trim()->toString() ?: null,
+                expectedStepId: $request->filled('step_id') ? $request->integer('step_id') : null,
             );
         } catch (WorkflowException $exception) {
             throw ValidationException::withMessages(['action' => [$exception->getMessage()]]);

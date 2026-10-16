@@ -30,7 +30,9 @@ These settings apply to newly issued sessions. They do not weaken browser cookie
 
 ## Social sign-in
 
-Enable Google, Microsoft, and/or GitHub independently. Each provider needs a client ID and client secret from that provider, plus the callback URL shown on the card. Microsoft also accepts a tenant (commonly `common` or `organizations`).
+Enable Google, Microsoft, and/or GitHub independently. Each provider needs a client ID and client secret from that provider, plus the callback URL shown on the card. Microsoft also accepts a tenant. Enter your organisation's **directory ID** (or its `*.onmicrosoft.com` domain) so Microsoft sign-in can create accounts and connect existing ones. With `common` or `organizations`, Microsoft does not verify the email address it reports — any Microsoft tenant can claim any address — so ApproveDesk then only signs in people whose Microsoft account is already connected and never matches by email.
+
+Social sign-in replaces only the password. People with an authenticator app still enter their code afterwards, and people who use a passkey sign in with the passkey.
 
 Password sign-in remains available. Existing accounts can link a matching verified email. New accounts still follow registration, domain, and active-user capacity rules.
 

@@ -24,8 +24,11 @@ use App\Models\WorkflowInstance;
 use App\Models\WorkflowSelectionRule;
 use App\Models\WorkflowTemplate;
 use App\Models\WorkflowTemplateStep;
+use App\Services\Workflow\AssigneeResolver;
+use App\Services\Workflow\ReviewRound;
 use App\Services\Workflow\StepOutcomes;
 use App\Services\Workflow\WorkflowTemplateSelector;
+use App\Support\SeparationOfDuties;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
@@ -83,6 +86,10 @@ class WorkflowEngine
 
     /**
      * Validate, record, and apply an approver action against the current step.
+     *
+     * Every user-facing caller passes $expectedStepId (the step the person saw),
+     * so a replayed, double-submitted, or delayed request cannot decide a later
+     * step that happens to be assigned to the same actor (RV-ENG-02).
      */
     public function processAction(
         WorkflowInstance $instance,
@@ -90,14 +97,17 @@ class WorkflowEngine
         WorkflowActionType $action,
         ?string $comment = null,
         ?string $outcomeKey = null,
+        ?int $expectedStepId = null,
     ): WorkflowInstance {
-        $applied = DB::transaction(function () use ($instance, $actor, $action, $comment, $outcomeKey): WorkflowInstance {
+        $applied = DB::transaction(function () use ($instance, $actor, $action, $comment, $outcomeKey, $expectedStepId): WorkflowInstance {
             /** @var WorkflowInstance $instance */
             $instance = WorkflowInstance::query()
                 ->with(['currentStep', 'submission', 'templateVersion'])
                 ->whereKey($instance->getKey())
                 ->lockForUpdate()
                 ->firstOrFail();
+
+            $this->assertExpectedStep($instance, $expectedStepId);
 
             if ($outcomeKey !== null) {
                 $outcome = $this->outcomes->find($instance->templateVersion, $outcomeKey);
@@ -110,7 +120,7 @@ class WorkflowEngine
                 }
             }
 
-            $this->authorize($instance, $actor, $action);
+            $onBehalfOf = $this->authorize($instance, $actor, $action);
 
             if (in_array($action, [
                 WorkflowActionType::ApproveWithConditions,
@@ -126,6 +136,7 @@ class WorkflowEngine
                 'instance_id' => $instance->id,
                 'step_id' => $instance->current_step_id,
                 'actor_id' => $actor->id,
+                'on_behalf_of_id' => $onBehalfOf,
                 'action' => $action,
                 'outcome_key' => $outcomeKey ?? $action->value,
                 'comment' => $comment,
@@ -144,7 +155,9 @@ class WorkflowEngine
                 WorkflowActionType::AutoApprove,
                 WorkflowActionType::AutoReject,
                 WorkflowActionType::ConditionMatched,
-                WorkflowActionType::ConditionNotMatched => throw WorkflowException::unsupportedStepType($action->value),
+                WorkflowActionType::ConditionNotMatched,
+                WorkflowActionType::Withdraw,
+                WorkflowActionType::DelegationRevoked => throw WorkflowException::unsupportedStepType($action->value),
             };
         });
 
@@ -160,15 +173,18 @@ class WorkflowEngine
         CarbonInterface $expiresAt,
         ?string $comment = null,
         ?CarbonInterface $startsAt = null,
+        ?int $expectedStepId = null,
     ): Delegation {
         $startsAt ??= now();
 
-        $delegation = DB::transaction(function () use ($instance, $delegator, $delegate, $expiresAt, $comment, $startsAt): Delegation {
+        $delegation = DB::transaction(function () use ($instance, $delegator, $delegate, $expiresAt, $comment, $startsAt, $expectedStepId): Delegation {
             /** @var WorkflowInstance $instance */
             $instance = WorkflowInstance::query()
                 ->whereKey($instance->getKey())
                 ->lockForUpdate()
                 ->firstOrFail();
+
+            $this->assertExpectedStep($instance, $expectedStepId);
 
             $this->authorizeDelegation($instance, $delegator, $delegate, $expiresAt, $startsAt);
             $step = $instance->currentStep;
@@ -199,6 +215,43 @@ class WorkflowEngine
         DB::afterCommit(fn () => event(new WorkflowDelegated($delegation)));
 
         return $delegation;
+    }
+
+    /**
+     * End a current or future delegation early and record it in the history, so
+     * the delegator regains the step (RV-ENG-12). The delegation row is kept as
+     * evidence; only its window is closed.
+     */
+    public function revokeDelegation(Delegation $delegation, User $actor, ?string $reason = null): Delegation
+    {
+        return DB::transaction(function () use ($delegation, $actor, $reason): Delegation {
+            WorkflowInstance::query()->whereKey($delegation->instance_id)->lockForUpdate()->firstOrFail();
+
+            /** @var Delegation $locked */
+            $locked = Delegation::query()->whereKey($delegation->getKey())->lockForUpdate()->firstOrFail();
+
+            if ($locked->expires_at->lessThanOrEqualTo(now())) {
+                return $locked;
+            }
+
+            $locked->forceFill([
+                'starts_at' => $locked->starts_at->greaterThan(now()) ? now() : $locked->starts_at,
+                'expires_at' => now(),
+            ])->save();
+
+            WorkflowAction::create([
+                'instance_id' => $locked->instance_id,
+                'step_id' => $locked->step_id,
+                'actor_id' => $actor->id,
+                'action' => WorkflowActionType::DelegationRevoked,
+                'comment' => $reason ?? 'Delegation ended early.',
+                'delegated_to' => $locked->delegate_id,
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+            ]);
+
+            return $locked;
+        });
     }
 
     public function processTimeout(WorkflowInstance $instance): WorkflowInstance
@@ -234,9 +287,21 @@ class WorkflowEngine
     }
 
     /**
+     * @throws WorkflowException when the instance has moved past the step the caller acted on
+     */
+    private function assertExpectedStep(WorkflowInstance $instance, ?int $expectedStepId): void
+    {
+        if ($expectedStepId !== null && (int) $instance->current_step_id !== $expectedStepId) {
+            throw WorkflowException::staleStep();
+        }
+    }
+
+    /**
+     * @return int|null the delegator whose seat the actor fills, or null for the actor's own seat
+     *
      * @throws WorkflowException when the actor may not perform this action
      */
-    private function authorize(WorkflowInstance $instance, User $actor, WorkflowActionType $action): void
+    private function authorize(WorkflowInstance $instance, User $actor, WorkflowActionType $action): ?int
     {
         if ($instance->status !== WorkflowStatus::Active) {
             throw WorkflowException::instanceNotActive($instance->status->value);
@@ -248,10 +313,14 @@ class WorkflowEngine
             throw WorkflowException::actorNotAssigned($actor->email, 'none');
         }
 
-        $directlyAssigned = $step->assignedUsers($instance->submission)->contains($actor);
-        $delegated = $this->hasActiveIncomingDelegation($instance, $step, $actor);
+        if ($action !== WorkflowActionType::Comment && SeparationOfDuties::forbids($actor, $instance->submission)) {
+            throw WorkflowException::selfApprovalNotAllowed();
+        }
 
-        if (! $directlyAssigned && ! $delegated) {
+        $directlyAssigned = $step->assignedUsers($instance->submission)->contains($actor);
+        $delegatorId = $directlyAssigned ? null : $this->activeIncomingDelegatorId($instance, $step, $actor);
+
+        if (! $directlyAssigned && $delegatorId === null) {
             throw WorkflowException::actorNotAssigned($actor->email, $step->name);
         }
 
@@ -261,10 +330,15 @@ class WorkflowEngine
             throw WorkflowException::delegationNotAllowed('your authority is currently delegated');
         }
 
-        // Comments are repeatable; state-changing actions are one per actor per step.
-        if ($action !== WorkflowActionType::Comment && $this->hasActedOn($instance, $step, $actor)) {
+        // Comments are repeatable; state-changing actions are one per seat per step.
+        // A delegate fills the delegator's seat, so the two never count twice (RV-ENG-03).
+        if ($action !== WorkflowActionType::Comment
+            && ($this->hasActedOn($instance, $step, $actor->id)
+                || ($delegatorId !== null && $this->hasActedOn($instance, $step, $delegatorId)))) {
             throw WorkflowException::duplicateAction($actor->email);
         }
+
+        return $delegatorId;
     }
 
     private function authorizeDelegation(
@@ -288,12 +362,16 @@ class WorkflowEngine
             throw WorkflowException::actorNotAssigned($delegator->email, $step->name);
         }
 
-        if ($this->hasActedOn($instance, $step, $delegator)) {
+        if ($this->hasActedOn($instance, $step, $delegator->id)) {
             throw WorkflowException::delegationNotAllowed('you have already decided this step');
         }
 
         if (! $delegate->is_active || $delegate->is($delegator)) {
             throw WorkflowException::delegationNotAllowed('select a different active user');
+        }
+
+        if (SeparationOfDuties::forbids($delegate, $instance->submission)) {
+            throw WorkflowException::selfDelegationNotAllowed();
         }
 
         if ($expiresAt->lessThanOrEqualTo(now())) {
@@ -321,16 +399,22 @@ class WorkflowEngine
         }
     }
 
-    private function hasActiveIncomingDelegation(
+    private function activeIncomingDelegatorId(
         WorkflowInstance $instance,
         WorkflowTemplateStep $step,
         User $user,
-    ): bool {
-        return Delegation::query()->active()
+    ): ?int {
+        if (! $user->is_active) {
+            return null;
+        }
+
+        $delegatorId = Delegation::query()->active()
             ->where('instance_id', $instance->id)
             ->where('step_id', $step->id)
             ->where('delegate_id', $user->id)
-            ->exists();
+            ->value('delegator_id');
+
+        return $delegatorId === null ? null : (int) $delegatorId;
     }
 
     private function hasActiveOutgoingDelegation(
@@ -338,10 +422,12 @@ class WorkflowEngine
         WorkflowTemplateStep $step,
         User $user,
     ): bool {
+        // A delegation to someone since deactivated no longer holds the step (RV-ENG-12).
         return Delegation::query()->active()
             ->where('instance_id', $instance->id)
             ->where('step_id', $step->id)
             ->where('delegator_id', $user->id)
+            ->whereHas('delegate', fn ($delegate) => $delegate->where('is_active', true))
             ->exists();
     }
 
@@ -478,15 +564,14 @@ class WorkflowEngine
     {
         $step = $instance->currentStep;
 
-        $approvals = WorkflowAction::query()
+        $approvals = ReviewRound::constrain(WorkflowAction::query())
             ->where('instance_id', $instance->id)
             ->where('step_id', $step->id)
             ->whereIn('action', [
                 WorkflowActionType::Approve,
                 WorkflowActionType::ApproveWithConditions,
             ])
-            ->distinct()
-            ->count('actor_id');
+            ->count(DB::raw('distinct coalesce(on_behalf_of_id, actor_id)'));
 
         $completion = $step->groupCompletion();
         $assigneeCount = $step->assignedUsers($instance->submission)->unique('id')->count();
@@ -564,6 +649,10 @@ class WorkflowEngine
             }
 
             if ($step->assignedUsers($instance->submission)->isEmpty()) {
+                if (app(AssigneeResolver::class)->onlyRequesterResolves($step, $instance->submission)) {
+                    throw WorkflowException::onlyApproverIsRequester($step->name);
+                }
+
                 throw WorkflowException::unresolvedAssignees($step->name);
             }
 
@@ -670,12 +759,16 @@ class WorkflowEngine
         }
     }
 
-    private function hasActedOn(WorkflowInstance $instance, WorkflowTemplateStep $step, User $actor): bool
+    /**
+     * Has this seat decided the step in the current round, in person or through a delegate?
+     */
+    private function hasActedOn(WorkflowInstance $instance, WorkflowTemplateStep $step, int $seatUserId): bool
     {
-        return WorkflowAction::query()
+        return ReviewRound::constrain(WorkflowAction::query())
             ->where('instance_id', $instance->id)
             ->where('step_id', $step->id)
-            ->where('actor_id', $actor->id)
+            ->where(fn ($seat) => $seat->where('on_behalf_of_id', $seatUserId)
+                ->orWhere(fn ($own) => $own->whereNull('on_behalf_of_id')->where('actor_id', $seatUserId)))
             ->whereIn('action', [
                 WorkflowActionType::Approve,
                 WorkflowActionType::ApproveWithConditions,
@@ -683,6 +776,48 @@ class WorkflowEngine
                 WorkflowActionType::Escalate,
             ])
             ->exists();
+    }
+
+    /**
+     * The requester pulls a request out of review. Locks the instance first (the
+     * engine's lock order), re-checks it is still open, records the withdrawal in
+     * the append-only history, then cancels the instance and the submission
+     * (RV-ENG-05).
+     */
+    public function withdraw(WorkflowInstance $instance, User $actor, ?string $comment = null): WorkflowInstance
+    {
+        return DB::transaction(function () use ($instance, $actor, $comment): WorkflowInstance {
+            /** @var WorkflowInstance $instance */
+            $instance = WorkflowInstance::query()
+                ->with(['submission'])
+                ->whereKey($instance->getKey())
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if (! in_array($instance->status, [WorkflowStatus::Active, WorkflowStatus::OnHold], true)
+                || $instance->current_step_id === null) {
+                throw WorkflowException::instanceNotActive($instance->status->value);
+            }
+
+            WorkflowAction::create([
+                'instance_id' => $instance->id,
+                'step_id' => $instance->current_step_id,
+                'actor_id' => $actor->id,
+                'action' => WorkflowActionType::Withdraw,
+                'outcome_key' => WorkflowActionType::Withdraw->value,
+                'comment' => $comment,
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+            ]);
+
+            $instance->update([
+                'status' => WorkflowStatus::Cancelled,
+                'completed_at' => now(),
+            ]);
+            $instance->submission->update(['status' => SubmissionStatus::Withdrawn]);
+
+            return $instance;
+        });
     }
 
     /**

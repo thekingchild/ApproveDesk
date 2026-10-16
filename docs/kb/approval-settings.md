@@ -1,6 +1,6 @@
 # Approval settings
 
-Open **Settings → Approval settings** to control approval IDs, signed approval links, deadline calendars, and reminder quiet hours. Use these controls when organization-wide approval timing or identity requirements change.
+Open **Settings → Approval settings** to control approval IDs, separation of duties, signed approval links, deadline calendars, and reminder quiet hours. Use these controls when organization-wide approval timing or identity requirements change.
 
 ## Approval ID format
 
@@ -23,6 +23,22 @@ A format change affects only approvals created after the save. Existing IDs, lin
 
 Printed approval reports and downloaded PDFs display the supplied image stamp for the approval's current status in the report heading. The stamp is evidence of the status when the report was generated; it does not change the stored workflow history.
 
+## Separation of duties
+
+**Requesters cannot approve their own requests** is on by default. While it is on:
+
+- A requester is never one of the approvers on their own request, even when a step names them, includes their role or department, or resolves to them as department manager or as the person picked on the form.
+- Nobody can delegate a step to the requester, and a delegation granted to the requester earlier cannot be used.
+- On an **All** or **Quorum** step, the requester's place is not counted, so the remaining approvers decide.
+- The requester sees a short note on the request page explaining that another approver must decide. They can still comment and reply to information requests.
+- On **Records**, a disposition review must be decided by someone other than the person who opened it.
+
+Use it to keep the person who asks for something from also signing it off, which most audit and compliance policies require.
+
+If a step would be approved **only** by the requester, for example a department manager's own request on a **Department manager** step, the request cannot move to that step. The person submitting, or the approver whose decision would move it there, sees a message naming the step. Change who approves that step in the workflow template (for example, add a second approver or route to the requester's manager), then try again.
+
+Switching it off lets requesters approve their own requests again wherever a step includes them. The change applies immediately to requests in progress.
+
 ## Approval email links
 
 Set how long a signed approval link stays valid, from 1 to 720 hours. The default is 72 hours. Shorter is safer; longer is more convenient for people who batch email.
@@ -33,7 +49,7 @@ Turn on **Require sign-in and a second factor for approval links** when the name
 
 The setting affects every link still within its original expiry, including messages already sent. The person enabling it must already have a second factor and verify it in the current session. People without a factor are directed to **Settings → Security**.
 
-This option covers messages that open the ApproveDesk approval page. Direct approval buttons inside Teams and Slack use their own signed action. Keep `{{approval_url}}` in action-required email copy.
+This option covers messages that open the ApproveDesk approval page. While it is on, Teams and Slack cards no longer approve in one click: their button opens the same confirmation page, and Approve buttons on cards sent earlier stop working. Slack approvals are accepted only from the approver's own linked Slack account. Keep `{{approval_url}}` in action-required email copy.
 
 ## Business calendar
 
@@ -51,6 +67,7 @@ Quiet hours do not change office hours, workflow deadlines, or approval-link exp
 
 ## What not to do
 
+- Do not switch off **Requesters cannot approve their own requests** unless your policy truly allows self-approval; decisions made while it is off stay in the audit trail.
 - Do not extend link lifetime without considering the extra exposure window.
 - Do not enable second-factor enforcement before affected approvers can enroll.
 - Do not enter an almost-all-day office window when an empty window means the full working day.

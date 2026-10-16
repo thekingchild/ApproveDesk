@@ -10,7 +10,7 @@ Request field and file changes also appear on **Request history**, with a short 
 
 ## Evidence pack
 
-Administrators and auditors with an active grant can download an **evidence pack** from the request. The pack is a signed zip of the request, workflow version, assignments, actions, comments, delegations, notifications, file hashes, and timestamps.
+Administrators and auditors with an active grant can download an **evidence pack** from the request. The pack is a signed zip of the request, workflow version, assignments, actions, comments, delegations (including expired and ended ones, with the delegate's name), notifications, file hashes, and timestamps.
 
 Open **Administration → Records** and use **Verify an evidence pack** to check a downloaded file. A changed file or a broken signature is refused.
 

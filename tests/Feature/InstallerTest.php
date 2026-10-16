@@ -20,9 +20,19 @@ class InstallerTest extends TestCase
 
     private string $lockFile;
 
+    private string $testingConnection;
+
+    /** @var array<string, mixed> */
+    private array $testingConnectionConfig;
+
     protected function setUp(): void
     {
         parent::setUp();
+
+        // RefreshDatabase has opened its transaction on this connection; tests below
+        // repoint the runtime config, so remember exactly what to restore.
+        $this->testingConnection = (string) config('database.default');
+        $this->testingConnectionConfig = (array) config("database.connections.{$this->testingConnection}");
 
         $this->envFile = storage_path('framework/testing/installer.env');
         $this->lockFile = storage_path('framework/testing/installed.lock');
@@ -51,13 +61,24 @@ class InstallerTest extends TestCase
         parent::tearDown();
     }
 
+    /**
+     * Point the runtime config back at the real testing connection before
+     * RefreshDatabase rolls back. Forcing 'sqlite' here left the MariaDB job's
+     * transaction open (its connection is named 'mariadb'), so the next
+     * migrate:fresh waited forever on a metadata lock.
+     */
     private function restoreTestingDatabase(): void
     {
+        foreach (['mysql', 'mariadb', 'sqlite'] as $connection) {
+            if ($connection !== $this->testingConnection) {
+                DB::purge($connection);
+            }
+        }
+
         config([
-            'database.default' => 'sqlite',
-            'database.connections.sqlite.database' => ':memory:',
+            'database.default' => $this->testingConnection,
+            "database.connections.{$this->testingConnection}" => $this->testingConnectionConfig,
         ]);
-        DB::purge('mysql');
     }
 
     #[TestDox('guests are redirected to the installer while the app is not installed')]

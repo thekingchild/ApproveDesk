@@ -103,7 +103,7 @@ class PhaseEightAcceptanceTest extends TestCase
         $instance = $submission->workflowInstance()->with('currentStep')->firstOrFail();
         $token = ChatActionToken::issue($instance, $instance->currentStep, $approver);
         $secret = 'slack-signing';
-        $payload = json_encode(['type' => 'block_actions', 'actions' => [['value' => $token]]]);
+        $payload = json_encode(['type' => 'block_actions', 'user' => ['id' => $approver->slack_user_id], 'actions' => [['value' => $token]]]);
         $timestamp = (string) time();
         $body = http_build_query(['payload' => $payload]);
         $signature = 'v0='.hash_hmac('sha256', 'v0:'.$timestamp.':'.$body, $secret);

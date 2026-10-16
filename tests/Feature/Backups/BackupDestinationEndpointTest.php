@@ -4,6 +4,8 @@ namespace Tests\Feature\Backups;
 
 use App\Actions\Backups\StoreBackupDestinationAction;
 use App\Models\User;
+use App\Services\Backups\BackupTransportFactory;
+use App\Support\DnsResolver;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use InvalidArgumentException;
@@ -62,5 +64,23 @@ class BackupDestinationEndpointTest extends TestCase
             'bucket' => 'bucket',
             'endpoint' => 'https://10.0.0.5:9000',
         ])->assertSessionHasErrors('endpoint');
+    }
+
+    public function test_virtual_hosted_bucket_name_resolving_to_a_private_address_is_refused(): void
+    {
+        // RV-SEC-17: {bucket}.{endpoint} is what the SDK actually connects to.
+        $destination = app(StoreBackupDestinationAction::class)->execute([
+            'name' => 'Object storage',
+            'kind' => 's3',
+            'enabled' => true,
+            'key' => 'id',
+            'secret' => 'secret',
+            'bucket' => 'internal',
+            'endpoint' => 'https://storage.example.com',
+        ]);
+        app(DnsResolver::class)->set('internal.storage.example.com', ['10.0.0.8']);
+
+        $this->expectException(InvalidArgumentException::class);
+        app(BackupTransportFactory::class)->make($destination)->test();
     }
 }

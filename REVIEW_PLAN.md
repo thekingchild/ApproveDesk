@@ -2,7 +2,7 @@
 
 **Reviewer role:** project code reviewer for everything shipped through **v2.8.6** and for the remaining plan (Phases 10–15).
 **Created:** 2026-10-12 · **Baseline commit:** `4131fa1` (`chore: release v2.8.6`)
-**Status:** Wave 0 — Complete (2026-10-12), with item 2 and part of item 6 carried into Wave 1 · Wave 1 — Next
+**Status:** Wave 0 — Complete (2026-10-12) · Wave 1 — **Complete (2026-10-16)**: all S1/S2 and the Wave 1 S3 findings have fixes in review (PRs #24–#46); deferred with reasons: RV-SEC-15 (CSP, Wave 3 ADR), Teams Bot Framework JWT verification, RV-FEAT-01 (reassign step), RV-ENG-10/11 (suspected, unverified). MariaDB 10.6 CI green from #36 · Wave 2 — Next
 **Companion docs:** [AGENTS.md](AGENTS.md) · [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) · [docs/SECURITY.md](docs/SECURITY.md) · [docs/PERFORMANCE.md](docs/PERFORMANCE.md)
 
 This plan defines how the review runs, what each review track checks, how findings are recorded and fixed, and what "done" means. It is written so any engineer or agent can pick up a track without prior conversation context.
@@ -391,6 +391,6 @@ Check Phases 10–15 for missing or under-specified items, including:
 
 1. **Release cadence — Decided (2026-10-12):** fixes ship as patch releases from **v2.8.7** onwards.
 2. **UI/UX scope — Decided (2026-10-12):** improve within the current **Flux** design system; no visual redesign.
-3. **Large-component refactors — Open:** approve splitting `submissions/show`, `request-types`, `workflow-templates`, and `workflow-builder` into smaller components and Actions in v2.9.0?
-4. **WorkflowEngine coverage target — Open:** raise to 100% as AGENTS.md says, or amend AGENTS.md to 97%?
+3. **Large-component refactors — Decided (2026-10-16):** split `submissions/show`, `request-types`, `workflow-templates`, and `workflow-builder` into smaller components with business rules moved to Actions/Services, in Wave 3, after each file's Wave 1/2 fixes have landed.
+4. **WorkflowEngine coverage target — Decided (2026-10-16):** keep the CI gate at 97% as the floor; aim for 100% during Wave 1 engine work and raise the gate only when reached.
 5. **MariaDB support — Decided (2026-10-12):** MariaDB 10.6 stays supported; CI job added in Wave 0.

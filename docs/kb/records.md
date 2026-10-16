@@ -24,7 +24,7 @@ Enter a request reference and a reason. A hold blocks automatic deletion. **Rele
 
 Set how many days drafts and finished requests are kept. Drafts older than the draft window are removed unless they have a hold. Finished requests (approved, rejected, or withdrawn) are removed only after that window **and** an approved disposition review.
 
-Open a disposition review from a request reference, then approve it when disposal is allowed.
+Open a disposition review from a request reference, then approve it when disposal is allowed. Each review is decided once. While **Requesters cannot approve their own requests** is on (Approval settings), a different person must decide a disposition you opened. Auditors' access ends when their grant ends, even if they followed requests while it was active.
 
 ### Verify a pack
 

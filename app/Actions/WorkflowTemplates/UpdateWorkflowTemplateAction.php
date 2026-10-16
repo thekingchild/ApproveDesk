@@ -9,6 +9,7 @@ use App\Enums\WorkflowTemplateVersionStatus;
 use App\Models\User;
 use App\Models\WorkflowTemplate;
 use App\Models\WorkflowTemplateVersion;
+use App\Services\Workflow\StepOutcomes;
 use App\Services\Workflow\WorkflowAssigneeGuard;
 use Illuminate\Support\Facades\DB;
 
@@ -46,6 +47,7 @@ final class UpdateWorkflowTemplateAction
             if ($baseline === null || $this->structureChanged($baseline, $data)) {
                 $this->assignees->assertAssignable($data->steps);
                 $draft = $this->editableDraft($template, $editor, $data->changeSummary);
+                StepOutcomes::assertValid($data->outcomes);
                 $draft->forceFill(['outcomes' => $data->outcomes !== [] ? $data->outcomes : null])->save();
                 $draft->steps()->delete();
                 $this->writeSteps($template, $draft, $data->steps);

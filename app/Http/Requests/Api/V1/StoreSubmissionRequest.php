@@ -24,7 +24,9 @@ class StoreSubmissionRequest extends FormRequest
             'title' => ['required', 'string', 'max:500'],
             'body' => ['nullable', 'string', 'max:65535'],
             'priority' => ['nullable', Rule::enum(SubmissionPriority::class)],
-            'department_id' => ['nullable', 'integer', 'exists:departments,id'],
+            // Department drives department-manager routing; requesters may only use
+            // their own, as on the web form (RV-SEC-12).
+            'department_id' => ['nullable', 'integer', Rule::in(array_filter([$this->user()->department_id]))],
             'due_date' => ['nullable', 'date', 'after:today'],
             'submit' => ['nullable', 'boolean'],
         ];

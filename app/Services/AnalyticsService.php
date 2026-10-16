@@ -7,6 +7,7 @@ use App\Enums\WorkflowStatus;
 use App\Models\User;
 use App\Models\WorkflowAction;
 use App\Models\WorkflowInstance;
+use App\Services\Workflow\AssigneeResolver;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -271,43 +272,45 @@ final class AnalyticsService
      */
     private function workloadByApprover(Collection $instances): array
     {
-        /** @var array<int, array{approver_id: int, approver: string, active: int, overdue: int}> $workload */
-        $workload = [];
+        return AssigneeResolver::batch(function () use ($instances): array {
+            /** @var array<int, array{approver_id: int, approver: string, active: int, overdue: int}> $workload */
+            $workload = [];
 
-        foreach ($instances as $instance) {
-            if ($instance->currentStep === null) {
-                continue;
+            foreach ($instances as $instance) {
+                if ($instance->currentStep === null) {
+                    continue;
+                }
+
+                $approvers = $instance->currentStep->assignedUsers($instance->submission)->keyBy('id');
+                $delegations = $instance->delegations->filter(fn ($delegation): bool => $delegation->step_id === $instance->current_step_id
+                    && $delegation->starts_at <= now()
+                    && $delegation->expires_at > now());
+
+                foreach ($delegations as $delegation) {
+                    $approvers->forget($delegation->delegator_id);
+                    $approvers->put($delegation->delegate_id, $delegation->delegate);
+                }
+
+                foreach ($approvers as $approver) {
+                    $workload[$approver->id] ??= [
+                        'approver_id' => $approver->id,
+                        'approver' => $approver->name,
+                        'active' => 0,
+                        'overdue' => 0,
+                    ];
+                    $workload[$approver->id]['active']++;
+                    $workload[$approver->id]['overdue'] += $instance->isOverdue() ? 1 : 0;
+                }
             }
 
-            $approvers = $instance->currentStep->assignedUsers($instance->submission)->keyBy('id');
-            $delegations = $instance->delegations->filter(fn ($delegation): bool => $delegation->step_id === $instance->current_step_id
-                && $delegation->starts_at <= now()
-                && $delegation->expires_at > now());
-
-            foreach ($delegations as $delegation) {
-                $approvers->forget($delegation->delegator_id);
-                $approvers->put($delegation->delegate_id, $delegation->delegate);
-            }
-
-            foreach ($approvers as $approver) {
-                $workload[$approver->id] ??= [
-                    'approver_id' => $approver->id,
-                    'approver' => $approver->name,
-                    'active' => 0,
-                    'overdue' => 0,
-                ];
-                $workload[$approver->id]['active']++;
-                $workload[$approver->id]['overdue'] += $instance->isOverdue() ? 1 : 0;
-            }
-        }
-
-        return array_values(collect($workload)
-            ->sortBy([
-                ['active', 'desc'],
-                ['approver', 'asc'],
-            ])
-            ->take(10)
-            ->all());
+            return array_values(collect($workload)
+                ->sortBy([
+                    ['active', 'desc'],
+                    ['approver', 'asc'],
+                ])
+                ->take(10)
+                ->all());
+        });
     }
 
     private function isTransition(WorkflowActionType $action): bool

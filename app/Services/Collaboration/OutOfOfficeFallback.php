@@ -93,6 +93,7 @@ final class OutOfOfficeFallback
                     ? $schedule->message
                     : 'Out of office until '.$schedule->ends_at->toIso8601String(),
                 now(),
+                $step->id,
             );
         } catch (WorkflowException $exception) {
             Log::info('Out-of-office fallback skipped', [

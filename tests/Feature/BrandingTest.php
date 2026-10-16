@@ -488,6 +488,23 @@ class BrandingTest extends TestCase
         $this->assertSame($snippet, Setting::get('brand.custom_code'));
     }
 
+    public function test_stale_password_confirmation_does_not_save_custom_code(): void
+    {
+        // RV-SEC-16: confirmations older than auth.password_timeout no longer count.
+        $owner = $this->owner();
+        $this->actingAs($owner);
+        session(['auth.password_confirmed_at' => time() - (int) config('auth.password_timeout', 10800) - 60]
+            + array_diff_key($this->ownerSession($owner), ['auth.password_confirmed_at' => true]));
+
+        Livewire::actingAs($owner)
+            ->test('pages::settings.branding')
+            ->set('custom_code', '<script src="https://owner.test/late.js"></script>')
+            ->call('save')
+            ->assertRedirect(route('password.confirm'));
+
+        $this->assertStringNotContainsString('late.js', (string) Setting::get('brand.custom_code'));
+    }
+
     public function test_system_owner_sees_custom_code_editor(): void
     {
         $owner = $this->owner();

@@ -2,6 +2,7 @@
 
 use App\Enums\NotificationFrequency;
 use App\Models\Submission;
+use App\Services\Workflow\AssigneeResolver;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
@@ -116,10 +117,53 @@ new #[Title('Notifications')] class extends Component {
         return Auth::user()->notifications()->findOrFail($id);
     }
 
+    /**
+     * Requests the viewer may open, for every notification on this page, loaded
+     * and authorised in one pass instead of several queries per row (RV-PERF-05).
+     *
+     * @return array<int, Submission|null> null when the request is gone or not viewable
+     */
+    #[Computed]
+    public function viewableSubmissions(): array
+    {
+        $ids = collect($this->notifications->items())
+            ->map(fn (DatabaseNotification $notification): mixed => data_get($notification->data, 'submission_id'))
+            ->filter(fn (mixed $id): bool => is_numeric($id))
+            ->map(fn (mixed $id): int => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+
+        if ($ids === []) {
+            return [];
+        }
+
+        $user = Auth::user();
+
+        $viewable = AssigneeResolver::batch(fn (): array => Submission::query()
+            ->with(['workflowInstance.currentStep', 'workflowInstance.delegations', 'workflowInstance.actions', 'watchers'])
+            ->whereIn('id', $ids)
+            ->get()
+            ->filter(fn (Submission $submission): bool => Gate::forUser($user)->allows('view', $submission))
+            ->keyBy('id')
+            ->all());
+
+        return array_replace(array_fill_keys($ids, null), $viewable);
+    }
+
     public function submissionFor(DatabaseNotification $notification): ?Submission
     {
         $id = data_get($notification->data, 'submission_id');
-        $submission = is_numeric($id) ? Submission::query()->find((int) $id) : null;
+        if (! is_numeric($id)) {
+            return null;
+        }
+
+        if (array_key_exists((int) $id, $this->viewableSubmissions)) {
+            return $this->viewableSubmissions[(int) $id];
+        }
+
+        // Not on the current page (e.g. opened from elsewhere): check it directly.
+        $submission = Submission::query()->find((int) $id);
 
         return $submission && Gate::forUser(Auth::user())->allows('view', $submission)
             ? $submission

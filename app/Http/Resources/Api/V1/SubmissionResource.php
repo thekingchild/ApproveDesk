@@ -3,6 +3,7 @@
 namespace App\Http\Resources\Api\V1;
 
 use App\Models\Submission;
+use App\Services\RichTextSanitizer;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -18,7 +19,7 @@ class SubmissionResource extends JsonResource
             'type' => $this->type->value,
             'request_type_version_id' => $this->request_type_version_id,
             'title' => $this->title,
-            'body' => $this->body,
+            'body' => app(RichTextSanitizer::class)->sanitize((string) $this->body),
             'priority' => $this->priority->value,
             'status' => $this->status->value,
             'due_date' => $this->due_date?->toDateString(),

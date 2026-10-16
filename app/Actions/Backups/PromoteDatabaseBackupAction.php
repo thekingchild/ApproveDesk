@@ -6,19 +6,21 @@ use App\Enums\BackupSnapshotKind;
 use App\Enums\BackupSnapshotStatus;
 use App\Models\BackupDestination;
 use App\Models\BackupSnapshot;
+use App\Models\Setting;
 use App\Models\User;
+use App\Models\WorkflowAction;
 use App\Services\Backups\BackupRecorder;
 use App\Services\Backups\BackupRestoreTrail;
+use App\Services\Backups\MysqlDumpLoader;
 use App\Services\Backups\SqliteSnapshotLoader;
 use App\Services\Operations\BackupVerifier;
 use App\Services\Operations\OperationsReconciler;
-use App\Support\SchemaTable;
 use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use InvalidArgumentException;
 use RuntimeException;
+use Throwable;
 
 final class PromoteDatabaseBackupAction
 {
@@ -29,6 +31,8 @@ final class PromoteDatabaseBackupAction
         private readonly SqliteSnapshotLoader $sqliteLoader,
         private readonly BackupVerifier $verifier,
         private readonly OperationsReconciler $reconciler,
+        private readonly CreateDatabaseBackupAction $createBackup,
+        private readonly MysqlDumpLoader $loader,
     ) {}
 
     public function execute(BackupSnapshot $snapshot, User $actor, string $confirmation): BackupSnapshot
@@ -49,23 +53,35 @@ final class PromoteDatabaseBackupAction
         $snapshot->loadMissing('destination');
 
         $driver = Schema::getConnection()->getDriverName();
+        $liveActions = WorkflowAction::query()->count();
+        $safety = null;
 
         if ($driver === 'sqlite') {
             $this->promoteSqliteFile($snapshot);
         } elseif (in_array($driver, ['mysql', 'mariadb'], true)) {
-            $this->promoteSqlDump($snapshot);
+            $safety = $this->promoteSqlDump($snapshot);
         } else {
             throw new InvalidArgumentException('Promote supports SQLite files and MySQL.');
         }
 
-        $this->rememberPromoted($snapshot, $actor);
+        $snapshotActions = (int) ($snapshot->manifest['workflow_actions'] ?? $liveActions);
+        // The settings table was replaced wholesale; drop the cached copy.
+        Setting::flushCache();
+
+        $this->rememberPromoted($snapshot, $actor, [
+            'discarded_workflow_actions' => max(0, $liveActions - $snapshotActions),
+            'safety_snapshot_id' => $safety?->id,
+        ]);
 
         $this->reconciler->run();
 
         return BackupSnapshot::query()->find($snapshot->id) ?? $snapshot;
     }
 
-    public function rememberPromoted(BackupSnapshot $snapshot, User $actor): BackupSnapshot
+    /**
+     * @param  array{discarded_workflow_actions?: int, safety_snapshot_id?: int|null}  $details
+     */
+    public function rememberPromoted(BackupSnapshot $snapshot, User $actor, array $details = []): BackupSnapshot
     {
         $this->restoreDestinationIfMissing($snapshot);
 
@@ -97,7 +113,7 @@ final class PromoteDatabaseBackupAction
         }
 
         $persisted->forceFill($attributes)->save();
-        $this->restores->record($persisted, $actor);
+        $this->restores->record($persisted, $actor, $details);
 
         Log::info('backup.promoted', [
             'kind' => 'database',
@@ -165,52 +181,114 @@ final class PromoteDatabaseBackupAction
         }
     }
 
-    private function promoteSqlDump(BackupSnapshot $snapshot): void
+    /**
+     * MySQL/MariaDB cannot replace tables transactionally, so (RV-DATA-03):
+     * enter maintenance mode, take and verify a fresh safety backup, load the
+     * snapshot, verify it, and only then come back up. Any failure reloads the
+     * safety backup; if that also fails the site stays in maintenance mode.
+     */
+    private function promoteSqlDump(BackupSnapshot $snapshot): BackupSnapshot
+    {
+        $sql = $this->decodeSqlDump($snapshot);
+        $stayDown = false;
+
+        Artisan::call('down', ['--retry' => 60]);
+
+        try {
+            $safety = $this->createBackup->execute();
+            $this->verify->execute($safety);
+            $safety = $safety->fresh() ?? $safety;
+            $safetySql = $this->decodeSqlDump($safety);
+
+            try {
+                $this->loader->replace($sql);
+                $this->assertRestored($snapshot);
+            } catch (Throwable $failure) {
+                try {
+                    $this->loader->replace($safetySql);
+                    $this->reinsert($safety);
+                } catch (Throwable $rollbackFailure) {
+                    $stayDown = true;
+                    Log::critical('backup.promote_rollback_failed', [
+                        'snapshot_id' => $snapshot->id,
+                        'safety_snapshot_id' => $safety->id,
+                        'error' => $rollbackFailure->getMessage(),
+                    ]);
+
+                    throw new RuntimeException(
+                        "Promote failed and the automatic rollback also failed. The site stays in maintenance mode; restore safety snapshot #{$safety->id}.",
+                        previous: $failure,
+                    );
+                }
+
+                Log::warning('backup.promote_rolled_back', [
+                    'snapshot_id' => $snapshot->id,
+                    'safety_snapshot_id' => $safety->id,
+                    'error' => $failure->getMessage(),
+                ]);
+
+                throw $failure;
+            }
+
+            return $this->reinsert($safety);
+        } finally {
+            if (! $stayDown) {
+                Artisan::call('up');
+            }
+        }
+    }
+
+    private function assertRestored(BackupSnapshot $snapshot): void
+    {
+        $check = $this->verifier->verifyCurrent();
+        if (! $check->ok) {
+            throw new InvalidArgumentException('This snapshot failed the backup check.');
+        }
+
+        $expected = (int) ($snapshot->manifest['workflow_actions'] ?? -1);
+        if ($expected >= 0 && ($check->tableCounts['workflow_actions'] ?? -1) !== $expected) {
+            throw new InvalidArgumentException('workflow_actions count does not match the snapshot.');
+        }
+    }
+
+    private function decodeSqlDump(BackupSnapshot $snapshot): string
     {
         $absolute = app(MaterializeBackupSnapshotAction::class)->execute($snapshot);
         $decoded = storage_path('app/private/backups/.promote-'.uniqid('', true).'.sql');
-        $this->recorder->gunzipTo($absolute, $decoded);
 
         try {
+            $this->recorder->gunzipTo($absolute, $decoded);
             $sql = (string) file_get_contents($decoded);
-            if ($sql === '') {
-                throw new InvalidArgumentException('The snapshot file is empty.');
-            }
-
-            Artisan::call('down', ['--retry' => 60]);
-            try {
-                DB::statement('SET FOREIGN_KEY_CHECKS=0');
-                foreach ($this->droppableTables() as $table) {
-                    Schema::dropIfExists($table);
-                }
-                DB::unprepared($sql);
-                DB::statement('SET FOREIGN_KEY_CHECKS=1');
-            } finally {
-                Artisan::call('up');
-            }
-
-            $check = $this->verifier->verifyCurrent();
-            if (! $check->ok) {
-                throw new InvalidArgumentException('This snapshot failed the backup check.');
-            }
-
-            $expected = (int) ($snapshot->manifest['workflow_actions'] ?? -1);
-            if ($expected >= 0 && ($check->tableCounts['workflow_actions'] ?? -1) !== $expected) {
-                throw new InvalidArgumentException('workflow_actions count does not match the snapshot.');
-            }
         } finally {
             if (is_file($decoded)) {
                 unlink($decoded);
             }
         }
+
+        if ($sql === '') {
+            throw new InvalidArgumentException('The snapshot file is empty.');
+        }
+
+        return $sql;
     }
 
     /**
-     * @return list<string>
+     * The safety snapshot's row lives in the table that was just replaced;
+     * write it back so the backup stays listed and restorable.
      */
-    private function droppableTables(): array
+    private function reinsert(BackupSnapshot $snapshot): BackupSnapshot
     {
-        return SchemaTable::applicationTables();
+        $existing = BackupSnapshot::query()->find($snapshot->id);
+        if ($existing !== null) {
+            return $existing;
+        }
+
+        // Raw attributes: re-filling casts (manifest JSON, enums) would double-encode them.
+        $persisted = new BackupSnapshot;
+        $persisted->setRawAttributes($snapshot->getAttributes());
+        $persisted->save();
+
+        return $persisted;
     }
 
     private function materializeSqlite(BackupSnapshot $snapshot, string $scratch): void

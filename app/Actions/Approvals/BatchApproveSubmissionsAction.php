@@ -28,7 +28,7 @@ class BatchApproveSubmissionsAction
 
         return DB::transaction(function () use ($ids, $approver): int {
             $instances = WorkflowInstance::query()
-                ->with(['currentStep', 'actions', 'delegations'])
+                ->with(['currentStep', 'actions', 'delegations', 'submission'])
                 ->whereKey($ids)
                 ->orderBy('id')
                 ->get();
@@ -48,7 +48,7 @@ class BatchApproveSubmissionsAction
             }
 
             foreach ($instances as $instance) {
-                $this->engine->processAction($instance, $approver, WorkflowActionType::Approve);
+                $this->engine->processAction($instance, $approver, WorkflowActionType::Approve, expectedStepId: (int) $instance->current_step_id);
             }
 
             return $instances->count();

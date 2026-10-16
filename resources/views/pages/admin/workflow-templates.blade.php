@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -53,6 +54,15 @@ new #[Title('Workflow templates')] class extends Component {
 
     /** @var array<int, array<string, mixed>> */
     public array $steps = [];
+
+    /**
+     * Custom outcomes of the version being edited. This screen cannot edit them,
+     * so they are carried through unchanged instead of being dropped (RV-BUG-05).
+     *
+     * @var array<int, array<string, mixed>>
+     */
+    #[Locked]
+    public array $editingOutcomes = [];
 
     public function mount(): void
     {
@@ -165,9 +175,14 @@ new #[Title('Workflow templates')] class extends Component {
         $this->submissionTypes = $template->submission_types ?? [];
         $this->isDefault = $template->is_default;
         $this->isActive = $template->is_active;
+        $this->editingOutcomes = $graph?->outcomes ?? [];
         $this->steps = ($graph?->steps ?? collect())->map(fn ($step) => [
             'name' => $step->name,
             'stepType' => $step->step_type->value,
+            // Completion rules set in the visual builder (e.g. "All" on a sequential
+            // step) are not shown here; keep them while the step type is unchanged.
+            'completionRule' => $step->completion_rule?->value,
+            'completionRuleStepType' => $step->step_type->value,
             'quorumCount' => $step->quorum_count,
             'assigneeType' => $step->assignee_type->value,
             'assigneeIds' => $step->assignee_ids,
@@ -247,6 +262,8 @@ new #[Title('Workflow templates')] class extends Component {
                 StepType::Notification->value,
             ])],
             'steps.*.quorumCount' => ['nullable', 'integer', 'min:1'],
+            'steps.*.completionRule' => ['nullable', 'string', Rule::enum(\App\Enums\GroupCompletion::class)],
+            'steps.*.completionRuleStepType' => ['nullable', 'string'],
             'steps.*.assigneeType' => ['required', Rule::enum(AssigneeType::class)],
             'steps.*.assigneeIds' => ['array'],
             'steps.*.assigneeIds.*' => ['required', 'integer'],
@@ -347,7 +364,10 @@ new #[Title('Workflow templates')] class extends Component {
                 conditions: $conditions,
                 timeoutHours: $timeoutHours,
                 timeoutAction: $timeoutAction,
-                completionRule: \App\Enums\GroupCompletion::fromStepType($stepType),
+                completionRule: ($step['completionRuleStepType'] ?? null) === $stepType->value
+                    && \App\Enums\GroupCompletion::tryFrom((string) ($step['completionRule'] ?? '')) !== null
+                        ? \App\Enums\GroupCompletion::from((string) $step['completionRule'])
+                        : \App\Enums\GroupCompletion::fromStepType($stepType),
                 timeoutCalendar: filled($step['timeoutCalendar'] ?? null)
                     ? \App\Enums\TimeoutCalendar::from((string) $step['timeoutCalendar'])
                     : \App\Enums\TimeoutCalendar::Elapsed,
@@ -363,6 +383,7 @@ new #[Title('Workflow templates')] class extends Component {
             isActive: $validated['isActive'],
             steps: $stepData,
             changeSummary: $this->changeSummary !== '' ? $this->changeSummary : null,
+            outcomes: $target ? $this->editingOutcomes : [],
         );
 
         if ($target) {
@@ -522,7 +543,7 @@ new #[Title('Workflow templates')] class extends Component {
         $this->resetValidation();
         $this->reset([
             'editingTemplateId', 'editingTemplateUsed', 'editingVersionNumber', 'editingVersionStatus',
-            'changeSummary', 'name', 'description', 'submissionTypes', 'isDefault', 'steps',
+            'changeSummary', 'name', 'description', 'submissionTypes', 'isDefault', 'steps', 'editingOutcomes',
         ]);
         $this->isActive = true;
         $this->steps = [$this->blankStep(1)];

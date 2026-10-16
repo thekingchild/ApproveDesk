@@ -29,6 +29,8 @@ final class EvidencePackBuilder
             'workflowInstance.templateVersion',
             'workflowInstance.currentStep',
             'workflowInstance.actions.actor:id,name',
+            'workflowInstance.actions.onBehalfOf:id,name',
+            'workflowInstance.actions.delegate:id,name',
             'workflowInstance.actions.step',
         ]);
 
@@ -82,6 +84,8 @@ final class EvidencePackBuilder
                 'id' => $action->id,
                 'action' => $action->action->value,
                 'actor' => $action->actor?->name,
+                'on_behalf_of' => $action->onBehalfOf?->name,
+                'delegated_to' => $action->delegate?->name,
                 'step' => $action->step?->name,
                 'comment' => $action->comment,
                 'created_at' => $action->created_at?->toIso8601String(),

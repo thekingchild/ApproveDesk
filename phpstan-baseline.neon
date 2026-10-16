@@ -1,10 +1,10 @@
 parameters:
 	ignoreErrors:
 		-
-			message: '#^Parameter \#1 \$query of static method Illuminate\\Database\\Connection\:\:unprepared\(\) expects literal\-string, non\-empty\-string given\.$#'
+			message: '#^Parameter \#1 \$query of static method Illuminate\\Database\\Connection\:\:unprepared\(\) expects literal\-string, string given\.$#'
 			identifier: argument.type
 			count: 1
-			path: app/Actions/Backups/PromoteDatabaseBackupAction.php
+			path: app/Services/Backups/MysqlDumpLoader.php
 
 		-
 			message: '#^Offset ''workflow_actions'' on non-empty-array<string, int<0, max>> on left side of \?\? always exists and is not nullable\.$#'
@@ -397,12 +397,6 @@ parameters:
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Services/Users/UserImportService.php
-
-		-
-			message: '#^Parameter \#2 \$operator of method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:whereColumn\(\) expects string\|null, Illuminate\\Contracts\\Database\\Query\\Expression given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Services/Workflow/AssignedStepConstraint.php
 
 		-
 			message: '#^Method App\\Services\\Workflow\\AssigneeDirectory\:\:search\(\) should return Illuminate\\Support\\Collection\<int, object\> but returns Illuminate\\Support\\Collection\<int, App\\Models\\Department\>\|Illuminate\\Support\\Collection\<int, App\\Models\\User\>\|Illuminate\\Support\\Collection\<int, Spatie\\Permission\\Models\\Role\>\.$#'

@@ -192,7 +192,7 @@ class ParallelWorkflowTest extends TestCase
         $this->assertSame(2, $this->instance->actions()->count());
     }
 
-    public function test_return_and_resume_preserve_existing_parallel_approvals(): void
+    public function test_return_and_resume_start_a_new_review_round_for_the_step(): void
     {
         $this->engine->processAction(
             $this->instance,
@@ -216,13 +216,15 @@ class ParallelWorkflowTest extends TestCase
         $this->instance->refresh();
         $this->assertSame(1, $this->instance->currentStep->step_order);
 
-        $this->expectException(WorkflowException::class);
-        $this->expectExceptionMessage('already acted');
-
+        // RV-ENG-04: the first-round approval no longer counts, so the earlier
+        // approver decides again on the revised request instead of being a duplicate.
         $this->engine->processAction(
             $this->instance,
             $this->parallelApprovers[0],
             WorkflowActionType::Approve,
         );
+
+        $this->instance->refresh();
+        $this->assertSame(1, $this->instance->currentStep->step_order);
     }
 }

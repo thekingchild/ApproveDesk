@@ -5,23 +5,43 @@ namespace App\Actions\Audit;
 use App\Enums\DispositionStatus;
 use App\Models\DispositionReview;
 use App\Models\User;
+use App\Support\SeparationOfDuties;
+use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
 final class ReviewDispositionAction
 {
+    /**
+     * Approved dispositions feed retention deletion, so a review is decided once,
+     * under a lock, and — under separation of duties — never by the person who
+     * requested it (RV-SEC-19).
+     */
     public function execute(User $actor, DispositionReview $review, DispositionStatus $status, string $notes = ''): DispositionReview
     {
         if ($status === DispositionStatus::Pending) {
             throw new InvalidArgumentException('Choose approve or reject.');
         }
 
-        $review->forceFill([
-            'status' => $status,
-            'reviewed_by' => $actor->id,
-            'reviewed_at' => now(),
-            'notes' => $notes !== '' ? $notes : $review->notes,
-        ])->save();
+        return DB::transaction(function () use ($actor, $review, $status, $notes): DispositionReview {
+            /** @var DispositionReview $locked */
+            $locked = DispositionReview::query()->whereKey($review->getKey())->lockForUpdate()->firstOrFail();
 
-        return $review;
+            if ($locked->status !== DispositionStatus::Pending) {
+                throw new InvalidArgumentException('This disposition review has already been decided.');
+            }
+
+            if (SeparationOfDuties::enabled() && (int) $locked->requested_by === (int) $actor->id) {
+                throw new InvalidArgumentException('A different person must review a disposition you requested.');
+            }
+
+            $locked->forceFill([
+                'status' => $status,
+                'reviewed_by' => $actor->id,
+                'reviewed_at' => now(),
+                'notes' => $notes !== '' ? $notes : $locked->notes,
+            ])->save();
+
+            return $locked;
+        });
     }
 }

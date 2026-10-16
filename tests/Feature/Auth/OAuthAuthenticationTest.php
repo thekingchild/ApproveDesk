@@ -10,6 +10,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 class OAuthAuthenticationTest extends TestCase
@@ -96,11 +97,13 @@ class OAuthAuthenticationTest extends TestCase
 
     public function test_microsoft_login_can_create_a_submitter_when_registration_is_open(): void
     {
+        // Creation needs a directory-pinned tenant: multi-tenant emails are unverified (RV-SEC-20).
+        config(['services.oauth.microsoft.tenant' => 'contoso.onmicrosoft.com']);
         $this->get(route('oauth.redirect', 'microsoft'));
         $attempt = session('oauth.microsoft');
 
         Http::fake([
-            'https://login.microsoftonline.com/organizations/oauth2/v2.0/token' => Http::response(['access_token' => 'microsoft-token']),
+            'https://login.microsoftonline.com/contoso.onmicrosoft.com/oauth2/v2.0/token' => Http::response(['access_token' => 'microsoft-token']),
             'https://graph.microsoft.com/oidc/userinfo' => Http::response([
                 'sub' => 'microsoft-user-456',
                 'name' => 'Microsoft Person',
@@ -185,12 +188,14 @@ class OAuthAuthenticationTest extends TestCase
 
     public function test_microsoft_new_user_inside_the_domain_allow_list_is_created(): void
     {
+        // Creation needs a directory-pinned tenant: multi-tenant emails are unverified (RV-SEC-20).
+        config(['services.oauth.microsoft.tenant' => 'contoso.onmicrosoft.com']);
         Setting::put('auth.allowed_registration_domains', 'example.com');
         $this->get(route('oauth.redirect', 'microsoft'));
         $attempt = session('oauth.microsoft');
 
         Http::fake([
-            'https://login.microsoftonline.com/organizations/oauth2/v2.0/token' => Http::response(['access_token' => 'microsoft-token']),
+            'https://login.microsoftonline.com/contoso.onmicrosoft.com/oauth2/v2.0/token' => Http::response(['access_token' => 'microsoft-token']),
             'https://graph.microsoft.com/oidc/userinfo' => Http::response([
                 'sub' => 'microsoft-allowed-user',
                 'name' => 'Allowed Person',
@@ -305,5 +310,58 @@ class OAuthAuthenticationTest extends TestCase
 
         $this->get(route('oauth.redirect', 'google'))->assertNotFound();
         $this->get(route('oauth.redirect', 'unknown'))->assertNotFound();
+    }
+
+    /**
+     * RV-SEC-20 ("nOAuth"): any Entra tenant's administrator can set the email a
+     * multi-tenant sign-in reports, so it must never select an existing account.
+     */
+    public function test_multi_tenant_microsoft_email_cannot_take_over_an_existing_account(): void
+    {
+        $admin = User::factory()->create(['email' => 'boss@victim.example'])->assignRole('admin');
+
+        $this->microsoftCallback('organizations', ['sub' => 'attacker-tenant-user', 'name' => 'Attacker', 'email' => 'boss@victim.example'])
+            ->assertRedirect(route('login'))
+            ->assertSessionHasErrors('oauth');
+
+        $this->assertGuest();
+        $this->assertFalse(OAuthIdentity::query()->where('user_id', $admin->id)->exists());
+    }
+
+    public function test_an_already_linked_microsoft_identity_still_signs_in_on_a_multi_tenant_setup(): void
+    {
+        $user = User::factory()->create(['email' => 'linked@example.test'])->assignRole('submitter');
+        OAuthIdentity::query()->create(['user_id' => $user->id, 'provider' => 'microsoft', 'provider_user_id' => 'stable-object-id', 'email' => 'linked@example.test']);
+
+        $this->microsoftCallback('organizations', ['sub' => 'stable-object-id', 'name' => 'Linked', 'email' => 'linked@example.test'])
+            ->assertRedirect(route('dashboard', absolute: false));
+
+        $this->assertAuthenticatedAs($user);
+    }
+
+    public function test_social_sign_in_of_an_account_with_an_authenticator_goes_through_the_challenge(): void
+    {
+        $user = User::factory()->withTwoFactor()->create(['email' => 'staff@contoso.example'])->assignRole('submitter');
+
+        $this->microsoftCallback('contoso.onmicrosoft.com', ['sub' => 'contoso-user', 'name' => 'Staff', 'email' => 'staff@contoso.example'])
+            ->assertRedirect(route('two-factor.login'));
+
+        $this->assertGuest();
+        $this->assertSame($user->id, session('login.id'));
+    }
+
+    /** @param array<string, string> $profile */
+    private function microsoftCallback(string $tenant, array $profile): TestResponse
+    {
+        config(['services.oauth.microsoft.tenant' => $tenant]);
+        $this->get(route('oauth.redirect', 'microsoft'));
+        $attempt = session('oauth.microsoft');
+
+        Http::fake([
+            "https://login.microsoftonline.com/{$tenant}/oauth2/v2.0/token" => Http::response(['access_token' => 'token']),
+            'https://graph.microsoft.com/oidc/userinfo' => Http::response($profile),
+        ]);
+
+        return $this->get(route('oauth.callback', ['provider' => 'microsoft', 'state' => $attempt['state'], 'code' => 'code']));
     }
 }

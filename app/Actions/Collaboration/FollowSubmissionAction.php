@@ -29,12 +29,18 @@ final class FollowSubmissionAction
         }
 
         if ($actor->is($target)) {
-            if (! $actor->can('view', $submission) && ! $submission->isWatchedBy($actor)) {
-                throw CollaborationException::cannotWatch('you do not have access to this request');
+            if (! $actor->can('follow', $submission)) {
+                throw CollaborationException::cannotWatch('you cannot follow this request');
             }
         } elseif ($fromMention) {
             if (! $actor->can('comment', $submission)) {
                 throw CollaborationException::cannotWatch('you cannot mention people on this request');
+            }
+
+            // A mention may only open the request to someone new if the author could
+            // add them as a follower anyway (RV-SEC-09).
+            if (! $target->can('view', $submission) && ! $actor->can('addWatcher', $submission)) {
+                throw CollaborationException::cannotMention($target->name);
             }
         } elseif (! $actor->can('addWatcher', $submission)) {
             throw CollaborationException::cannotWatch('you cannot add followers to this request');

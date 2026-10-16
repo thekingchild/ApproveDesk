@@ -15,7 +15,6 @@ use App\Models\Submission;
 use App\Models\User;
 use App\Services\Audit\EvidencePackVerifier;
 use Flux\Flux;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Computed;
@@ -26,6 +25,9 @@ use Livewire\WithPagination;
 
 new #[Title('Records')] class extends Component
 {
+    /** Set from the browser (<x-browser-timezone />) so datetime-local values are read in the viewer's timezone. */
+    public string $browserTimezone = '';
+
     use WithFileUploads;
     use WithPagination;
 
@@ -88,7 +90,7 @@ new #[Title('Records')] class extends Component
 
     public function grantAccess(GrantAuditorAccessAction $grant): void
     {
-        $this->authorize('settings.manage');
+        $this->authorize('audit.auditor_access.manage');
         $this->validate([
             'auditorUserId' => ['required', 'integer', 'exists:users,id'],
             'accessStartsAt' => ['required', 'date'],
@@ -100,8 +102,8 @@ new #[Title('Records')] class extends Component
             $grant->execute(
                 Auth::user(),
                 User::query()->assignable()->findOrFail($this->auditorUserId),
-                Carbon::parse($this->accessStartsAt),
-                Carbon::parse($this->accessEndsAt),
+                \App\Support\LocalTime::parse($this->accessStartsAt, $this->browserTimezone),
+                \App\Support\LocalTime::parse($this->accessEndsAt, $this->browserTimezone),
                 $this->accessReason,
             );
         } catch (\InvalidArgumentException $exception) {
@@ -114,7 +116,7 @@ new #[Title('Records')] class extends Component
 
     public function revokeAccess(int $accessId, RevokeAuditorAccessAction $revoke): void
     {
-        $this->authorize('settings.manage');
+        $this->authorize('audit.auditor_access.manage');
         $revoke->execute(Auth::user(), AuditorAccess::query()->findOrFail($accessId));
         unset($this->grants);
         Flux::toast('Auditor access revoked.', variant: 'success');
@@ -201,6 +203,10 @@ new #[Title('Records')] class extends Component
     <div class="mt-8 grid gap-8 lg:grid-cols-2">
         <flux:card>
             <flux:heading size="sm">{{ __('Auditor access') }}</flux:heading>
+            @cannot('audit.auditor_access.manage')
+                <flux:text class="mt-2 text-sm" data-test="auditor-access-read-only">{{ __('You can see current grants. Granting or revoking auditor access needs the Manage auditor access permission.') }}</flux:text>
+            @endcannot
+            @can('audit.auditor_access.manage')
             <div class="mt-4 space-y-3">
                 <flux:select wire:model="auditorUserId" :label="__('Auditor')">
                     <flux:select.option value="0">{{ __('Choose an auditor') }}</flux:select.option>
@@ -210,10 +216,13 @@ new #[Title('Records')] class extends Component
                 </flux:select>
                 <flux:input type="datetime-local" wire:model="accessStartsAt" :label="__('Starts')"/>
                 <flux:input type="datetime-local" wire:model="accessEndsAt" :label="__('Ends')"/>
+                <x-browser-timezone />
+                <flux:text class="text-xs">{{ __('Times are in your time zone (:zone).', ['zone' => \App\Support\LocalTime::label($this->browserTimezone)]) }}</flux:text>
                 <flux:input wire:model="accessReason" :label="__('Reason')"/>
                 <flux:error name="accessReason" />
                 <flux:button variant="primary" wire:click="grantAccess">{{ __('Grant access') }}</flux:button>
             </div>
+            @endcan
             <ul class="mt-4 space-y-2 text-sm">
                 @forelse ($this->grants as $grant)
                     <li class="flex items-start justify-between gap-3">
@@ -223,7 +232,7 @@ new #[Title('Records')] class extends Component
                                 · {{ __('revoked') }}
                             @endif
                         </span>
-                        @if ($grant->revoked_at === null)
+                        @if ($grant->revoked_at === null && auth()->user()->can('audit.auditor_access.manage'))
                             <flux:button size="xs" variant="ghost" wire:click="revokeAccess({{ $grant->id }})">{{ __('Revoke') }}</flux:button>
                         @endif
                     </li>

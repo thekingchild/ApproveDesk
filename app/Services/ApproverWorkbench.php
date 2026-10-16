@@ -6,6 +6,8 @@ use App\Enums\WorkflowActionType;
 use App\Enums\WorkflowStatus;
 use App\Models\User;
 use App\Models\WorkflowInstance;
+use App\Services\Workflow\AssigneeResolver;
+use App\Services\Workflow\ReviewRound;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
 
@@ -22,50 +24,52 @@ class ApproverWorkbench
      */
     public function itemsFor(User $user): array
     {
-        $instances = WorkflowInstance::query()
-            ->with([
-                'submission.submitter.department',
-                'submission.department',
-                'submission.files',
-                'currentStep',
-                'actions',
-                'delegations',
-            ])
-            ->where(function ($query) use ($user): void {
-                $query->whereHas('actions', fn ($actions) => $actions->where('actor_id', $user->id))
-                    ->orWhere('status', WorkflowStatus::Active);
-            })
-            ->get();
+        return AssigneeResolver::batch(function () use ($user): array {
+            $instances = WorkflowInstance::query()
+                ->with([
+                    'submission.submitter.department',
+                    'submission.department',
+                    'submission.files',
+                    'currentStep',
+                    'actions',
+                    'delegations',
+                ])
+                ->where(function ($query) use ($user): void {
+                    $query->whereHas('actions', fn ($actions) => $actions->where('actor_id', $user->id))
+                        ->orWhere('status', WorkflowStatus::Active);
+                })
+                ->get();
 
-        return $instances
-            ->map(function (WorkflowInstance $instance) use ($user): ?array {
-                $eligibility = $this->eligibility($instance, $user);
-                $involved = $instance->actions->contains('actor_id', $user->id);
+            return $instances
+                ->map(function (WorkflowInstance $instance) use ($user): ?array {
+                    $eligibility = $this->eligibility($instance, $user);
+                    $involved = $instance->actions->contains('actor_id', $user->id);
 
-                if (! $involved && ! $eligibility['eligible'] && ! $eligibility['delegated_by_me']) {
-                    return null;
-                }
+                    if (! $involved && ! $eligibility['eligible'] && ! $eligibility['delegated_by_me']) {
+                        return null;
+                    }
 
-                return [
-                    'instance' => $instance,
-                    'needs_me' => $instance->status === WorkflowStatus::Active
-                        && $eligibility['eligible']
-                        && ! $this->hasDecidedCurrentStep($instance, $user),
-                    'delegation' => match (true) {
-                        $eligibility['delegated_to_me'] => 'delegated_to_me',
-                        $eligibility['delegated_by_me'] => 'delegated_by_me',
-                        default => 'direct',
-                    },
-                    'deadline' => $instance->deadlineAt(),
-                    'last_activity' => $instance->actions->isEmpty()
-                        ? $instance->submission->updated_at
-                        : $instance->actions->last()->created_at,
-                ];
-            })
-            ->filter()
-            ->sort($this->compareItems(...))
-            ->values()
-            ->all();
+                    return [
+                        'instance' => $instance,
+                        'needs_me' => $instance->status === WorkflowStatus::Active
+                            && $eligibility['eligible']
+                            && ! $this->hasDecidedCurrentStep($instance, $user),
+                        'delegation' => match (true) {
+                            $eligibility['delegated_to_me'] => 'delegated_to_me',
+                            $eligibility['delegated_by_me'] => 'delegated_by_me',
+                            default => 'direct',
+                        },
+                        'deadline' => $instance->deadlineAt(),
+                        'last_activity' => $instance->actions->isEmpty()
+                            ? $instance->submission->updated_at
+                            : $instance->actions->last()->created_at,
+                    ];
+                })
+                ->filter()
+                ->sort($this->compareItems(...))
+                ->values()
+                ->all();
+        });
     }
 
     public function canAct(WorkflowInstance $instance, User $user): bool
@@ -96,9 +100,7 @@ class ApproverWorkbench
 
     private function hasDecidedCurrentStep(WorkflowInstance $instance, User $user): bool
     {
-        return $instance->actions
-            ->where('step_id', $instance->current_step_id)
-            ->where('actor_id', $user->id)
+        return ReviewRound::forSeat($instance->actions, $instance->current_step_id, (int) $user->id)
             ->whereIn('action', [
                 WorkflowActionType::Approve,
                 WorkflowActionType::ApproveWithConditions,

@@ -16,4 +16,6 @@ enum WorkflowActionType: string
     case AutoReject = 'auto_reject';
     case ConditionMatched = 'condition_matched';
     case ConditionNotMatched = 'condition_not_matched';
+    case Withdraw = 'withdraw';
+    case DelegationRevoked = 'delegation_revoked';
 }

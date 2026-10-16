@@ -32,6 +32,7 @@ class ProcessWorkflowActionRequest extends FormRequest
                 WorkflowActionType::Comment->value,
             ])],
             'comment' => ['nullable', 'string', 'max:5000'],
+            'step_id' => ['nullable', 'integer'],
         ];
     }
 }

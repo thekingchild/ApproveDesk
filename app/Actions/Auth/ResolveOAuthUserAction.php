@@ -30,6 +30,14 @@ final class ResolveOAuthUserAction
                 return $this->ensureActive($identity->user);
             }
 
+            // An email the provider does not vouch for must never select or create an
+            // account; only identities already linked (matched by provider id above) work.
+            if (! $data->emailVerified) {
+                throw ValidationException::withMessages([
+                    'oauth' => __(':provider sign-in can only be used for accounts already connected to it. Sign in with your password, or ask the System owner to restrict :provider sign-in to your organisation\'s directory.', ['provider' => $data->provider->label()]),
+                ]);
+            }
+
             $user = User::query()->where('email', $data->email)->lockForUpdate()->first();
 
             if ($user === null) {

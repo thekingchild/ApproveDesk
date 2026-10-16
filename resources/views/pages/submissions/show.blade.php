@@ -17,16 +17,23 @@ use App\Services\ApproverWorkbench;
 use App\Services\Collaboration\ExpectedProgress;
 use App\Services\Collaboration\MentionParser;
 use App\Services\Workflow\AssigneeDirectory;
+use App\Services\Workflow\AssigneeResolver;
+use App\Services\Workflow\ReviewRound;
+use App\Support\SeparationOfDuties;
 use App\Services\WorkflowEngine;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
 new #[Title('Submission')] class extends Component {
+    /** Set from the browser (<x-browser-timezone />) so datetime-local values are read in the viewer's timezone. */
+    public string $browserTimezone = '';
+
     public Submission $submission;
 
     public string $comment = '';
@@ -66,10 +73,21 @@ new #[Title('Submission')] class extends Component {
 
     public ?int $previewFileId = null;
 
-    public function mount(Submission $submission): void
+    /** The workflow step this page showed; decisions are refused once the request has moved on. */
+    #[Locked]
+    public ?int $renderedStepId = null;
+
+    /** @var array<int, \Illuminate\Database\Eloquent\Collection<int, User>> Approvers per step for this render. */
+    private array $assigneesByStep = [];
+
+    /** @return \Illuminate\Database\Eloquent\Collection<int, User> */
+    private function assigneesFor(\App\Models\WorkflowTemplateStep $step): \Illuminate\Database\Eloquent\Collection
     {
-        $this->authorize('view', $submission);
-        $this->submission = $submission->load([
+        return $this->assigneesByStep[$step->id] ??= $step->assignedUsers($this->submission);
+    }
+
+    /** Relations the page renders; reloaded on every request because Livewire rehydrates the model without them. */
+    private const RELATIONS = [
             'submitter', 'department', 'files.uploader',
             'requestTypeVersion.requestType', 'requestTypeVersion.fields',
             'fieldValues.field', 'fieldValues.userValue', 'fieldValues.departmentValue',
@@ -77,13 +95,25 @@ new #[Title('Submission')] class extends Component {
             'workflowInstance.templateVersion',
             'workflowInstance.currentStep',
             'workflowInstance.actions.actor',
+            'workflowInstance.actions.onBehalfOf:id,name',
             'watchers.user',
             'revisions.actor:id,name',
             'fileRevisions',
             'submitter.manager',
             'submitter.department.manager',
             'department.manager',
-        ]);
+    ];
+
+    public function hydrate(): void
+    {
+        $this->submission->loadMissing(self::RELATIONS);
+    }
+
+    public function mount(Submission $submission): void
+    {
+        $this->authorize('view', $submission);
+        $this->submission = $submission->load(self::RELATIONS);
+        $this->renderedStepId = $this->submission->workflowInstance?->current_step_id;
 
         $mine = $this->submission->watchers->firstWhere('user_id', Auth::id());
         if ($mine) {
@@ -118,9 +148,9 @@ new #[Title('Submission')] class extends Component {
 
         return $instance->template->steps->map(function ($step) use ($instance, $actions) {
             $stepActions = $actions->get($step->id, collect());
-            $assignedUsers = $step->assignedUsers($instance->submission);
+            $assignedUsers = $this->assigneesFor($step);
             $automatic = $step->step_type->isAutomatic();
-            $approvalCount = $stepActions->whereIn('action', [WorkflowActionType::Approve, WorkflowActionType::ApproveWithConditions])->unique('actor_id')->count();
+            $approvalCount = ReviewRound::filter($stepActions, $step->id)->whereIn('action', [WorkflowActionType::Approve, WorkflowActionType::ApproveWithConditions])->unique('actor_id')->count();
             $requiredApprovals = match ($step->groupCompletion()) {
                 \App\Enums\GroupCompletion::FirstResponse => 1,
                 \App\Enums\GroupCompletion::All => $assignedUsers->count(),
@@ -168,7 +198,11 @@ new #[Title('Submission')] class extends Component {
             return false;
         }
 
-        $direct = $step->assignedUsers()->contains($user);
+        if (SeparationOfDuties::forbids($user, $this->submission)) {
+            return false;
+        }
+
+        $direct = $this->assigneesFor($step)->contains($user);
         $incoming = Delegation::query()->active()
             ->where('instance_id', $instance->id)
             ->where('step_id', $step->id)
@@ -178,17 +212,28 @@ new #[Title('Submission')] class extends Component {
             ->where('instance_id', $instance->id)
             ->where('step_id', $step->id)
             ->where('delegator_id', $user->id)
+            ->whereHas('delegate', fn ($delegate) => $delegate->where('is_active', true))
             ->exists();
 
         if ((! $direct && ! $incoming) || $outgoing) {
             return false;
         }
 
-        return ! $instance->actions
-            ->where('step_id', $step->id)
-            ->where('actor_id', $user->id)
+        return ! ReviewRound::forSeat($instance->actions, $step->id, (int) $user->id)
             ->whereIn('action', ['approve', 'reject', 'escalate'])
             ->isNotEmpty();
+    }
+
+    /** True when the viewer would be an approver on the current step but separation of duties excludes them. */
+    #[Computed]
+    public function selfApprovalBlocked(): bool
+    {
+        $step = $this->submission->workflowInstance?->currentStep;
+
+        return $step !== null
+            && $this->submission->workflowInstance->status->value === 'active'
+            && SeparationOfDuties::forbids(Auth::user(), $this->submission)
+            && app(AssigneeResolver::class)->candidates($step, $this->submission)->contains(Auth::user());
     }
 
     /** @return array{previous: string|null, next: string|null} */
@@ -219,15 +264,14 @@ new #[Title('Submission')] class extends Component {
 
         return $instance?->status->value === 'active'
             && $step?->allow_delegation
-            && $step->assignedUsers()->contains($user)
+            && $this->assigneesFor($step)->contains($user)
             && ! Delegation::query()->active()
                 ->where('instance_id', $instance->id)
                 ->where('step_id', $step->id)
                 ->where('delegator_id', $user->id)
+                ->whereHas('delegate', fn ($delegate) => $delegate->where('is_active', true))
                 ->exists()
-            && ! $instance->actions
-                ->where('step_id', $step->id)
-                ->where('actor_id', $user->id)
+            && ! ReviewRound::forSeat($instance->actions, $step->id, (int) $user->id)
                 ->whereIn('action', ['approve', 'reject', 'escalate'])
                 ->isNotEmpty();
     }
@@ -236,7 +280,11 @@ new #[Title('Submission')] class extends Component {
     public function delegateCandidates(): \Illuminate\Database\Eloquent\Collection
     {
         $step = $this->submission->workflowInstance?->currentStep;
-        $excluded = $step?->assignedUsers()->pluck('id')->all() ?? [];
+        $excluded = $step !== null ? $this->assigneesFor($step)->pluck('id')->all() : [];
+
+        if (SeparationOfDuties::enabled()) {
+            $excluded[] = $this->submission->submitter_id;
+        }
 
         return User::query()
             ->assignable()
@@ -247,20 +295,58 @@ new #[Title('Submission')] class extends Component {
             ->get();
     }
 
+    /** The viewer's current or upcoming delegation on this step, if any (for "Take back"). */
+    #[Computed]
+    public function myDelegation(): ?Delegation
+    {
+        $instance = $this->submission->workflowInstance;
+        if ($instance === null || $instance->status->value !== 'active') {
+            return null;
+        }
+
+        return Delegation::query()
+            ->with('delegate:id,name')
+            ->where('instance_id', $instance->id)
+            ->where('step_id', $instance->current_step_id)
+            ->where('delegator_id', Auth::id())
+            ->where('expires_at', '>', now())
+            ->latest('id')
+            ->first();
+    }
+
+    public function takeBackDelegation(): void
+    {
+        $delegation = $this->myDelegation;
+        if ($delegation === null) {
+            return;
+        }
+
+        app(WorkflowEngine::class)->revokeDelegation($delegation, Auth::user(), __('Taken back by the approver.'));
+        Flux::toast(__('This step is yours again.'), variant: 'success');
+        $this->redirect(route('submissions.show', $this->submission), navigate: true);
+    }
+
     public function delegateApproval(): void
     {
         $validated = $this->validate([
             'delegateUserId' => ['required', 'integer', Rule::exists(User::class, 'id')->where('is_active', true)],
             'delegationStartsAt' => ['nullable', 'date'],
-            'delegationExpiresAt' => ['required', 'date', 'after:now'],
+            'delegationExpiresAt' => ['required', 'date'],
             'delegationComment' => ['nullable', 'string', 'max:1000'],
         ]);
 
         $startsAt = filled($validated['delegationStartsAt'] ?? null)
-            ? \Illuminate\Support\Carbon::parse($validated['delegationStartsAt'])
+            ? \App\Support\LocalTime::parse($validated['delegationStartsAt'], $this->browserTimezone)
             : now();
+        $expiresAt = \App\Support\LocalTime::parse($validated['delegationExpiresAt'], $this->browserTimezone);
 
-        if ($startsAt->greaterThanOrEqualTo(\Illuminate\Support\Carbon::parse($validated['delegationExpiresAt']))) {
+        if (! $expiresAt->isFuture()) {
+            $this->addError('delegationExpiresAt', __('The expiry must be in the future.'));
+
+            return;
+        }
+
+        if ($startsAt->greaterThanOrEqualTo($expiresAt)) {
             $this->addError('delegationStartsAt', __('The start must be before the expiry.'));
 
             return;
@@ -281,9 +367,10 @@ new #[Title('Submission')] class extends Component {
                 $this->submission->workflowInstance,
                 Auth::user(),
                 $delegate,
-                \Illuminate\Support\Carbon::parse($validated['delegationExpiresAt']),
+                $expiresAt,
                 $validated['delegationComment'] ?: null,
                 $startsAt,
+                $this->renderedStepId,
             );
         } catch (WorkflowException $exception) {
             $this->addError('delegateUserId', $exception->getMessage());
@@ -301,6 +388,13 @@ new #[Title('Submission')] class extends Component {
 
         $outcomes = app(\App\Services\Workflow\StepOutcomes::class)->forVersion($this->submission->workflowInstance?->templateVersion);
         $outcome = collect($outcomes)->firstWhere('key', $action);
+
+        if ($outcome === null && WorkflowActionType::tryFrom($action) === null) {
+            Flux::toast(__('That decision is not available on this step.'), variant: 'danger');
+
+            return;
+        }
+
         $requiresComment = $outcome['requires_comment'] ?? in_array($action, ['reject', 'return', 'request_information', 'escalate', 'approve_with_conditions'], true);
 
         if ($requiresComment && trim($this->actionComment) === '') {
@@ -317,6 +411,7 @@ new #[Title('Submission')] class extends Component {
                 $actionType,
                 trim($this->actionComment) !== '' ? trim($this->actionComment) : null,
                 $outcome !== null ? $action : null,
+                $this->renderedStepId,
             );
         } catch (WorkflowException $exception) {
             Flux::toast($exception->getMessage(), variant: 'danger');
@@ -536,11 +631,29 @@ new #[Title('Submission')] class extends Component {
     #[Computed]
     public function commentThreads(): \Illuminate\Database\Eloquent\Collection
     {
-        return $this->submission->comments()
+        $threads = $this->submission->comments()
             ->with(['author', 'mentions.user', 'revisions.editor', 'replies.author', 'replies.mentions.user', 'replies.revisions.editor'])
             ->whereNull('parent_id')
             ->orderBy('id')
             ->get();
+
+        // Every comment here belongs to this request; hand it over instead of letting
+        // the comment policy lazy-load it once per comment (RV-PERF-03).
+        foreach ($threads as $comment) {
+            $comment->setRelation('commentable', $this->submission);
+            foreach ($comment->replies as $reply) {
+                $reply->setRelation('commentable', $this->submission);
+            }
+        }
+
+        return $threads;
+    }
+
+    /** Revision history with editors; loaded here so it survives Livewire rehydration. */
+    #[Computed]
+    public function revisionHistory(): \Illuminate\Database\Eloquent\Collection
+    {
+        return $this->submission->revisions()->with('actor:id,name')->get();
     }
 
     #[Computed]
@@ -567,7 +680,11 @@ new #[Title('Submission')] class extends Component {
     #[Computed]
     public function mentionedUsers(): \Illuminate\Support\Collection
     {
-        return app(AssigneeDirectory::class)->selected('user', $this->mentionedUserIds);
+        // Only people who can be mentioned; a tampered id list must not reveal hidden accounts.
+        return User::query()->assignable()->where('is_active', true)
+            ->whereIn('id', array_map('intval', $this->mentionedUserIds))
+            ->orderBy('name')
+            ->get(['id', 'name', 'email']);
     }
 
     public function displayComment(Comment $comment): string
@@ -593,7 +710,14 @@ new #[Title('Submission')] class extends Component {
     {
         $this->authorize('withdraw', $this->submission);
 
-        app(\App\Actions\Submissions\WithdrawSubmissionAction::class)->execute($this->submission);
+        try {
+            app(\App\Actions\Submissions\WithdrawSubmissionAction::class)->execute($this->submission, Auth::user());
+        } catch (WorkflowException) {
+            Flux::toast(__('This request has already been decided, so it can no longer be withdrawn.'), variant: 'danger');
+            $this->redirect(route('submissions.show', $this->submission), navigate: true);
+
+            return;
+        }
 
         Flux::toast('Submission withdrawn.', variant: 'success');
 
@@ -735,11 +859,11 @@ new #[Title('Submission')] class extends Component {
         </dl>
     </flux:card>
 
-    @if ($submission->revisions->isNotEmpty() || $submission->fileRevisions->isNotEmpty())
+    @if ($this->revisionHistory->isNotEmpty() || $submission->fileRevisions->isNotEmpty())
         <flux:card data-test="request-history">
             <flux:heading size="sm">{{ __('Request history') }}</flux:heading>
             <ul class="mt-3 space-y-2 text-sm">
-                @foreach ($submission->revisions as $revision)
+                @foreach ($this->revisionHistory as $revision)
                     <li>
                         <span class="font-medium">{{ $revision->summary }}</span>
                         <span class="text-zinc-500"> · {{ $revision->actor?->name ?? __('System') }} · {{ $revision->created_at?->format('d M Y H:i') }}</span>
@@ -877,7 +1001,10 @@ new #[Title('Submission')] class extends Component {
                     @foreach ($submission->workflowInstance->actions as $entry)
                         <li class="text-sm">
                             <span class="font-medium">{{ $entry->actor?->name ?? __('System') }}</span>
-                            <flux:badge class="mx-1" color="{{ ['approve' => 'lime', 'auto_approve' => 'lime', 'condition_matched' => 'blue', 'condition_not_matched' => 'zinc', 'reject' => 'red', 'return' => 'amber', 'comment' => 'zinc', 'delegate' => 'blue', 'escalate' => 'blue'][$entry->action->value] ?? 'zinc' }}">{{ str($entry->action->value)->replace('_', ' ') }}</flux:badge>
+                            @if ($entry->on_behalf_of_id)
+                                <span class="text-zinc-500" data-test="on-behalf-of">{{ __('on behalf of :name', ['name' => $entry->onBehalfOf?->name ?? __('a former user')]) }}</span>
+                            @endif
+                            <flux:badge class="mx-1" color="{{ ['approve' => 'lime', 'auto_approve' => 'lime', 'condition_matched' => 'blue', 'condition_not_matched' => 'zinc', 'reject' => 'red', 'return' => 'amber', 'comment' => 'zinc', 'delegate' => 'blue', 'delegation_revoked' => 'zinc', 'escalate' => 'blue', 'withdraw' => 'zinc'][$entry->action->value] ?? 'zinc' }}">{{ str($entry->action->value)->replace('_', ' ') }}</flux:badge>
                             <span class="text-xs text-zinc-400">{{ $entry->created_at?->format('d M Y H:i') }}</span>
                             @if ($entry->comment)<p class="mt-1 rounded-md bg-zinc-50 p-2 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">{{ $entry->comment }}</p>@endif
                         </li>
@@ -928,6 +1055,23 @@ new #[Title('Submission')] class extends Component {
         </flux:modal>
     @endif
 
+    @if ($this->myDelegation)
+        <flux:callout variant="secondary" icon="user-plus" class="mt-6" data-test="my-delegation">
+            <flux:callout.heading>{{ __('You delegated this step to :name', ['name' => $this->myDelegation->delegate?->name]) }}</flux:callout.heading>
+            <flux:callout.text>{{ __('Until :time. Take it back to decide yourself; the change is recorded in the history.', ['time' => $this->myDelegation->expires_at->timezone((string) config('app.timezone'))->format('d M Y H:i')]) }}</flux:callout.text>
+            <x-slot name="actions">
+                <flux:button size="sm" wire:click="takeBackDelegation" wire:confirm="{{ __('Take this step back from :name now?', ['name' => $this->myDelegation->delegate?->name]) }}" data-test="take-back-delegation">{{ __('Take back') }}</flux:button>
+            </x-slot>
+        </flux:callout>
+    @endif
+
+    @if ($this->selfApprovalBlocked)
+        <flux:callout variant="secondary" icon="information-circle" class="mt-6" data-test="self-approval-blocked">
+            <flux:callout.heading>{{ __('You cannot approve your own request') }}</flux:callout.heading>
+            <flux:callout.text>{{ __('You are on this step, but you submitted this request, so another approver must decide it. You can still comment.') }}</flux:callout.text>
+        </flux:callout>
+    @endif
+
     @if ($this->canAct)
         <flux:card class="sticky bottom-3 z-20 border-blue-200 bg-white/95 shadow-xl backdrop-blur dark:border-blue-900 dark:bg-zinc-900/95">
             <div class="flex flex-wrap items-start justify-between gap-3">
@@ -954,7 +1098,7 @@ new #[Title('Submission')] class extends Component {
                 <flux:button variant="primary" wire:click="act('approve_with_conditions')" data-test="approve-with-conditions" data-requires-online>{{ __('Approve with conditions') }}</flux:button>
                 @foreach (app(\App\Services\Workflow\StepOutcomes::class)->forVersion($submission->workflowInstance?->templateVersion) as $outcome)
                     @if ($outcome['custom'])
-                        <flux:button variant="subtle" wire:click="act('{{ $outcome['key'] }}')" data-test="outcome-{{ $outcome['key'] }}">{{ $outcome['label'] }}</flux:button>
+                        <flux:button variant="subtle" wire:click="act({{ \Illuminate\Support\Js::from($outcome['key']) }})" data-test="outcome-{{ $outcome['key'] }}">{{ $outcome['label'] }}</flux:button>
                     @endif
                 @endforeach
                 <flux:modal.trigger name="reject-modal">
@@ -1011,6 +1155,9 @@ new #[Title('Submission')] class extends Component {
                     <flux:input wire:model="delegationStartsAt" type="datetime-local" :label="__('Starts at (optional)')" :description="__('Leave empty to start immediately. A future start keeps your authority until then.')" />
                     <flux:error name="delegationStartsAt" />
                     <flux:input wire:model="delegationExpiresAt" type="datetime-local" :label="__('Expires at')" />
+                    <flux:error name="delegationExpiresAt" />
+                    <x-browser-timezone />
+                    <flux:text class="text-xs" data-test="delegation-timezone">{{ __('Times are in your time zone (:zone).', ['zone' => \App\Support\LocalTime::label($this->browserTimezone)]) }}</flux:text>
                     <flux:textarea wire:model="delegationComment" :label="__('Note (optional)')" rows="2" />
                     <div class="flex justify-end gap-2">
                         <flux:modal.close><flux:button variant="ghost">{{ __('Cancel') }}</flux:button></flux:modal.close>

@@ -10,7 +10,7 @@ Use followers when someone must see the request but is not on the workflow. Use 
 
 Open a request. The Followers card lists people who can open it because they were added, not only because they submitted it or sit on the current step.
 
-Follow adds you. Unfollow removes you. Only you can remove your own follow, unless you were added by someone who can still manage followers (the requester, a current approver, or an administrator who can view all requests).
+Follow adds you. Following yourself keeps you notified, but it does not give you access by itself: if you could open the request only through an auditor grant or a delegation, you lose access when that ends. People added by the requester, an approver, or a mention keep access while they are followers. Read-only auditors cannot follow requests. Unfollow removes you. Only you can remove your own follow, unless you were added by someone who can still manage followers (the requester, a current approver, or an administrator who can view all requests).
 
 Adding a person grants them view access. That is the explicit permission. Do not add people who should not read the form or files.
 
@@ -20,7 +20,7 @@ While you follow, you can turn off comment notifications or status notifications
 
 Comments sit on the request. They are part of the record.
 
-Type a comment, then search by name to mention someone. A mention notifies that person and adds them as a follower so they can open the request.
+Type a comment, then search by name to mention someone. A mention notifies that person and adds them as a follower so they can open the request. You can mention someone who cannot already open the request only if you are allowed to add followers (the requester, a current approver, or an administrator); otherwise ask one of them to add the person.
 
 Reply starts a thread under a top-level comment. You cannot reply to a reply; stay one level deep.
 
@@ -38,7 +38,7 @@ Reminders are rate limited: one to the same person on the same request each hour
 
 Open **Settings → Out of office**. Set a start, an end, an optional fallback approver, and an optional note.
 
-While the schedule is active and the current step allows delegation, ApproveDesk hands that step to the fallback, the same way a manual delegation would. The fallback can decide. You cannot decide on that step until the grant ends.
+While the schedule is active and the current step allows delegation, ApproveDesk hands that step to the fallback, the same way a manual delegation would. The fallback can decide. You cannot decide on that step until the grant ends — unless you come back early: deleting or shortening the schedule hands those steps back to you, and the request page offers **Take back** on any step you delegated. If the person you delegated to is deactivated, the step returns to you automatically.
 
 Conflicts are rejected: overlapping periods on your own calendar, a fallback who is also away, a fallback who already falls back to you, or delegating a request to someone who is away during that window.
 

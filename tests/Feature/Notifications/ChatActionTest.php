@@ -31,7 +31,7 @@ class ChatActionTest extends TestCase
     public function test_signed_slack_approve_records_an_approval_and_tampered_tokens_are_rejected(): void
     {
         $submitter = User::factory()->create()->assignRole('submitter');
-        $approver = User::factory()->create()->assignRole('approver');
+        $approver = User::factory()->create(['slack_user_id' => 'U0APPROVER'])->assignRole('approver');
         WorkflowTemplate::factory()->default()->sequential([$approver])->create();
         $submission = Submission::factory()->for($submitter, 'submitter')->create(['status' => SubmissionStatus::Draft]);
         app(SubmitSubmissionAction::class)->execute($submission);
@@ -44,7 +44,7 @@ class ChatActionTest extends TestCase
             ['bot_token' => 'xoxb-x', 'signing_secret' => $secret],
         );
 
-        $payload = json_encode(['type' => 'block_actions', 'actions' => [['value' => $token]]]);
+        $payload = json_encode(['type' => 'block_actions', 'user' => ['id' => 'U0APPROVER'], 'actions' => [['value' => $token]]]);
         $timestamp = (string) time();
         $body = http_build_query(['payload' => $payload]);
         $signature = 'v0='.hash_hmac('sha256', 'v0:'.$timestamp.':'.$body, $secret);
