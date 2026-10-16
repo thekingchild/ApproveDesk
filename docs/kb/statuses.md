@@ -15,4 +15,4 @@ Status is the current state of the request. Workflow history is a separate, appe
 
 Completed in lists and dashboards usually means Approved or Rejected.
 
-You cannot edit a published decision. Returned requests can be edited and resubmitted by the original submitter. Awaiting-information requests wait for that submitter’s reply, including files when asked.
+You cannot edit a published decision. Returned requests can be edited and resubmitted by the original submitter. When a returned request is resubmitted, everyone on the step that returned it decides again; approvals given before the return stay in the history but no longer count toward that step. Awaiting-information requests wait for that submitter’s reply, including files when asked.

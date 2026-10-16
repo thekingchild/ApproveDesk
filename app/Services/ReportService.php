@@ -9,6 +9,7 @@ use App\Models\Submission;
 use App\Models\User;
 use App\Models\WorkflowInstance;
 use App\Services\Workflow\AssignedStepConstraint;
+use App\Services\Workflow\ReviewRound;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 
@@ -137,7 +138,7 @@ final class ReportService
         return WorkflowInstance::query()
             ->where('status', WorkflowStatus::Active)
             ->whereDoesntHave('actions', function (Builder $query) use ($user): void {
-                $query->where('actor_id', $user->id)
+                ReviewRound::constrain($query)->where('actor_id', $user->id)
                     ->whereColumn('workflow_actions.step_id', 'workflow_instances.current_step_id')
                     ->whereIn('action', [
                         WorkflowActionType::Approve,

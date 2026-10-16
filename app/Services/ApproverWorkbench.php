@@ -6,6 +6,7 @@ use App\Enums\WorkflowActionType;
 use App\Enums\WorkflowStatus;
 use App\Models\User;
 use App\Models\WorkflowInstance;
+use App\Services\Workflow\ReviewRound;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
 
@@ -96,8 +97,7 @@ class ApproverWorkbench
 
     private function hasDecidedCurrentStep(WorkflowInstance $instance, User $user): bool
     {
-        return $instance->actions
-            ->where('step_id', $instance->current_step_id)
+        return ReviewRound::filter($instance->actions, $instance->current_step_id)
             ->where('actor_id', $user->id)
             ->whereIn('action', [
                 WorkflowActionType::Approve,

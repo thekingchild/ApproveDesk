@@ -25,6 +25,7 @@ use App\Models\WorkflowSelectionRule;
 use App\Models\WorkflowTemplate;
 use App\Models\WorkflowTemplateStep;
 use App\Services\Workflow\AssigneeResolver;
+use App\Services\Workflow\ReviewRound;
 use App\Services\Workflow\StepOutcomes;
 use App\Services\Workflow\WorkflowTemplateSelector;
 use App\Support\SeparationOfDuties;
@@ -508,7 +509,7 @@ class WorkflowEngine
     {
         $step = $instance->currentStep;
 
-        $approvals = WorkflowAction::query()
+        $approvals = ReviewRound::constrain(WorkflowAction::query())
             ->where('instance_id', $instance->id)
             ->where('step_id', $step->id)
             ->whereIn('action', [
@@ -706,7 +707,7 @@ class WorkflowEngine
 
     private function hasActedOn(WorkflowInstance $instance, WorkflowTemplateStep $step, User $actor): bool
     {
-        return WorkflowAction::query()
+        return ReviewRound::constrain(WorkflowAction::query())
             ->where('instance_id', $instance->id)
             ->where('step_id', $step->id)
             ->where('actor_id', $actor->id)

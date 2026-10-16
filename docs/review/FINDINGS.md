@@ -148,7 +148,7 @@ Sources: three read-only reviews (engine/audit, authorization, input-output/file
 - Fix: count approvals by seat (record on-behalf-of); treat “my delegate already decided” as a duplicate.
 
 ### RV-ENG-04 — Approvals survive return-for-revision
-- Severity: **S2** · Status: Open · Location: `WorkflowEngine::resume()` (`:692-723`), `isStepSatisfied`
+- Severity: **S2** · Status: **Fix in review** (branch `feature/rv-eng-review-round`; decided 2026-10-16: a return resets the step). `App\Services\Workflow\ReviewRound` counts only actions after the latest return on that step, in the engine, workbench, dashboard query, and request page. This reverses a previously tested behaviour (`ParallelWorkflowTest` updated) · Location: `WorkflowEngine::resume()` (`:692-723`), `isStepSatisfied`
 - Evidence (probe): parallel {A,B}; A approves, B returns, submitter revises; B approves → complete. A never saw the revised content and is blocked as a duplicate.
 - Fix: append a `resubmitted` system action; count approvals/duplicates only after the latest return on that step.
 

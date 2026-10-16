@@ -24,6 +24,10 @@ Keyboard shortcuts move to the next or previous request and open the approve or 
 
 For a document-ready copy, choose **Approval report** on the request. The preview and downloadable PDF include the request information you are allowed to see, workflow steps, recorded decisions, decision comments, the attachment list, and a compact image stamp showing the current Draft, Pending, In review, Approved, Rejected, Returned, Awaiting information, or Withdrawn status. The stamp records the status displayed when the copy was generated; workflow history remains the authority. See [Requests](requests.md) for printing, sensitive-field, and signature guidance.
 
+## After a return
+
+If someone on a step returns the request for revision, approvals already given on that step stop counting once the requester resubmits. Everyone on that step reviews the revised request and decides again; the earlier approvals remain visible in the request history.
+
 ## Batch approve
 
 You can approve several requests at once only when they are the same workflow step and you are the current actor. Reject, return, escalate, and information request stay one-at-a-time.
