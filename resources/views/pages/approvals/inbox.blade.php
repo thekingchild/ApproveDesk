@@ -14,8 +14,13 @@ use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
 use Livewire\Component;
+use Livewire\WithPagination;
 
 new #[Title('Approvals')] class extends Component {
+    use WithPagination;
+
+    private const PER_PAGE = 25;
+
     #[Url]
     public string $view = 'needs_decision';
 
@@ -65,6 +70,27 @@ new #[Title('Approvals')] class extends Component {
             ->values();
     }
 
+    /** Render one page of the queue; a busy approver's full list was megabytes of HTML (RV-PERF-08). */
+    #[Computed]
+    public function pageItems(): \Illuminate\Pagination\LengthAwarePaginator
+    {
+        $page = max(1, $this->getPage());
+
+        return new \Illuminate\Pagination\LengthAwarePaginator(
+            $this->items->forPage($page, self::PER_PAGE)->values(),
+            $this->items->count(),
+            self::PER_PAGE,
+            $page,
+        );
+    }
+
+    public function updated(string $property): void
+    {
+        if ($property !== 'selected' && $property !== 'previewInstanceId') {
+            $this->resetPage();
+        }
+    }
+
     /** @return array<string, int> */
     #[Computed]
     public function viewCounts(): array
@@ -105,6 +131,7 @@ new #[Title('Approvals')] class extends Component {
 
         $this->view = $view;
         $this->selected = [];
+        $this->resetPage();
     }
 
     public function openPreview(int $instanceId): void
@@ -148,7 +175,7 @@ new #[Title('Approvals')] class extends Component {
             return;
         }
 
-        unset($this->allItems, $this->items, $this->viewCounts, $this->previewItem, $this->batchEligible);
+        unset($this->allItems, $this->items, $this->pageItems, $this->viewCounts, $this->previewItem, $this->batchEligible);
         Flux::toast(trans_choice('{1} Approval recorded.|[2,*] :count approvals recorded.', $count, ['count' => $count]), variant: 'success');
     }
 
@@ -197,6 +224,9 @@ new #[Title('Approvals')] class extends Component {
 } ?>
 
 <div class="space-y-6">
+    @if (session('status'))
+        <flux:callout variant="secondary" icon="information-circle" data-test="queue-status">{{ session('status') }}</flux:callout>
+    @endif
     <x-ui.breadcrumbs :items="[['label' => __('Dashboard'), 'url' => route('dashboard')], ['label' => __('Approvals')]]" :back="route('dashboard')" back-label="Back to dashboard" />
 
     <x-ui.page-header :title="__('Approval workbench')" :description="__('Review the highest-priority decisions first, preview context, and act without losing your place.')" help-article="approvals" />
@@ -251,24 +281,23 @@ new #[Title('Approvals')] class extends Component {
         </div>
     </flux:card>
 
-    @if (count($selected))
-        <div class="sticky top-3 z-20 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-blue-200 bg-white p-3 shadow-lg dark:border-blue-900 dark:bg-zinc-900" role="status">
-            <span class="text-sm font-medium">{{ trans_choice('{1} :count request selected|[2,*] :count requests selected', count($selected), ['count' => count($selected)]) }}</span>
-            <flux:button variant="primary" wire:click="batchApprove" wire:confirm="{{ __('Approve all selected requests? Each approval is recorded separately in the audit trail.') }}" :disabled="! $this->batchEligible">
-                {{ __('Approve selected') }}
-            </flux:button>
-        </div>
-    @endif
+    {{-- Selection is tracked in the browser; ticking a box no longer reloads the queue (RV-PERF-08). --}}
+    <div x-cloak x-show="$wire.selected.length > 0" class="sticky top-3 z-20 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-blue-200 bg-white p-3 shadow-lg dark:border-blue-900 dark:bg-zinc-900" role="status" data-test="batch-bar">
+        <span class="text-sm font-medium" x-text="$wire.selected.length === 1 ? @js(__('1 request selected')) : @js(__(':count requests selected')).replace(':count', $wire.selected.length)"></span>
+        <flux:button variant="primary" wire:click="batchApprove" wire:confirm="{{ __('Approve all selected requests? Each approval is recorded separately in the audit trail.') }}">
+            {{ __('Approve selected') }}
+        </flux:button>
+    </div>
     <flux:error name="selected" />
 
     <section aria-live="polite" aria-label="{{ __('Approval queue') }}" class="space-y-3">
-        @forelse ($this->items as $item)
+        @forelse ($this->pageItems as $item)
             @php($instance = $item['instance'])
             @php($submission = $instance->submission)
             <article wire:key="approval-{{ $instance->id }}" class="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
                 <div class="flex items-start gap-3">
                     @if ($item['needs_me'])
-                        <flux:checkbox wire:model.live="selected" value="{{ $instance->id }}" aria-label="{{ __('Select :title', ['title' => $submission->title]) }}" />
+                        <flux:checkbox wire:model="selected" value="{{ $instance->id }}" aria-label="{{ __('Select :title', ['title' => $submission->title]) }}" />
                     @endif
                     <div class="min-w-0 flex-1">
                         <div class="flex flex-wrap items-start justify-between gap-3">
@@ -292,7 +321,7 @@ new #[Title('Approvals')] class extends Component {
                             <div><dt class="text-xs text-zinc-500">{{ __('Requester') }}</dt><dd class="font-medium">{{ $submission->submitter->name }}</dd></div>
                             <div><dt class="text-xs text-zinc-500">{{ __('Key fields') }}</dt><dd class="font-medium">{{ ucfirst($submission->type->value) }} · {{ $submission->department?->name ?? __('No department') }}</dd></div>
                             <div><dt class="text-xs text-zinc-500">{{ __('Current step') }}</dt><dd class="font-medium">{{ $instance->currentStep?->name ?? '—' }}</dd></div>
-                            <div><dt class="text-xs text-zinc-500">{{ __('Attachments') }}</dt><dd class="font-medium">{{ $submission->files->count() }}</dd></div>
+                            <div><dt class="text-xs text-zinc-500">{{ __('Attachments') }}</dt><dd class="font-medium">{{ $submission->files_count }}</dd></div>
                             <div><dt class="text-xs text-zinc-500">{{ __('Assignment') }}</dt><dd class="font-medium">{{ str($item['delegation'])->replace('_', ' ') }}</dd></div>
                             <div><dt class="text-xs text-zinc-500">{{ __('Last activity') }}</dt><dd class="font-medium">{{ $item['last_activity']?->diffForHumans() ?? '—' }}</dd></div>
                         </dl>
@@ -303,6 +332,10 @@ new #[Title('Approvals')] class extends Component {
         @empty
             <x-ui.empty-state :title="__('No approvals match this view')" :description="__('Try another saved view or clear one of the filters.')" icon="inbox" class="py-12" />
         @endforelse
+        {{ $this->pageItems->links() }}
+        @if ($view === 'completed' && $this->viewCounts['completed'] >= \App\Services\ApproverWorkbench::COMPLETED_LIMIT)
+            <flux:text class="text-sm">{{ __('Showing your :count most recent decided requests. Older ones are in My submissions and reports.', ['count' => \App\Services\ApproverWorkbench::COMPLETED_LIMIT]) }}</flux:text>
+        @endif
     </section>
 
     @if ($this->previewItem)
@@ -326,7 +359,7 @@ new #[Title('Approvals')] class extends Component {
             @if ($previewSubmission->body)
                 <div class="prose prose-sm mt-6 max-w-none dark:prose-invert">{!! app(\App\Services\RichTextSanitizer::class)->sanitize($previewSubmission->body) !!}</div>
             @endif
-            <p class="mt-6 text-sm text-zinc-500">{{ trans_choice('{0} No attachments|{1} 1 attachment|[2,*] :count attachments', $previewSubmission->files->count(), ['count' => $previewSubmission->files->count()]) }}</p>
+            <p class="mt-6 text-sm text-zinc-500">{{ trans_choice('{0} No attachments|{1} 1 attachment|[2,*] :count attachments', $previewSubmission->files_count, ['count' => $previewSubmission->files_count]) }}</p>
             <div class="sticky bottom-0 mt-8 flex flex-wrap justify-end gap-3 border-t border-zinc-200 bg-white py-4 dark:border-zinc-700 dark:bg-zinc-900">
                 <flux:button :href="route('submissions.show', $previewSubmission)" wire:navigate variant="ghost">{{ __('Open full request') }}</flux:button>
                 @if ($this->previewItem['needs_me'])

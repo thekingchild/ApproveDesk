@@ -12,7 +12,7 @@ use App\Http\Requests\Api\V1\ShowSubmissionRequest;
 use App\Http\Requests\Api\V1\StoreSubmissionRequest;
 use App\Http\Resources\Api\V1\SubmissionResource;
 use App\Models\Submission;
-use App\Services\Workflow\AssignedStepConstraint;
+use App\Services\SubmissionVisibility;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\DB;
@@ -26,20 +26,7 @@ class SubmissionController extends Controller
         $validated = $request->validated();
         $query = Submission::query()
             ->with(['submitter:id,name', 'department:id,name', 'requestTypeVersion.requestType:id,name,slug', 'workflowInstance.currentStep'])
-            ->when(! $user->can('submissions.view.all'), function ($builder) use ($user): void {
-                $builder->where(function ($builder) use ($user): void {
-                    $builder->where('submitter_id', $user->id)
-                        ->orWhereHas('workflowInstance', function ($instances) use ($user): void {
-                            app(AssignedStepConstraint::class)->constrainInstances($instances, $user);
-                        })
-                        ->orWhereHas('workflowInstance.delegations', fn ($builder) => $builder
-                            ->where('starts_at', '<=', now())
-                            ->where('expires_at', '>', now())
-                            ->where('delegate_id', $user->id)
-                            ->whereColumn('delegations.step_id', 'workflow_instances.current_step_id'))
-                        ->orWhereHas('workflowInstance.actions', fn ($builder) => $builder->where('actor_id', $user->id));
-                });
-            })
+            ->tap(fn ($builder) => app(SubmissionVisibility::class)->constrain($builder, $user))
             ->when(isset($validated['status']), fn ($builder) => $builder->where('status', $validated['status']))
             ->when(isset($validated['type']), fn ($builder) => $builder->where('type', $validated['type']));
 

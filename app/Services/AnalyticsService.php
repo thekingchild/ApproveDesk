@@ -12,6 +12,7 @@ use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Collection as SupportCollection;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * Read-only, organization-wide workflow analytics.
@@ -24,6 +25,8 @@ final class AnalyticsService
     /** @var list<int> */
     public const PERIODS = [7, 30, 90];
 
+    public const CACHE_SECONDS = 600;
+
     /**
      * @return array{
      *   days: int,
@@ -33,16 +36,51 @@ final class AnalyticsService
      *   daily: list<array{date: string, label: string, started: int, resolved: int}>,
      *   bottlenecks: list<array{step_id: int, step: string, workflow: string, completed_samples: int, average_minutes: int|null, open: int, overdue: int, oldest_open_minutes: int|null, score_minutes: int}>,
      *   slowest_active: list<array{reference: string, title: string, step: string, started_at: CarbonInterface, elapsed_minutes: int, overdue: bool, submission_id: int}>,
-     *   workload_by_approver: list<array{approver_id: int, approver: string, active: int, overdue: int}>
+     *   workload_by_approver: list<array{approver_id: int, approver: string, active: int, overdue: int}>,
+     *   request_type_id: int|null,
+     *   custom_fields: list<array{key: string, label: string, values: list<array{value: string, count: int}>}>,
+     *   generated_at: CarbonInterface
      * }
      */
-    public function dashboard(int $days, ?User $user = null, ?int $requestTypeId = null): array
+    public function dashboard(int $days, ?User $user = null, ?int $requestTypeId = null, bool $fresh = false): array
     {
         $days = $this->normalizeDays($days);
+        $sensitive = $user !== null && app(RequestFieldAccess::class)->canDiscoverSensitive($user);
+        // Organization-wide figures are the same for everyone with the same field
+        // access; recomputing the cohort on every page load cost seconds (RV-PERF-10).
+        $key = implode(':', ['analytics', 'dashboard', $days, $requestTypeId ?? 'all', $user === null ? 'none' : ($sensitive ? 'sensitive' : 'standard'), now()->toDateString()]);
+
+        if ($fresh) {
+            Cache::forget($key);
+        }
+
+        return Cache::remember($key, self::CACHE_SECONDS, fn (): array => [
+            ...$this->compute($days, $user, $requestTypeId),
+            'generated_at' => now(),
+        ]);
+    }
+
+    /**
+     * @return array{
+     *   days: int,
+     *   from: CarbonInterface,
+     *   to: CarbonInterface,
+     *   summary: array{started: int, active: int, resolved: int, approved: int, rejected: int, returned: int, approval_rate: float|null, returned_rate: float|null, sla_compliance: float|null, average_turnaround_minutes: int|null, median_turnaround_minutes: int|null, overdue: int},
+     *   daily: list<array{date: string, label: string, started: int, resolved: int}>,
+     *   bottlenecks: list<array{step_id: int, step: string, workflow: string, completed_samples: int, average_minutes: int|null, open: int, overdue: int, oldest_open_minutes: int|null, score_minutes: int}>,
+     *   slowest_active: list<array{reference: string, title: string, step: string, started_at: CarbonInterface, elapsed_minutes: int, overdue: bool, submission_id: int}>,
+     *   workload_by_approver: list<array{approver_id: int, approver: string, active: int, overdue: int}>,
+     *   request_type_id: int|null,
+     *   custom_fields: list<array{key: string, label: string, values: list<array{value: string, count: int}>}>
+     * }
+     */
+    private function compute(int $days, ?User $user, ?int $requestTypeId): array
+    {
         $to = now()->endOfDay();
         $from = now()->subDays($days - 1)->startOfDay();
 
-        $instances = $this->cohort($from, $to, $requestTypeId)->get();
+        // Form-field breakdowns are only shown on the analytics page (with a viewer).
+        $instances = $this->cohort($from, $to, $requestTypeId, withFields: $user !== null)->get();
         $resolved = $instances->filter(fn (WorkflowInstance $instance): bool => in_array(
             $instance->status,
             [WorkflowStatus::Completed, WorkflowStatus::Rejected],
@@ -82,21 +120,23 @@ final class AnalyticsService
             'slowest_active' => $this->slowestActive($instances),
             'workload_by_approver' => $this->workloadByApprover($active),
             'request_type_id' => $requestTypeId,
-            'custom_fields' => $this->customFieldBreakdown($instances, $user),
+            'custom_fields' => $user === null ? [] : $this->customFieldBreakdown($instances, $user),
         ];
     }
 
     /** @return Builder<WorkflowInstance> */
-    private function cohort(CarbonInterface $from, CarbonInterface $to, ?int $requestTypeId = null): Builder
+    private function cohort(CarbonInterface $from, CarbonInterface $to, ?int $requestTypeId = null, bool $withFields = true): Builder
     {
         return WorkflowInstance::query()
             ->whereBetween('started_at', [$from, $to])
             ->when($requestTypeId !== null, fn (Builder $query) => $query->whereHas('submission.requestTypeVersion', fn (Builder $version) => $version->where('request_type_id', $requestTypeId)))
-            ->with([
-                'submission:id,reference_number,title,request_type_version_id,submitter_id',
+            ->when($withFields, fn (Builder $query) => $query->with([
                 'submission.fieldValues.field',
                 'submission.fieldValues.userValue:id,name',
                 'submission.fieldValues.departmentValue:id,name',
+            ]))
+            ->with([
+                'submission:id,reference_number,title,request_type_version_id,submitter_id',
                 'currentStep:id,name,timeout_hours,timeout_calendar,assignee_type,assignee_ids',
                 'template:id,name',
                 'templateVersion:id,workflow_template_id,version,status',

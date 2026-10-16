@@ -11,6 +11,8 @@ use Illuminate\Support\Str;
 
 final class SubmissionSearchService
 {
+    public function __construct(private readonly SubmissionVisibility $visibility) {}
+
     /**
      * Search submission fields without allowing the search index to bypass
      * SubmissionPolicy. Results are streamed newest-first and collected only
@@ -50,6 +52,9 @@ final class SubmissionSearchService
                     });
                 }
             })
+            // Filter by visibility in SQL first; the policy check below then runs
+            // only on the handful of rows shown (RV-PERF-07).
+            ->tap(fn (Builder $visible) => $this->visibility->constrain($visible, $user))
             ->latest('updated_at')
             ->latest('id')
             ->cursor();
