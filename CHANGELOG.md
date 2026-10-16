@@ -30,6 +30,7 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Security
 
+- Following a request no longer turns temporary access (an auditor grant or a delegation) into permanent access, and read-only auditors can no longer follow requests.
 - User import's **Update the existing account** mode now follows the same rules as editing a user by hand (Update users permission; administrators only by the System owner), and the analysed preview can no longer be altered in the browser before it is applied.
 - Administrators can no longer change the email of, deactivate, or anonymize peer administrators or anyone holding permissions above their own; only the System owner can. Previously an administrator could redirect a stronger account's email and reset its password.
 - Publishing from the workflow builder now requires the **Publish workflows** permission, as on the Workflow templates screen.

@@ -10,7 +10,7 @@ Use followers when someone must see the request but is not on the workflow. Use 
 
 Open a request. The Followers card lists people who can open it because they were added, not only because they submitted it or sit on the current step.
 
-Follow adds you. Unfollow removes you. Only you can remove your own follow, unless you were added by someone who can still manage followers (the requester, a current approver, or an administrator who can view all requests).
+Follow adds you. Following yourself keeps you notified, but it does not give you access by itself: if you could open the request only through an auditor grant or a delegation, you lose access when that ends. People added by the requester, an approver, or a mention keep access while they are followers. Read-only auditors cannot follow requests. Unfollow removes you. Only you can remove your own follow, unless you were added by someone who can still manage followers (the requester, a current approver, or an administrator who can view all requests).
 
 Adding a person grants them view access. That is the explicit permission. Do not add people who should not read the form or files.
 
