@@ -7,15 +7,18 @@ use App\Actions\Submissions\SubmitSubmissionAction;
 use App\DTOs\SubmissionData;
 use App\Enums\RequestFieldType;
 use App\Enums\SubmissionType;
+use App\Exceptions\WorkflowException;
 use App\Models\Department;
 use App\Models\RequestFieldDefinition;
 use App\Models\RequestType;
 use App\Models\RequestTypeVersion;
 use App\Models\Submission;
+use App\Models\SubmissionFile;
 use App\Models\User;
 use App\Services\RequestTypes\RequestSchemaCompiler;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\Title;
@@ -82,7 +85,17 @@ new #[Title('Custom request')] class extends Component {
     public function submit(): void
     {
         $submission = $this->persist(true);
-        app(SubmitSubmissionAction::class)->execute($submission);
+
+        // The draft is already saved; a refused submit keeps it rather than losing the work (RV-BUG-07).
+        try {
+            app(SubmitSubmissionAction::class)->execute($submission);
+        } catch (WorkflowException $exception) {
+            Flux::toast(__('Saved as a draft but not sent for approval: :reason', ['reason' => $exception->getMessage()]), variant: 'danger');
+            $this->redirect(route('submissions.show', $submission), navigate: true);
+
+            return;
+        }
+
         Flux::toast('Submission sent for approval.', variant: 'success');
         $this->redirect(route('submissions.show', $submission), navigate: true);
     }
@@ -94,29 +107,41 @@ new #[Title('Custom request')] class extends Component {
         $validated = app(RequestSchemaCompiler::class)->validate($this->version, $this->values, $enforceRequired);
         $title = collect($validated)->filter(fn ($value) => is_string($value) && trim($value) !== '')->first() ?: $this->version->requestType->name.' request';
 
-        if ($this->draftId === null) {
-            $submission = app(CreateSubmissionAction::class)->execute(new SubmissionData(
-                type: SubmissionType::Request,
-                title: str($title)->limit(500)->toString(),
-                body: null,
-                requestTypeVersionId: $this->version->id,
-            ), Auth::user(), true);
-            $this->draftId = $submission->id;
-        } else {
-            $submission = Submission::findOrFail($this->draftId);
-            $this->authorize('update', $submission);
-            $submission->update(['title' => str($title)->limit(500)->toString()]);
-        }
+        $draftId = $this->draftId;
 
-        $allUploads = collect($this->uploads)->flatten()->all();
-        if ($allUploads !== []) {
-            app(AttachSubmissionFilesAction::class)->execute($submission, Auth::user(), $allUploads);
-            foreach ($this->uploads as $key => $uploads) {
-                $validated[$key] = collect($submission->files()->latest('id')->limit(count($uploads))->get())->pluck('id')->all();
-            }
-        }
+        try {
+            $submission = DB::transaction(function () use ($title, $validated, $enforceRequired): Submission {
+                if ($this->draftId === null) {
+                    $submission = app(CreateSubmissionAction::class)->execute(new SubmissionData(
+                        type: SubmissionType::Request,
+                        title: str($title)->limit(500)->toString(),
+                        body: null,
+                        requestTypeVersionId: $this->version->id,
+                    ), Auth::user(), true);
+                    $this->draftId = $submission->id;
+                } else {
+                    $submission = Submission::findOrFail($this->draftId);
+                    $this->authorize('update', $submission);
+                    $submission->update(['title' => str($title)->limit(500)->toString()]);
+                }
 
-        app(StoreSubmissionFieldValuesAction::class)->execute($submission, $validated, $enforceRequired);
+                // Attach per field so each file field keeps its own uploads (RV-BUG-12).
+                foreach ($this->uploads as $key => $uploads) {
+                    if ($uploads !== []) {
+                        $files = app(AttachSubmissionFilesAction::class)->execute($submission, Auth::user(), array_values($uploads));
+                        $validated[$key] = array_map(fn (SubmissionFile $file): int => $file->id, $files);
+                    }
+                }
+
+                app(StoreSubmissionFieldValuesAction::class)->execute($submission, $validated, $enforceRequired);
+
+                return $submission;
+            });
+        } catch (\Throwable $exception) {
+            $this->draftId = $draftId;
+
+            throw $exception;
+        }
 
         return $submission;
     }

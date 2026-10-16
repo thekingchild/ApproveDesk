@@ -23,6 +23,7 @@ use App\Support\SeparationOfDuties;
 use App\Services\WorkflowEngine;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
@@ -728,19 +729,29 @@ new #[Title('Submission')] class extends Component {
     {
         $this->authorize('submit', $this->submission);
 
-        if ($this->submission->status === \App\Enums\SubmissionStatus::AwaitingInformation) {
-            $validated = $this->validate([
-                'resubmissionComment' => ['required', 'string', 'max:5000'],
-            ]);
+        $awaitingInformation = $this->submission->status === \App\Enums\SubmissionStatus::AwaitingInformation;
+        $comment = $awaitingInformation
+            ? $this->validate(['resubmissionComment' => ['required', 'string', 'max:5000']])['resubmissionComment']
+            : null;
 
-            app(PostCommentAction::class)->execute(
-                $this->submission,
-                Auth::user(),
-                $validated['resubmissionComment'],
-            );
+        // The answer and the resubmit land together or not at all (RV-BUG-07).
+        try {
+            DB::transaction(function () use ($comment): void {
+                if ($comment !== null) {
+                    app(PostCommentAction::class)->execute($this->submission, Auth::user(), $comment);
+                }
+
+                app(\App\Actions\Submissions\SubmitSubmissionAction::class)->execute($this->submission);
+            });
+        } catch (WorkflowException $exception) {
+            $message = __('This request could not be sent for approval: :reason', ['reason' => $exception->getMessage()]);
+            if ($comment !== null) {
+                $this->addError('resubmissionComment', $message);
+            }
+            Flux::toast($message, variant: 'danger');
+
+            return;
         }
-
-        app(\App\Actions\Submissions\SubmitSubmissionAction::class)->execute($this->submission);
 
         Flux::toast('Resubmitted for approval.', variant: 'success');
 

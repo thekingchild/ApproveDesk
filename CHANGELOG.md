@@ -14,6 +14,10 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Fixed
 
+- **A request that cannot be sent for approval is kept as a draft.** Submitting no longer shows an error page when, for example, nobody can approve a step. Your work, including attachments, is saved as one draft (retrying no longer creates another), opened, and the reason is shown. Answering an information request posts your reply only if the request actually goes back for approval.
+- On custom forms with more than one file field, each field now keeps its own uploads; they were linked to the wrong field.
+- Required custom fields are checked on every submit, including the API and resubmitting a returned request.
+- API: `POST /api/v1/submissions` with `submit: true` is all-or-nothing, and both submit endpoints return 422 with the reason instead of a server error or a stranded Pending request. Answering an information request through `POST /api/v1/submissions/{id}/submit` requires a `comment`.
 - **Delegations can be taken back.** The request page offers **Take back** to the person who delegated a step; deleting or shortening an out-of-office period hands its steps back; and a delegation to someone who is later deactivated no longer locks the original approver out. Each early end is recorded in the history.
 - Expired delegations are no longer deleted every night, so evidence packs keep who acted as delegate and when.
 - The nightly clean-up of unconfirmed sign-ups no longer deletes established accounts whose owners changed their email address; it only removes self-registrations that never confirmed their code.

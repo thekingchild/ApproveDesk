@@ -152,6 +152,26 @@ final class RequestSchemaCompiler
         return $this->withCalculatedValues($version, $values);
     }
 
+    /**
+     * Labels of visible required fields that have no value: the submit-time
+     * check for paths that never ran the form validation (API, resubmit).
+     *
+     * @param  array<string, mixed>  $values
+     * @return list<string>
+     */
+    public function missingRequired(RequestTypeVersion $version, array $values): array
+    {
+        $version->loadMissing('fields');
+
+        return array_values($version->fields
+            ->filter(fn (RequestFieldDefinition $field): bool => $field->type !== RequestFieldType::Calculated
+                && $this->isVisible($field, $values)
+                && $this->isRequired($field, $values)
+                && in_array($values[$field->key] ?? null, [null, '', []], true))
+            ->map(fn (RequestFieldDefinition $field): string => $field->label)
+            ->all());
+    }
+
     /** @param array<string, mixed> $values */
     public function isVisible(RequestFieldDefinition $field, array $values): bool
     {
