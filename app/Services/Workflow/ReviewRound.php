@@ -40,6 +40,20 @@ final class ReviewRound
     }
 
     /**
+     * Already-loaded actions in the current round of a step that the user took
+     * personally or that a delegate took for the user's seat.
+     *
+     * @param  Collection<int, WorkflowAction>  $actions
+     * @return Collection<int, WorkflowAction>
+     */
+    public static function forSeat(Collection $actions, ?int $stepId, int $userId): Collection
+    {
+        return self::filter($actions, $stepId)
+            ->filter(fn (WorkflowAction $action): bool => (int) $action->actor_id === $userId || (int) $action->on_behalf_of_id === $userId)
+            ->values();
+    }
+
+    /**
      * Filter already-loaded actions of one instance to the current round of a step.
      *
      * @param  Collection<int, WorkflowAction>  $actions

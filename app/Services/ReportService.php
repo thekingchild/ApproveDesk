@@ -138,7 +138,8 @@ final class ReportService
         return WorkflowInstance::query()
             ->where('status', WorkflowStatus::Active)
             ->whereDoesntHave('actions', function (Builder $query) use ($user): void {
-                ReviewRound::constrain($query)->where('actor_id', $user->id)
+                ReviewRound::constrain($query)
+                    ->where(fn (Builder $seat) => $seat->where('actor_id', $user->id)->orWhere('on_behalf_of_id', $user->id))
                     ->whereColumn('workflow_actions.step_id', 'workflow_instances.current_step_id')
                     ->whereIn('action', [
                         WorkflowActionType::Approve,

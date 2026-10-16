@@ -97,8 +97,7 @@ class ApproverWorkbench
 
     private function hasDecidedCurrentStep(WorkflowInstance $instance, User $user): bool
     {
-        return ReviewRound::filter($instance->actions, $instance->current_step_id)
-            ->where('actor_id', $user->id)
+        return ReviewRound::forSeat($instance->actions, $instance->current_step_id, (int) $user->id)
             ->whereIn('action', [
                 WorkflowActionType::Approve,
                 WorkflowActionType::ApproveWithConditions,

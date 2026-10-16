@@ -85,6 +85,7 @@ new #[Title('Submission')] class extends Component {
             'workflowInstance.templateVersion',
             'workflowInstance.currentStep',
             'workflowInstance.actions.actor',
+            'workflowInstance.actions.onBehalfOf:id,name',
             'watchers.user',
             'revisions.actor:id,name',
             'fileRevisions',
@@ -197,8 +198,7 @@ new #[Title('Submission')] class extends Component {
             return false;
         }
 
-        return ! ReviewRound::filter($instance->actions, $step->id)
-            ->where('actor_id', $user->id)
+        return ! ReviewRound::forSeat($instance->actions, $step->id, (int) $user->id)
             ->whereIn('action', ['approve', 'reject', 'escalate'])
             ->isNotEmpty();
     }
@@ -249,8 +249,7 @@ new #[Title('Submission')] class extends Component {
                 ->where('step_id', $step->id)
                 ->where('delegator_id', $user->id)
                 ->exists()
-            && ! ReviewRound::filter($instance->actions, $step->id)
-                ->where('actor_id', $user->id)
+            && ! ReviewRound::forSeat($instance->actions, $step->id, (int) $user->id)
                 ->whereIn('action', ['approve', 'reject', 'escalate'])
                 ->isNotEmpty();
     }
@@ -913,6 +912,9 @@ new #[Title('Submission')] class extends Component {
                     @foreach ($submission->workflowInstance->actions as $entry)
                         <li class="text-sm">
                             <span class="font-medium">{{ $entry->actor?->name ?? __('System') }}</span>
+                            @if ($entry->on_behalf_of_id)
+                                <span class="text-zinc-500" data-test="on-behalf-of">{{ __('on behalf of :name', ['name' => $entry->onBehalfOf?->name ?? __('a former user')]) }}</span>
+                            @endif
                             <flux:badge class="mx-1" color="{{ ['approve' => 'lime', 'auto_approve' => 'lime', 'condition_matched' => 'blue', 'condition_not_matched' => 'zinc', 'reject' => 'red', 'return' => 'amber', 'comment' => 'zinc', 'delegate' => 'blue', 'escalate' => 'blue'][$entry->action->value] ?? 'zinc' }}">{{ str($entry->action->value)->replace('_', ' ') }}</flux:badge>
                             <span class="text-xs text-zinc-400">{{ $entry->created_at?->format('d M Y H:i') }}</span>
                             @if ($entry->comment)<p class="mt-1 rounded-md bg-zinc-50 p-2 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">{{ $entry->comment }}</p>@endif

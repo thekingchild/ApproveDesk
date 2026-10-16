@@ -18,6 +18,7 @@ use RuntimeException;
  * @property int $instance_id
  * @property int $step_id
  * @property int|null $actor_id
+ * @property int|null $on_behalf_of_id
  * @property WorkflowActionType $action
  * @property string|null $outcome_key
  * @property string|null $comment
@@ -29,6 +30,7 @@ use RuntimeException;
  * @property-read WorkflowTemplateStep $step
  * @property-read User|null $actor
  * @property-read User|null $delegate
+ * @property-read User|null $onBehalfOf
  */
 class WorkflowAction extends Model
 {
@@ -38,7 +40,7 @@ class WorkflowAction extends Model
     public const UPDATED_AT = null;
 
     protected $fillable = [
-        'instance_id', 'step_id', 'actor_id', 'action', 'outcome_key', 'comment',
+        'instance_id', 'step_id', 'actor_id', 'on_behalf_of_id', 'action', 'outcome_key', 'comment',
         'delegated_to', 'ip_address', 'user_agent',
     ];
 
@@ -90,5 +92,11 @@ class WorkflowAction extends Model
     public function delegate(): BelongsTo
     {
         return $this->belongsTo(User::class, 'delegated_to');
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function onBehalfOf(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'on_behalf_of_id');
     }
 }
