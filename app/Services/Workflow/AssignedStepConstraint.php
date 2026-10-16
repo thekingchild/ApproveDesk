@@ -7,7 +7,7 @@ use App\Models\User;
 use App\Models\WorkflowInstance;
 use App\Support\SeparationOfDuties;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 
 final class AssignedStepConstraint
 {
@@ -71,10 +71,13 @@ final class AssignedStepConstraint
                     ->whereHas('submission.fieldValues', function (Builder $values) use ($user): void {
                         $values->where('user_value_id', $user->id)
                             ->whereHas('field', function (Builder $field): void {
-                                $field->whereColumn(
-                                    'request_field_definitions.key',
-                                    DB::raw("json_extract((select assignee_config from workflow_template_steps where id = workflow_instances.current_step_id), '$.field_key')"),
-                                );
+                                // Select the JSON path through the grammar so it is unquoted
+                                // per driver; a raw json_extract kept quotes on MariaDB (RV-BUG-02).
+                                $field->where('request_field_definitions.key', '=', function (QueryBuilder $step): void {
+                                    $step->select('workflow_template_steps.assignee_config->field_key')
+                                        ->from('workflow_template_steps')
+                                        ->whereColumn('workflow_template_steps.id', 'workflow_instances.current_step_id');
+                                });
                             });
                     });
             });
