@@ -31,17 +31,20 @@ trait RendersNotificationCopy
             $safe[$key] = $value === null || str_ends_with((string) $key, '_url') ? $value : MarkdownText::escape($value);
         }
 
+        // The subject is plain text, so it uses the original values; only body
+        // lines go through Markdown.
+        $plain = $this->renderedCopy($kind, $context);
         $copy = $this->renderedCopy($kind, $safe);
         $mail = (new MailMessage)
-            ->subject($copy->subject)
+            ->subject($plain->subject)
             ->greeting('Hello '.MarkdownText::escape($notifiable->name).',');
 
         foreach ($copy->lines as $line) {
             $mail->line($line);
         }
 
-        if ($copy->actionUrl) {
-            $mail->action($copy->actionLabel ?? 'Open request', $copy->actionUrl);
+        if ($plain->actionUrl) {
+            $mail->action($plain->actionLabel ?? 'Open request', $plain->actionUrl);
         }
 
         return $mail;
