@@ -20,6 +20,7 @@ final class NotificationDeliveryRecorder
 
         return NotificationDelivery::query()->create([
             'user_id' => $user->id,
+            'submission_id' => is_numeric($payload['submission_id'] ?? null) ? (int) $payload['submission_id'] : null,
             'kind' => $kind,
             'channel' => $channel,
             'status' => $deferred ? NotificationDeliveryStatus::Deferred : NotificationDeliveryStatus::Queued,

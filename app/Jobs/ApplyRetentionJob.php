@@ -6,12 +6,20 @@ use App\Enums\DispositionStatus;
 use App\Enums\SubmissionStatus;
 use App\Models\Setting;
 use App\Models\Submission;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 
-class ApplyRetentionJob implements ShouldQueue
+class ApplyRetentionJob implements ShouldBeUnique, ShouldQueue
 {
     use Queueable;
+
+    /**
+     * One copy queued or running at a time; the schedule's withoutOverlapping()
+     * only guards dispatch, so copies piled up when the worker lagged (RV-OPS-02).
+     * The lock lapses after this many seconds if a worker is killed mid-job.
+     */
+    public int $uniqueFor = 3600;
 
     public function handle(): void
     {

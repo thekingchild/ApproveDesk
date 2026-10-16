@@ -62,9 +62,11 @@ php artisan ops:scheduler-check
 A healthy result means the heartbeat is no more than five minutes old. A stale/missing result means the one-minute cron or its PHP binary needs attention. **Backup now** does not test cron.
 
 ```php
-Schedule::command('queue:work --stop-when-empty --tries=3 --timeout=90')
-    ->everyMinute()->withoutOverlapping();
+Schedule::command('queue:work --stop-when-empty --max-time=50 --tries=3 --timeout=90')
+    ->everyMinute()->withoutOverlapping(5)->runInBackground();
 ```
+
+The worker exits after 50 seconds, so ticks never stack, and its overlap lock expires after 5 minutes if the host kills it. Keep `DB_QUEUE_RETRY_AFTER` (default 150) above `--timeout`, or a slow job is handed to a second worker while the first is still running. Scheduled jobs (escalations, out-of-office fallbacks, delivery retries, digests, retention) are unique: a copy is not queued while another is waiting or running. Operations snapshots older than 14 days are pruned daily.
 
 **Optional .htaccess hardening** (force HTTPS, protect sensitive paths):
 
