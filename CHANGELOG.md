@@ -14,6 +14,7 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Fixed
 
+- Delegation, out-of-office, and auditor-access start and end times are now read in the viewer's own time zone (shown under the fields) instead of the server's, so windows no longer shift by hours for people in another zone.
 - Database backups are taken as one consistent point-in-time snapshot, so a decision recorded during a backup can no longer leave a request's status and its history out of step in the backup.
 - Bulk updates and deletes of workflow history are refused by the application, not only single-record changes.
 - **Database promote on MySQL/MariaDB is now recoverable.** ApproveDesk takes and verifies a safety backup first, stays in maintenance mode until the restored database passes its check, and automatically puts the safety backup back if the restore fails (staying in maintenance mode if even that fails). The confirmation warns how many later workflow actions will be removed, and Restore history records the safety backup and that count. New nullable `backup_restore_events` columns.

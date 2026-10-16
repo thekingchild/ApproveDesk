@@ -31,6 +31,9 @@ use Livewire\Attributes\Title;
 use Livewire\Component;
 
 new #[Title('Submission')] class extends Component {
+    /** Set from the browser (<x-browser-timezone />) so datetime-local values are read in the viewer's timezone. */
+    public string $browserTimezone = '';
+
     public Submission $submission;
 
     public string $comment = '';
@@ -278,15 +281,22 @@ new #[Title('Submission')] class extends Component {
         $validated = $this->validate([
             'delegateUserId' => ['required', 'integer', Rule::exists(User::class, 'id')->where('is_active', true)],
             'delegationStartsAt' => ['nullable', 'date'],
-            'delegationExpiresAt' => ['required', 'date', 'after:now'],
+            'delegationExpiresAt' => ['required', 'date'],
             'delegationComment' => ['nullable', 'string', 'max:1000'],
         ]);
 
         $startsAt = filled($validated['delegationStartsAt'] ?? null)
-            ? \Illuminate\Support\Carbon::parse($validated['delegationStartsAt'])
+            ? \App\Support\LocalTime::parse($validated['delegationStartsAt'], $this->browserTimezone)
             : now();
+        $expiresAt = \App\Support\LocalTime::parse($validated['delegationExpiresAt'], $this->browserTimezone);
 
-        if ($startsAt->greaterThanOrEqualTo(\Illuminate\Support\Carbon::parse($validated['delegationExpiresAt']))) {
+        if (! $expiresAt->isFuture()) {
+            $this->addError('delegationExpiresAt', __('The expiry must be in the future.'));
+
+            return;
+        }
+
+        if ($startsAt->greaterThanOrEqualTo($expiresAt)) {
             $this->addError('delegationStartsAt', __('The start must be before the expiry.'));
 
             return;
@@ -307,7 +317,7 @@ new #[Title('Submission')] class extends Component {
                 $this->submission->workflowInstance,
                 Auth::user(),
                 $delegate,
-                \Illuminate\Support\Carbon::parse($validated['delegationExpiresAt']),
+                $expiresAt,
                 $validated['delegationComment'] ?: null,
                 $startsAt,
                 $this->renderedStepId,
@@ -1067,6 +1077,9 @@ new #[Title('Submission')] class extends Component {
                     <flux:input wire:model="delegationStartsAt" type="datetime-local" :label="__('Starts at (optional)')" :description="__('Leave empty to start immediately. A future start keeps your authority until then.')" />
                     <flux:error name="delegationStartsAt" />
                     <flux:input wire:model="delegationExpiresAt" type="datetime-local" :label="__('Expires at')" />
+                    <flux:error name="delegationExpiresAt" />
+                    <x-browser-timezone />
+                    <flux:text class="text-xs" data-test="delegation-timezone">{{ __('Times are in your time zone (:zone).', ['zone' => \App\Support\LocalTime::label($this->browserTimezone)]) }}</flux:text>
                     <flux:textarea wire:model="delegationComment" :label="__('Note (optional)')" rows="2" />
                     <div class="flex justify-end gap-2">
                         <flux:modal.close><flux:button variant="ghost">{{ __('Cancel') }}</flux:button></flux:modal.close>
