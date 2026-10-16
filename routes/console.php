@@ -5,6 +5,7 @@ use App\Jobs\ApplyRetentionJob;
 use App\Jobs\ProcessEscalation;
 use App\Jobs\RetryNotificationDeliveries;
 use App\Jobs\SendNotificationDigests;
+use App\Models\OpsSnapshot;
 use App\Support\BackupSettings;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -15,10 +16,15 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 // Shared hosts need only one cron entry: `php artisan schedule:run` each
-// minute. Each invocation drains the database queue and exits cleanly.
-Schedule::command('queue:work --stop-when-empty --tries=3 --timeout=90')
+// minute. Each invocation drains the database queue and exits cleanly. The
+// worker runs in the background so the rest of the schedule stays on time,
+// stops after 50 s so ticks do not stack up, and its overlap lock expires
+// after 5 minutes so a killed worker cannot stop mail for a day (RV-OPS-01).
+// Keep queue.connections.database.retry_after above --timeout.
+Schedule::command('queue:work --stop-when-empty --max-time=50 --tries=3 --timeout=90')
     ->everyMinute()
-    ->withoutOverlapping();
+    ->withoutOverlapping(5)
+    ->runInBackground();
 
 Schedule::command('ops:heartbeat')->everyMinute()->withoutOverlapping();
 
@@ -29,6 +35,7 @@ Schedule::job(new RetryNotificationDeliveries)->everyFifteenMinutes()->withoutOv
 Schedule::job(new ApplyRetentionJob)->dailyAt('04:15')->withoutOverlapping();
 Schedule::command('approvedesk:fetch-whatsapp-templates')->dailyAt('03:15')->withoutOverlapping();
 Schedule::command('users:prune-unconfirmed')->dailyAt('03:45');
+Schedule::command('model:prune', ['--model' => [OpsSnapshot::class]])->dailyAt('03:30')->withoutOverlapping();
 
 Schedule::command('backups:database')
     ->dailyAt(BackupSettings::databaseAt())

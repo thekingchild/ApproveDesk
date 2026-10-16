@@ -295,12 +295,12 @@ Measured on the Wave 0 performance dataset (2,857 submissions, 2,008 active work
 | RV-PERF-08 | S2 | Approvals inbox loads every active workflow and renders all items unpaginated; recomputed on every checkbox | busy approver: 4.8 s, 94 MB, 5.6 MB HTML | Open |
 | RV-PERF-09 | S2 | Request page runs the whole workbench on every render just for Previous/Next | busy approver: 4.4 s, 70 MB | Open |
 | RV-PERF-10 | S2 | Admin dashboard and analytics hydrate the whole 30-day cohort in PHP, uncached | 3.4 s, 60 MB | Open |
-| RV-PERF-11 | S2 | Out-of-office sweep is O(away users × active workflows × ~5 queries) every 15 min | 5 away × 2,008: 27.9 s, 50,247 queries | Open |
-| RV-OPS-01 | S2 | Scheduled `queue:work` has no `--max-time`, foreground, 24 h overlap lock (stale after a kill → no mail for a day); `retry_after` = `--timeout` | traced | Open |
-| RV-OPS-02 | S2 | `withoutOverlapping()` on `Schedule::job()` only guards the dispatch; copies pile up when the worker lags | traced | Open |
-| RV-PERF-12 | S2 | Evidence pack loads the whole `notification_deliveries` table (no submission_id column); attachments read fully into memory to hash | 100k deliveries: 9.0 s, 273 MB | Open |
+| RV-PERF-11 | S2 | Out-of-office sweep is O(away users × active workflows × ~5 queries) every 15 min | 5 away × 2,008: 27.9 s, 50,247 queries | **Fix in review** (`feature/rv-ops-scheduler-jobs`) |
+| RV-OPS-01 | S2 | Scheduled `queue:work` has no `--max-time`, foreground, 24 h overlap lock (stale after a kill → no mail for a day); `retry_after` = `--timeout` | traced | **Fix in review** (`feature/rv-ops-scheduler-jobs`) |
+| RV-OPS-02 | S2 | `withoutOverlapping()` on `Schedule::job()` only guards the dispatch; copies pile up when the worker lags | traced | **Fix in review** (`feature/rv-ops-scheduler-jobs`) |
+| RV-PERF-12 | S2 | Evidence pack loads the whole `notification_deliveries` table (no submission_id column); attachments read fully into memory to hash | 100k deliveries: 9.0 s, 273 MB | **Fix in review** (`feature/rv-ops-scheduler-jobs`) |
 | RV-OPS-03 | S2 | Backups/promote/verify read whole files into memory and run inside the web request with no time limit; an OOM/timeout fatal skips `up`, leaving maintenance mode on | 173 MB dump → 333 MB peak | Open |
-| RV-OPS-04 | S2 | `ops_snapshots` gains a row every minute, never read or pruned (~525k rows/yr in every backup) | traced | Open |
+| RV-OPS-04 | S2 | `ops_snapshots` gains a row every minute, never read or pruned (~525k rows/yr in every backup) | traced | **Fix in review** (`feature/rv-ops-scheduler-jobs`) |
 | RV-PERF-13 | S3 | Spatie permission cache flushed on every request and artisan command (`AppServiceProvider.php:128`) | ~22 ms + 3 queries + a file write per request | Open |
 | RV-PERF-14 | S3 | Unbounded full-model user dropdowns (submissions filter, delegate candidates, departments, create-custom) | ~75 B HTML/user | Open |
 | RV-PERF-15 | S3 | `NotifyCurrentApprovers` re-queries the submission per approver inside the approving request | traced | Open |

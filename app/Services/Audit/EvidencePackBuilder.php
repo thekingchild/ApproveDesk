@@ -93,14 +93,12 @@ final class EvidencePackBuilder
         ];
 
         $documents = $submission->files->map(function (SubmissionFile $file): array {
-            $contents = $this->fileContents($file);
-
             return [
                 'id' => $file->id,
                 'name' => $file->original_name,
                 'mime_type' => $file->mime_type,
                 'size_bytes' => $file->size_bytes,
-                'sha256' => $contents === null ? null : hash('sha256', $contents),
+                'sha256' => $this->fileHash($file),
                 'removed_at' => $file->deleted_at?->toIso8601String(),
                 'removed_by' => $file->remover?->name,
             ];
@@ -130,9 +128,9 @@ final class EvidencePackBuilder
 
         $notifications = NotificationDelivery::query()
             ->with('user:id,name,email')
+            ->where('submission_id', $submission->id)
+            ->orderBy('id')
             ->get()
-            ->filter(fn (NotificationDelivery $delivery): bool => (int) ($delivery->payload['submission_id'] ?? 0) === $submission->id)
-            ->values()
             ->map(fn (NotificationDelivery $delivery): array => [
                 'id' => $delivery->id,
                 'user' => $delivery->user?->name,
@@ -160,13 +158,24 @@ final class EvidencePackBuilder
         ];
     }
 
-    private function fileContents(SubmissionFile $file): ?string
+    /** Streams the file through the hash so large attachments are not held in memory (RV-PERF-12). */
+    private function fileHash(SubmissionFile $file): ?string
     {
-        if (! Storage::disk($file->disk)->exists($file->stored_path)) {
+        $disk = Storage::disk($file->disk);
+        if (! $disk->exists($file->stored_path)) {
             return null;
         }
 
-        return (string) Storage::disk($file->disk)->get($file->stored_path);
+        $stream = $disk->readStream($file->stored_path);
+        if (! is_resource($stream)) {
+            return null;
+        }
+
+        $context = hash_init('sha256');
+        hash_update_stream($context, $stream);
+        fclose($stream);
+
+        return hash_final($context);
     }
 
     private function encode(mixed $payload): string

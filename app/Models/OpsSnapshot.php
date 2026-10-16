@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\MassPrunable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 
@@ -18,6 +20,11 @@ use Illuminate\Support\Carbon;
  */
 class OpsSnapshot extends Model
 {
+    use MassPrunable;
+
+    /** Snapshots are written every minute; keep two weeks (RV-OPS-04). */
+    public const KEEP_DAYS = 14;
+
     public $timestamps = false;
 
     protected $fillable = [
@@ -43,5 +50,11 @@ class OpsSnapshot extends Model
             'stuck_workflows' => 'integer',
             'oldest_pending_seconds' => 'integer',
         ];
+    }
+
+    /** @return Builder<static> */
+    public function prunable(): Builder
+    {
+        return static::query()->where('recorded_at', '<', now()->subDays(self::KEEP_DAYS));
     }
 }

@@ -5,12 +5,20 @@ namespace App\Jobs;
 use App\Enums\NotificationFrequency;
 use App\Models\User;
 use App\Notifications\NotificationDigest;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 
-class SendNotificationDigests implements ShouldQueue
+class SendNotificationDigests implements ShouldBeUnique, ShouldQueue
 {
     use Queueable;
+
+    /**
+     * One copy queued or running at a time; the schedule's withoutOverlapping()
+     * only guards dispatch, so copies piled up when the worker lagged (RV-OPS-02).
+     * The lock lapses after this many seconds if a worker is killed mid-job.
+     */
+    public int $uniqueFor = 3600;
 
     public function handle(): void
     {
