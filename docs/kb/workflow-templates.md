@@ -54,7 +54,7 @@ Group completion is first response, all assignees, or quorum N-of-M. Sequential,
 
 Deadlines can use elapsed hours or business hours. Business hours use organization working days, office hours, and holidays from **Settings → Approval settings**. Elapsed hours count every hour on the clock.
 
-Custom outcomes on a published version add extra decision buttons. Approve with conditions is always available and requires a comment. Every custom outcome maps to approve, reject, return, request information, or escalate. An outcome **key** uses 1 to 40 lowercase letters, numbers, or underscores (for example `approve_budget`); the label is what approvers see.
+Custom outcomes on a published version add extra decision buttons. Approve with conditions is always available and requires a comment. Every custom outcome maps to approve, reject, return, request information, or escalate. Editing a template on the **Workflow templates** list keeps settings made in the visual builder — custom outcomes and a step's completion rule (for example **All assignees**) — unless you change that step's type there. An outcome **key** uses 1 to 40 lowercase letters, numbers, or underscores (for example `approve_budget`); the label is what approvers see.
 
 ## Timeouts
 
