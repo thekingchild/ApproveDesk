@@ -107,7 +107,7 @@ DB_DATABASE=$PWD/database/perf.sqlite PERF_USERS=300 PERF_SUBMISSIONS=3000 php a
 - First run: 882 of 949 tests fail, all from one cause → RV-DATA-02.
 
 ### RV-DATA-02 — Migrations fail or silently corrupt timestamps on MariaDB 10.6–10.9
-- Severity: **S1** · Status: Open — **decision needed** (fix requires editing released migrations)
+- Severity: **S1** · Status: **Fix in review** (PR #23, commit `d3b9803`)
 - Location: 10 `Schema::create` blocks with `NOT NULL TIMESTAMP` columns (`timestamp('x')` with no `nullable`/`useCurrent`/`default`).
 - Evidence: CI `mariadb` job — `1067 Invalid default value for 'expires_at'` on `create table delegations`. MariaDB < 10.10 defaults to `explicit_defaults_for_timestamp=OFF` (global-only, not settable per session before 10.10), so:
   - the **first** such column in a table silently becomes `DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`;
@@ -116,7 +116,7 @@ DB_DATABASE=$PWD/database/perf.sqlite PERF_USERS=300 PERF_SUBMISSIONS=3000 php a
   - **Install-breaking (2+ columns):** `delegations` (starts_at, expires_at), `user_out_of_office` (starts_at, ends_at), `auditor_accesses` (starts_at, ends_at). A fresh install on MariaDB 10.6–10.9 — common on cPanel — stops at `2026_08_17_120000`.
   - **Silent overwrite (1 column):** `workflow_instances.started_at`, `workflow_actions.created_at`, `submission_nudges.scheduled_for`, `registration_otp_codes.expires_at`, `legal_holds.placed_at`, `ops_snapshots.recorded_at`, `ops_backup_verifications.verified_at` would be reset to "now" on every row update — e.g. `started_at` on every approval step, `placed_at` when a hold is released. Audit-evidence corruption.
   - No working MariaDB < 10.10 installation can exist today (installs fail at `delegations`), so changing these migrations creates no drift for real installs. MySQL 8, MariaDB ≥ 10.10 and SQLite are unaffected.
-- Proposed fix: in the affected create migrations, give these columns an explicit definition that disables the implicit behaviour only when the server is MariaDB with `explicit_defaults_for_timestamp=OFF` (schema on MySQL/SQLite unchanged); add an installer requirements check that reports the setting; regression test that asserts no `NOT NULL TIMESTAMP` column is declared without an explicit default.
+- Fix: `App\Support\SchemaTimestamps::required()` adds an explicit `DEFAULT CURRENT_TIMESTAMP` only on MariaDB with the setting off. The 7 released migrations were edited as a recorded exception (decision 2026-10-16, ADR 0004). Regression test `PortableTimestampColumnsTest` (static scan + MySQL/MariaDB column metadata). Closes when the `mariadb` CI job on PR #23 is green.
 
 ---
 
