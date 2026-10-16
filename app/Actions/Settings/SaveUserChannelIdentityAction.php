@@ -4,14 +4,21 @@ namespace App\Actions\Settings;
 
 use App\Enums\NotificationChannelKey;
 use App\Models\User;
+use Illuminate\Support\Facades\Gate;
 use InvalidArgumentException;
 
 final class SaveUserChannelIdentityAction
 {
-    public function execute(User $user, NotificationChannelKey $channel, ?string $externalId): void
+    public function execute(User $user, NotificationChannelKey $channel, ?string $externalId, ?User $actor = null): void
     {
         if ($user->isSystemOwner()) {
             throw new InvalidArgumentException('The System owner cannot be mapped from user administration.');
+        }
+
+        // A chat identity can approve through one-click cards, so remapping someone
+        // else's follows the same rule as changing their email (RV-SEC-10 residual).
+        if ($actor !== null && ! $actor->is($user) && ! Gate::forUser($actor)->allows('manageIdentity', $user)) {
+            throw new InvalidArgumentException('Only the System owner can change the chat identity of someone with more access than you.');
         }
 
         $column = match ($channel) {
@@ -34,6 +41,14 @@ final class SaveUserChannelIdentityAction
             throw new InvalidArgumentException('That identity is already mapped to another person.');
         }
 
+        $previous = $user->getAttribute($column);
         $user->forceFill([$column => $value])->save();
+
+        if ($actor !== null && $previous !== $value) {
+            activity()->performedOn($user)->causedBy($actor)
+                ->event('channel-identity-changed')
+                ->withProperties(['channel' => $channel->value, 'had_previous' => $previous !== null, 'cleared' => $value === null])
+                ->log('Chat identity mapping changed');
+        }
     }
 }

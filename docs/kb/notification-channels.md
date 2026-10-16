@@ -249,7 +249,7 @@ Teams and Slack action-required messages can include an **Approve** button. That
 
 ### People
 
-Map a person to a Teams, Slack, or Telegram ID. **Remove** clears that mapping. WhatsApp uses the E.164 phone number on the user record. People without a valid phone number are skipped on WhatsApp.
+Map a person to a Teams, Slack, or Telegram ID. **Remove** clears that mapping. Because Slack and Teams cards can approve requests, only the System owner can change the chat identity of administrators or of anyone with more access than you, and every change is recorded in the activity log. WhatsApp uses the E.164 phone number on the user record. People without a valid phone number are skipped on WhatsApp.
 
 ### Delivery
 

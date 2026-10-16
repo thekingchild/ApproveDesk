@@ -4,6 +4,7 @@ namespace App\Services\Backups;
 
 use App\Models\BackupDestination;
 use App\Support\OutboundDestination;
+use App\Support\OutboundPin;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
@@ -71,11 +72,29 @@ final class S3BackupTransport implements BackupTransport
 
         $credentials = $this->destination->credentials();
         $endpoint = $credentials['endpoint'] ?? null;
+        $pathStyle = ($credentials['path_style'] ?? '0') === '1';
+        $http = [];
         if (is_string($endpoint) && trim($endpoint) !== '') {
-            app(OutboundDestination::class)->validate($endpoint, [
+            $options = [
                 'allow_private' => (bool) config('backups.allow_private_s3_endpoint'),
                 'allow_nonstandard_port' => (bool) config('backups.allow_private_s3_endpoint'),
-            ]);
+            ];
+            $pins = [app(OutboundDestination::class)->validate($endpoint, $options)];
+
+            // Virtual-hosted style connects to {bucket}.{endpoint host}; validate that
+            // name too, and pin every validated address so the SDK cannot re-resolve
+            // to something else between check and connect (RV-SEC-17).
+            $bucket = (string) ($credentials['bucket'] ?? '');
+            if (! $pathStyle && $bucket !== '') {
+                $parts = parse_url($endpoint);
+                $virtualHost = ($parts['scheme'] ?? 'https').'://'.$bucket.'.'.($parts['host'] ?? '')
+                    .(isset($parts['port']) ? ':'.$parts['port'] : '');
+                $pins[] = app(OutboundDestination::class)->validate($virtualHost, $options);
+            }
+
+            if (defined('CURLOPT_RESOLVE')) {
+                $http = ['http' => ['curl' => [CURLOPT_RESOLVE => OutboundPin::curlResolveEntries($pins)]]];
+            }
         }
 
         $this->disk = Storage::build([
@@ -85,8 +104,9 @@ final class S3BackupTransport implements BackupTransport
             'region' => $credentials['region'] ?? 'auto',
             'bucket' => $credentials['bucket'] ?? '',
             'endpoint' => $credentials['endpoint'] ?? null,
-            'use_path_style_endpoint' => ($credentials['path_style'] ?? '0') === '1',
+            'use_path_style_endpoint' => $pathStyle,
             'throw' => true,
+            ...$http,
         ]);
 
         return $this->disk;
