@@ -78,7 +78,8 @@ class RetentionAndLegalHoldTest extends TestCase
         ]);
 
         $review = app(RequestDispositionAction::class)->execute($this->admin, $ready, 'Past retention');
-        app(ReviewDispositionAction::class)->execute($this->admin, $review, DispositionStatus::Approved, 'OK to close');
+        $reviewer = User::factory()->create()->assignRole('admin');
+        app(ReviewDispositionAction::class)->execute($reviewer, $review, DispositionStatus::Approved, 'OK to close');
 
         (new ApplyRetentionJob)->handle();
 

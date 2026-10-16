@@ -31,6 +31,7 @@ Printed approval reports and downloaded PDFs display the supplied image stamp fo
 - Nobody can delegate a step to the requester, and a delegation granted to the requester earlier cannot be used.
 - On an **All** or **Quorum** step, the requester's place is not counted, so the remaining approvers decide.
 - The requester sees a short note on the request page explaining that another approver must decide. They can still comment and reply to information requests.
+- On **Records**, a disposition review must be decided by someone other than the person who opened it.
 
 Use it to keep the person who asks for something from also signing it off, which most audit and compliance policies require.
 

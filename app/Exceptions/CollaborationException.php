@@ -6,6 +6,11 @@ use RuntimeException;
 
 class CollaborationException extends RuntimeException
 {
+    public static function cannotMention(string $name): self
+    {
+        return new self("You cannot mention {$name}: they cannot open this request and you cannot add followers. Ask the requester or an approver to add them.");
+    }
+
     public static function cannotWatch(string $reason): self
     {
         return new self("You cannot follow this request: {$reason}.");

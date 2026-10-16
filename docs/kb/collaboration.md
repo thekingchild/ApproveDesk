@@ -20,7 +20,7 @@ While you follow, you can turn off comment notifications or status notifications
 
 Comments sit on the request. They are part of the record.
 
-Type a comment, then search by name to mention someone. A mention notifies that person and adds them as a follower so they can open the request.
+Type a comment, then search by name to mention someone. A mention notifies that person and adds them as a follower so they can open the request. You can mention someone who cannot already open the request only if you are allowed to add followers (the requester, a current approver, or an administrator); otherwise ask one of them to add the person.
 
 Reply starts a thread under a top-level comment. You cannot reply to a reply; stay one level deep.
 

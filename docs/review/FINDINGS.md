@@ -210,14 +210,14 @@ Sources: three read-only reviews (engine/audit, authorization, input-output/file
 | RV-ENG-07 | S3 | **Fix in review** (`feature/rv-s3-integrity`: `AppendOnlyBuilder` refuses bulk update/delete/upsert/increment; FK actions closed by RV-ENG-06; raw `DB::table()` writes and DB triggers out of scope — triggers need privileges shared hosts often lack) — Append-only guard is model-event only; builder/DB updates and FK actions bypass it | `app/Models/WorkflowAction.php:52-60` |
 | RV-DATA-04 | S3 | **Fix in review** (`feature/rv-s3-integrity`: whole dump in one read transaction) — Database backups aren't a consistent snapshot (per-table cursors, no transaction) | `CreateDatabaseBackupAction.php:69-77` |
 | RV-BUG-03 | S3 | Delegation window parsed in `APP_TIMEZONE`, not the user's | `submissions/show.blade.php:259-284` |
-| RV-SEC-09 | S3 | Mentions add watchers without `addWatcher`; mention list not locked | `PostCommentAction.php:58`, `FollowSubmissionAction.php:35` |
-| RV-SEC-12 | S3 | API submitters can choose any department, steering department-manager routing | `StoreSubmissionRequest.php:27` |
+| RV-SEC-09 | S3 | **Fix in review** (`feature/rv-s3-authz`) —  Mentions add watchers without `addWatcher`; mention list not locked | `PostCommentAction.php:58`, `FollowSubmissionAction.php:35` |
+| RV-SEC-12 | S3 | **Fix in review** (`feature/rv-s3-authz`) —  API submitters can choose any department, steering department-manager routing | `StoreSubmissionRequest.php:27` |
 | RV-SEC-13 | S3 | Permission catalogue keys with no enforcement (`submissions.withdraw`, `comments.create`, `reminders.send`, `submissions.view.own`, `audit.evidence.export`, `audit.auditor_access.manage`) | `app/Policies/SubmissionPolicy.php` and others |
 | RV-SEC-14 | S3 | Markdown link injection in notification emails via title/comment | `RendersNotificationCopy::mailFromCopy` |
 | RV-SEC-15 | S3 | CSP allows `unsafe-inline` and `unsafe-eval`, so it doesn't mitigate XSS | `app/Http/Middleware/SecurityHeaders.php:34` |
 | RV-SEC-16 | S3 | Custom-code save accepts a password confirmation of any age; second factor is login-time only | `settings/branding.blade.php:208-209` |
 | RV-SEC-17 | S3 | S3 backup endpoint validated but not pinned; virtual-host bucket name never validated (suspected) | `S3BackupTransport.php:71-77` |
-| RV-SEC-19 | S3 | Disposition review has no four-eyes or still-pending check | `ReviewDispositionAction` |
+| RV-SEC-19 | S3 | **Fix in review** (`feature/rv-s3-authz`; four-eyes follows the separation-of-duties setting) —  Disposition review has no four-eyes or still-pending check | `ReviewDispositionAction` |
 | RV-ENG-08 | S4 | **Fix in review** (`feature/rv-sec-builder`) — Unknown `act()` argument is treated as Approve | `submissions/show.blade.php:313` |
 | RV-ENG-09 | S4 | Escalate timeout on the last step fails and is logged every 15 min forever | `WorkflowEngine.php:428-430` |
 | RV-BUG-04 | S4 | Double submit of a draft returns a 500 (unique constraint) | `SubmitSubmissionAction` |

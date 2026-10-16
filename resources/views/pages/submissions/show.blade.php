@@ -602,7 +602,11 @@ new #[Title('Submission')] class extends Component {
     #[Computed]
     public function mentionedUsers(): \Illuminate\Support\Collection
     {
-        return app(AssigneeDirectory::class)->selected('user', $this->mentionedUserIds);
+        // Only people who can be mentioned; a tampered id list must not reveal hidden accounts.
+        return User::query()->assignable()->where('is_active', true)
+            ->whereIn('id', array_map('intval', $this->mentionedUserIds))
+            ->orderBy('name')
+            ->get(['id', 'name', 'email']);
     }
 
     public function displayComment(Comment $comment): string
