@@ -42,4 +42,4 @@ Open **Security**. Signed-in browsers appear under **Devices**. Sign out one you
 
 Open **Privacy** to **Download my data**. The zip is your profile, requests you submitted, comments, followers, out-of-office periods, sign-in history, and decisions recorded in your name. Passwords, recovery codes, API tokens, and connector secrets are not included.
 
-You can delete the account only when you have no request or decision history. If you do, ask an administrator to anonymize the account so your name comes off while the history stays. See [Security and privacy](security-and-privacy.md).
+You can delete the account only when you have no request or decision history. History includes requests you submitted, decisions, delegations given to or by you, and comments. If you do, ask an administrator to anonymize the account so your name comes off while the history stays. See [Security and privacy](security-and-privacy.md).

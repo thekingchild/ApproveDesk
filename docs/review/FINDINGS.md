@@ -158,7 +158,7 @@ Sources: three read-only reviews (engine/audit, authorization, input-output/file
 - Fix: `WorkflowEngine::withdraw()` with lock, status re-check, appended `withdraw` action.
 
 ### RV-ENG-06 — Deleting a user rewrites `workflow_actions.delegated_to` via FK cascade
-- Severity: **S2** (audit tampering) · Status: Open
+- Severity: **S2** (audit tampering) · Status: **Fix in review** (branch `feature/rv-eng-audit-fk`; new migration makes `delegated_to` and `instance_id` restrict-on-delete; evidence check covers delegations, on-behalf-of, and comments; prune skips users with evidence)
 - Evidence (probe): `delegated_to … nullOnDelete()`; `hasPreservedAuditEvidence()` ignores `delegated_to`; `users:prune-unconfirmed` bulk-deletes with no evidence check. `instance_id cascadeOnDelete` is latent risk.
 - Fix: new migration → `restrictOnDelete`; extend the evidence check; make prune skip users with evidence.
 
