@@ -33,6 +33,9 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Security
 
+- Mentioning someone who cannot already open a request now requires permission to add followers, so followers can no longer share a request with anyone by mentioning them.
+- The API accepts only the requester's own department when creating a submission.
+- Disposition reviews are decided once, under a lock, and — while separation of duties is on — not by the person who opened them.
 - Teams and Slack one-click **Approve** now respects **Require sign-in and a second factor for approval links**: while it is on, cards open the confirmation page and older card buttons stop working. Slack approvals are accepted only from the approver's own linked Slack account.
 - Following a request no longer turns temporary access (an auditor grant or a delegation) into permanent access, and read-only auditors can no longer follow requests.
 - User import's **Update the existing account** mode now follows the same rules as editing a user by hand (Update users permission; administrators only by the System owner), and the analysed preview can no longer be altered in the browser before it is applied.
