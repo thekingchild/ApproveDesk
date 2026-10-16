@@ -179,6 +179,15 @@ class User extends Authenticatable implements PasskeyUser
             && str_starts_with($this->email, 'anonymized-');
     }
 
+    /**
+     * Memoized per request on this user object: the layout renders a desktop and
+     * a mobile notification indicator for the same signed-in user (RV-PERF-19).
+     */
+    public function unreadNotificationCount(): int
+    {
+        return once(fn (): int => $this->unreadNotifications()->count());
+    }
+
     public function isSystemOwner(): bool
     {
         $ownerId = app(SystemOwnerService::class)->ownerId();

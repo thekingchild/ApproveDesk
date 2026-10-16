@@ -1,6 +1,4 @@
 import './pwa.js'
-import { Editor } from '@tiptap/core'
-import StarterKit from '@tiptap/starter-kit'
 
 // Form builder local-draft autosave (P6B-UI-04): stores builder state in
 // this browser only, debounced; the server draft stays the durable record.
@@ -70,7 +68,14 @@ window.richTextEditor = (initialContent = '') => ({
     content: initialContent || '',
     editor: null,
 
-    init() {
+    // Tiptap is most of the bundle but only the submission wizard uses it, so it
+    // is loaded on demand into its own chunk (RV-PERF-19).
+    async init() {
+        const [{ Editor }, { default: StarterKit }] = await Promise.all([
+            import('@tiptap/core'),
+            import('@tiptap/starter-kit'),
+        ])
+
         this.editor = new Editor({
             element: this.$refs.editor,
             extensions: [StarterKit],
@@ -94,6 +99,10 @@ window.richTextEditor = (initialContent = '') => ({
     },
 
     command(name, options = {}) {
+        if (! this.editor) {
+            return
+        }
+
         const chain = this.editor.chain().focus()
 
         const commands = {

@@ -57,6 +57,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Events\MigrationsEnded;
 use Illuminate\Foundation\Http\Events\RequestHandled;
 use Illuminate\Http\Request;
 use Illuminate\Queue\Events\JobProcessing;
@@ -125,7 +126,10 @@ class AppServiceProvider extends ServiceProvider
         $this->configureCloudflareCompatibility();
         $this->configureSystemRuntime();
 
-        PermissionCache::forgetIfReady();
+        // Spatie clears its cache when roles and permissions change through its
+        // models; only migrations write those tables directly. Clearing on every
+        // request cost ~22 ms, 3 queries and a file write (RV-PERF-13).
+        Event::listen(MigrationsEnded::class, fn () => PermissionCache::forgetIfReady());
 
         Gate::policy(Role::class, RolePolicy::class);
 
