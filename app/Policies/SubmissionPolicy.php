@@ -28,28 +28,39 @@ class SubmissionPolicy
 
         // Approvers: anyone who has acted on, or is assigned to the current
         // step of, this submission's workflow may view it.
-        $instance = $submission->workflowInstance()->first();
+        // Use the loaded relation when a page already has it (avoids a query per row).
+        $instance = $submission->workflowInstance;
 
         if ($instance === null) {
             return false;
         }
 
-        if ($instance->currentStep?->assignedUsers($instance->submission)->contains($user)) {
+        if ($instance->currentStep?->assignedUsers($submission)->contains($user)) {
             return true;
         }
 
-        if (Delegation::query()->active()
-            ->where('instance_id', $instance->id)
-            ->where('step_id', $instance->current_step_id)
-            ->where('delegate_id', $user->id)
-            ->exists()) {
+        // Lists that eager-load delegations/actions avoid two queries per row.
+        $delegated = $instance->relationLoaded('delegations')
+            ? $instance->delegations->contains(fn (Delegation $delegation): bool => $delegation->step_id === $instance->current_step_id
+                && $delegation->delegate_id === $user->id
+                && $delegation->starts_at <= now()
+                && $delegation->expires_at > now())
+            : Delegation::query()->active()
+                ->where('instance_id', $instance->id)
+                ->where('step_id', $instance->current_step_id)
+                ->where('delegate_id', $user->id)
+                ->exists();
+
+        if ($delegated) {
             return true;
         }
 
-        return WorkflowAction::query()
-            ->where('instance_id', $instance->id)
-            ->where('actor_id', $user->id)
-            ->exists();
+        return $instance->relationLoaded('actions')
+            ? $instance->actions->contains('actor_id', $user->id)
+            : WorkflowAction::query()
+                ->where('instance_id', $instance->id)
+                ->where('actor_id', $user->id)
+                ->exists();
     }
 
     public function create(User $user): bool

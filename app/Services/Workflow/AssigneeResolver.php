@@ -15,6 +15,36 @@ use Spatie\Permission\Models\Role;
 final class AssigneeResolver
 {
     /**
+     * Per-batch memo of request-independent assignee sets (named users, roles,
+     * departments), keyed by step. Null outside batch(): the engine and
+     * policies always resolve fresh.
+     *
+     * @var array<string, Collection<int, User>>|null
+     */
+    private static ?array $memo = null;
+
+    /**
+     * Run list/dashboard work that resolves many steps with a shared memo, so
+     * N requests on the same step cost one query instead of N (RV-PERF).
+     *
+     * @template T
+     *
+     * @param  callable(): T  $work
+     * @return T
+     */
+    public static function batch(callable $work): mixed
+    {
+        $outer = self::$memo;
+        self::$memo ??= [];
+
+        try {
+            return $work();
+        } finally {
+            self::$memo = $outer;
+        }
+    }
+
+    /**
      * @param  iterable<int, ExternalAssigneeResolver>  $external
      */
     public function __construct(private readonly iterable $external = []) {}
@@ -41,6 +71,13 @@ final class AssigneeResolver
      */
     public function candidates(WorkflowTemplateStep $step, ?Submission $submission = null): Collection
     {
+        $requestIndependent = in_array($step->assignee_type, [AssigneeType::User, AssigneeType::Role, AssigneeType::Department], true);
+        $key = $step->id.':'.$step->assignee_type->value.':'.json_encode($step->assignee_ids ?? []);
+
+        if ($requestIndependent && self::$memo !== null && isset(self::$memo[$key])) {
+            return new Collection(self::$memo[$key]->all());
+        }
+
         $users = match ($step->assignee_type) {
             AssigneeType::User => $this->namedUsers($step->assignee_ids ?? []),
             AssigneeType::Role => $this->roleUsers($step->assignee_ids ?? []),
@@ -51,7 +88,13 @@ final class AssigneeResolver
             AssigneeType::External => $this->externalUsers($step, $submission),
         };
 
-        return new Collection($users->unique('id')->values()->all());
+        $users = new Collection($users->unique('id')->values()->all());
+
+        if ($requestIndependent && self::$memo !== null) {
+            self::$memo[$key] = $users;
+        }
+
+        return $users;
     }
 
     /**

@@ -76,27 +76,27 @@ DB_DATABASE=$PWD/database/perf.sqlite PERF_USERS=300 PERF_SUBMISSIONS=3000 php a
 - Fix: Tiptap 3.30.1 → 3.32.0 (with patched `prosemirror-view`); `concurrently` moved to `devDependencies`. `npm audit` (all deps) reports 0. Dusk suite 5/5 locally, repeated.
 
 ### RV-PERF-01 — Admin dashboard issues ~1 query per submission
-- Severity: S3 · Status: Open · Location: `resources/views/pages/dashboard.blade.php` · Evidence: 43 → 70 queries for 3 → 30 submissions.
+- Severity: S3 · Status: **Fix in review** (branch `feature/rv-perf-n-plus-one`; guarded by `QueryScalingTest`) · Location: `resources/views/pages/dashboard.blade.php` · Evidence: 43 → 70 queries for 3 → 30 submissions.
 
 ### RV-PERF-02 — Approvals inbox issues ~1 query per pending item
-- Severity: S3 · Status: Open · Location: `resources/views/pages/approvals/inbox.blade.php` · Evidence: 21 → 48 queries.
+- Severity: S3 · Status: **Fix in review** (branch `feature/rv-perf-n-plus-one`; guarded by `QueryScalingTest`) · Location: `resources/views/pages/approvals/inbox.blade.php` · Evidence: 21 → 48 queries.
 
 ### RV-PERF-03 — Submission detail issues ~2 queries per comment; lazy-loads `Comment::commentable`
-- Severity: S3 · Status: Open · Location: `resources/views/pages/submissions/show.blade.php` · Evidence: 52 → 106 queries for 3 → 30 comments; lazy-load violation `Comment::commentable`.
+- Severity: S3 · Status: **Fix in review** (branch `feature/rv-perf-n-plus-one`; guarded by `QueryScalingTest`) · Location: `resources/views/pages/submissions/show.blade.php` · Evidence: 52 → 106 queries for 3 → 30 comments; lazy-load violation `Comment::commentable`.
 
 ### RV-PERF-04 — Analytics query count grows with submissions
-- Severity: S3 · Status: Open · Location: `resources/views/pages/admin/analytics.blade.php`, `app/Services/AnalyticsService.php` · Evidence: 23 → 50 queries.
+- Severity: S3 · Status: **Fix in review** (branch `feature/rv-perf-n-plus-one`; guarded by `QueryScalingTest`) · Location: `resources/views/pages/admin/analytics.blade.php`, `app/Services/AnalyticsService.php` · Evidence: 23 → 50 queries.
 
 ### RV-PERF-05 — Notifications centre issues ~2.4 queries per notification
-- Severity: S3 · Status: Open · Location: `resources/views/pages/notifications/index.blade.php` · Evidence: 37 → 103 queries.
+- Severity: S3 · Status: **Fix in review** (branch `feature/rv-perf-n-plus-one`; guarded by `QueryScalingTest`) · Location: `resources/views/pages/notifications/index.blade.php` · Evidence: 37 → 103 queries.
 
 ### RV-TEST-03 — Query budget tests cannot detect row-level N+1
-- Severity: S3 · Status: Open · Location: `tests/Feature/QueryBudgetTest.php`
+- Severity: S3 · Status: **Fix in review** (`QueryScalingTest`: 9 pages, equal query counts at two dataset sizes) · Location: `tests/Feature/QueryBudgetTest.php`
 - Evidence: fixed budgets measured at 5–20 rows; none of RV-PERF-01…05 trips them.
 - Fix: Wave 2 — assert equal query counts at two dataset sizes per page, and cover the five pages above.
 
 ### RV-LAR-01 — No lazy-loading / strict-model guard outside production
-- Severity: S3 · Status: Open · Location: `app/Providers/AppServiceProvider.php`
+- Severity: S3 · Status: **Fix in review** (`Model::preventLazyLoading(! app()->isProduction())`; the three violations the suite surfaced are fixed) · Location: `app/Providers/AppServiceProvider.php`
 - Fix: `Model::shouldBeStrict(! app()->isProduction())` (or at least `preventLazyLoading`) after RV-PERF-03 is fixed.
 
 ### RV-TEST-04 — `WorkflowEngine` coverage is only just above its gate
@@ -241,7 +241,7 @@ Checked and found correct in Wave 1 (summary): engine transactions/locks/duplica
 | L3 Authorization only at route level in 26 pages; 12 `#[Locked]` properties | SEC | 1 | Reviewed → RV-SEC-06, RV-SEC-07, RV-SEC-11; other pages authorize per action |
 | L4 13 raw `{!! !!}` outputs | SEC | 1 | Reviewed → RV-SEC-03 (fixed); theme CSS, Help, QR found safe |
 | L5 `hasRole` outside Policies (7 files) | ARC/SEC | 1 | Reviewed → RV-SEC-04, RV-SEC-18 |
-| L6 Per-key `rememberForever` settings on file cache | PERF | 2 | Open |
+| L6 Per-key `rememberForever` settings on file cache | PERF | 2 | **Fix in review**: one `settings.all` entry, memoised per request; also fixed caching of the first caller's default for missing keys |
 | L7 40 `lockForUpdate()` calls outside the engine | ENG | 1 | Reviewed: all transactional; inversions → RV-ENG-05 |
 | L8 Engine coverage target | TEST | — | → RV-TEST-04 |
 | L9 Missing ADRs | DOC | 3 | Open |

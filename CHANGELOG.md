@@ -14,6 +14,8 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Fixed
 
+- Faster dashboards, approval inbox, analytics, request page, and notifications: they no longer run extra database queries for every row (for example the notifications page went from 111 to 29 queries for 20 notifications). Settings are read from one cached entry per request instead of one per setting.
+- A missing setting no longer remembers the first default value any screen asked for.
 - Delegation, out-of-office, and auditor-access start and end times are now read in the viewer's own time zone (shown under the fields) instead of the server's, so windows no longer shift by hours for people in another zone.
 - Database backups are taken as one consistent point-in-time snapshot, so a decision recorded during a backup can no longer leave a request's status and its history out of step in the backup.
 - Bulk updates and deletes of workflow history are refused by the application, not only single-record changes.

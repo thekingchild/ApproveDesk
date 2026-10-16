@@ -77,10 +77,17 @@ new #[Title('Submission')] class extends Component {
     #[Locked]
     public ?int $renderedStepId = null;
 
-    public function mount(Submission $submission): void
+    /** @var array<int, \Illuminate\Database\Eloquent\Collection<int, User>> Approvers per step for this render. */
+    private array $assigneesByStep = [];
+
+    /** @return \Illuminate\Database\Eloquent\Collection<int, User> */
+    private function assigneesFor(\App\Models\WorkflowTemplateStep $step): \Illuminate\Database\Eloquent\Collection
     {
-        $this->authorize('view', $submission);
-        $this->submission = $submission->load([
+        return $this->assigneesByStep[$step->id] ??= $step->assignedUsers($this->submission);
+    }
+
+    /** Relations the page renders; reloaded on every request because Livewire rehydrates the model without them. */
+    private const RELATIONS = [
             'submitter', 'department', 'files.uploader',
             'requestTypeVersion.requestType', 'requestTypeVersion.fields',
             'fieldValues.field', 'fieldValues.userValue', 'fieldValues.departmentValue',
@@ -95,7 +102,17 @@ new #[Title('Submission')] class extends Component {
             'submitter.manager',
             'submitter.department.manager',
             'department.manager',
-        ]);
+    ];
+
+    public function hydrate(): void
+    {
+        $this->submission->loadMissing(self::RELATIONS);
+    }
+
+    public function mount(Submission $submission): void
+    {
+        $this->authorize('view', $submission);
+        $this->submission = $submission->load(self::RELATIONS);
         $this->renderedStepId = $this->submission->workflowInstance?->current_step_id;
 
         $mine = $this->submission->watchers->firstWhere('user_id', Auth::id());
@@ -131,7 +148,7 @@ new #[Title('Submission')] class extends Component {
 
         return $instance->template->steps->map(function ($step) use ($instance, $actions) {
             $stepActions = $actions->get($step->id, collect());
-            $assignedUsers = $step->assignedUsers($instance->submission);
+            $assignedUsers = $this->assigneesFor($step);
             $automatic = $step->step_type->isAutomatic();
             $approvalCount = ReviewRound::filter($stepActions, $step->id)->whereIn('action', [WorkflowActionType::Approve, WorkflowActionType::ApproveWithConditions])->unique('actor_id')->count();
             $requiredApprovals = match ($step->groupCompletion()) {
@@ -185,7 +202,7 @@ new #[Title('Submission')] class extends Component {
             return false;
         }
 
-        $direct = $step->assignedUsers($this->submission)->contains($user);
+        $direct = $this->assigneesFor($step)->contains($user);
         $incoming = Delegation::query()->active()
             ->where('instance_id', $instance->id)
             ->where('step_id', $step->id)
@@ -246,7 +263,7 @@ new #[Title('Submission')] class extends Component {
 
         return $instance?->status->value === 'active'
             && $step?->allow_delegation
-            && $step->assignedUsers($this->submission)->contains($user)
+            && $this->assigneesFor($step)->contains($user)
             && ! Delegation::query()->active()
                 ->where('instance_id', $instance->id)
                 ->where('step_id', $step->id)
@@ -261,7 +278,7 @@ new #[Title('Submission')] class extends Component {
     public function delegateCandidates(): \Illuminate\Database\Eloquent\Collection
     {
         $step = $this->submission->workflowInstance?->currentStep;
-        $excluded = $step?->assignedUsers($this->submission)->pluck('id')->all() ?? [];
+        $excluded = $step !== null ? $this->assigneesFor($step)->pluck('id')->all() : [];
 
         if (SeparationOfDuties::enabled()) {
             $excluded[] = $this->submission->submitter_id;
@@ -581,11 +598,29 @@ new #[Title('Submission')] class extends Component {
     #[Computed]
     public function commentThreads(): \Illuminate\Database\Eloquent\Collection
     {
-        return $this->submission->comments()
+        $threads = $this->submission->comments()
             ->with(['author', 'mentions.user', 'revisions.editor', 'replies.author', 'replies.mentions.user', 'replies.revisions.editor'])
             ->whereNull('parent_id')
             ->orderBy('id')
             ->get();
+
+        // Every comment here belongs to this request; hand it over instead of letting
+        // the comment policy lazy-load it once per comment (RV-PERF-03).
+        foreach ($threads as $comment) {
+            $comment->setRelation('commentable', $this->submission);
+            foreach ($comment->replies as $reply) {
+                $reply->setRelation('commentable', $this->submission);
+            }
+        }
+
+        return $threads;
+    }
+
+    /** Revision history with editors; loaded here so it survives Livewire rehydration. */
+    #[Computed]
+    public function revisionHistory(): \Illuminate\Database\Eloquent\Collection
+    {
+        return $this->submission->revisions()->with('actor:id,name')->get();
     }
 
     #[Computed]
@@ -791,11 +826,11 @@ new #[Title('Submission')] class extends Component {
         </dl>
     </flux:card>
 
-    @if ($submission->revisions->isNotEmpty() || $submission->fileRevisions->isNotEmpty())
+    @if ($this->revisionHistory->isNotEmpty() || $submission->fileRevisions->isNotEmpty())
         <flux:card data-test="request-history">
             <flux:heading size="sm">{{ __('Request history') }}</flux:heading>
             <ul class="mt-3 space-y-2 text-sm">
-                @foreach ($submission->revisions as $revision)
+                @foreach ($this->revisionHistory as $revision)
                     <li>
                         <span class="font-medium">{{ $revision->summary }}</span>
                         <span class="text-zinc-500"> · {{ $revision->actor?->name ?? __('System') }} · {{ $revision->created_at?->format('d M Y H:i') }}</span>

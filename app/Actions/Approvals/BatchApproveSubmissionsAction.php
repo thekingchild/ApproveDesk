@@ -28,7 +28,7 @@ class BatchApproveSubmissionsAction
 
         return DB::transaction(function () use ($ids, $approver): int {
             $instances = WorkflowInstance::query()
-                ->with(['currentStep', 'actions', 'delegations'])
+                ->with(['currentStep', 'actions', 'delegations', 'submission'])
                 ->whereKey($ids)
                 ->orderBy('id')
                 ->get();
