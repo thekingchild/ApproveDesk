@@ -17,7 +17,7 @@ return new class extends Migration
             $table->foreignId('on_behalf_of_id')
                 ->nullable()
                 ->after('actor_id')
-                ->constrained('users', indexName: 'workflow_actions_on_behalf_of_foreign')
+                ->constrained('users')
                 ->restrictOnDelete();
         });
     }
