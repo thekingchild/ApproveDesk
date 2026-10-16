@@ -38,11 +38,22 @@ new #[Title('Approval analytics')] class extends Component {
         return RequestType::query()->whereHas('publishedVersion')->orderBy('name')->get();
     }
 
+    private bool $fresh = false;
+
     /** @return array<string, mixed> */
     #[Computed]
     public function report(): array
     {
-        return app(AnalyticsService::class)->dashboard($this->days, auth()->user(), ctype_digit($this->requestType) ? (int) $this->requestType : null);
+        return app(AnalyticsService::class)->dashboard($this->days, auth()->user(), ctype_digit($this->requestType) ? (int) $this->requestType : null, $this->fresh);
+    }
+
+    /** Figures are cached for a few minutes; recalculate them now. */
+    public function refresh(): void
+    {
+        $this->fresh = true;
+        unset($this->report);
+        $this->report;
+        $this->fresh = false;
     }
 
     public function duration(?int $minutes): string
@@ -78,7 +89,10 @@ new #[Title('Approval analytics')] class extends Component {
                 <flux:heading size="lg">{{ __('Approval analytics') }}</flux:heading>
                 <x-ui.help-link article="analytics" />
             </div>
-            <flux:subheading>{{ __('Organization-wide workflows started between :from and :to. Calculated live at :time.', ['from' => $this->report['from']->format('M j, Y'), 'to' => $this->report['to']->format('M j, Y'), 'time' => now()->format('M j, Y g:i A')]) }}</flux:subheading>
+            <flux:subheading>
+                {{ __('Organization-wide workflows started between :from and :to. Figures as of :time.', ['from' => $this->report['from']->format('M j, Y'), 'to' => $this->report['to']->format('M j, Y'), 'time' => $this->report['generated_at']->format('M j, Y g:i A')]) }}
+                <flux:link as="button" wire:click="refresh" class="ms-1 text-sm" data-test="analytics-refresh">{{ __('Refresh') }}</flux:link>
+            </flux:subheading>
         </div>
 
         <div class="flex flex-wrap items-end gap-3">

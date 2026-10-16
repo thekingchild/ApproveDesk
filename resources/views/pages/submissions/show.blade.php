@@ -13,7 +13,6 @@ use App\Models\Comment;
 use App\Models\Delegation;
 use App\Models\Submission;
 use App\Models\User;
-use App\Services\ApproverWorkbench;
 use App\Services\Collaboration\ExpectedProgress;
 use App\Services\Collaboration\MentionParser;
 use App\Services\Workflow\AssigneeDirectory;
@@ -235,25 +234,6 @@ new #[Title('Submission')] class extends Component {
             && $this->submission->workflowInstance->status->value === 'active'
             && SeparationOfDuties::forbids(Auth::user(), $this->submission)
             && app(AssigneeResolver::class)->candidates($step, $this->submission)->contains(Auth::user());
-    }
-
-    /** @return array{previous: string|null, next: string|null} */
-    #[Computed]
-    public function approvalNavigation(): array
-    {
-        $items = collect(app(ApproverWorkbench::class)->itemsFor(Auth::user()))
-            ->filter(fn (array $item): bool => $item['needs_me'])
-            ->values();
-        $index = $items->search(fn (array $item): bool => $item['instance']->submission_id === $this->submission->id);
-
-        if ($index === false) {
-            return ['previous' => null, 'next' => null];
-        }
-
-        return [
-            'previous' => $index > 0 ? route('submissions.show', $items[$index - 1]['instance']->submission) : null,
-            'next' => $index < $items->count() - 1 ? route('submissions.show', $items[$index + 1]['instance']->submission) : null,
-        ];
     }
 
     #[Computed]
@@ -796,7 +776,7 @@ new #[Title('Submission')] class extends Component {
 
 <div
     class="space-y-6"
-    x-data="{ previous: @js($this->approvalNavigation['previous']), next: @js($this->approvalNavigation['next']) }"
+    x-data="{ previous: @js($this->canAct ? route('approvals.queue', [$submission, 'previous']) : null), next: @js($this->canAct ? route('approvals.queue', [$submission, 'next']) : null) }"
     x-on:keydown.window="
         if (['INPUT', 'TEXTAREA', 'SELECT'].includes($event.target.tagName) || $event.metaKey || $event.ctrlKey || $event.altKey) return;
         if ($event.key === '[' && previous) window.location.assign(previous);
@@ -1109,12 +1089,8 @@ new #[Title('Submission')] class extends Component {
                     <flux:subheading>{{ __('Shortcuts: [ previous, ] next, A approve, R reject') }}</flux:subheading>
                 </div>
                 <div class="flex gap-2">
-                    @if ($this->approvalNavigation['previous'])
-                        <flux:button :href="$this->approvalNavigation['previous']" variant="ghost" wire:navigate aria-label="{{ __('Previous request') }}">{{ __('Previous') }}</flux:button>
-                    @endif
-                    @if ($this->approvalNavigation['next'])
-                        <flux:button :href="$this->approvalNavigation['next']" variant="ghost" wire:navigate aria-label="{{ __('Next request') }}">{{ __('Next') }}</flux:button>
-                    @endif
+                    <flux:button :href="route('approvals.queue', [$submission, 'previous'])" variant="ghost" aria-label="{{ __('Previous request in my queue') }}" data-test="queue-previous">{{ __('Previous') }}</flux:button>
+                    <flux:button :href="route('approvals.queue', [$submission, 'next'])" variant="ghost" aria-label="{{ __('Next request in my queue') }}" data-test="queue-next">{{ __('Next') }}</flux:button>
                 </div>
             </div>
             <flux:textarea wire:model="actionComment" :label="__('Comment (required for reject, return, information request, or escalation)')" rows="3" class="mt-3" />

@@ -8,9 +8,11 @@ The approval workbench is the queue of work assigned to you, including work dele
 - Due soon: a deadline is close.
 - Overdue: the step deadline has passed. Overdue uses the step’s deadline calendar (elapsed or business, including office hours when set).
 - Waiting on others: you are involved, but someone else must act.
-- Completed: finished work you can still open.
+- Completed: finished work you decided, most recent first. The workbench keeps your 100 most recent; find older requests in **My submissions** or reports.
 
-Filter by status, deadline, priority, request type, department, requester, and delegation.
+Filter by status, deadline, priority, request type, department, requester, and delegation. The queue shows 25 requests per page, highest priority first.
+
+Tick the requests you want to approve together; the bar at the top shows how many are selected. **Approve selected** works when every selected request is at the same step of the same workflow; otherwise it tells you why nothing was approved.
 
 ## Preview and decide
 
@@ -20,7 +22,7 @@ Decision buttons disable while you are offline. Approvals still need a live conn
 
 Reject, return, escalate, request information, and approve with conditions need a comment. Approval can be confirmed from the workbench for eligible items.
 
-Keyboard shortcuts move to the next or previous request and open the approve or reject dialog. Destructive actions still need confirmation.
+**Previous** and **Next** on a request (or the `[` and `]` keys) open the neighbouring request in your **Needs my decision** queue. At either end of the queue they return you to the workbench. `A` and `R` open the approve or reject dialog. Destructive actions still need confirmation.
 
 For a document-ready copy, choose **Approval report** on the request. The preview and downloadable PDF include the request information you are allowed to see, workflow steps, recorded decisions, decision comments, the attachment list, and a compact image stamp showing the current Draft, Pending, In review, Approved, Rejected, Returned, Awaiting information, or Withdrawn status. The stamp records the status displayed when the copy was generated; workflow history remains the authority. See [Requests](requests.md) for printing, sensitive-field, and signature guidance.
 

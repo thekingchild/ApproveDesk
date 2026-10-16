@@ -291,10 +291,10 @@ Measured on the Wave 0 performance dataset (2,857 submissions, 2,008 active work
 
 | ID | Sev | Finding | Measured | Status |
 |---|---|---|---|---|
-| RV-PERF-07 | S2 | Global search (header, every page, live) scans all matching submissions and runs the view policy per row in PHP (`SubmissionSearchService.php:55-58`) | submitter typing "re": 11.9 s, 14,621 queries | Open |
-| RV-PERF-08 | S2 | Approvals inbox loads every active workflow and renders all items unpaginated; recomputed on every checkbox | busy approver: 4.8 s, 94 MB, 5.6 MB HTML | Open |
-| RV-PERF-09 | S2 | Request page runs the whole workbench on every render just for Previous/Next | busy approver: 4.4 s, 70 MB | Open |
-| RV-PERF-10 | S2 | Admin dashboard and analytics hydrate the whole 30-day cohort in PHP, uncached | 3.4 s, 60 MB | Open |
+| RV-PERF-07 | S2 | Global search (header, every page, live) scans all matching submissions and runs the view policy per row in PHP (`SubmissionSearchService.php:55-58`) | submitter typing "re": 11.9 s, 14,621 queries | **Fix in review** (`feature/rv-perf-pages`) |
+| RV-PERF-08 | S2 | Approvals inbox loads every active workflow and renders all items unpaginated; recomputed on every checkbox | busy approver: 4.8 s, 94 MB, 5.6 MB HTML | **Fix in review** (`feature/rv-perf-pages`) |
+| RV-PERF-09 | S2 | Request page runs the whole workbench on every render just for Previous/Next | busy approver: 4.4 s, 70 MB | **Fix in review** (`feature/rv-perf-pages`) |
+| RV-PERF-10 | S2 | Admin dashboard and analytics hydrate the whole 30-day cohort in PHP, uncached | 3.4 s, 60 MB | **Fix in review** (`feature/rv-perf-pages`) |
 | RV-PERF-11 | S2 | Out-of-office sweep is O(away users × active workflows × ~5 queries) every 15 min | 5 away × 2,008: 27.9 s, 50,247 queries | **Fix in review** (`feature/rv-ops-scheduler-jobs`) |
 | RV-OPS-01 | S2 | Scheduled `queue:work` has no `--max-time`, foreground, 24 h overlap lock (stale after a kill → no mail for a day); `retry_after` = `--timeout` | traced | **Fix in review** (`feature/rv-ops-scheduler-jobs`) |
 | RV-OPS-02 | S2 | `withoutOverlapping()` on `Schedule::job()` only guards the dispatch; copies pile up when the worker lags | traced | **Fix in review** (`feature/rv-ops-scheduler-jobs`) |

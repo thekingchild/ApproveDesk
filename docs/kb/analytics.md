@@ -4,6 +4,8 @@ Open **Administration → Analytics** for organization-wide workflow metrics.
 
 The report covers workflows started in the selected period: 7, 30, or 90 days. You can narrow it to one published request type.
 
+Figures are recalculated at most every 10 minutes; the time under the title shows when. Choose **Refresh** to recalculate now. The dashboard's administrator cards use the same figures.
+
 ## What you will see
 
 - Items waiting on you, overdue work, median cycle time, return rate, and SLA compliance

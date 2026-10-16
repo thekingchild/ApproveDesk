@@ -14,6 +14,12 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Fixed
 
+- **Faster search, approvals, request pages, and analytics for large organizations.**
+  - Global search filters by what you can see in the database instead of checking every matching request one by one (a requester typing two letters took about 12 seconds).
+  - The approval workbench loads only work you could act on, have acted on, or recently decided. It shows 25 per page and keeps your 100 most recent decided requests under Completed. Ticking checkboxes no longer reloads the queue.
+  - The request page no longer rebuilds your whole queue on every load; **Previous** / **Next** find the neighbouring request when you click them.
+  - Analytics and the administrator dashboard cards are cached for up to 10 minutes, with the calculation time shown and a **Refresh** action.
+- The API's submission list now includes requests you follow (added by someone else) and, for auditors with active access, all requests, matching what the request page already allowed.
 - **Background work on shared hosting is more robust.** The scheduled queue worker now stops after 50 seconds and runs alongside the rest of the schedule; a worker killed by the host no longer blocks mail and reminders for up to a day (its lock expires after 5 minutes); and a job running close to the timeout is no longer handed to a second worker (`DB_QUEUE_RETRY_AFTER` now defaults to 150). Escalations, out-of-office fallbacks, delivery retries, digests, and retention can no longer pile up as duplicate jobs when the queue is slow.
 - Operations snapshots (one per minute) are pruned after 14 days instead of growing forever and inflating every backup.
 - The out-of-office sweep only checks workflows the away person could be assigned to (5 away people × 2,000 active workflows took about 28 seconds and 50,000 queries).

@@ -84,12 +84,6 @@ parameters:
 			count: 1
 			path: app/DTOs/OutboundNotification.php
 
-		-
-			message: '#^Parameter \#1 \$query of method App\\Services\\Workflow\\AssignedStepConstraint\:\:constrainInstances\(\) expects Illuminate\\Database\\Eloquent\\Builder\<App\\Models\\WorkflowInstance\>, Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\> given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Http/Controllers/Api/V1/SubmissionController.php
-
 
 		-
 			message: '#^Using nullsafe method call on non\-nullable type Illuminate\\Contracts\\Session\\Session\. Use \-\> instead\.$#'

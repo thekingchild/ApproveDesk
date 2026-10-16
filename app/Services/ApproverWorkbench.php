@@ -2,17 +2,25 @@
 
 namespace App\Services;
 
+use App\Enums\AssigneeType;
 use App\Enums\WorkflowActionType;
 use App\Enums\WorkflowStatus;
 use App\Models\User;
 use App\Models\WorkflowInstance;
+use App\Services\Workflow\AssignedStepConstraint;
 use App\Services\Workflow\AssigneeResolver;
 use App\Services\Workflow\ReviewRound;
 use Carbon\CarbonInterface;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 
 class ApproverWorkbench
 {
+    /** Decided requests shown under Completed; older ones are in reports. */
+    public const COMPLETED_LIMIT = 100;
+
+    public function __construct(private readonly AssignedStepConstraint $assignedSteps) {}
+
     /**
      * @return array<int, array{
      *     instance: WorkflowInstance,
@@ -25,18 +33,34 @@ class ApproverWorkbench
     public function itemsFor(User $user): array
     {
         return AssigneeResolver::batch(function () use ($user): array {
+            // Narrow in SQL before the per-item eligibility check (RV-PERF-08):
+            // this used to load every active workflow in the organization.
+            $recentlyDecided = WorkflowInstance::query()
+                ->whereNotIn('status', [WorkflowStatus::Active->value, WorkflowStatus::OnHold->value])
+                ->whereHas('actions', fn ($actions) => $actions->where('actor_id', $user->id))
+                ->latest('updated_at')
+                ->limit(self::COMPLETED_LIMIT)
+                ->pluck('id');
+
             $instances = WorkflowInstance::query()
                 ->with([
+                    'submission' => fn ($submission) => $submission->withCount('files'),
                     'submission.submitter.department',
                     'submission.department',
-                    'submission.files',
                     'currentStep',
                     'actions',
                     'delegations',
                 ])
-                ->where(function ($query) use ($user): void {
-                    $query->whereHas('actions', fn ($actions) => $actions->where('actor_id', $user->id))
-                        ->orWhere('status', WorkflowStatus::Active);
+                ->where(function ($query) use ($user, $recentlyDecided): void {
+                    $query->where(function ($open) use ($user): void {
+                        $open->where('status', WorkflowStatus::Active->value)
+                            ->where(fn ($mine) => $this->couldHoldCurrentStep($mine, $user));
+                    })
+                        ->orWhere(function ($waiting) use ($user): void {
+                            $waiting->whereIn('status', [WorkflowStatus::Active->value, WorkflowStatus::OnHold->value])
+                                ->whereHas('actions', fn ($actions) => $actions->where('actor_id', $user->id));
+                        })
+                        ->orWhereIn('id', $recentlyDecided);
                 })
                 ->get();
 
@@ -70,6 +94,43 @@ class ApproverWorkbench
                 ->values()
                 ->all();
         });
+    }
+
+    /**
+     * The request after (or before) $submission in the user's "needs my
+     * decision" queue, worked out only when asked (RV-PERF-09).
+     */
+    public function neighbour(User $user, int $submissionId, string $direction): ?int
+    {
+        $queue = collect($this->itemsFor($user))
+            ->filter(fn (array $item): bool => $item['needs_me'])
+            ->map(fn (array $item): int => $item['instance']->submission_id)
+            ->values();
+
+        $index = $queue->search($submissionId);
+        if ($index === false) {
+            return $queue->first();
+        }
+
+        return $queue->get($direction === 'previous' ? $index - 1 : $index + 1);
+    }
+
+    /**
+     * Superset of the active workflows whose current step this user may act
+     * on: assigned (SQL-resolvable types), resolved by an external system
+     * (checked per item), or delegated to or by the user.
+     *
+     * @param  Builder<WorkflowInstance>  $query
+     */
+    private function couldHoldCurrentStep(Builder $query, User $user): void
+    {
+        $this->assignedSteps->constrainInstances($query, $user)
+            ->orWhereHas('currentStep', fn ($step) => $step->where('assignee_type', AssigneeType::External))
+            ->orWhereHas('delegations', fn ($delegation) => $delegation
+                ->where('starts_at', '<=', now())
+                ->where('expires_at', '>', now())
+                ->where(fn ($party) => $party->where('delegate_id', $user->id)->orWhere('delegator_id', $user->id))
+                ->whereColumn('delegations.step_id', 'workflow_instances.current_step_id'));
     }
 
     public function canAct(WorkflowInstance $instance, User $user): bool

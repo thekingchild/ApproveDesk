@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\ResetUserPasswordController;
 use App\Http\Controllers\Admin\ResetUserSecondFactorController;
 use App\Http\Controllers\AnalyticsExportController;
+use App\Http\Controllers\ApprovalQueueController;
 use App\Http\Controllers\ApprovalReportController;
 use App\Http\Controllers\Auth\RegistrationConfirmationController;
 use App\Http\Controllers\BackupDestinationController;
@@ -253,6 +254,9 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         ->name('submissions.approval-report.download');
     Route::livewire('submissions/{submission}', 'pages::submissions.show')->name('submissions.show');
     Route::livewire('approvals/inbox', 'pages::approvals.inbox')->name('approvals.inbox');
+    Route::get('approvals/queue/{submission}/{direction}', ApprovalQueueController::class)
+        ->whereIn('direction', ['previous', 'next'])
+        ->name('approvals.queue');
 
     Route::get('submissions/{submission}/files/{file}', SubmissionFileDownloadController::class)
         ->middleware('signed')
