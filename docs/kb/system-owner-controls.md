@@ -45,7 +45,7 @@ Open **Settings → Branding → Advanced: analytics and custom code**. This con
 
 - Add only code from a reviewed provider or a source you control.
 - Never put passwords, API secrets, private keys, or user-specific data in the field.
-- Confirm your password and second factor before saving. If this session has not confirmed your password yet, **Save branding** opens the confirmation page and keeps the snippet you entered.
+- Confirm your password and second factor before saving. If this session has not confirmed your password recently (within the password-confirmation window, three hours by default), **Save branding** opens the confirmation page and keeps the snippet you entered.
 - Remove the code immediately if it causes an unsafe redirect, captures form data, or breaks navigation.
 
 People with ordinary Branding access can manage identity and appearance but cannot view or change this field.

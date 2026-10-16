@@ -34,6 +34,8 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Security
 
+- Request titles, comments, and names in notification emails are shown as plain text, so they can no longer turn into links inside a genuine ApproveDesk email.
+- Saving owner analytics/custom code requires a password confirmation within the configured confirmation window, not one from any earlier point in the session.
 - Mentioning someone who cannot already open a request now requires permission to add followers, so followers can no longer share a request with anyone by mentioning them.
 - The API accepts only the requester's own department when creating a submission.
 - Disposition reviews are decided once, under a lock, and — while separation of duties is on — not by the person who opened them.
