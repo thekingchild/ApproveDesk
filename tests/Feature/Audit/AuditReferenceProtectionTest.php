@@ -56,6 +56,9 @@ class AuditReferenceProtectionTest extends TestCase
         $approver = User::factory()->create();
         $unconfirmedDelegate = User::factory()->unverified()->create(['created_at' => now()->subDays(10)]);
         $unconfirmedStranger = User::factory()->unverified()->create(['created_at' => now()->subDays(10)]);
+        foreach ([$unconfirmedDelegate, $unconfirmedStranger] as $registrant) {
+            \App\Models\RegistrationOtpCode::query()->create(['email' => $registrant->email, 'code_hash' => 'x', 'expires_at' => now()->subDays(9), 'attempts' => 0]);
+        }
         WorkflowTemplate::factory()->default()->sequential([$approver])->create();
         $instance = app(WorkflowEngine::class)->initialize(Submission::factory()->create());
         app(WorkflowEngine::class)->delegate($instance, $approver, $unconfirmedDelegate, now()->addHour());
