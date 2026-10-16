@@ -13,6 +13,9 @@ use Livewire\Attributes\Title;
 use Livewire\Component;
 
 new #[Title('Out of office')] class extends Component {
+    /** Set from the browser (<x-browser-timezone />) so datetime-local values are read in the viewer's timezone. */
+    public string $browserTimezone = '';
+
     public string $startsAt = '';
 
     public string $endsAt = '';
@@ -35,8 +38,8 @@ new #[Title('Out of office')] class extends Component {
         try {
             $save->execute(
                 Auth::user(),
-                \Illuminate\Support\Carbon::parse($validated['startsAt']),
-                \Illuminate\Support\Carbon::parse($validated['endsAt']),
+                \App\Support\LocalTime::parse($validated['startsAt'], $this->browserTimezone),
+                \App\Support\LocalTime::parse($validated['endsAt'], $this->browserTimezone),
                 isset($validated['fallbackUserId']) && $validated['fallbackUserId'] !== ''
                     ? (int) $validated['fallbackUserId']
                     : null,
@@ -117,6 +120,8 @@ new #[Title('Out of office')] class extends Component {
         <flux:input wire:model="startsAt" type="datetime-local" :label="__('Starts')" required />
         <flux:error name="startsAt" />
         <flux:input wire:model="endsAt" type="datetime-local" :label="__('Ends')" required />
+        <x-browser-timezone />
+        <flux:text class="text-xs">{{ __('Times are in your time zone (:zone).', ['zone' => \App\Support\LocalTime::label($this->browserTimezone)]) }}</flux:text>
         <flux:error name="endsAt" />
         <div>
             <flux:heading size="sm">{{ __('Fallback approver') }}</flux:heading>

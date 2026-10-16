@@ -15,7 +15,6 @@ use App\Models\Submission;
 use App\Models\User;
 use App\Services\Audit\EvidencePackVerifier;
 use Flux\Flux;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Computed;
@@ -26,6 +25,9 @@ use Livewire\WithPagination;
 
 new #[Title('Records')] class extends Component
 {
+    /** Set from the browser (<x-browser-timezone />) so datetime-local values are read in the viewer's timezone. */
+    public string $browserTimezone = '';
+
     use WithFileUploads;
     use WithPagination;
 
@@ -100,8 +102,8 @@ new #[Title('Records')] class extends Component
             $grant->execute(
                 Auth::user(),
                 User::query()->assignable()->findOrFail($this->auditorUserId),
-                Carbon::parse($this->accessStartsAt),
-                Carbon::parse($this->accessEndsAt),
+                \App\Support\LocalTime::parse($this->accessStartsAt, $this->browserTimezone),
+                \App\Support\LocalTime::parse($this->accessEndsAt, $this->browserTimezone),
                 $this->accessReason,
             );
         } catch (\InvalidArgumentException $exception) {
@@ -214,6 +216,8 @@ new #[Title('Records')] class extends Component
                 </flux:select>
                 <flux:input type="datetime-local" wire:model="accessStartsAt" :label="__('Starts')"/>
                 <flux:input type="datetime-local" wire:model="accessEndsAt" :label="__('Ends')"/>
+                <x-browser-timezone />
+                <flux:text class="text-xs">{{ __('Times are in your time zone (:zone).', ['zone' => \App\Support\LocalTime::label($this->browserTimezone)]) }}</flux:text>
                 <flux:input wire:model="accessReason" :label="__('Reason')"/>
                 <flux:error name="accessReason" />
                 <flux:button variant="primary" wire:click="grantAccess">{{ __('Grant access') }}</flux:button>
