@@ -255,35 +255,36 @@ Sources: two read-only feature-area reviews with 43 probe tests (every listed CO
 | RV-BUG-12 | S2 | With two file fields, each field is linked to the other's uploads (`create-custom.blade.php:115`) | **Fix in review** (`feature/rv-bug-submit-failures`) |
 | RV-BUG-13 | S2 | Visibility/required rule on a multi-select source crashes the form ("Array to string conversion") | **Fix in review** (`feature/rv-bug-conditional-routing`) |
 | RV-BUG-14 | S2 | Returning to sequential numbering after random can collide and then block every new request (counter rollback) | **Fix in review** (`feature/rv-data-attachments-references`) |
-| RV-BUG-15 | S3 | Chat send failures recorded as Sent (never retried/shown); unmapped WhatsApp kinds recorded Sent, not Skipped | Open |
-| RV-BUG-16 | S3 | Quiet-hours-deferred chat messages lose their copy and signed link; sent even if the step moved on | Open |
-| RV-BUG-17 | S3 | Decision emails show literal `{{comment}}` or a stale return comment on an Approved email | Open |
-| RV-BUG-18 | S3 | Daily digests skip a day when the job starts seconds earlier than yesterday | Open |
-| RV-BUG-19 | S3 | Reminder cap counts recipients, so steps with more approvers than the cap can never be reminded; one recent recipient aborts the batch | Open |
-| RV-BUG-20 | S3 | Deactivated/anonymized people still receive decision, comment, and digest email | Open |
+| RV-BUG-15 | S3 | Chat send failures recorded as Sent (never retried/shown); unmapped WhatsApp kinds recorded Sent, not Skipped | **Fix in review** (`feature/rv-wave2-s3`) |
+| RV-BUG-16 | S3 | Quiet-hours-deferred chat messages lose their copy and signed link; sent even if the step moved on | **Fix in review** (`feature/rv-wave2-s3`) |
+| RV-BUG-17 | S3 | Decision emails show literal `{{comment}}` or a stale return comment on an Approved email | **Fix in review** (`feature/rv-wave2-s3`) |
+| RV-BUG-18 | S3 | Daily digests skip a day when the job starts seconds earlier than yesterday | **Fix in review** (`feature/rv-wave2-s3`) |
+| RV-BUG-19 | S3 | Reminder cap counts recipients, so steps with more approvers than the cap can never be reminded; one recent recipient aborts the batch | **Fix in review** (`feature/rv-wave2-s3`) |
+| RV-BUG-20 | S3 | Deactivated/anonymized people still receive decision, comment, and digest email | **Fix in review** (`feature/rv-wave2-s3`) |
 | RV-BUG-21 | S3 | API lets a requester resume an information request without any reply | **Fix in review** (`feature/rv-bug-submit-failures`) |
-| RV-SEC-21 | S3 | Evidence-pack verifier accepts extra files injected into the zip; manifest metadata unsigned | Open |
-| RV-DATA-07 | S3 | Evidence packs omit comment/submission/file revision histories and most notifications; notification query loads the whole table | Open |
-| RV-BUG-22 | S3 | Approval report shows a withdrawn step as Completed and lists today's assignees instead of who acted | Open |
-| RV-BUG-23 | S3 | Files-backup promote doesn't restore branding artwork (left in restore-holding) | Open |
-| RV-SEC-22 | S3 | Anonymizing keeps the profile photo (still served to admins), watchers, and future delegations | Open |
-| RV-BUG-24 | S3 | Import "update existing" skips row validation (phone, department, manager) | Open |
-| RV-BUG-25 | S3 | Import silently drops a manager whose own row failed | Open |
-| RV-DATA-08 | S3 | Retention only soft-deletes; nothing is ever purged though Help says "removed" | Open |
-| RV-BUG-26 | S3 | Dispositions allowed before a request is finished; approve/release errors surface as 500 | Open |
-| RV-BUG-27 | S3? | Concurrent requests with the same Idempotency-Key both run (suspected race) | Open |
-| RV-BUG-28 | S3 | Request-page timeline shows the latest published version, not the instance's pinned version | Open |
-| RV-BUG-29 | S3 | Hidden parent's stale value still makes descendants required, then the answer is discarded | Open |
-| RV-BUG-30 | S3 | Calculated total on the review screen differs from the stored total | Open |
-| RV-BUG-31 | S3 | Saving a request-type draft re-activates an archived type | Open |
-| RV-BUG-32 | S3 | Editing a General Request draft/returned request clears its department | Open |
+| RV-SEC-21 | S3 | Evidence-pack verifier accepts extra files injected into the zip; manifest metadata unsigned | **Fix in review** (`feature/rv-wave2-s3`) |
+| RV-DATA-07 | S3 | Evidence packs omit comment/submission/file revision histories and most notifications; notification query loads the whole table | **Fix in review** (`feature/rv-wave2-s3`; email notifications are not recorded per request (would need a NotificationSent listener)) |
+| RV-BUG-22 | S3 | Approval report shows a withdrawn step as Completed and lists today's assignees instead of who acted | **Fix in review** (`feature/rv-wave2-s3`) |
+| RV-BUG-23 | S3 | Files-backup promote doesn't restore branding artwork (left in restore-holding) | **Fix in review** (`feature/rv-wave2-s3`) |
+| RV-SEC-22 | S3 | Anonymizing keeps the profile photo (still served to admins), watchers, and future delegations | **Fix in review** (`feature/rv-wave2-s3`) |
+| RV-BUG-24 | S3 | Import "update existing" skips row validation (phone, department, manager) | **Fix in review** (`feature/rv-wave2-s3`) |
+| RV-BUG-25 | S3 | Import silently drops a manager whose own row failed | **Fix in review** (`feature/rv-wave2-s3`) |
+| RV-DATA-08 | S3 | Retention only soft-deletes; nothing is ever purged though Help says "removed" | **Fix in review** (`feature/rv-wave2-s3`; decided: keep evidence — Help corrected to "retired, kept as evidence"; no purge built because hard-deleting would cascade into append-only history) |
+| RV-BUG-26 | S3 | Dispositions allowed before a request is finished; approve/release errors surface as 500 | **Fix in review** (`feature/rv-wave2-s3`) |
+| RV-BUG-27 | S3? | Concurrent requests with the same Idempotency-Key both run (suspected race) | **Fix in review** (`feature/rv-wave2-s3`; reproduced) |
+| RV-BUG-28 | S3 | Request-page timeline shows the latest published version, not the instance's pinned version | **Fix in review** (`feature/rv-wave2-s3`) |
+| RV-BUG-29 | S3 | Hidden parent's stale value still makes descendants required, then the answer is discarded | **Fix in review** (`feature/rv-wave2-s3`) |
+| RV-BUG-30 | S3 | Calculated total on the review screen differs from the stored total | **Fix in review** (`feature/rv-wave2-s3`) |
+| RV-BUG-31 | S3 | Saving a request-type draft re-activates an archived type | **Fix in review** (`feature/rv-wave2-s3`) |
+| RV-BUG-32 | S3 | Editing a General Request draft/returned request clears its department | **Fix in review** (`feature/rv-wave2-s3`) |
 | RV-BUG-33 | S3 | API submit / direct `resubmit()` skips required custom fields | **Fix in review** (`feature/rv-bug-submit-failures`) |
-| RV-BUG-34 | S3 | 24-hour business-hours mode counts the hour before a working day (deadlines up to 1h early) | Open |
-| RV-BUG-35 | S3 | Date-time field max date rejects that whole day | Open |
-| RV-BUG-36 | S3 | Required checkbox passes when unticked | Open |
-| RV-DOC-02 | S3 | Help says manager/form-field assignees are fixed at submit; they resolve live; `resume()` lacks the empty-assignee check | Open |
-| RV-BUG-37 | S3? | Stale builder save can publish over another admin's version (no version check; suspected) | Open |
+| RV-BUG-34 | S3 | 24-hour business-hours mode counts the hour before a working day (deadlines up to 1h early) | **Fix in review** (`feature/rv-wave2-s3`) |
+| RV-BUG-35 | S3 | Date-time field max date rejects that whole day | **Fix in review** (`feature/rv-wave2-s3`) |
+| RV-BUG-36 | S3 | Required checkbox passes when unticked | **Fix in review** (`feature/rv-wave2-s3`) |
+| RV-DOC-02 | S3 | Help says manager/form-field assignees are fixed at submit; they resolve live; `resume()` lacks the empty-assignee check | **Fix in review** (`feature/rv-wave2-s3`) |
+| RV-BUG-37 | S3? | Stale builder save can publish over another admin's version (no version check; suspected) | **Fix in review** (`feature/rv-wave2-s3`; reproduced) |
 | RV-BUG-38 | S4 | Minor: mentions added by editing a comment are ignored; API docs field name/list scope/retry count; draft retention counts from creation; files-promote leftovers; builder preview parity; reference period read twice at boundaries | Open |
+| RV-DATA-09 | S3 | Email notifications are not recorded per request (only chat channels write `notification_deliveries`), so evidence packs cannot list emails sent; needs a `NotificationSent` listener for the mail channel (found while fixing RV-DATA-07) | Open |
 
 ## Wave 2 shared-hosting performance findings (2026-10-16)
 
@@ -301,14 +302,14 @@ Measured on the Wave 0 performance dataset (2,857 submissions, 2,008 active work
 | RV-PERF-12 | S2 | Evidence pack loads the whole `notification_deliveries` table (no submission_id column); attachments read fully into memory to hash | 100k deliveries: 9.0 s, 273 MB | **Fix in review** (`feature/rv-ops-scheduler-jobs`) |
 | RV-OPS-03 | S2 | Backups/promote/verify read whole files into memory and run inside the web request with no time limit; an OOM/timeout fatal skips `up`, leaving maintenance mode on | 173 MB dump → 333 MB peak | **Fix in review** (`feature/rv-ops-backups`; still in-request by design for shared hosting, now streamed, time limit lifted, fatal-error recovery) |
 | RV-OPS-04 | S2 | `ops_snapshots` gains a row every minute, never read or pruned (~525k rows/yr in every backup) | traced | **Fix in review** (`feature/rv-ops-scheduler-jobs`) |
-| RV-PERF-13 | S3 | Spatie permission cache flushed on every request and artisan command (`AppServiceProvider.php:128`) | ~22 ms + 3 queries + a file write per request | Open |
-| RV-PERF-14 | S3 | Unbounded full-model user dropdowns (submissions filter, delegate candidates, departments, create-custom) | ~75 B HTML/user | Open |
-| RV-PERF-15 | S3 | `NotifyCurrentApprovers` re-queries the submission per approver inside the approving request | traced | Open |
-| RV-PERF-16 | S3 | `ApplyRetentionJob` offset-chunks while soft-deleting (skips every other page); no job timeout | traced | Open |
-| RV-PERF-17 | S3 | Backups page loads 40 snapshots including full files manifests (suspected) | traced | Open |
-| RV-OPS-05 | S3 | Nothing prunes notifications, deliveries, failed jobs, activity log, or evidence-pack zips | traced | Open |
-| RV-PERF-18 | S3 | `RetryNotificationDeliveries` sends up to 50 external messages in one job (suspected) | traced | Open |
-| RV-PERF-19 | S4 | Minor: ~6 avoidable constant queries per page (system settings LIKE, owner, default theme, unread count twice); Tiptap is 99% of `app.js` but only used on one page; stamp PNGs inlined; builder undo history in Livewire state; heartbeat schema queries; file cache never garbage-collected | — | Open |
+| RV-PERF-13 | S3 | Spatie permission cache flushed on every request and artisan command (`AppServiceProvider.php:128`) | ~22 ms + 3 queries + a file write per request | **Fix in review** (`feature/rv-wave2-s3`) |
+| RV-PERF-14 | S3 | Unbounded full-model user dropdowns (submissions filter, delegate candidates, departments, create-custom) | ~75 B HTML/user | **Partially fixed** (`feature/rv-wave2-s3`: only displayed columns loaded; searchable pickers moved to Wave 4) |
+| RV-PERF-15 | S3 | `NotifyCurrentApprovers` re-queries the submission per approver inside the approving request | traced | **Fix in review** (`feature/rv-wave2-s3`) |
+| RV-PERF-16 | S3 | `ApplyRetentionJob` offset-chunks while soft-deleting (skips every other page); no job timeout | traced | **Fix in review** (`feature/rv-wave2-s3`) |
+| RV-PERF-17 | S3 | Backups page loads 40 snapshots including full files manifests (suspected) | traced | **Fix in review** (`feature/rv-wave2-s3`; confirmed) |
+| RV-OPS-05 | S3 | Nothing prunes notifications, deliveries, failed jobs, activity log, or evidence-pack zips | traced | **Fix in review** (`feature/rv-wave2-s3`) |
+| RV-PERF-18 | S3 | `RetryNotificationDeliveries` sends up to 50 external messages in one job (suspected) | traced | **Fix in review** (`feature/rv-wave2-s3`; confirmed) |
+| RV-PERF-19 | S4 | Minor: ~6 avoidable constant queries per page (system settings LIKE, owner, default theme, unread count twice); Tiptap is 99% of `app.js` but only used on one page; stamp PNGs inlined; builder undo history in Livewire state; heartbeat schema queries; file cache never garbage-collected | — | **Partially fixed** (`feature/rv-wave2-s3`: settings LIKE, duplicate unread count, Tiptap split, file-cache prune; theme/owner queries, stamp PNGs, builder history and heartbeat checks accepted as minor) |
 
 ---
 
