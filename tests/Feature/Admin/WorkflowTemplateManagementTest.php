@@ -224,6 +224,7 @@ class WorkflowTemplateManagementTest extends TestCase
             ->set('submissionTypes', ['memo'])
             ->set('steps', [
                 [
+                    'key' => 'route',
                     'name' => 'Route by amount',
                     'stepType' => StepType::Conditional->value,
                     'quorumCount' => null,
@@ -233,10 +234,11 @@ class WorkflowTemplateManagementTest extends TestCase
                     'conditionField' => 'metadata.amount',
                     'conditionOperator' => 'gte',
                     'conditionValue' => '10000',
-                    'trueStep' => 3,
-                    'falseStep' => 2,
+                    'trueStep' => 'policy',
+                    'falseStep' => 'standard',
                 ],
                 [
+                    'key' => 'standard',
                     'name' => 'Standard review',
                     'stepType' => StepType::Sequential->value,
                     'quorumCount' => null,
@@ -245,6 +247,7 @@ class WorkflowTemplateManagementTest extends TestCase
                     'allowDelegation' => true,
                 ],
                 [
+                    'key' => 'policy',
                     'name' => 'Automatic policy check',
                     'stepType' => StepType::Auto->value,
                     'quorumCount' => null,
@@ -253,6 +256,7 @@ class WorkflowTemplateManagementTest extends TestCase
                     'allowDelegation' => false,
                 ],
                 [
+                    'key' => 'executive',
                     'name' => 'Executive review',
                     'stepType' => StepType::Sequential->value,
                     'quorumCount' => null,

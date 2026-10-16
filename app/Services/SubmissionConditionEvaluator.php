@@ -20,6 +20,28 @@ final class SubmissionConditionEvaluator
     /** @param array<string, mixed> $conditions */
     public function evaluate(Submission $submission, array $conditions): bool
     {
+        $this->assertValid($conditions);
+
+        $results = array_map(
+            fn (array $rule): bool => $this->evaluateRule($submission, $rule),
+            $conditions['rules'],
+        );
+
+        return ($conditions['match'] ?? 'all') === 'all'
+            ? ! in_array(false, $results, true)
+            : in_array(true, $results, true);
+    }
+
+    /**
+     * Structural check used when a condition is saved or published, so a
+     * condition the engine would refuse never reaches a live request (RV-BUG-10).
+     *
+     * @param  array<string, mixed>  $conditions
+     *
+     * @throws InvalidArgumentException
+     */
+    public function assertValid(array $conditions): void
+    {
         $rules = $conditions['rules'] ?? null;
         $match = $conditions['match'] ?? 'all';
 
@@ -27,48 +49,61 @@ final class SubmissionConditionEvaluator
             throw new InvalidArgumentException('Conditions require a non-empty rules array and an all/any match mode.');
         }
 
-        $results = array_map(
-            fn (mixed $rule): bool => $this->evaluateRule($submission, $rule),
-            $rules,
-        );
+        foreach ($rules as $rule) {
+            if (! is_array($rule)) {
+                throw new InvalidArgumentException('Every condition rule must be an object.');
+            }
 
-        return $match === 'all'
-            ? ! in_array(false, $results, true)
-            : in_array(true, $results, true);
+            $field = $rule['field'] ?? null;
+            if (! is_string($field) || ! $this->fieldIsAllowed($field)) {
+                throw new InvalidArgumentException('Condition field is not allowed.');
+            }
+
+            $operator = $rule['operator'] ?? null;
+            if (! is_string($operator) || ! in_array($operator, self::OPERATORS, true)) {
+                throw new InvalidArgumentException('Condition operator is not supported.');
+            }
+        }
     }
 
-    private function evaluateRule(Submission $submission, mixed $rule): bool
+    /** @param array<string, mixed> $rule */
+    private function evaluateRule(Submission $submission, array $rule): bool
     {
-        if (! is_array($rule)) {
-            throw new InvalidArgumentException('Every condition rule must be an object.');
-        }
-
-        $field = $rule['field'] ?? null;
-        $operator = $rule['operator'] ?? null;
-
-        if (! is_string($field) || ! $this->fieldIsAllowed($field)) {
-            throw new InvalidArgumentException('Condition field is not allowed.');
-        }
-
-        if (! is_string($operator) || ! in_array($operator, self::OPERATORS, true)) {
-            throw new InvalidArgumentException('Condition operator is not supported.');
-        }
-
+        $field = (string) $rule['field'];
         $actual = $this->value($submission, $field);
         $expected = $rule['value'] ?? null;
 
-        return match ($operator) {
+        return match ((string) $rule['operator']) {
             'equals' => $this->comparable($actual) === $this->comparable($expected),
             'not_equals' => $this->comparable($actual) !== $this->comparable($expected),
-            'in' => is_array($expected) && in_array($this->comparable($actual), array_map($this->comparable(...), $expected), true),
-            'not_in' => is_array($expected) && ! in_array($this->comparable($actual), array_map($this->comparable(...), $expected), true),
+            'in' => in_array($this->comparable($actual), array_map($this->comparable(...), $this->listValue($expected)), true),
+            'not_in' => ! in_array($this->comparable($actual), array_map($this->comparable(...), $this->listValue($expected)), true),
             'gt' => $this->orderedComparison($actual, $expected, fn (int|float|string $a, int|float|string $b): bool => $a > $b),
             'gte' => $this->orderedComparison($actual, $expected, fn (int|float|string $a, int|float|string $b): bool => $a >= $b),
             'lt' => $this->orderedComparison($actual, $expected, fn (int|float|string $a, int|float|string $b): bool => $a < $b),
             'lte' => $this->orderedComparison($actual, $expected, fn (int|float|string $a, int|float|string $b): bool => $a <= $b),
             'contains' => $this->contains($actual, $expected),
-            'present' => $actual !== null && $actual !== '',
+            default => $actual !== null && $actual !== '' && $actual !== [],
         };
+    }
+
+    /**
+     * Lists are stored as arrays; versions saved by the builder before
+     * RV-BUG-09 hold "high, urgent" instead, which is read as the same list.
+     *
+     * @return list<mixed>
+     */
+    private function listValue(mixed $expected): array
+    {
+        if (is_array($expected)) {
+            return array_values($expected);
+        }
+
+        if (! is_string($expected)) {
+            return [];
+        }
+
+        return array_values(array_filter(array_map('trim', explode(',', $expected)), fn (string $item): bool => $item !== ''));
     }
 
     private function fieldIsAllowed(string $field): bool
@@ -82,6 +117,15 @@ final class SubmissionConditionEvaluator
     {
         if (str_starts_with($field, 'fields.')) {
             return $this->fieldValue($submission, substr($field, 7));
+        }
+
+        // Nothing stores request metadata, so metadata.KEY means the form field
+        // KEY, as Explain routing and simulation already showed (RV-BUG-11).
+        if (str_starts_with($field, 'metadata.')) {
+            $path = substr($field, 9);
+            $stored = data_get($submission->metadata ?? [], $path);
+
+            return $stored ?? (str_contains($path, '.') ? null : $this->fieldValue($submission, $path));
         }
 
         $context = [

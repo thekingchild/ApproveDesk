@@ -50,6 +50,16 @@ Assignees can be named people, a role, department members, the requester's line 
 
 For named people, roles, and departments, type at least two characters to search. Chosen records appear as chips. The page does not list everyone.
 
+## Conditions
+
+A Condition step checks one rule and sends the request down its **true** or **false** branch. A branch goes to a later step or completes the workflow.
+
+- **Field** is a request field (`priority`, `type`, `title`, `department_id`, `submitter_id`, `due_date`), a form field written as `fields.amount`, or `metadata.amount` (which reads the form field `amount`). Any other field is refused when you save or publish, because no request could start on it.
+- **Operator** includes equals, in a comma-separated list (for example `high, urgent`), greater than, at least, contains, and is present.
+- In the builder, choose **Connect true branch** or **Connect false branch**, then click the target node. The inspector names the step each branch goes to.
+- Branches follow the step you chose, not its number. Moving or duplicating steps keeps them pointing at the same step. If you delete a step that a branch points to, saving asks you to choose a new target; the branch is never quietly changed to "complete".
+- A condition with more than one rule (from an earlier version or the API) keeps its other rules when you edit the first one.
+
 Group completion is first response, all assignees, or quorum N-of-M. Sequential, parallel, and quorum step types still set that default.
 
 Deadlines can use elapsed hours or business hours. Business hours use organization working days, office hours, and holidays from **Settings → Approval settings**. Elapsed hours count every hour on the clock.

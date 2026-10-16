@@ -14,6 +14,11 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Fixed
 
+- **Condition branches follow their step.** In the workflow builder and on the Workflow templates list, moving or duplicating steps no longer re-points a condition's true/false branch at a different step, and deleting a branch's target asks for a new one instead of silently completing the workflow. The builder now shows the step each branch goes to, offers the operator list, and lists anything that blocks saving.
+- **Re-saving a template in the builder no longer breaks "in list" conditions.** Lists stay lists, and versions already damaged by the old behaviour (for example `high, urgent` stored as one value) route by the list again. Extra rules and the any/all mode of multi-rule conditions are kept.
+- Conditions and selection rules on unknown fields are refused when saved or published, instead of publishing and then failing every request that reaches them.
+- **`metadata.KEY` rules now work on real requests.** Selection rules and conditions on `metadata.amount` read the form field `amount`, which is what Explain routing and simulation already showed. Before, they never matched a real request. **Upgrade note:** review active rules and conditions that use `metadata.*`; requests submitted after the upgrade follow them.
+- Form visibility and required rules that check a multi-select field no longer crash the form; they match when the field contains the value.
 - **A request that cannot be sent for approval is kept as a draft.** Submitting no longer shows an error page when, for example, nobody can approve a step. Your work, including attachments, is saved as one draft (retrying no longer creates another), opened, and the reason is shown. Answering an information request posts your reply only if the request actually goes back for approval.
 - On custom forms with more than one file field, each field now keeps its own uploads; they were linked to the wrong field.
 - Required custom fields are checked on every submit, including the API and resubmitting a returned request.

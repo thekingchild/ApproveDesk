@@ -6,11 +6,15 @@ use App\Models\RequestType;
 use App\Models\User;
 use App\Models\WorkflowSelectionRule;
 use App\Models\WorkflowTemplate;
+use App\Services\SubmissionConditionEvaluator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use InvalidArgumentException;
 
 final class SaveWorkflowSelectionRulesAction
 {
+    public function __construct(private readonly SubmissionConditionEvaluator $conditions) {}
+
     /**
      * @param  array<int, array<string, mixed>>  $rules
      */
@@ -41,20 +45,31 @@ final class SaveWorkflowSelectionRulesAction
                     ]);
                 }
 
+                $conditions = [
+                    'match' => 'all',
+                    'rules' => [[
+                        'field' => $field,
+                        'operator' => $operator,
+                        'value' => $this->typedValue($operator, $value),
+                    ]],
+                ];
+
+                // A rule the evaluator refuses would silently never match (RV-BUG-10).
+                try {
+                    $this->conditions->assertValid($conditions);
+                } catch (InvalidArgumentException) {
+                    throw ValidationException::withMessages([
+                        "rules.{$index}.field" => __('Use a request field (priority, type, title, department_id, submitter_id, due_date), a form field as fields.key, or metadata.key.'),
+                    ]);
+                }
+
                 WorkflowSelectionRule::query()->create([
                     'request_type_id' => $type->id,
                     'workflow_template_id' => $templateId,
                     'name' => $name,
                     'priority' => $priority,
                     'is_active' => (bool) ($rule['is_active'] ?? true),
-                    'conditions' => [
-                        'match' => 'all',
-                        'rules' => [[
-                            'field' => $field,
-                            'operator' => $operator,
-                            'value' => $this->typedValue($operator, $value),
-                        ]],
-                    ],
+                    'conditions' => $conditions,
                 ]);
             }
         });

@@ -7,11 +7,15 @@ use App\Enums\GroupCompletion;
 use App\Enums\StepType;
 use App\Enums\TimeoutAction;
 use App\Models\WorkflowTemplateStep;
+use App\Services\SubmissionConditionEvaluator;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
+use InvalidArgumentException;
 
 final class WorkflowGraphValidator
 {
+    public function __construct(private readonly SubmissionConditionEvaluator $conditions) {}
+
     /**
      * @param  Collection<int, WorkflowTemplateStep>  $steps
      *
@@ -99,6 +103,13 @@ final class WorkflowGraphValidator
                 if ($target !== null && (! is_int($target) || $target <= $step->step_order || $target > $max)) {
                     $errors["{$prefix}.".$label] = __('Each branch must target a later step or completion.');
                 }
+            }
+
+            // Refuse at publish what the engine would refuse at submit (RV-BUG-10).
+            try {
+                $this->conditions->assertValid($step->conditions ?? []);
+            } catch (InvalidArgumentException) {
+                $errors["{$prefix}.conditionField"] = __('Use a request field (priority, type, title, department_id, submitter_id, due_date), a form field as fields.key, or metadata.key.');
             }
         }
 

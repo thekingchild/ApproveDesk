@@ -14,6 +14,7 @@ use App\Models\Department;
 use App\Models\User;
 use App\Models\WorkflowTemplate;
 use App\Services\Workflow\AssigneeDirectory;
+use App\Support\StepConditionForm;
 use Flux\Flux;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
@@ -190,17 +191,12 @@ new #[Title('Workflow templates')] class extends Component {
             'assigneeField' => data_get($step->assignee_config, 'field_key', ''),
             'assigneeResolver' => data_get($step->assignee_config, 'resolver', ''),
             'allowDelegation' => $step->allow_delegation,
-            'conditionField' => data_get($step->conditions, 'rules.0.field', 'priority'),
-            'conditionOperator' => data_get($step->conditions, 'rules.0.operator', 'equals'),
-            'conditionValue' => is_array(data_get($step->conditions, 'rules.0.value'))
-                ? implode(', ', data_get($step->conditions, 'rules.0.value'))
-                : (string) data_get($step->conditions, 'rules.0.value', ''),
-            'trueStep' => data_get($step->conditions, 'true_step'),
-            'falseStep' => data_get($step->conditions, 'false_step'),
+            ...StepConditionForm::state($step->conditions),
             'timeoutHours' => $step->timeout_hours,
             'timeoutAction' => $step->timeout_action?->value ?? '',
             'timeoutCalendar' => $step->timeoutCalendar()->value,
         ])->values()->all();
+        $this->steps = StepConditionForm::keyed($this->steps);
 
         $this->modal('template-form')->show();
     }
@@ -269,12 +265,10 @@ new #[Title('Workflow templates')] class extends Component {
             'steps.*.assigneeIds.*' => ['required', 'integer'],
             'steps.*.allowDelegation' => ['sometimes', 'boolean'],
             'steps.*.conditionField' => ['nullable', 'string', 'max:100'],
-            'steps.*.conditionOperator' => ['nullable', Rule::in([
-                'equals', 'not_equals', 'in', 'not_in', 'gt', 'gte', 'lt', 'lte', 'contains', 'present',
-            ])],
+            'steps.*.conditionOperator' => ['nullable', Rule::in(array_keys(StepConditionForm::OPERATORS))],
             'steps.*.conditionValue' => ['nullable', 'string', 'max:1000'],
-            'steps.*.trueStep' => ['nullable', 'integer', 'min:1', 'max:20'],
-            'steps.*.falseStep' => ['nullable', 'integer', 'min:1', 'max:20'],
+            'steps.*.trueStep' => ['nullable', 'string', 'max:40'],
+            'steps.*.falseStep' => ['nullable', 'string', 'max:40'],
             'steps.*.timeoutHours' => ['nullable', 'integer', 'min:1', 'max:8760'],
             'steps.*.timeoutAction' => ['nullable', Rule::enum(TimeoutAction::class)],
         ]);
@@ -333,7 +327,7 @@ new #[Title('Workflow templates')] class extends Component {
             }
 
             $conditions = $stepType === StepType::Conditional
-                ? $this->conditionalConfiguration($step, $index, $stepCount)
+                ? StepConditionForm::conditions($this->steps, $index)
                 : null;
             $timeoutHours = ! $automatic && filled($step['timeoutHours'] ?? null)
                 ? (int) $step['timeoutHours']
@@ -404,6 +398,7 @@ new #[Title('Workflow templates')] class extends Component {
     private function blankStep(int $number): array
     {
         return [
+            'key' => StepConditionForm::newKey(),
             'name' => 'Approval Level '.$number,
             'stepType' => StepType::Sequential->value,
             'quorumCount' => null,
@@ -416,55 +411,13 @@ new #[Title('Workflow templates')] class extends Component {
             'conditionField' => 'priority',
             'conditionOperator' => 'equals',
             'conditionValue' => '',
+            'conditionMatch' => 'all',
+            'conditionExtraRules' => [],
             'trueStep' => null,
             'falseStep' => null,
             'timeoutHours' => null,
             'timeoutAction' => '',
             'timeoutCalendar' => 'elapsed',
-        ];
-    }
-
-    /**
-     * @param  array<string, mixed>  $step
-     * @return array<string, mixed>
-     */
-    private function conditionalConfiguration(array $step, int $index, int $stepCount): array
-    {
-        $field = trim((string) ($step['conditionField'] ?? ''));
-        $operator = (string) ($step['conditionOperator'] ?? '');
-
-        if (! in_array($field, ['type', 'title', 'priority', 'department_id', 'submitter_id', 'due_date'], true)
-            && preg_match('/^metadata(?:\.[A-Za-z0-9_-]+)+$/', $field) !== 1) {
-            throw ValidationException::withMessages([
-                "steps.{$index}.conditionField" => __('Use a supported submission field or metadata.key path.'),
-            ]);
-        }
-
-        $trueStep = filled($step['trueStep'] ?? null) ? (int) $step['trueStep'] : null;
-        $falseStep = filled($step['falseStep'] ?? null) ? (int) $step['falseStep'] : null;
-
-        foreach (['trueStep' => $trueStep, 'falseStep' => $falseStep] as $key => $target) {
-            if ($target !== null && ($target <= $index + 1 || $target > $stepCount)) {
-                throw ValidationException::withMessages([
-                    "steps.{$index}.{$key}" => __('A branch must target a later step or completion.'),
-                ]);
-            }
-        }
-
-        $value = (string) ($step['conditionValue'] ?? '');
-        if (in_array($operator, ['in', 'not_in'], true)) {
-            $value = array_values(array_filter(array_map('trim', explode(',', $value)), fn (string $item): bool => $item !== ''));
-        }
-
-        return [
-            'match' => 'all',
-            'rules' => [[
-                'field' => $field,
-                'operator' => $operator,
-                'value' => $value,
-            ]],
-            'true_step' => $trueStep,
-            'false_step' => $falseStep,
         ];
     }
 
@@ -702,9 +655,9 @@ new #[Title('Workflow templates')] class extends Component {
 
                                 @if ($step['stepType'] === 'conditional')
                                     <div class="grid gap-4 sm:col-span-3 sm:grid-cols-3">
-                                        <flux:input wire:model="steps.{{ $index }}.conditionField" :label="__('Field')" placeholder="priority or metadata.amount" />
+                                        <flux:input wire:model="steps.{{ $index }}.conditionField" :label="__('Field')" placeholder="priority or fields.amount" />
                                         <flux:select wire:model="steps.{{ $index }}.conditionOperator" :label="__('Operator')">
-                                            @foreach (['equals' => 'Equals', 'not_equals' => 'Does not equal', 'in' => 'In comma-separated list', 'not_in' => 'Not in list', 'gt' => 'Greater than', 'gte' => 'At least', 'lt' => 'Less than', 'lte' => 'At most', 'contains' => 'Contains', 'present' => 'Is present'] as $value => $label)
+                                            @foreach (StepConditionForm::OPERATORS as $value => $label)
                                                 <flux:select.option :value="$value">{{ __($label) }}</flux:select.option>
                                             @endforeach
                                         </flux:select>
@@ -712,13 +665,13 @@ new #[Title('Workflow templates')] class extends Component {
                                         <flux:select wire:model="steps.{{ $index }}.trueStep" :label="__('When true')">
                                             <flux:select.option value="">{{ __('Complete workflow') }}</flux:select.option>
                                             @foreach ($steps as $targetIndex => $targetStep)
-                                                @if ($targetIndex > $index)<flux:select.option :value="$targetIndex + 1">{{ ($targetIndex + 1).'. '.$targetStep['name'] }}</flux:select.option>@endif
+                                                @if ($targetIndex > $index)<flux:select.option :value="$targetStep['key']">{{ ($targetIndex + 1).'. '.$targetStep['name'] }}</flux:select.option>@endif
                                             @endforeach
                                         </flux:select>
                                         <flux:select wire:model="steps.{{ $index }}.falseStep" :label="__('When false')">
                                             <flux:select.option value="">{{ __('Complete workflow') }}</flux:select.option>
                                             @foreach ($steps as $targetIndex => $targetStep)
-                                                @if ($targetIndex > $index)<flux:select.option :value="$targetIndex + 1">{{ ($targetIndex + 1).'. '.$targetStep['name'] }}</flux:select.option>@endif
+                                                @if ($targetIndex > $index)<flux:select.option :value="$targetStep['key']">{{ ($targetIndex + 1).'. '.$targetStep['name'] }}</flux:select.option>@endif
                                             @endforeach
                                         </flux:select>
                                     </div>
