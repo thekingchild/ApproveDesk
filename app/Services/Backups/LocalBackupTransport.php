@@ -23,12 +23,9 @@ final class LocalBackupTransport implements BackupTransport
 
     public function fetch(string $remoteId, string $destination): void
     {
-        $contents = Storage::disk('local')->get($remoteId);
-        if ($contents === null) {
+        if (! Storage::disk('local')->exists($remoteId) || ! copy(Storage::disk('local')->path($remoteId), $destination)) {
             throw new RuntimeException('Local backup file is missing.');
         }
-
-        file_put_contents($destination, $contents);
     }
 
     public function delete(string $remoteId): void

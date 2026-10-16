@@ -2,6 +2,7 @@
 
 namespace App\Services\Backups;
 
+use App\Support\LongRunningOperation;
 use Closure;
 use Illuminate\Support\Facades\Cache;
 use InvalidArgumentException;
@@ -18,6 +19,7 @@ final class BackupExecutionGuard
      */
     public function run(Closure $callback): mixed
     {
+        LongRunningOperation::prepare();
         $lock = Cache::lock(self::LOCK_NAME, 7200);
 
         if (! $lock->get()) {

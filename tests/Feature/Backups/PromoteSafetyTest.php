@@ -63,20 +63,25 @@ class PromoteSafetyTest extends TestCase
         {
             private int $calls = 0;
 
-            public function replace(string $sql): void
+            public function replaceFromFile(string $path): void
             {
                 if (++$this->calls === 1) {
+                    $half = $path.'.half';
+                    file_put_contents($half, substr((string) file_get_contents($path), 0, intdiv((int) filesize($path), 2)));
+
                     try {
                         // Drop everything and load only part of the dump, like a dropped connection.
-                        parent::replace(substr($sql, 0, intdiv(strlen($sql), 2)));
+                        parent::replaceFromFile($half);
                     } catch (Throwable) {
                         // A truncated statement may fail on its own; either way the load is incomplete.
+                    } finally {
+                        unlink($half);
                     }
 
                     throw new RuntimeException('Simulated failure while loading the snapshot.');
                 }
 
-                parent::replace($sql);
+                parent::replaceFromFile($path);
             }
         });
 
@@ -107,7 +112,7 @@ class PromoteSafetyTest extends TestCase
 
         $this->app->instance(MysqlDumpLoader::class, new class extends MysqlDumpLoader
         {
-            public function replace(string $sql): void
+            public function replaceFromFile(string $path): void
             {
                 throw new RuntimeException('Simulated load failure.');
             }

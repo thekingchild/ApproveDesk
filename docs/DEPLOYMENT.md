@@ -59,7 +59,7 @@ Find the right PHP binary via MultiPHP Manager (e.g. `/opt/cpanel/ea-php83/root/
 php artisan ops:scheduler-check
 ```
 
-A healthy result means the heartbeat is no more than five minutes old. A stale/missing result means the one-minute cron or its PHP binary needs attention. **Backup now** does not test cron.
+A healthy result means the heartbeat is no more than five minutes old. A stale/missing result means the one-minute cron or its PHP binary needs attention. **Backup now** does not test cron. Backup, verify, and promote run inside the web request with PHP's time limit lifted and stream files in 1 MB pieces; a host-level request limit (for example a 300-second LiteSpeed or PHP-FPM `request_terminate_timeout`) still applies, so on large installations prefer the scheduled backups and run `php artisan backups:database` over SSH when available.
 
 ```php
 Schedule::command('queue:work --stop-when-empty --max-time=50 --tries=3 --timeout=90')

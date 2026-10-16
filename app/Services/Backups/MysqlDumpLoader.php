@@ -13,7 +13,8 @@ use Illuminate\Support\Facades\Schema;
  */
 class MysqlDumpLoader
 {
-    public function replace(string $sql): void
+    /** Streams the dump statement by statement instead of loading it whole (RV-OPS-03). */
+    public function replaceFromFile(string $path): void
     {
         DB::statement('SET FOREIGN_KEY_CHECKS=0');
 
@@ -22,7 +23,9 @@ class MysqlDumpLoader
                 Schema::dropIfExists($table);
             }
 
-            DB::unprepared($sql);
+            foreach (SqlStatementStream::statements($path, true) as $statement) {
+                DB::unprepared($statement);
+            }
         } finally {
             DB::statement('SET FOREIGN_KEY_CHECKS=1');
         }

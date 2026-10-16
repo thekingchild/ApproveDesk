@@ -15,6 +15,7 @@ use App\Services\Backups\MysqlDumpLoader;
 use App\Services\Backups\SqliteSnapshotLoader;
 use App\Services\Operations\BackupVerifier;
 use App\Services\Operations\OperationsReconciler;
+use App\Support\LongRunningOperation;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
@@ -24,6 +25,11 @@ use Throwable;
 
 final class PromoteDatabaseBackupAction
 {
+    /** Read by the fatal-error guard: once loading starts the live tables may be half replaced. */
+    private bool $loadStarted = false;
+
+    private ?int $safetySnapshotId = null;
+
     public function __construct(
         private readonly VerifyBackupSnapshotAction $verify,
         private readonly BackupRecorder $recorder,
@@ -49,6 +55,7 @@ final class PromoteDatabaseBackupAction
             throw new InvalidArgumentException('Verify the snapshot before promoting it.');
         }
 
+        LongRunningOperation::prepare();
         $this->verify->execute($snapshot);
         $snapshot->loadMissing('destination');
 
@@ -165,15 +172,24 @@ final class PromoteDatabaseBackupAction
             throw new InvalidArgumentException('workflow_actions count does not match the snapshot.');
         }
 
+        $aside = $live.'.pre-promote';
         Artisan::call('down', ['--retry' => 60]);
+        // A fatal error skips finally; put the old file back and come up (RV-OPS-03).
+        $guard = LongRunningOperation::onFatal(function () use ($live, $aside): void {
+            if (is_file($aside)) {
+                copy($aside, $live);
+            }
+            Artisan::call('up');
+        });
+
         try {
-            $aside = $live.'.pre-promote';
             copy($live, $aside);
             if (! copy($scratch, $live)) {
                 copy($aside, $live);
                 throw new RuntimeException('Could not replace the live database.');
             }
         } finally {
+            $guard->disarm();
             Artisan::call('up');
             if (is_file($scratch)) {
                 unlink($scratch);
@@ -190,22 +206,42 @@ final class PromoteDatabaseBackupAction
     private function promoteSqlDump(BackupSnapshot $snapshot): BackupSnapshot
     {
         $sql = $this->decodeSqlDump($snapshot);
+        $safetySql = null;
         $stayDown = false;
+        $this->loadStarted = false;
+        $this->safetySnapshotId = null;
 
         Artisan::call('down', ['--retry' => 60]);
+        // A fatal error (out of memory, host time limit) skips finally. Before the
+        // load starts the live tables are untouched, so come back up; once it has
+        // started they may be half replaced, so stay down and say how to recover.
+        $guard = LongRunningOperation::onFatal(function () use ($snapshot): void {
+            if (! $this->loadStarted) {
+                Artisan::call('up');
+
+                return;
+            }
+
+            Log::critical('backup.promote_interrupted', [
+                'snapshot_id' => $snapshot->id,
+                'safety_snapshot_id' => $this->safetySnapshotId,
+            ]);
+        });
 
         try {
             $safety = $this->createBackup->execute();
             $this->verify->execute($safety);
             $safety = $safety->fresh() ?? $safety;
+            $this->safetySnapshotId = $safety->id;
             $safetySql = $this->decodeSqlDump($safety);
 
             try {
-                $this->loader->replace($sql);
+                $this->loadStarted = true;
+                $this->loader->replaceFromFile($sql);
                 $this->assertRestored($snapshot);
             } catch (Throwable $failure) {
                 try {
-                    $this->loader->replace($safetySql);
+                    $this->loader->replaceFromFile($safetySql);
                     $this->reinsert($safety);
                 } catch (Throwable $rollbackFailure) {
                     $stayDown = true;
@@ -232,6 +268,12 @@ final class PromoteDatabaseBackupAction
 
             return $this->reinsert($safety);
         } finally {
+            $guard->disarm();
+            foreach ([$sql, $safetySql] as $decoded) {
+                if ($decoded !== null && is_file($decoded)) {
+                    unlink($decoded);
+                }
+            }
             if (! $stayDown) {
                 Artisan::call('up');
             }
@@ -251,6 +293,7 @@ final class PromoteDatabaseBackupAction
         }
     }
 
+    /** Decompresses the snapshot to a temporary .sql file; the caller deletes it. */
     private function decodeSqlDump(BackupSnapshot $snapshot): string
     {
         $absolute = app(MaterializeBackupSnapshotAction::class)->execute($snapshot);
@@ -258,18 +301,19 @@ final class PromoteDatabaseBackupAction
 
         try {
             $this->recorder->gunzipTo($absolute, $decoded);
-            $sql = (string) file_get_contents($decoded);
-        } finally {
-            if (is_file($decoded)) {
-                unlink($decoded);
-            }
+        } catch (Throwable $exception) {
+            @unlink($decoded);
+
+            throw $exception;
         }
 
-        if ($sql === '') {
+        if ((int) filesize($decoded) === 0) {
+            unlink($decoded);
+
             throw new InvalidArgumentException('The snapshot file is empty.');
         }
 
-        return $sql;
+        return $decoded;
     }
 
     /**
@@ -305,7 +349,7 @@ final class PromoteDatabaseBackupAction
                 return;
             }
 
-            $this->sqliteLoader->loadSqlDump((string) file_get_contents($decoded), $scratch);
+            $this->sqliteLoader->loadSqlDumpFile($decoded, $scratch);
         } finally {
             if (is_file($decoded)) {
                 unlink($decoded);
