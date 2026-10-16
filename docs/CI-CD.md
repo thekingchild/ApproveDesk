@@ -41,7 +41,7 @@ The checked-in workflow is the source of truth. It runs five jobs:
 - **mysql** — sequential PHPUnit against MySQL 8.
 - **mariadb** — sequential PHPUnit against MariaDB 10.6 (the oldest supported MariaDB).
 - **assets** — production Composer install and Vite build; uploads `public/build`.
-- **browser** — Dusk; `continue-on-error: true` so it does not block merge.
+- **browser** — Dusk browser and axe accessibility tests. Blocks merge. The server runs with `--no-reload` and shares `/tmp/approvedesk-dusk.sqlite` with the test process and `.env.dusk.local`; the server log is printed on failure.
 
 Notes:
 - Index and foreign-key names must be 64 characters or fewer (InnoDB). Prefer explicit short names on composite indexes. Do not put unbounded `TEXT`/`BLOB` columns in unique keys (MySQL error 1170); hash long values such as push endpoints first. `Schema::getTableListing()` defaults to schema-qualified names (`approvedesk_test.activity_log`); never wrap that string in one pair of backticks — use `Schema::getTableListing(schemaQualified: false)` or `App\Support\SchemaTable`.

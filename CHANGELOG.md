@@ -17,6 +17,10 @@ All notable changes to ApproveDesk are documented here. The project follows
 - Fresh installs on MariaDB 10.6–10.9 no longer fail at the delegations migration, and required timestamp columns (for example a workflow's start time or a legal hold's placement time) are no longer silently reset on row updates on those versions. MySQL and SQLite schemas are unchanged.
 - The test suite refuses to run when configuration or routes are cached, or when the database is not an isolated test database. Previously a cached config made tests run against, and reset, the local development database.
 
+### Changed
+
+- Browser and accessibility tests now block merges in CI. They had been failing unnoticed since v2.8.3 because the CI server and test process used different databases.
+
 ### Security
 
 - The rich-text editor (Tiptap 3.32, ProseMirror) is updated to fix a paste-handling XSS and prototype-pollution issues reported by `npm audit`. Build tooling (`concurrently`) moved to development dependencies. `npm audit` reports no vulnerabilities.

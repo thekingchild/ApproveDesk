@@ -391,6 +391,6 @@ Check Phases 10–15 for missing or under-specified items, including:
 
 1. **Release cadence — Decided (2026-10-12):** fixes ship as patch releases from **v2.8.7** onwards.
 2. **UI/UX scope — Decided (2026-10-12):** improve within the current **Flux** design system; no visual redesign.
-3. **Large-component refactors — Open:** approve splitting `submissions/show`, `request-types`, `workflow-templates`, and `workflow-builder` into smaller components and Actions in v2.9.0?
-4. **WorkflowEngine coverage target — Open:** raise to 100% as AGENTS.md says, or amend AGENTS.md to 97%?
+3. **Large-component refactors — Decided (2026-10-16):** split `submissions/show`, `request-types`, `workflow-templates`, and `workflow-builder` into smaller components with business rules moved to Actions/Services, in Wave 3, after each file's Wave 1/2 fixes have landed.
+4. **WorkflowEngine coverage target — Decided (2026-10-16):** keep the CI gate at 97% as the floor; aim for 100% during Wave 1 engine work and raise the gate only when reached.
 5. **MariaDB support — Decided (2026-10-12):** MariaDB 10.6 stays supported; CI job added in Wave 0.
