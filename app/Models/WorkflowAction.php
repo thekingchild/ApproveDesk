@@ -3,7 +3,9 @@
 namespace App\Models;
 
 use App\Enums\WorkflowActionType;
+use App\Models\Builders\AppendOnlyBuilder;
 use Database\Factories\WorkflowActionFactory;
+use Illuminate\Database\Eloquent\Attributes\UseEloquentBuilder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -32,6 +34,7 @@ use RuntimeException;
  * @property-read User|null $delegate
  * @property-read User|null $onBehalfOf
  */
+#[UseEloquentBuilder(AppendOnlyBuilder::class)]
 class WorkflowAction extends Model
 {
     /** @use HasFactory<WorkflowActionFactory> */
