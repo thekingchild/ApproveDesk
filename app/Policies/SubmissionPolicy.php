@@ -20,7 +20,7 @@ class SubmissionPolicy
             return true;
         }
 
-        if ($submission->isWatchedBy($user)) {
+        if ($submission->grantsFollowerAccessTo($user)) {
             return true;
         }
 

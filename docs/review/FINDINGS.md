@@ -189,7 +189,7 @@ Sources: three read-only reviews (engine/audit, authorization, input-output/file
 - Fix: `authorize('publish')` in `requestPublish`/`confirmPublish` and inside `PublishWorkflowTemplateVersionAction`.
 
 ### RV-SEC-08 — Time-limited auditor or delegate access becomes permanent by following
-- Severity: **S2** · Status: Open · Location: `app/Actions/Collaboration/FollowSubmissionAction.php:30-33`
+- Severity: **S2** · Status: **Fix in review** (branch `feature/rv-sec-follow-access`; self-follow requires the `follow` policy; only followers added by someone else grant view) · Location: `app/Actions/Collaboration/FollowSubmissionAction.php:30-33`
 - Evidence (probe): self-follow checks `view`, not `follow`; watcher status grants view after the grant is revoked.
 - Fix: require the `follow` policy; don't let watcher status outlive the basis that granted access.
 

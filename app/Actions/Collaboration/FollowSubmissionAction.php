@@ -29,8 +29,8 @@ final class FollowSubmissionAction
         }
 
         if ($actor->is($target)) {
-            if (! $actor->can('view', $submission) && ! $submission->isWatchedBy($actor)) {
-                throw CollaborationException::cannotWatch('you do not have access to this request');
+            if (! $actor->can('follow', $submission)) {
+                throw CollaborationException::cannotWatch('you cannot follow this request');
             }
         } elseif ($fromMention) {
             if (! $actor->can('comment', $submission)) {

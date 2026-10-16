@@ -216,6 +216,26 @@ class Submission extends Model
         return $this->legalHolds()->active()->exists();
     }
 
+    /**
+     * Followers invited by someone else (requester, approver, mention) may view
+     * the request. Following yourself never grants access on its own, so a
+     * time-limited auditor grant or delegation cannot be made permanent (RV-SEC-08).
+     */
+    public function grantsFollowerAccessTo(User $user): bool
+    {
+        if ($this->relationLoaded('watchers')) {
+            return $this->watchers->contains(
+                fn (SubmissionWatcher $watcher): bool => $watcher->user_id === $user->id
+                    && ($watcher->added_by_id === null || $watcher->added_by_id !== $user->id),
+            );
+        }
+
+        return $this->watchers()
+            ->where('user_id', $user->id)
+            ->where(fn ($query) => $query->whereNull('added_by_id')->orWhere('added_by_id', '!=', $user->id))
+            ->exists();
+    }
+
     public function isWatchedBy(User $user): bool
     {
         if ($this->relationLoaded('watchers')) {
