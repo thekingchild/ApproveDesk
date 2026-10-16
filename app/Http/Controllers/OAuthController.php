@@ -41,7 +41,23 @@ class OAuthController extends Controller
             ]);
         }
 
-        Auth::login($user, remember: ! SystemSettings::expireOnClose());
+        $remember = ! SystemSettings::expireOnClose();
+
+        // Social sign-in is a first factor only: accounts with an authenticator go
+        // through the same challenge as a password sign-in (RV-SEC-20).
+        if ($user->hasEnabledTwoFactorAuthentication()) {
+            $request->session()->put(['login.id' => $user->getKey(), 'login.remember' => $remember]);
+
+            return redirect()->route('two-factor.login');
+        }
+
+        if ($user->passkeys()->exists()) {
+            return redirect()->route('login')->withErrors([
+                'oauth' => __('This account uses a passkey. Sign in with your passkey instead.'),
+            ]);
+        }
+
+        Auth::login($user, remember: $remember);
         $request->session()->regenerate();
 
         return redirect()->intended(route('dashboard', absolute: false));

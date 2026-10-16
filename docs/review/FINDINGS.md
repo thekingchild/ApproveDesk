@@ -235,6 +235,56 @@ Sources: three read-only reviews (engine/audit, authorization, input-output/file
 
 Checked and found correct in Wave 1 (summary): engine transactions/locks/duplicate checks; all 37 `lockForUpdate()` calls outside the engine run in transactions with id-ordered multi-row locks; timeout/escalation idempotency; signed file/report/backup downloads with per-user authorization; API scopes on every endpoint; global search filtering; theme CSS validation; Help Markdown; XLSX import guard; attachment serving; `OutboundDestination` SSRF guard with DNS pinning for webhooks/connectors/web push; Slack request signatures; secrets encrypted at rest and never re-sent.
 
+## Wave 2 correctness findings (2026-10-16)
+
+Sources: two read-only feature-area reviews with 43 probe tests (every listed CONFIRMED item reproduced by a probe that passes on the buggy code; probes re-run before logging).
+
+| ID | Sev | Finding | Status |
+|---|---|---|---|
+| RV-SEC-20 | **S1** | Microsoft sign-in links an existing account (admins included) by unverified `email`/`preferred_username` and skips that account's second factor (`OAuthClient.php:186`, `ResolveOAuthUserAction.php:33`, `OAuthController.php:44`) | **Fix in review** (`feature/rv-sec-oauth-verified`) |
+| RV-BUG-05 | **S1** | Saving on **Workflow templates** resets every step's completion rule to its step-type default ("All" → first response) and drops custom outcomes, auto-publishing on unused templates (`workflow-templates.blade.php:350, 358-366`) | Open |
+| RV-BUG-06 | S2 | Changing your email on Profile clears `email_verified_at`; `users:prune-unconfirmed` then deletes the (old) account | Open |
+| RV-DATA-05 | S2 | Daily `PurgeExpiredDelegations` deletes delegation rows, so evidence packs lose who the delegate was; `workflow.json` omits `delegated_to`/window | Open |
+| RV-BUG-07 | S2 | Submit failures (e.g. no resolvable approver): raw 500 in UI; custom-form retries leave an orphan draft per attempt; API create+submit leaves a stranded Pending request with no workflow | Open |
+| RV-ENG-12 | S2 | Delegations can't be revoked: a deactivated delegate, or a deleted/shortened out-of-office period, leaves the delegator locked out until expiry | Open |
+| RV-BUG-08 | S2 | Condition branch targets are positions; moving/deleting/duplicating steps in builder or templates page re-points branches silently | Open |
+| RV-BUG-09 | S2 | Builder resave turns `in`/`not_in` lists into a string that never matches | Open |
+| RV-BUG-10 | S2 | Builder publishes conditions on unknown fields; every submission on that template then fails | Open |
+| RV-BUG-11 | S2 | `metadata.*` selection rules/conditions never match real requests (nothing writes metadata), but Explain routing and simulation say they do | Open |
+| RV-DATA-06 | S2 | On a returned/awaiting-information request the submitter can hard-delete an attachment approvers already saw; no "removed" revision, ignores legal hold | Open |
+| RV-BUG-12 | S2 | With two file fields, each field is linked to the other's uploads (`create-custom.blade.php:115`) | Open |
+| RV-BUG-13 | S2 | Visibility/required rule on a multi-select source crashes the form ("Array to string conversion") | Open |
+| RV-BUG-14 | S2 | Returning to sequential numbering after random can collide and then block every new request (counter rollback) | Open |
+| RV-BUG-15 | S3 | Chat send failures recorded as Sent (never retried/shown); unmapped WhatsApp kinds recorded Sent, not Skipped | Open |
+| RV-BUG-16 | S3 | Quiet-hours-deferred chat messages lose their copy and signed link; sent even if the step moved on | Open |
+| RV-BUG-17 | S3 | Decision emails show literal `{{comment}}` or a stale return comment on an Approved email | Open |
+| RV-BUG-18 | S3 | Daily digests skip a day when the job starts seconds earlier than yesterday | Open |
+| RV-BUG-19 | S3 | Reminder cap counts recipients, so steps with more approvers than the cap can never be reminded; one recent recipient aborts the batch | Open |
+| RV-BUG-20 | S3 | Deactivated/anonymized people still receive decision, comment, and digest email | Open |
+| RV-BUG-21 | S3 | API lets a requester resume an information request without any reply | Open |
+| RV-SEC-21 | S3 | Evidence-pack verifier accepts extra files injected into the zip; manifest metadata unsigned | Open |
+| RV-DATA-07 | S3 | Evidence packs omit comment/submission/file revision histories and most notifications; notification query loads the whole table | Open |
+| RV-BUG-22 | S3 | Approval report shows a withdrawn step as Completed and lists today's assignees instead of who acted | Open |
+| RV-BUG-23 | S3 | Files-backup promote doesn't restore branding artwork (left in restore-holding) | Open |
+| RV-SEC-22 | S3 | Anonymizing keeps the profile photo (still served to admins), watchers, and future delegations | Open |
+| RV-BUG-24 | S3 | Import "update existing" skips row validation (phone, department, manager) | Open |
+| RV-BUG-25 | S3 | Import silently drops a manager whose own row failed | Open |
+| RV-DATA-08 | S3 | Retention only soft-deletes; nothing is ever purged though Help says "removed" | Open |
+| RV-BUG-26 | S3 | Dispositions allowed before a request is finished; approve/release errors surface as 500 | Open |
+| RV-BUG-27 | S3? | Concurrent requests with the same Idempotency-Key both run (suspected race) | Open |
+| RV-BUG-28 | S3 | Request-page timeline shows the latest published version, not the instance's pinned version | Open |
+| RV-BUG-29 | S3 | Hidden parent's stale value still makes descendants required, then the answer is discarded | Open |
+| RV-BUG-30 | S3 | Calculated total on the review screen differs from the stored total | Open |
+| RV-BUG-31 | S3 | Saving a request-type draft re-activates an archived type | Open |
+| RV-BUG-32 | S3 | Editing a General Request draft/returned request clears its department | Open |
+| RV-BUG-33 | S3 | API submit / direct `resubmit()` skips required custom fields | Open |
+| RV-BUG-34 | S3 | 24-hour business-hours mode counts the hour before a working day (deadlines up to 1h early) | Open |
+| RV-BUG-35 | S3 | Date-time field max date rejects that whole day | Open |
+| RV-BUG-36 | S3 | Required checkbox passes when unticked | Open |
+| RV-DOC-02 | S3 | Help says manager/form-field assignees are fixed at submit; they resolve live; `resume()` lacks the empty-assignee check | Open |
+| RV-BUG-37 | S3? | Stale builder save can publish over another admin's version (no version check; suspected) | Open |
+| RV-BUG-38 | S4 | Minor: mentions added by editing a comment are ignored; API docs field name/list scope/retry count; draft retention counts from creation; files-promote leftovers; builder preview parity; reference period read twice at boundaries | Open |
+
 ---
 
 ## Leads awaiting verification (from REVIEW_PLAN §4)

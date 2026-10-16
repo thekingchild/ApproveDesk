@@ -38,6 +38,7 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Security
 
+- **Microsoft sign-in can no longer take over accounts ("nOAuth").** With a multi-tenant Microsoft setup (`common`/`organizations`), the email Microsoft reports is not verified, so ApproveDesk no longer uses it to create accounts or connect existing ones; already-connected accounts keep working. Pin the Microsoft tenant to your directory ID to allow creation and connection. Social sign-in now also requires the account's authenticator code, and passkey accounts must use their passkey.
 - Changing another person's Slack, Teams, or Telegram identity now follows the same rule as changing their email (administrators and people with more access only by the System owner), and every change is logged.
 - S3 backup destinations are pinned to the addresses that passed the outbound check, and virtual-hosted bucket names (`bucket.endpoint`) are checked too, so DNS changes cannot redirect backups to internal hosts.
 - Request titles, comments, and names in notification emails are shown as plain text, so they can no longer turn into links inside a genuine ApproveDesk email.

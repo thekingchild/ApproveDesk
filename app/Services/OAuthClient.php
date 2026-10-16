@@ -202,6 +202,10 @@ final class OAuthClient
             name: trim($name),
             email: Str::lower($email),
             avatar: is_string($profile['picture'] ?? null) ? $profile['picture'] : null,
+            // Microsoft's email/preferred_username are not verified and are editable by
+            // any tenant's administrators; trust them only when sign-in is pinned to
+            // this organisation's own directory (RV-SEC-20).
+            emailVerified: $provider !== OAuthProvider::Microsoft || $this->microsoftTenantIsPinned(),
         );
     }
 
@@ -244,6 +248,11 @@ final class OAuthClient
     {
         return (string) (config("services.oauth.{$provider->value}.redirect")
             ?: route('oauth.callback', $provider->value));
+    }
+
+    private function microsoftTenantIsPinned(): bool
+    {
+        return ! in_array(strtolower($this->microsoftTenant()), ['common', 'organizations', 'consumers'], true);
     }
 
     private function microsoftTenant(): string
