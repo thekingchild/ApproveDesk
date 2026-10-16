@@ -139,7 +139,8 @@ class PromoteSafetyTest extends TestCase
 
             $event = BackupRestoreEvent::query()->latest('id')->firstOrFail();
             $this->assertNotNull($event->safety_snapshot_id);
-            $this->assertSame(BackupSnapshotStatus::Success, BackupSnapshot::query()->find($event->safety_snapshot_id)?->status);
+            // The safety backup is verified before the live tables are replaced.
+            $this->assertSame(BackupSnapshotStatus::Verified, BackupSnapshot::query()->find($event->safety_snapshot_id)?->status);
             $this->assertFalse(app()->isDownForMaintenance());
         } finally {
             $this->resetDatabase();
