@@ -144,7 +144,7 @@
                 <p class="empty">{{ __('No approval workflow has started.') }}</p>
             @else
                 <table>
-                    <thead><tr><th>{{ __('Step') }}</th><th>{{ __('Assigned to') }}</th><th>{{ __('State') }}</th></tr></thead>
+                    <thead><tr><th>{{ __('Step') }}</th><th>{{ __('Decided by / assigned to') }}</th><th>{{ __('State') }}</th></tr></thead>
                     <tbody>
                         @foreach ($workflow_steps as $step)
                             <tr><td>{{ $step['name'] }}</td><td>{{ $step['actors'] ?: '—' }}</td><td>{{ $step['state'] }}</td></tr>
