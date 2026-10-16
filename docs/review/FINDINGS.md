@@ -55,7 +55,7 @@ DB_DATABASE=$PWD/database/perf.sqlite PERF_USERS=300 PERF_SUBMISSIONS=3000 php a
 - Fix: `TestCase::createApplication()` refuses to run when config/routes are cached, when `APP_ENV` ≠ `testing`, or when the database is not in-memory SQLite / a `*test*` MySQL/MariaDB database. Verified: passes normally; fails before any migration with `config:cache` present.
 
 ### RV-TEST-02 — Browser and accessibility tests have been failing for 6+ weeks unnoticed
-- Severity: **S2** · Status: Open
+- Severity: **S2** · Status: **Fix in review** (branch `feature/rv-test-browser-ci`; CI wiring fixed, `continue-on-error` removed — closes when the PR's `browser` job is green). Flaky draft-flow waits remain open.
 - Location: `.github/workflows/ci.yml` (`browser` job, `continue-on-error: true`), `tests/Browser/*`
 - Evidence: all 5 Dusk tests (`AccessibilityResponsiveTest` ×2, `RequesterApprovalFlowTest` ×3) fail with `TimeoutException` on every `main` run from 2026-08-31 to v2.8.6.
 - Impact: the plan's accessibility exit gate (IMPLEMENTATION_PLAN §3.1) and the wizard/approval-modal browser coverage (AGENTS.md) are effectively off.
