@@ -14,6 +14,7 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Fixed
 
+- **Large backups and restores no longer run the server out of memory or strand the site in maintenance mode.** Compression, copies, Google Drive transfers, checks, and SQL restores now stream in 1 MB pieces (a 173 MB dump peaked at 333 MB of memory before). Backup, verify, and promote lift PHP's time limit and keep running if the page is closed. If the request still dies from a fatal error, a SQLite promote puts the old database back and reopens the site; a MySQL/MariaDB promote reopens the site if loading had not started, and otherwise stays in maintenance mode and logs the safety backup to restore.
 - **Faster search, approvals, request pages, and analytics for large organizations.**
   - Global search filters by what you can see in the database instead of checking every matching request one by one (a requester typing two letters took about 12 seconds).
   - The approval workbench loads only work you could act on, have acted on, or recently decided. It shows 25 per page and keeps your 100 most recent decided requests under Completed. Ticking checkboxes no longer reloads the queue.

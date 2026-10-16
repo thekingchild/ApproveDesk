@@ -8,6 +8,7 @@ use App\Models\BackupSnapshot;
 use App\Services\Backups\BackupIntegrity;
 use App\Services\Backups\BackupRecorder;
 use App\Services\Operations\BackupVerifier;
+use App\Support\LongRunningOperation;
 use InvalidArgumentException;
 
 final class VerifyBackupSnapshotAction
@@ -20,6 +21,7 @@ final class VerifyBackupSnapshotAction
 
     public function execute(BackupSnapshot $snapshot): BackupSnapshot
     {
+        LongRunningOperation::prepare();
         $absolute = app(MaterializeBackupSnapshotAction::class)->execute($snapshot);
         $scratch = storage_path('app/private/backups/.verify-'.uniqid('', true));
         @mkdir(dirname($scratch), 0775, true);

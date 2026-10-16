@@ -19,21 +19,32 @@ INSERT INTO `users` (`id`, `name`) VALUES (1, 'Ada');
 SET FOREIGN_KEY_CHECKS=1;
 SQL;
         $path = sys_get_temp_dir().'/ad-sqlite-load-'.uniqid('', true).'.sqlite';
+        $dump = $path.'.sql';
+        file_put_contents($dump, $sql);
 
         try {
-            app(SqliteSnapshotLoader::class)->loadSqlDump($sql, $path);
+            app(SqliteSnapshotLoader::class)->loadSqlDumpFile($dump, $path);
             $pdo = new PDO('sqlite:'.$path);
             $this->assertSame('Ada', $pdo->query('select name from users')->fetchColumn());
         } finally {
-            if (is_file($path)) {
-                unlink($path);
+            foreach ([$path, $dump] as $file) {
+                if (is_file($file)) {
+                    unlink($file);
+                }
             }
         }
     }
 
     public function test_empty_dump_is_refused(): void
     {
-        $this->expectException(InvalidArgumentException::class);
-        app(SqliteSnapshotLoader::class)->loadSqlDump("SET FOREIGN_KEY_CHECKS=0;\nSET FOREIGN_KEY_CHECKS=1;\n", sys_get_temp_dir().'/ad-empty.sqlite');
+        $dump = sys_get_temp_dir().'/ad-empty-'.uniqid('', true).'.sql';
+        file_put_contents($dump, "SET FOREIGN_KEY_CHECKS=0;\nSET FOREIGN_KEY_CHECKS=1;\n");
+
+        try {
+            $this->expectException(InvalidArgumentException::class);
+            app(SqliteSnapshotLoader::class)->loadSqlDumpFile($dump, sys_get_temp_dir().'/ad-empty.sqlite');
+        } finally {
+            unlink($dump);
+        }
     }
 }

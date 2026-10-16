@@ -8,22 +8,31 @@ use PDOException;
 
 final class SqliteSnapshotLoader
 {
-    public function loadSqlDump(string $sql, string $sqlitePath): void
+    /** Loads a dump file into a new SQLite database one statement at a time (RV-OPS-03). */
+    public function loadSqlDumpFile(string $dumpPath, string $sqlitePath): void
     {
-        $sql = $this->withoutMysqlSessionStatements($sql);
-        if (trim($sql) === '') {
-            throw new InvalidArgumentException('The snapshot file is empty.');
-        }
-
         $pdo = new PDO('sqlite:'.$sqlitePath, null, null, [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         ]);
         $pdo->exec('PRAGMA foreign_keys = OFF');
+        $loaded = 0;
 
         try {
-            $pdo->exec($sql);
-        } catch (PDOException $exception) {
+            foreach (SqlStatementStream::statements($dumpPath) as $statement) {
+                $statement = trim($this->withoutMysqlSessionStatements($statement));
+                if ($statement === '' || $statement === ';') {
+                    continue;
+                }
+
+                $pdo->exec($statement);
+                $loaded++;
+            }
+        } catch (PDOException) {
             throw new InvalidArgumentException('This snapshot could not be loaded as a SQLite database.');
+        }
+
+        if ($loaded === 0) {
+            throw new InvalidArgumentException('The snapshot file is empty.');
         }
     }
 

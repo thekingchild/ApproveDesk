@@ -4,7 +4,6 @@ namespace App\Services\Operations;
 
 use App\DTOs\Operations\BackupVerificationResult;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
 use InvalidArgumentException;
 use PDO;
@@ -63,12 +62,23 @@ final class BackupVerifier
 
     private function inspectSqlDump(string $path): BackupVerificationResult
     {
-        $sql = File::get($path);
+        // Scan line by line; CREATE TABLE headers are on one line (RV-OPS-03).
+        $created = [];
+        $handle = fopen($path, 'rb');
+        if ($handle !== false) {
+            while (($line = fgets($handle)) !== false) {
+                if (preg_match('/^\s*create\s+table\s+(?:if\s+not\s+exists\s+)?[`"\[]?([A-Za-z0-9_]+)[`"\]]?/i', $line, $match) === 1) {
+                    $created[strtolower($match[1])] = true;
+                }
+            }
+            fclose($handle);
+        }
+
         $counts = [];
         $issues = [];
 
         foreach (self::REQUIRED_TABLES as $table) {
-            $found = preg_match('/create\s+table\s+(?:if\s+not\s+exists\s+)?[`"\[]?'.$table.'[`"\]]?/i', $sql) === 1;
+            $found = isset($created[$table]);
             $counts[$table] = $found ? 0 : -1;
 
             if (! $found) {

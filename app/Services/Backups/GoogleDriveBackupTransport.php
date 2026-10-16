@@ -14,13 +14,17 @@ final class GoogleDriveBackupTransport implements BackupTransport
     {
         $token = $this->accessToken();
         $folder = $this->destination->credentials()['folder_id'] ?? '';
-        $contents = (string) file_get_contents($absolutePath);
+        // Stream the upload instead of reading the backup into memory (RV-OPS-03).
+        $contents = @fopen($absolutePath, 'rb');
+        if ($contents === false) {
+            throw new RuntimeException('Local backup file is missing.');
+        }
         $metadata = json_encode([
             'name' => $name,
             'parents' => [$folder],
         ], JSON_THROW_ON_ERROR);
 
-        $response = Http::timeout(30)
+        $response = Http::timeout(600)
             ->withToken($token)
             ->attach('metadata', $metadata, 'metadata.json', ['Content-Type' => 'application/json'])
             ->attach('file', $contents, $name)
@@ -49,15 +53,15 @@ final class GoogleDriveBackupTransport implements BackupTransport
 
     public function fetch(string $remoteId, string $destination): void
     {
-        $response = Http::timeout(30)
+        $response = Http::timeout(600)
             ->withToken($this->accessToken())
+            ->sink($destination)
             ->get('https://www.googleapis.com/drive/v3/files/'.$remoteId, ['alt' => 'media']);
 
         if (! $response->successful()) {
+            @unlink($destination);
             throw new RuntimeException('Google Drive download failed.');
         }
-
-        file_put_contents($destination, $response->body());
     }
 
     public function delete(string $remoteId): void

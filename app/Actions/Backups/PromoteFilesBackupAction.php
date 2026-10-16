@@ -8,6 +8,7 @@ use App\Models\BackupSnapshot;
 use App\Models\User;
 use App\Services\Backups\BackupIntegrity;
 use App\Services\Backups\BackupRestoreTrail;
+use App\Support\LongRunningOperation;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -24,6 +25,7 @@ final class PromoteFilesBackupAction
 
     public function execute(BackupSnapshot $snapshot, User $actor, string $confirmation): BackupSnapshot
     {
+        LongRunningOperation::prepare();
         if ($snapshot->kind !== BackupSnapshotKind::Files) {
             throw new InvalidArgumentException('Only a files snapshot can be promoted here.');
         }

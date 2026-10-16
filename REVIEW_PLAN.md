@@ -2,7 +2,7 @@
 
 **Reviewer role:** project code reviewer for everything shipped through **v2.8.6** and for the remaining plan (Phases 10–15).
 **Created:** 2026-10-12 · **Baseline commit:** `4131fa1` (`chore: release v2.8.6`)
-**Status:** Wave 0 — Complete (2026-10-12) · Wave 1 — **Complete (2026-10-16)**: all S1/S2 and the Wave 1 S3 findings have fixes in review (PRs #24–#46); deferred with reasons: RV-SEC-15 (CSP, Wave 3 ADR), Teams Bot Framework JWT verification, RV-FEAT-01 (reassign step), RV-ENG-10/11 (suspected, unverified). MariaDB 10.6 CI green from #36 · Wave 2 — Next
+**Status:** Wave 0 — Complete (2026-10-12) · Wave 1 — **Complete (2026-10-16)**: all S1/S2 and the Wave 1 S3 findings have fixes in review (PRs #24–#46); deferred with reasons: RV-SEC-15 (CSP, Wave 3 ADR), Teams Bot Framework JWT verification, RV-FEAT-01 (reassign step), RV-ENG-10/11 (suspected, unverified). MariaDB 10.6 CI green from #36 · Wave 2 — **In progress (2026-10-16)**: every S2 has a fix in review (correctness #53–#56, performance/operations #57–#59; MySQL-only backup tests await CI); 2 S3s fixed with them (RV-BUG-21, RV-BUG-33); remaining S3/S4 next
 **Companion docs:** [AGENTS.md](AGENTS.md) · [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) · [docs/SECURITY.md](docs/SECURITY.md) · [docs/PERFORMANCE.md](docs/PERFORMANCE.md)
 
 This plan defines how the review runs, what each review track checks, how findings are recorded and fixed, and what "done" means. It is written so any engineer or agent can pick up a track without prior conversation context.

@@ -15,6 +15,8 @@ use Throwable;
 
 final class BackupRecorder
 {
+    private const CHUNK_BYTES = 1048576;
+
     public function __construct(private readonly BackupTransportFactory $transports) {}
 
     public function localDestination(): BackupDestination
@@ -54,7 +56,9 @@ final class BackupRecorder
         }
         Storage::disk('local')->makeDirectory('backups/'.$kind->value);
         $relative = 'backups/'.$name;
-        Storage::disk('local')->put($relative, (string) file_get_contents($absolutePath));
+        if (! copy($absolutePath, Storage::disk('local')->path($relative))) {
+            throw new RuntimeException('Cannot store the backup file.');
+        }
 
         $checksum = hash_file('sha256', Storage::disk('local')->path($relative)) ?: '';
         $bytes = (int) Storage::disk('local')->size($relative);
@@ -78,29 +82,63 @@ final class BackupRecorder
         return $snapshot->fresh() ?? $snapshot;
     }
 
+    /** Compresses in chunks so a large dump is never held in memory (RV-OPS-03). */
     public function gzipFile(string $source, string $destination): void
     {
-        $raw = file_get_contents($source);
-        if ($raw === false) {
+        $in = @fopen($source, 'rb');
+        if ($in === false) {
             throw new RuntimeException('Cannot read backup source.');
         }
 
-        file_put_contents($destination, gzencode($raw, 6));
+        $out = gzopen($destination, 'wb6');
+        if ($out === false) {
+            fclose($in);
+            throw new RuntimeException('Cannot write compressed backup.');
+        }
+
+        try {
+            while (! feof($in)) {
+                $chunk = fread($in, self::CHUNK_BYTES);
+                if ($chunk === false || ($chunk !== '' && gzwrite($out, $chunk) === false)) {
+                    throw new RuntimeException('Cannot write compressed backup.');
+                }
+            }
+        } finally {
+            fclose($in);
+            gzclose($out);
+        }
     }
 
     public function gunzipTo(string $source, string $destination): void
     {
-        $raw = file_get_contents($source);
-        if ($raw === false) {
+        $magic = @file_get_contents($source, false, null, 0, 2);
+        if ($magic === false) {
             throw new RuntimeException('Cannot read compressed backup.');
         }
 
-        $decoded = @gzdecode($raw);
-        if ($decoded === false) {
+        // gzopen() would read a plain file transparently; insist on gzip.
+        if ($magic !== "\x1f\x8b") {
             throw new RuntimeException('Backup is not valid gzip.');
         }
 
-        file_put_contents($destination, $decoded);
+        $in = gzopen($source, 'rb');
+        $out = @fopen($destination, 'wb');
+        if ($in === false || $out === false) {
+            throw new RuntimeException('Cannot read compressed backup.');
+        }
+
+        try {
+            while (! gzeof($in)) {
+                $chunk = gzread($in, self::CHUNK_BYTES);
+                if ($chunk === false) {
+                    throw new RuntimeException('Backup is not valid gzip.');
+                }
+                fwrite($out, $chunk);
+            }
+        } finally {
+            gzclose($in);
+            fclose($out);
+        }
     }
 
     private function replicate(BackupSnapshot $local, string $absolutePath): void
