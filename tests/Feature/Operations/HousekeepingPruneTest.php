@@ -3,6 +3,7 @@
 namespace Tests\Feature\Operations;
 
 use App\Actions\Audit\PruneEvidencePackFilesAction;
+use App\Models\ApiIdempotencyKey;
 use App\Models\EvidencePack;
 use App\Models\InAppNotification;
 use App\Models\LegalHold;
@@ -134,5 +135,17 @@ class HousekeepingPruneTest extends TestCase
             'created_at' => $createdAt,
             'updated_at' => $createdAt,
         ]);
+    }
+
+    public function test_idempotency_keys_older_than_a_week_are_pruned(): void
+    {
+        $user = User::factory()->create();
+        $old = ApiIdempotencyKey::query()->create(['user_id' => $user->id, 'key' => 'old', 'method' => 'POST', 'path' => 'api/v1/submissions', 'request_hash' => 'a', 'status_code' => 201]);
+        $old->forceFill(['created_at' => now()->subDays(ApiIdempotencyKey::KEEP_DAYS + 1)])->save();
+        $recent = ApiIdempotencyKey::query()->create(['user_id' => $user->id, 'key' => 'new', 'method' => 'POST', 'path' => 'api/v1/submissions', 'request_hash' => 'b', 'status_code' => 201]);
+
+        $this->artisan('model:prune', ['--model' => [ApiIdempotencyKey::class]])->assertSuccessful();
+
+        $this->assertSame([$recent->id], ApiIdempotencyKey::query()->pluck('id')->all());
     }
 }

@@ -5,6 +5,7 @@ use App\Jobs\ApplyRetentionJob;
 use App\Jobs\ProcessEscalation;
 use App\Jobs\RetryNotificationDeliveries;
 use App\Jobs\SendNotificationDigests;
+use App\Models\ApiIdempotencyKey;
 use App\Models\InAppNotification;
 use App\Models\NotificationDelivery;
 use App\Models\OpsSnapshot;
@@ -39,7 +40,7 @@ Schedule::command('approvedesk:fetch-whatsapp-templates')->dailyAt('03:15')->wit
 Schedule::command('users:prune-unconfirmed')->dailyAt('03:45');
 // Housekeeping (RV-OPS-05). Kept: unread notifications, deliveries about requests
 // under legal hold, evidence-pack records, and the activity log (audit evidence).
-Schedule::command('model:prune', ['--model' => [OpsSnapshot::class, NotificationDelivery::class, InAppNotification::class]])->dailyAt('03:30')->withoutOverlapping();
+Schedule::command('model:prune', ['--model' => [OpsSnapshot::class, NotificationDelivery::class, InAppNotification::class, ApiIdempotencyKey::class]])->dailyAt('03:30')->withoutOverlapping();
 Schedule::command('queue:prune-failed', ['--hours' => 24 * 30])->dailyAt('03:35')->withoutOverlapping();
 Schedule::command('evidence:prune-files')->dailyAt('03:40')->withoutOverlapping();
 Schedule::command('cache:prune-file-cache')->dailyAt('03:50')->withoutOverlapping();

@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\MassPrunable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -15,6 +17,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class ApiIdempotencyKey extends Model
 {
+    use MassPrunable;
+
+    /** Clients retry within minutes; a week keeps replays safe without growing forever. */
+    public const KEEP_DAYS = 7;
+
     protected $fillable = [
         'user_id', 'key', 'method', 'path', 'request_hash', 'status_code', 'response_body',
     ];
@@ -31,5 +38,11 @@ class ApiIdempotencyKey extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /** @return Builder<static> */
+    public function prunable(): Builder
+    {
+        return static::query()->where('created_at', '<', now()->subDays(self::KEEP_DAYS));
     }
 }

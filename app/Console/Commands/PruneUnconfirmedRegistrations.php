@@ -31,6 +31,8 @@ class PruneUnconfirmedRegistrations extends Command
                 ->from('registration_otp_codes')
                 ->whereColumn('registration_otp_codes.email', 'users.email'))
             ->whereDoesntHave('roles', fn ($query) => $query->where('name', 'super-admin'))
+            // Page by id: offset paging skips rows when deleting as it goes.
+            ->lazyById()
             ->each(function (User $user) use (&$deleted): void {
                 // Unconfirmed accounts can still appear in request history (for
                 // example as a delegate); those are kept for the audit trail.
