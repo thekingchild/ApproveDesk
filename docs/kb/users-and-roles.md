@@ -14,6 +14,8 @@ Built-in roles are protected defaults. People with **Manage custom roles** can o
 
 A role manager can work only with custom roles and cannot grant permissions above their own access. Protected roles and protected permissions remain unavailable.
 
+These permissions take effect exactly as named: **Create comments**, **Send reminders**, **Withdraw requests**, **Export audit evidence**, and **Manage auditor access**. A requester can always comment on, send reminders about, and open their own requests, whatever their role. Existing roles kept their abilities when these permissions started being enforced; remove a permission from a role to take that ability away.
+
 | Role | What it is for |
 |---|---|
 | Administrator | Built-in broad administration for users, departments, workflows, request types, branding, webhooks, and sensitive fields. |
