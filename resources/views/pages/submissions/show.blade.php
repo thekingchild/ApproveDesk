@@ -18,6 +18,7 @@ use App\Services\Collaboration\ExpectedProgress;
 use App\Services\Collaboration\MentionParser;
 use App\Services\Workflow\AssigneeDirectory;
 use App\Services\Workflow\AssigneeResolver;
+use App\Services\Workflow\ReviewRound;
 use App\Support\SeparationOfDuties;
 use App\Services\WorkflowEngine;
 use Flux\Flux;
@@ -128,7 +129,7 @@ new #[Title('Submission')] class extends Component {
             $stepActions = $actions->get($step->id, collect());
             $assignedUsers = $step->assignedUsers($instance->submission);
             $automatic = $step->step_type->isAutomatic();
-            $approvalCount = $stepActions->whereIn('action', [WorkflowActionType::Approve, WorkflowActionType::ApproveWithConditions])->unique('actor_id')->count();
+            $approvalCount = ReviewRound::filter($stepActions, $step->id)->whereIn('action', [WorkflowActionType::Approve, WorkflowActionType::ApproveWithConditions])->unique('actor_id')->count();
             $requiredApprovals = match ($step->groupCompletion()) {
                 \App\Enums\GroupCompletion::FirstResponse => 1,
                 \App\Enums\GroupCompletion::All => $assignedUsers->count(),
@@ -196,8 +197,7 @@ new #[Title('Submission')] class extends Component {
             return false;
         }
 
-        return ! $instance->actions
-            ->where('step_id', $step->id)
+        return ! ReviewRound::filter($instance->actions, $step->id)
             ->where('actor_id', $user->id)
             ->whereIn('action', ['approve', 'reject', 'escalate'])
             ->isNotEmpty();
@@ -249,8 +249,7 @@ new #[Title('Submission')] class extends Component {
                 ->where('step_id', $step->id)
                 ->where('delegator_id', $user->id)
                 ->exists()
-            && ! $instance->actions
-                ->where('step_id', $step->id)
+            && ! ReviewRound::filter($instance->actions, $step->id)
                 ->where('actor_id', $user->id)
                 ->whereIn('action', ['approve', 'reject', 'escalate'])
                 ->isNotEmpty();
