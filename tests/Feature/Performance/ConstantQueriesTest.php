@@ -41,7 +41,7 @@ class ConstantQueriesTest extends TestCase
         Livewire::test('notification-indicator', ['mobile' => true]);
         DB::disableQueryLog();
 
-        $counts = collect(DB::getQueryLog())->filter(fn (array $query): bool => str_contains($query['query'], 'from "notifications"'));
+        $counts = collect(DB::getQueryLog())->filter(fn (array $query): bool => preg_match('/from [`"]notifications[`"]/', $query['query']) === 1);
         $this->assertCount(1, $counts);
     }
 }

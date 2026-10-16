@@ -87,7 +87,7 @@ class FilesPromoteAndBackupsPageTest extends TestCase
         $local = BackupDestination::factory()->create();
         $remote = BackupDestination::factory()->s3()->create();
         $files = array_map(fn (int $i): array => ['path' => "submissions/{$i}/file.pdf", 'sha256' => str_repeat('a', 64)], range(1, 500));
-        BackupSnapshot::factory()->create([
+        $big = BackupSnapshot::factory()->create([
             'kind' => BackupSnapshotKind::Files,
             'destination_id' => $local->id,
             'path' => 'backups/files/big.zip',
@@ -115,7 +115,7 @@ class FilesPromoteAndBackupsPageTest extends TestCase
 
         $component = Livewire::actingAs($this->admin)->test('pages::admin.backups')
             ->assertOk()
-            ->assertSee('delete-local-1', false)
+            ->assertSee('delete-local-'.$big->id, false)
             ->assertSee('2 workflow actions recorded after it', false);
 
         foreach ($component->instance()->snapshots as $snapshot) {
@@ -124,7 +124,7 @@ class FilesPromoteAndBackupsPageTest extends TestCase
         $this->assertSame(2, $component->instance()->actionsLostBy($database));
 
         // No query reads every column, and the per-row "remote copy?" check is one query.
-        $this->assertSame([], array_values(array_filter($selects, fn (string $sql): bool => str_contains($sql, 'select * from "backup_snapshots"'))));
+        $this->assertSame([], array_values(array_filter($selects, fn (string $sql): bool => preg_match('/select \* from [`"]backup_snapshots[`"]/', $sql) === 1)));
         $this->assertCount(1, array_filter($selects, fn (string $sql): bool => str_contains($sql, 'distinct')));
     }
 }
