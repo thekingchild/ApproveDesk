@@ -9,6 +9,16 @@ use App\Models\NotificationEmailTemplate;
 final class NotificationCopy
 {
     /**
+     * Placeholders the app fills. One with no value for this message (no
+     * comment, say) renders empty instead of as literal `{{comment}}`
+     * (RV-BUG-17); an unknown one stays literal so a typo shows in preview.
+     */
+    public const PLACEHOLDERS = [
+        'recipient_name', 'reference_number', 'title', 'submitter_name', 'priority',
+        'submission_url', 'approval_url', 'decision', 'comment', 'count',
+    ];
+
+    /**
      * @param  array<string, string|null>  $context
      */
     public function render(NotificationKind|string $kind, array $context): RenderedNotificationCopy
@@ -45,9 +55,11 @@ final class NotificationCopy
         return (string) preg_replace_callback('/\{\{\s*([a-z_]+)\s*\}\}/', function (array $matches) use ($context): string {
             $key = $matches[1];
 
-            return array_key_exists($key, $context) && $context[$key] !== null
-                ? (string) $context[$key]
-                : $matches[0];
+            if (array_key_exists($key, $context) && $context[$key] !== null) {
+                return (string) $context[$key];
+            }
+
+            return in_array($key, self::PLACEHOLDERS, true) ? '' : $matches[0];
         }, $template);
     }
 

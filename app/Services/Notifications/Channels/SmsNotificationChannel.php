@@ -6,6 +6,7 @@ use App\Contracts\OptionalNotificationChannel;
 use App\DTOs\ChannelTestResult;
 use App\DTOs\OutboundNotification;
 use App\Enums\NotificationChannelKey;
+use App\Exceptions\NotificationDeliveryException;
 use App\Models\User;
 
 /**
@@ -33,7 +34,10 @@ final class SmsNotificationChannel implements OptionalNotificationChannel
         return false;
     }
 
-    public function send(User $notifiable, OutboundNotification $message): void {}
+    public function send(User $notifiable, OutboundNotification $message): void
+    {
+        throw NotificationDeliveryException::skipped('SMS delivery is not available.');
+    }
 
     public function testConnection(): ChannelTestResult
     {

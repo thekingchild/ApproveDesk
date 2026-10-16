@@ -35,7 +35,7 @@ Built-in roles can be cloned but not edited or deleted. Archive a custom role to
 
 ## Inactive accounts
 
-Turn **Active** off to block sign-in and keep the person’s history. Do not reuse that email for a different person.
+Turn **Active** off to block sign-in and keep the person’s history. Inactive and anonymized people stop receiving notifications on every channel: no decision, comment, follower, or digest email, no chat messages, and nothing new in their inbox. Do not reuse that email for a different person.
 
 ## Departments on users
 

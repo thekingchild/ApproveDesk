@@ -594,7 +594,7 @@ new #[Title('Submission')] class extends Component {
     public function sendNudge(): void
     {
         try {
-            app(NudgeApproversAction::class)->execute(
+            $result = app(NudgeApproversAction::class)->execute(
                 $this->submission,
                 Auth::user(),
                 $this->nudgeMessage !== '' ? $this->nudgeMessage : null,
@@ -606,7 +606,12 @@ new #[Title('Submission')] class extends Component {
         }
 
         $this->reset('nudgeMessage');
-        Flux::toast('Reminder sent.', variant: 'success');
+        Flux::toast(
+            $result->skipped->isEmpty()
+                ? __('Reminder sent.')
+                : __('Reminder sent. Not reminded again yet: :names.', ['names' => $result->skipped->pluck('name')->join(', ')]),
+            variant: 'success',
+        );
     }
 
     #[Computed]

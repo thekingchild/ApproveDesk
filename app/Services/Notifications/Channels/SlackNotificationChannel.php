@@ -6,6 +6,7 @@ use App\Contracts\OptionalNotificationChannel;
 use App\DTOs\ChannelTestResult;
 use App\DTOs\OutboundNotification;
 use App\Enums\NotificationChannelKey;
+use App\Exceptions\NotificationDeliveryException;
 use App\Models\User;
 use App\Services\Notifications\ChannelSettings;
 use App\Services\Notifications\ChatCard;
@@ -39,7 +40,7 @@ final class SlackNotificationChannel implements OptionalNotificationChannel
     public function send(User $notifiable, OutboundNotification $message): void
     {
         if (! $this->isEnabled() || ! $this->isConfigured() || ! $this->canReceive($notifiable)) {
-            return;
+            throw NotificationDeliveryException::skipped('Channel is off, not configured, or the person is not linked.');
         }
 
         $token = $this->settings->credentials($this->key())['bot_token'] ?? '';
@@ -83,14 +84,17 @@ final class SlackNotificationChannel implements OptionalNotificationChannel
                     'blocks' => $blocks,
                 ]);
 
-            if ($response->failed() || $response->json('ok') !== true) {
-                $this->settings->recordSendFailure(
-                    $this->key(),
-                    'Slack send failed: '.(string) ($response->json('error') ?? $response->status()),
-                );
-            }
+            $refused = $response->failed() || $response->json('ok') !== true;
         } catch (Throwable $exception) {
-            $this->settings->recordSendFailure($this->key(), $exception->getMessage());
+            throw NotificationDeliveryException::failed($this->settings->recordSendFailure($this->key(), $exception->getMessage()));
+        }
+
+        // Slack answers 200 with ok=false on refusals; that is a failed delivery (RV-BUG-15).
+        if ($refused) {
+            throw NotificationDeliveryException::failed($this->settings->recordSendFailure(
+                $this->key(),
+                'Slack send failed: '.(string) ($response->json('error') ?? $response->status()),
+            ));
         }
     }
 

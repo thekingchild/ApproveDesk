@@ -23,7 +23,7 @@ class NotificationDigest extends Notification implements ShouldQueue
     /** @return array<int, string> */
     public function via(User $notifiable): array
     {
-        return ['mail'];
+        return $notifiable->canReceiveNotifications() ? ['mail'] : [];
     }
 
     public function toMail(User $notifiable): MailMessage

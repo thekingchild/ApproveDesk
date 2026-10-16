@@ -17,6 +17,7 @@ use RuntimeException;
  * @property int $actor_id
  * @property int $recipient_id
  * @property int|null $step_id
+ * @property string|null $batch_id
  * @property string|null $message
  * @property Carbon $scheduled_for
  * @property bool $delayed_for_quiet_hours
@@ -30,7 +31,7 @@ class SubmissionNudge extends Model
     public const UPDATED_AT = null;
 
     protected $fillable = [
-        'submission_id', 'actor_id', 'recipient_id', 'step_id', 'message',
+        'submission_id', 'actor_id', 'recipient_id', 'step_id', 'batch_id', 'message',
         'scheduled_for', 'delayed_for_quiet_hours',
     ];
 
