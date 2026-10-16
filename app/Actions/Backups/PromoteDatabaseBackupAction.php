@@ -6,6 +6,7 @@ use App\Enums\BackupSnapshotKind;
 use App\Enums\BackupSnapshotStatus;
 use App\Models\BackupDestination;
 use App\Models\BackupSnapshot;
+use App\Models\Setting;
 use App\Models\User;
 use App\Models\WorkflowAction;
 use App\Services\Backups\BackupRecorder;
@@ -64,6 +65,9 @@ final class PromoteDatabaseBackupAction
         }
 
         $snapshotActions = (int) ($snapshot->manifest['workflow_actions'] ?? $liveActions);
+        // The settings table was replaced wholesale; drop the cached copy.
+        Setting::flushCache();
+
         $this->rememberPromoted($snapshot, $actor, [
             'discarded_workflow_actions' => max(0, $liveActions - $snapshotActions),
             'safety_snapshot_id' => $safety?->id,
