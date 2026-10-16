@@ -399,12 +399,6 @@ parameters:
 			path: app/Services/Users/UserImportService.php
 
 		-
-			message: '#^Parameter \#2 \$operator of method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:whereColumn\(\) expects string\|null, Illuminate\\Contracts\\Database\\Query\\Expression given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Services/Workflow/AssignedStepConstraint.php
-
-		-
 			message: '#^Method App\\Services\\Workflow\\AssigneeDirectory\:\:search\(\) should return Illuminate\\Support\\Collection\<int, object\> but returns Illuminate\\Support\\Collection\<int, App\\Models\\Department\>\|Illuminate\\Support\\Collection\<int, App\\Models\\User\>\|Illuminate\\Support\\Collection\<int, Spatie\\Permission\\Models\\Role\>\.$#'
 			identifier: return.type
 			count: 1

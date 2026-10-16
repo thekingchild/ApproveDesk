@@ -168,7 +168,7 @@ Sources: three read-only reviews (engine/audit, authorization, input-output/file
 - Fix: pass `$instance->submission`.
 
 ### RV-BUG-02 — Form-field approvers missing from dashboard and API lists on MariaDB (lead L1)
-- Severity: **S2** · Status: Open · Location: `app/Services/Workflow/AssignedStepConstraint.php:71`
+- Severity: **S2** · Status: **Fix in review** (branch `feature/rv-bug-json-assignee`; the field key is selected through the query grammar's JSON path, unquoted per driver; new test exercises the SQL path so the MariaDB job guards it). `External` assignees still have no SQL branch (their resolvers are PHP-only) — tracked as a known limitation · Location: `app/Services/Workflow/AssignedStepConstraint.php:71`
 - Evidence: MariaDB `JSON_EXTRACT` returns the quoted string, so `key = '"reviewer"'` never matches; SQLite/MySQL 8 match. No test covers this branch. The constraint also has no branch for `External` assignees on any database.
 - Fix: driver-aware unquote (or Laravel's `->` JSON path); add a feature test so the MariaDB job guards it.
 
