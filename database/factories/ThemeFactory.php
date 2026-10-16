@@ -15,6 +15,7 @@ class ThemeFactory extends Factory
     {
         $name = fake()->unique()->colorName();
 
-        return ['key' => Str::slug($name), 'name' => Str::title($name), 'is_builtin' => false, 'is_enabled' => true, 'is_default' => false, 'primary_light' => '#2563EB', 'primary_dark' => '#60A5FA', 'foreground_light' => '#FFFFFF', 'foreground_dark' => '#172554'];
+        // Suffix keeps factory keys clear of built-in theme keys (e.g. "teal").
+        return ['key' => Str::slug($name).'-'.Str::lower(Str::random(6)), 'name' => Str::title($name), 'is_builtin' => false, 'is_enabled' => true, 'is_default' => false, 'primary_light' => '#2563EB', 'primary_dark' => '#60A5FA', 'foreground_light' => '#FFFFFF', 'foreground_dark' => '#172554'];
     }
 }
