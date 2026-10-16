@@ -4,16 +4,22 @@ namespace App\Actions\Privacy;
 
 use App\Models\Comment;
 use App\Models\Delegation;
+use App\Models\SubmissionWatcher;
 use App\Models\User;
 use App\Models\WorkflowAction;
 use App\Services\Security\DeviceSessionManager;
+use App\Services\WorkflowEngine;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 final class AnonymizeUserAction
 {
-    public function __construct(private readonly DeviceSessionManager $sessions) {}
+    public function __construct(
+        private readonly DeviceSessionManager $sessions,
+        private readonly WorkflowEngine $engine,
+    ) {}
 
     public function execute(User $target, User $actor): User
     {
@@ -29,7 +35,9 @@ final class AnonymizeUserAction
             ]);
         }
 
-        return DB::transaction(function () use ($target, $actor): User {
+        $photoPath = null;
+
+        $anonymized = DB::transaction(function () use ($target, $actor, &$photoPath): User {
             /** @var User $target */
             $target = User::query()->whereKey($target->getKey())->lockForUpdate()->firstOrFail();
 
@@ -51,11 +59,17 @@ final class AnonymizeUserAction
                 return $target;
             }
 
+            // The stored photo is personal data too (RV-SEC-22); the file is
+            // removed only once the transaction has committed.
+            $photoPath = $target->profile_image_path;
+
             $target->forceFill([
                 'name' => 'Former user',
                 'email' => 'anonymized-'.$target->id.'@invalid.local',
                 'phone' => null,
                 'avatar' => null,
+                'profile_image_path' => null,
+                'profile_image_mime' => null,
                 'teams_user_id' => null,
                 'slack_user_id' => null,
                 'telegram_user_id' => null,
@@ -79,10 +93,38 @@ final class AnonymizeUserAction
             $target->pushSubscriptions()->delete();
             $this->sessions->revokeAll($target);
 
-            unset($actor);
+            // Following a request is a live subscription, not history (RV-SEC-22).
+            SubmissionWatcher::query()->where('user_id', $target->id)->delete();
+
+            $this->endOpenDelegations($target, $actor);
 
             return $target->refresh();
         });
+
+        if (is_string($photoPath) && $photoPath !== '') {
+            Storage::disk('local')->delete($photoPath);
+        }
+
+        return $anonymized;
+    }
+
+    /**
+     * Active and future delegations to or from the person end through the
+     * engine so each one leaves an append-only DelegationRevoked record.
+     * Delegations that already ended stay untouched as evidence (RV-SEC-22).
+     */
+    private function endOpenDelegations(User $target, User $actor): void
+    {
+        Delegation::query()
+            ->where(fn ($query) => $query->where('delegator_id', $target->id)->orWhere('delegate_id', $target->id))
+            ->where('expires_at', '>', now())
+            ->orderBy('id')
+            ->get()
+            ->each(fn (Delegation $delegation) => $this->engine->revokeDelegation(
+                $delegation,
+                $actor,
+                __('Delegation ended because a participant was anonymized.'),
+            ));
     }
 
     /**

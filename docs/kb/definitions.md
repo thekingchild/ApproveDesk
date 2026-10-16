@@ -240,7 +240,7 @@ A zip of your profile, requests, comments, and sign-in history from **Settings �
 
 ## [Account anonymization](/help/users-and-roles)
 
-An administrator action that removes a person’s name and email, blocks sign-in, and keeps their request history.
+An administrator action that removes a person’s name, email, and profile photo, stops their follows and open delegations, blocks sign-in, and keeps their request history.
 
 ## [Display-name request](/help/account-settings)
 
