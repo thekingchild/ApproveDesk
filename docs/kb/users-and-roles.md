@@ -57,7 +57,7 @@ For large onboarding, open **Administration → Users → Import users**. A spre
 4. Preview the import. Ready rows will be created; existing emails and problems are listed. Download the problem report if you need to fix the file.
 5. Confirm. New accounts get a generated password — ask people to use **Forgot password** on the login screen to set their own.
 
-Departments must already exist (the importer will not create them). A manager must be an existing user or appear earlier in the same file. Roles must be ones you are allowed to grant. Imported people are trusted immediately; they do not go through the self-registration email code. Passwords are never read from the spreadsheet.
+Departments must already exist (the importer will not create them). A manager must be an existing user or appear earlier in the same file. Roles must be ones you are allowed to grant. **Update the existing account** changes only people you could edit on the Users screen yourself: it needs the **Update users** permission, and administrators can be updated only by the System owner. Other existing rows are skipped. Imported people are trusted immediately; they do not go through the self-registration email code. Passwords are never read from the spreadsheet.
 
 ## Anonymize an account
 
