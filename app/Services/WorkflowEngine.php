@@ -648,18 +648,29 @@ class WorkflowEngine
                 continue;
             }
 
-            if ($step->assignedUsers($instance->submission)->isEmpty()) {
-                if (app(AssigneeResolver::class)->onlyRequesterResolves($step, $instance->submission)) {
-                    throw WorkflowException::onlyApproverIsRequester($step->name);
-                }
-
-                throw WorkflowException::unresolvedAssignees($step->name);
-            }
+            $this->assertStepHasAssignees($instance, $step);
 
             return $instance;
         }
 
         throw WorkflowException::invalidCondition('automatic routing', 'too many automatic transitions');
+    }
+
+    /**
+     * Assignees resolve live (manager, form field, role, …), so a step can
+     * lose everyone between submit and the moment it becomes current.
+     */
+    private function assertStepHasAssignees(WorkflowInstance $instance, WorkflowTemplateStep $step): void
+    {
+        if ($step->assignedUsers($instance->submission)->isNotEmpty()) {
+            return;
+        }
+
+        if (app(AssigneeResolver::class)->onlyRequesterResolves($step, $instance->submission)) {
+            throw WorkflowException::onlyApproverIsRequester($step->name);
+        }
+
+        throw WorkflowException::unresolvedAssignees($step->name);
     }
 
     private function routeConditionalStep(
@@ -836,6 +847,11 @@ class WorkflowEngine
             if ($instance->status !== WorkflowStatus::OnHold) {
                 throw WorkflowException::instanceNotActive($instance->status->value);
             }
+
+            // The same check initialize/advance make: a revision may have
+            // cleared the form-field approver, or the manager may have left
+            // since the return. Refuse and stay on hold (RV-DOC-02).
+            $this->assertStepHasAssignees($instance, $instance->currentStep()->firstOrFail());
 
             $instance->update([
                 'status' => WorkflowStatus::Active,

@@ -20,6 +20,8 @@ Publish a request type when a process needs its own questions. Assign a workflow
 
 Archive a type to stop new submissions. Existing drafts and submitted requests keep working on the version they already have.
 
+An archived type stays archived while you edit it. Saving a draft or publishing a new version does not re-open it to requesters. When the form should be used again, choose **Restore** on its row in the list.
+
 The built-in General Request form is not edited here. You can still assign its workflow from **Built-in forms** on the same screen.
 
 ## Workflow assignment
@@ -52,9 +54,13 @@ Type a label for each field. If you later rename the field, visibility rules and
 
 Visibility and required-when rules may only reference an earlier field, and only with equals, not equals, in, and not empty.
 
+A hidden field counts as empty. If a requester answers a field and then changes an earlier answer so that field is hidden, the old answer is ignored. Fields that depend on the hidden field are hidden too and are not required, and a calculated total leaves out hidden amounts. The total on the review screen is the total that is saved.
+
+A required checkbox must be ticked before the request can be submitted. Drafts can still be saved with it unticked.
+
 ## Dates and defaults
 
-- **Date and date-time limits:** date fields show two calendar pickers — **Earliest date requesters can choose** and **Latest date requesters can choose**. Click a date instead of typing it; the bounds are inclusive, so a latest date of 2026-12-31 accepts that day. While you set limits, the builder echoes the window back in plain words: *Requesters can pick dates from 1 Sep 2026 up to 31 Dec 2026*. Submissions outside the window are rejected when saving or submitting. Number and currency fields keep plain Minimum value / Maximum value boxes.
+- **Date and date-time limits:** date fields show two calendar pickers — **Earliest date requesters can choose** and **Latest date requesters can choose**. Click a date instead of typing it; the bounds are inclusive, so a latest date of 2026-12-31 accepts that day. On a date-time field the latest date covers the whole day, up to 23:59. While you set limits, the builder echoes the window back in plain words: *Requesters can pick dates from 1 Sep 2026 up to 31 Dec 2026*. Submissions outside the window are rejected when saving or submitting. Number and currency fields keep plain Minimum value / Maximum value boxes.
 - **Limits must be real dates.** Typing a bare number (like 1 or 2) into a date limit is rejected with a clear message when saving or publishing, and the Draft checks panel warns while you build — numbers are not dates.
 - **Choice defaults:** a choice field's default value must be one of its options. Publishing rejects a default like *Unpaid* when the options are only *Annual* and *Sick*.
 - **Earliest must not come after latest** on date fields; saving and publishing reject an inverted range.

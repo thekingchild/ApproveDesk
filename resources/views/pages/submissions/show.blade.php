@@ -92,7 +92,7 @@ new #[Title('Submission')] class extends Component {
             'requestTypeVersion.requestType', 'requestTypeVersion.fields',
             'fieldValues.field', 'fieldValues.userValue', 'fieldValues.departmentValue',
             'workflowInstance.template.steps',
-            'workflowInstance.templateVersion',
+            'workflowInstance.templateVersion.steps',
             'workflowInstance.currentStep',
             'workflowInstance.actions.actor',
             'workflowInstance.actions.onBehalfOf:id,name',
@@ -146,7 +146,10 @@ new #[Title('Submission')] class extends Component {
 
         $actions = $instance->actions->groupBy('step_id');
 
-        return $instance->template->steps->map(function ($step) use ($instance, $actions) {
+        // The chain this request is pinned to, not whatever was published since (RV-BUG-28).
+        $steps = $instance->templateVersion?->steps ?? $instance->template->steps;
+
+        return $steps->map(function ($step) use ($instance, $actions) {
             $stepActions = $actions->get($step->id, collect());
             $assignedUsers = $this->assigneesFor($step);
             $automatic = $step->step_type->isAutomatic();

@@ -32,7 +32,7 @@ A branded, document-ready view of one request, its visible details, workflow pro
 
 ## [Request type](/help/request-types)
 
-A named form, such as Leave Request or Purchase Request. The request type is what a requester chooses. It owns the fields people fill in and the approval chain that starts when they submit.
+A named form, such as Leave Request or Purchase Request. The request type is what a requester chooses. It owns the fields people fill in and the approval chain that starts when they submit. An archived request type stays archived until an administrator chooses Restore.
 
 ## [Workflow template](/help/workflow-templates)
 
@@ -68,7 +68,7 @@ The search field on a workflow step that finds users, roles, or departments with
 
 ## [Assignee resolver](/help/workflow-templates)
 
-How a step decides who acts: named people, a role, department members, the requester's manager, the department manager, a person picked on the form, or another connected system.
+How a step decides who acts: named people, a role, department members, the requester's manager, the department manager, a person picked on the form, or another connected system. It looks people up from current data each time the step is checked, so a change of manager or of the person picked on the form is followed.
 
 ## [Separation of duties](/help/approval-settings)
 

@@ -65,6 +65,10 @@ new #[Title('Workflow templates')] class extends Component {
     #[Locked]
     public array $editingOutcomes = [];
 
+    /** What this editor loaded; a save is refused once someone else changes the template (RV-BUG-37). */
+    #[Locked]
+    public ?string $editingToken = null;
+
     public function mount(): void
     {
         $this->authorize('viewAny', WorkflowTemplate::class);
@@ -177,6 +181,7 @@ new #[Title('Workflow templates')] class extends Component {
         $this->isDefault = $template->is_default;
         $this->isActive = $template->is_active;
         $this->editingOutcomes = $graph?->outcomes ?? [];
+        $this->editingToken = $template->editionToken();
         $this->steps = ($graph?->steps ?? collect())->map(fn ($step) => [
             'name' => $step->name,
             'stepType' => $step->step_type->value,
@@ -381,7 +386,7 @@ new #[Title('Workflow templates')] class extends Component {
         );
 
         if ($target) {
-            app(UpdateWorkflowTemplateAction::class)->execute($target, $data, Auth::user());
+            app(UpdateWorkflowTemplateAction::class)->execute($target, $data, Auth::user(), $this->editingToken);
             $message = 'Workflow template updated.';
         } else {
             app(CreateWorkflowTemplateAction::class)->execute($data, Auth::user());
@@ -496,7 +501,7 @@ new #[Title('Workflow templates')] class extends Component {
         $this->resetValidation();
         $this->reset([
             'editingTemplateId', 'editingTemplateUsed', 'editingVersionNumber', 'editingVersionStatus',
-            'changeSummary', 'name', 'description', 'submissionTypes', 'isDefault', 'steps', 'editingOutcomes',
+            'changeSummary', 'name', 'description', 'submissionTypes', 'isDefault', 'steps', 'editingOutcomes', 'editingToken',
         ]);
         $this->isActive = true;
         $this->steps = [$this->blankStep(1)];
@@ -618,6 +623,7 @@ new #[Title('Workflow templates')] class extends Component {
                     <flux:heading size="sm">{{ __('Approval steps') }}</flux:heading>
                     <flux:button type="button" size="sm" variant="ghost" icon="plus" wire:click="addStep">{{ __('Add step') }}</flux:button>
                 </div>
+                <flux:error name="template" />
                 <flux:error name="steps" />
 
                 @foreach ($steps as $index => $step)

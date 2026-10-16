@@ -105,6 +105,7 @@ final class RequestSchemaCompiler
     {
         $version->loadMissing('fields');
         $this->assertSchemaValid($version->fields);
+        $values = $this->visibleValues($version, $values);
         $rules = [];
 
         foreach ($version->fields as $field) {
@@ -113,7 +114,14 @@ final class RequestSchemaCompiler
             }
 
             $configuration = $field->configuration ?? [];
-            $fieldRules = [$enforceRequired && $this->isRequired($field, $values) ? 'required' : 'nullable'];
+            $required = $enforceRequired && $this->isRequired($field, $values);
+            $fieldRules = [$required ? 'required' : 'nullable'];
+
+            // A required checkbox means "must be ticked"; false is a value, not a blank (RV-BUG-36).
+            if ($required && $field->type === RequestFieldType::Checkbox) {
+                $fieldRules[] = 'accepted';
+            }
+
             $fieldRules = [...$fieldRules, ...$this->typeRules($field, $configuration)];
             $rules["values.{$field->key}"] = $fieldRules;
 
@@ -131,7 +139,9 @@ final class RequestSchemaCompiler
      */
     public function validate(RequestTypeVersion $version, array $values, bool $enforceRequired = true): array
     {
-        return Validator::make(['values' => $values], $this->rules($version, $values, $enforceRequired), [], $this->attributes($version))
+        $rules = $this->rules($version, $values, $enforceRequired);
+
+        return Validator::make(['values' => $this->visibleValues($version, $values)], $rules, [], $this->attributes($version))
             ->validate()['values'] ?? [];
     }
 
@@ -161,18 +171,40 @@ final class RequestSchemaCompiler
      */
     public function missingRequired(RequestTypeVersion $version, array $values): array
     {
-        $version->loadMissing('fields');
+        $values = $this->visibleValues($version, $values);
 
         return array_values($version->fields
             ->filter(fn (RequestFieldDefinition $field): bool => $field->type !== RequestFieldType::Calculated
                 && $this->isVisible($field, $values)
                 && $this->isRequired($field, $values)
-                && in_array($values[$field->key] ?? null, [null, '', []], true))
+                && ($field->type === RequestFieldType::Checkbox
+                    ? ! filter_var($values[$field->key] ?? false, FILTER_VALIDATE_BOOLEAN)
+                    : in_array($values[$field->key] ?? null, [null, '', []], true)))
             ->map(fn (RequestFieldDefinition $field): string => $field->label)
             ->all());
     }
 
-    /** @param array<string, mixed> $values */
+    /**
+     * The values the form really holds: a hidden field's answer counts as
+     * absent, so a stale value left behind when the user changed an earlier
+     * answer cannot show, require or add up anything further down (RV-BUG-29,
+     * RV-BUG-30). Conditions may only reference earlier fields, so one pass in
+     * field order is transitive. Calculated fields are summed from what is left.
+     *
+     * @param  array<string, mixed>  $values
+     * @return array<string, mixed>
+     */
+    public function visibleValues(RequestTypeVersion $version, array $values): array
+    {
+        return $this->resolveValues($version, $values)['visible'];
+    }
+
+    /**
+     * Whether the field's own visibility rule matches. Pass visibleValues()
+     * so a field under a hidden parent is hidden too.
+     *
+     * @param  array<string, mixed>  $values
+     */
     public function isVisible(RequestFieldDefinition $field, array $values): bool
     {
         $condition = ($field->configuration ?? [])['visibility'] ?? null;
@@ -194,16 +226,33 @@ final class RequestSchemaCompiler
      */
     public function withCalculatedValues(RequestTypeVersion $version, array $values): array
     {
-        foreach ($version->fields as $field) {
-            if ($field->type !== RequestFieldType::Calculated) {
-                continue;
+        return [...$values, ...$this->resolveValues($version, $values)['calculated']];
+    }
+
+    /**
+     * @param  array<string, mixed>  $values
+     * @return array{visible: array<string, mixed>, calculated: array<string, float>}
+     */
+    private function resolveValues(RequestTypeVersion $version, array $values): array
+    {
+        $version->loadMissing('fields');
+        $calculated = [];
+
+        foreach ($version->fields->sortBy('position') as $field) {
+            if ($field->type === RequestFieldType::Calculated) {
+                $sources = ($field->configuration ?? [])['calculation']['fields'] ?? [];
+                $calculated[$field->key] = $values[$field->key] = array_sum(array_map(
+                    fn (string $key): float => (float) ($values[$key] ?? 0),
+                    $sources,
+                ));
             }
 
-            $sources = ($field->configuration ?? [])['calculation']['fields'] ?? [];
-            $values[$field->key] = array_sum(array_map(fn (string $key): float => (float) ($values[$key] ?? 0), $sources));
+            if (! $this->isVisible($field, $values)) {
+                unset($values[$field->key]);
+            }
         }
 
-        return $values;
+        return ['visible' => $values, 'calculated' => $calculated];
     }
 
     /**
@@ -271,7 +320,7 @@ final class RequestSchemaCompiler
             RequestFieldType::LongText, RequestFieldType::RichText => ['string', 'max:'.$max],
             RequestFieldType::Number, RequestFieldType::Currency => ['numeric', ...$this->rangeRules($configuration)],
             RequestFieldType::Date => ['date', ...$this->dateRangeRules($configuration)],
-            RequestFieldType::DateTime => ['date', ...$this->dateRangeRules($configuration)],
+            RequestFieldType::DateTime => ['date', ...$this->dateRangeRules($configuration, withTime: true)],
             RequestFieldType::Checkbox => ['boolean'],
             RequestFieldType::Select, RequestFieldType::Radio => [Rule::in($configuration['options'] ?? [])],
             RequestFieldType::MultiSelect => ['array'],
@@ -301,11 +350,19 @@ final class RequestSchemaCompiler
      * @param  array<string, mixed>  $configuration
      * @return list<string>
      */
-    private function dateRangeRules(array $configuration): array
+    private function dateRangeRules(array $configuration, bool $withTime = false): array
     {
+        $max = isset($configuration['max']) && $configuration['max'] !== '' ? (string) $configuration['max'] : null;
+
+        // A date-only latest date includes that whole day for a date-time field;
+        // compared as-is it would mean midnight at the start of it (RV-BUG-35).
+        if ($withTime && $max !== null && preg_match('/^\d{4}-\d{2}-\d{2}$/', $max) === 1) {
+            $max .= ' 23:59:59';
+        }
+
         return array_values(array_filter([
             isset($configuration['min']) && $configuration['min'] !== '' ? 'after_or_equal:'.$configuration['min'] : null,
-            isset($configuration['max']) && $configuration['max'] !== '' ? 'before_or_equal:'.$configuration['max'] : null,
+            $max !== null ? 'before_or_equal:'.$max : null,
         ]));
     }
 

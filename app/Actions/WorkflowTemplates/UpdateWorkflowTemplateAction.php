@@ -12,20 +12,31 @@ use App\Models\WorkflowTemplateVersion;
 use App\Services\Workflow\StepOutcomes;
 use App\Services\Workflow\WorkflowAssigneeGuard;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 final class UpdateWorkflowTemplateAction
 {
     public function __construct(private readonly WorkflowAssigneeGuard $assignees) {}
 
-    public function execute(WorkflowTemplate $template, WorkflowTemplateData $data, User $editor): WorkflowTemplate
+    /**
+     * @param  string|null  $expectedToken  WorkflowTemplate::editionToken() as the editor
+     *                                      loaded it; a mismatch means someone else saved since (RV-BUG-37)
+     */
+    public function execute(WorkflowTemplate $template, WorkflowTemplateData $data, User $editor, ?string $expectedToken = null): WorkflowTemplate
     {
-        return DB::transaction(function () use ($template, $data, $editor): WorkflowTemplate {
+        return DB::transaction(function () use ($template, $data, $editor, $expectedToken): WorkflowTemplate {
             /** @var WorkflowTemplate $template */
             $template = WorkflowTemplate::query()
                 ->with(['publishedVersion.steps', 'draftVersion.steps'])
                 ->whereKey($template->getKey())
                 ->lockForUpdate()
                 ->firstOrFail();
+
+            if ($expectedToken !== null && ! hash_equals($template->editionToken(), $expectedToken)) {
+                throw ValidationException::withMessages([
+                    'template' => __('Another administrator changed this workflow after you opened it. Reload the page to see their version, then make your changes again.'),
+                ]);
+            }
 
             if ($data->isDefault) {
                 WorkflowTemplate::query()
