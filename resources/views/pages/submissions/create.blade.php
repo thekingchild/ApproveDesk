@@ -5,6 +5,7 @@ use App\Actions\Submissions\CreateSubmissionAction;
 use App\Actions\Submissions\SubmitSubmissionAction;
 use App\Actions\Submissions\SyncLegacySubmissionFieldValuesAction;
 use App\DTOs\SubmissionData;
+use App\Exceptions\WorkflowException;
 use App\Models\Submission;
 use App\Models\SubmissionFile;
 use Flux\Flux;
@@ -159,8 +160,7 @@ new #[Title('New submission')] class extends Component {
         $this->validateOnly('title');
         $this->validateOnly('type');
 
-        $this->persistFields();
-        $this->persistAttachments();
+        $this->saveDraftAtomically();
 
         Flux::toast('Draft saved.', variant: 'success');
 
@@ -171,16 +171,40 @@ new #[Title('New submission')] class extends Component {
     {
         $this->validate();
 
-        $submission = DB::transaction(function (): Submission {
-            $submission = $this->persistFields();
-            $this->persistAttachments();
+        // Save first so a refused submit never loses the requester's work (RV-BUG-07).
+        $submission = $this->saveDraftAtomically();
 
-            return app(SubmitSubmissionAction::class)->execute($submission);
-        });
+        try {
+            app(SubmitSubmissionAction::class)->execute($submission);
+        } catch (WorkflowException $exception) {
+            Flux::toast(__('Saved as a draft but not sent for approval: :reason', ['reason' => $exception->getMessage()]), variant: 'danger');
+            $this->redirect(route('submissions.show', $submission), navigate: true);
+
+            return;
+        }
 
         Flux::toast('Submission sent for approval.', variant: 'success');
 
         $this->redirect(route('submissions.show', $submission), navigate: true);
+    }
+
+    private function saveDraftAtomically(): Submission
+    {
+        [$draftId, $attachments] = [$this->draftId, $this->attachments];
+
+        try {
+            return DB::transaction(function (): Submission {
+                $submission = $this->persistFields();
+                $this->persistAttachments();
+
+                return $submission;
+            });
+        } catch (\Throwable $exception) {
+            // A rolled-back insert must not leave the component pointing at a draft that does not exist.
+            [$this->draftId, $this->attachments] = [$draftId, $attachments];
+
+            throw $exception;
+        }
     }
 
     public function removeSavedFile(int $fileId): void

@@ -26,13 +26,15 @@ After you submit, the workflow card shows the current step, the expected next st
 
 ## Submit, withdraw, revise
 
-Submit when the form is complete. That starts the workflow assigned to the request type.
+Submit when the form is complete. That starts the workflow assigned to the request type. Required fields are checked again when you submit, including for a draft saved earlier with fields left empty.
+
+If ApproveDesk cannot send the request for approval (for example nobody can approve one of its steps, or you would be the only approver of your own request), it keeps your work as a draft, opens it, and shows the reason. Ask an administrator to fix the workflow, then choose **Edit draft** and submit again. Nothing is lost and no duplicate draft is created.
 
 Withdraw cancels an in-flight request that you own. Use it when the work is no longer needed. The withdrawal is recorded in the request history. If an approver finishes the request at the same moment, their decision stands and the request can no longer be withdrawn.
 
 If an approver returns the request, status becomes Returned. Open the request and choose Edit. Change the allowed fields or attachments, then submit again. The workflow continues from the return; it does not rewrite earlier decisions.
 
-If an approver asks for information, status becomes Awaiting information. Open the request, supply the answer or files they asked for, and send the response. Only the original submitter can complete that response.
+If an approver asks for information, status becomes Awaiting information. Open the request, supply the answer or files they asked for, and send the response. A written answer is required. Only the original submitter can complete that response. If the request cannot go back for approval, your answer is not posted and the reason is shown under it.
 
 ## Lists and saved views
 
