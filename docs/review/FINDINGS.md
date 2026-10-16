@@ -241,7 +241,7 @@ Sources: two read-only feature-area reviews with 43 probe tests (every listed CO
 
 | ID | Sev | Finding | Status |
 |---|---|---|---|
-| RV-SEC-20 | **S1** | Microsoft sign-in links an existing account (admins included) by unverified `email`/`preferred_username` and skips that account's second factor (`OAuthClient.php:186`, `ResolveOAuthUserAction.php:33`, `OAuthController.php:44`) | Open |
+| RV-SEC-20 | **S1** | Microsoft sign-in links an existing account (admins included) by unverified `email`/`preferred_username` and skips that account's second factor (`OAuthClient.php:186`, `ResolveOAuthUserAction.php:33`, `OAuthController.php:44`) | **Fix in review** (`feature/rv-sec-oauth-verified`) |
 | RV-BUG-05 | **S1** | Saving on **Workflow templates** resets every step's completion rule to its step-type default ("All" → first response) and drops custom outcomes, auto-publishing on unused templates (`workflow-templates.blade.php:350, 358-366`) | Open |
 | RV-BUG-06 | S2 | Changing your email on Profile clears `email_verified_at`; `users:prune-unconfirmed` then deletes the (old) account | Open |
 | RV-DATA-05 | S2 | Daily `PurgeExpiredDelegations` deletes delegation rows, so evidence packs lose who the delegate was; `workflow.json` omits `delegated_to`/window | Open |

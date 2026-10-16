@@ -12,5 +12,7 @@ final readonly class OAuthUserData
         public string $name,
         public string $email,
         public ?string $avatar,
+        /** False when the provider does not vouch for the email (e.g. multi-tenant Microsoft). */
+        public bool $emailVerified = true,
     ) {}
 }
