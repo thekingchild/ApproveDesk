@@ -239,14 +239,21 @@ final class RequestSchemaCompiler
      */
     private function conditionMatches(array $condition, array $values): bool
     {
-        $actual = $values[$condition['field']] ?? null;
+        // A multi-select (or file) source holds a list: it "equals" a value when
+        // the list contains it, and is "in" a list when any item is (RV-BUG-13).
+        $actual = array_map(
+            fn (mixed $item): string => is_scalar($item) ? (string) $item : '',
+            is_array($values[$condition['field']] ?? null) ? $values[$condition['field']] : [$values[$condition['field']] ?? null],
+        );
         $expected = $condition['value'] ?? null;
+        $expectedList = array_map(fn (mixed $item): string => is_scalar($item) ? (string) $item : '', (array) $expected);
+        $single = is_scalar($expected) ? (string) $expected : '';
 
         return match ($condition['operator']) {
-            'equals' => (string) $actual === (string) $expected,
-            'not_equals' => (string) $actual !== (string) $expected,
-            'in' => in_array((string) $actual, array_map('strval', (array) $expected), true),
-            'not_empty' => ! blank($actual),
+            'equals' => in_array($single, $actual, true),
+            'not_equals' => ! in_array($single, $actual, true),
+            'in' => array_intersect($actual, $expectedList) !== [],
+            'not_empty' => array_filter($actual, fn (string $item): bool => trim($item) !== '') !== [],
             default => false,
         };
     }

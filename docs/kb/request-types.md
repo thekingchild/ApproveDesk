@@ -34,6 +34,8 @@ Precedence, first match wins:
 
 Use **Explain routing** with sample metadata to see which rule would match. The chosen reason is stored on the workflow instance.
 
+A rule's field is a request field such as `priority`, a form field written as `fields.amount`, or `metadata.amount`, which reads the form field `amount` on real requests just as the sample does in Explain routing. A rule on any other field is refused when you save.
+
 - Blank assignment, or an inactive assigned template: new submissions start the default template unless a rule matches.
 - In-flight requests keep the template already stored on their workflow instance.
 - Document, Note, Memo, and Request are not routing keys.

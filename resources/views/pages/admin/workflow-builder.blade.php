@@ -16,6 +16,7 @@ use App\Models\WorkflowTemplateVersion;
 use App\Services\Workflow\AssigneeDirectory;
 use App\Services\WorkflowTemplates\WorkflowGraphSimulator;
 use App\Services\WorkflowTemplates\WorkflowGraphValidator;
+use App\Support\StepConditionForm;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
@@ -163,6 +164,7 @@ new #[Title('Workflow builder')] class extends Component {
         }
         $copy = $this->steps[$this->selectedIndex];
         $copy['name'] .= ' copy';
+        $copy['key'] = StepConditionForm::newKey();
         $insert = $this->selectedIndex + 1;
         array_splice($this->steps, $insert, 0, [$copy]);
         $this->selectedIndex = $insert;
@@ -204,7 +206,7 @@ new #[Title('Workflow builder')] class extends Component {
     {
         if ($this->connectMode !== '' && $this->selectedIndex !== null && $this->selectedIndex !== $index) {
             $field = $this->connectMode === 'false' ? 'falseStep' : 'trueStep';
-            $this->steps[$this->selectedIndex][$field] = $index + 1;
+            $this->steps[$this->selectedIndex][$field] = $this->steps[$index]['key'];
             $this->connectMode = '';
             $this->pushHistory();
 
@@ -366,16 +368,7 @@ new #[Title('Workflow builder')] class extends Component {
                 ]);
             }
 
-            $conditions = $stepType === StepType::Conditional ? [
-                'match' => 'all',
-                'rules' => [[
-                    'field' => $step['conditionField'] ?: 'priority',
-                    'operator' => $step['conditionOperator'] ?: 'equals',
-                    'value' => $step['conditionValue'] ?? '',
-                ]],
-                'true_step' => filled($step['trueStep'] ?? null) ? (int) $step['trueStep'] : null,
-                'false_step' => filled($step['falseStep'] ?? null) ? (int) $step['falseStep'] : null,
-            ] : null;
+            $conditions = $stepType === StepType::Conditional ? StepConditionForm::conditions($this->steps, $index) : null;
 
             $completion = filled($step['completionRule'] ?? null)
                 ? GroupCompletion::tryFrom((string) $step['completionRule'])
@@ -426,17 +419,12 @@ new #[Title('Workflow builder')] class extends Component {
             'assigneeField' => data_get($step->assignee_config, 'field_key', ''),
             'assigneeResolver' => data_get($step->assignee_config, 'resolver', ''),
             'allowDelegation' => $step->allow_delegation,
-            'conditionField' => data_get($step->conditions, 'rules.0.field', 'priority'),
-            'conditionOperator' => data_get($step->conditions, 'rules.0.operator', 'equals'),
-            'conditionValue' => is_array(data_get($step->conditions, 'rules.0.value'))
-                ? implode(', ', data_get($step->conditions, 'rules.0.value'))
-                : (string) data_get($step->conditions, 'rules.0.value', ''),
-            'trueStep' => data_get($step->conditions, 'true_step'),
-            'falseStep' => data_get($step->conditions, 'false_step'),
+            ...StepConditionForm::state($step->conditions),
             'timeoutHours' => $step->timeout_hours,
             'timeoutAction' => $step->timeout_action?->value ?? '',
             'timeoutCalendar' => $step->timeoutCalendar()->value,
         ])->values()->all();
+        $this->steps = StepConditionForm::keyed($this->steps);
         if ($this->steps === []) {
             $this->steps = [$this->blankStep(1)];
         }
@@ -447,6 +435,7 @@ new #[Title('Workflow builder')] class extends Component {
     private function blankStep(int $number): array
     {
         return [
+            'key' => StepConditionForm::newKey(),
             'name' => 'Approval Level '.$number,
             'stepType' => StepType::Sequential->value,
             'quorumCount' => null,
@@ -459,6 +448,8 @@ new #[Title('Workflow builder')] class extends Component {
             'conditionField' => 'priority',
             'conditionOperator' => 'equals',
             'conditionValue' => '',
+            'conditionMatch' => 'all',
+            'conditionExtraRules' => [],
             'trueStep' => null,
             'falseStep' => null,
             'timeoutHours' => null,
@@ -528,6 +519,24 @@ new #[Title('Workflow builder')] class extends Component {
             <flux:button variant="primary" wire:click="requestPublish" data-test="builder-publish">{{ __('Publish version') }}</flux:button>
         </x-slot:actions>
     </x-ui.page-header>
+
+    @if ($errors->any())
+        <flux:callout variant="danger" icon="exclamation-triangle" :heading="__('This workflow cannot be saved yet')" data-test="builder-errors">
+            <flux:callout.text>
+                <ul class="list-disc space-y-1 ps-5">
+                    @foreach ($errors->getMessages() as $key => $messages)
+                        @php $stepNumber = preg_match('/^steps\.(\d+)/', $key, $match) === 1 ? (int) $match[1] : null; @endphp
+                        <li>
+                            @if ($stepNumber !== null && isset($steps[$stepNumber]))
+                                <button type="button" class="font-medium underline" wire:click="selectStep({{ $stepNumber }})">{{ ($stepNumber + 1).'. '.$steps[$stepNumber]['name'] }}</button>:
+                            @endif
+                            {{ $messages[0] }}
+                        </li>
+                    @endforeach
+                </ul>
+            </flux:callout.text>
+        </flux:callout>
+    @endif
 
     <div class="flex flex-wrap items-center gap-2">
         <flux:button size="sm" :variant="$viewMode === 'canvas' ? 'primary' : 'ghost'" wire:click="$set('viewMode', 'canvas')" data-test="view-canvas">{{ __('Canvas') }}</flux:button>
@@ -645,11 +654,32 @@ new #[Title('Workflow builder')] class extends Component {
                             </flux:select>
                         @endif
                         @if ($selected['stepType'] === 'conditional')
-                            <flux:input wire:model="steps.{{ $selectedIndex }}.conditionField" :label="__('Field')" />
-                            <flux:input wire:model="steps.{{ $selectedIndex }}.conditionValue" :label="__('Value')" />
+                            @php
+                                $branchLabel = function (mixed $key) use ($steps): string {
+                                    $position = \App\Support\StepConditionForm::position($steps, $key);
+                                    if ($position !== null) {
+                                        return $position.'. '.$steps[$position - 1]['name'];
+                                    }
+
+                                    return blank($key) ? __('complete the workflow') : __('a removed step — choose again');
+                                };
+                            @endphp
+                            <flux:input wire:model="steps.{{ $selectedIndex }}.conditionField" :label="__('Field')" placeholder="priority or fields.amount" :description="__('A request field, or a form field as fields.key.')" />
+                            <flux:error name="steps.{{ $selectedIndex }}.conditionField" />
+                            <flux:select wire:model.live="steps.{{ $selectedIndex }}.conditionOperator" :label="__('Operator')" data-test="condition-operator">
+                                @foreach (\App\Support\StepConditionForm::OPERATORS as $value => $label)
+                                    <flux:select.option :value="$value">{{ __($label) }}</flux:select.option>
+                                @endforeach
+                            </flux:select>
+                            <flux:input wire:model="steps.{{ $selectedIndex }}.conditionValue" :label="__('Value')" :disabled="($selected['conditionOperator'] ?? '') === 'present'" />
+                            @if (($selected['conditionExtraRules'] ?? []) !== [])
+                                <p class="text-xs text-zinc-500">{{ trans_choice('{1} :count more rule from an earlier version is kept unchanged.|[2,*] :count more rules from an earlier version are kept unchanged.', count($selected['conditionExtraRules']), ['count' => count($selected['conditionExtraRules'])]) }}</p>
+                            @endif
                             <flux:button size="sm" wire:click="beginConnect('true')" data-test="connect-true">{{ $connectMode === 'true' ? __('Click a later node') : __('Connect true branch') }}</flux:button>
                             <flux:button size="sm" wire:click="beginConnect('false')">{{ $connectMode === 'false' ? __('Click a later node') : __('Connect false branch') }}</flux:button>
-                            <p class="text-xs text-zinc-500">{{ __('True → step :true · False → step :false', ['true' => $selected['trueStep'] ?: __('end'), 'false' => $selected['falseStep'] ?: __('end')]) }}</p>
+                            <p class="text-xs text-zinc-500" data-test="branch-summary">{{ __('True → :true · False → :false', ['true' => $branchLabel($selected['trueStep'] ?? null), 'false' => $branchLabel($selected['falseStep'] ?? null)]) }}</p>
+                            <flux:error name="steps.{{ $selectedIndex }}.trueStep" />
+                            <flux:error name="steps.{{ $selectedIndex }}.falseStep" />
                         @endif
                         <div class="flex flex-wrap gap-2">
                             <flux:button size="sm" wire:click="duplicateSelected">{{ __('Duplicate') }}</flux:button>

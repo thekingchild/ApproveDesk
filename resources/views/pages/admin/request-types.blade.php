@@ -749,13 +749,18 @@ new #[Title('Request types')] class extends Component {
                         </flux:select>
                         <flux:input wire:model="selectionRules.{{ $index }}.field" :label="__('Field')" placeholder="metadata.amount or fields.amount" />
                         <flux:select wire:model="selectionRules.{{ $index }}.operator" :label="__('Operator')">
-                            @foreach (['equals', 'gte', 'lte', 'gt', 'lt', 'contains', 'present'] as $operator)
-                                <flux:select.option :value="$operator">{{ $operator }}</flux:select.option>
+                            @foreach (\App\Support\StepConditionForm::OPERATORS as $operator => $operatorLabel)
+                                <flux:select.option :value="$operator">{{ __($operatorLabel) }}</flux:select.option>
                             @endforeach
                         </flux:select>
                         <div class="flex items-end gap-2">
                             <flux:input wire:model="selectionRules.{{ $index }}.value" :label="__('Value')" />
                             <flux:button size="xs" variant="danger" wire:click="removeSelectionRule({{ $index }})">{{ __('Remove') }}</flux:button>
+                        </div>
+                        <div class="md:col-span-6">
+                            <flux:error name="rules.{{ $index }}.name" />
+                            <flux:error name="rules.{{ $index }}.workflow_template_id" />
+                            <flux:error name="rules.{{ $index }}.field" />
                         </div>
                     </div>
                 @endforeach

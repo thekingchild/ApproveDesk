@@ -247,13 +247,13 @@ Sources: two read-only feature-area reviews with 43 probe tests (every listed CO
 | RV-DATA-05 | S2 | Daily `PurgeExpiredDelegations` deletes delegation rows, so evidence packs lose who the delegate was; `workflow.json` omits `delegated_to`/window | **Fix in review** (`feature/rv-bug-prune-registrations`) |
 | RV-BUG-07 | S2 | Submit failures (e.g. no resolvable approver): raw 500 in UI; custom-form retries leave an orphan draft per attempt; API create+submit leaves a stranded Pending request with no workflow | **Fix in review** (`feature/rv-bug-submit-failures`) |
 | RV-ENG-12 | S2 | Delegations can't be revoked: a deactivated delegate, or a deleted/shortened out-of-office period, leaves the delegator locked out until expiry | **Fix in review** (`feature/rv-bug-prune-registrations`) |
-| RV-BUG-08 | S2 | Condition branch targets are positions; moving/deleting/duplicating steps in builder or templates page re-points branches silently | Open |
-| RV-BUG-09 | S2 | Builder resave turns `in`/`not_in` lists into a string that never matches | Open |
-| RV-BUG-10 | S2 | Builder publishes conditions on unknown fields; every submission on that template then fails | Open |
-| RV-BUG-11 | S2 | `metadata.*` selection rules/conditions never match real requests (nothing writes metadata), but Explain routing and simulation say they do | Open |
+| RV-BUG-08 | S2 | Condition branch targets are positions; moving/deleting/duplicating steps in builder or templates page re-points branches silently | **Fix in review** (`feature/rv-bug-conditional-routing`) |
+| RV-BUG-09 | S2 | Builder resave turns `in`/`not_in` lists into a string that never matches | **Fix in review** (`feature/rv-bug-conditional-routing`) |
+| RV-BUG-10 | S2 | Builder publishes conditions on unknown fields; every submission on that template then fails | **Fix in review** (`feature/rv-bug-conditional-routing`) |
+| RV-BUG-11 | S2 | `metadata.*` selection rules/conditions never match real requests (nothing writes metadata), but Explain routing and simulation say they do | **Fix in review** (`feature/rv-bug-conditional-routing`) |
 | RV-DATA-06 | S2 | On a returned/awaiting-information request the submitter can hard-delete an attachment approvers already saw; no "removed" revision, ignores legal hold | Open |
 | RV-BUG-12 | S2 | With two file fields, each field is linked to the other's uploads (`create-custom.blade.php:115`) | **Fix in review** (`feature/rv-bug-submit-failures`) |
-| RV-BUG-13 | S2 | Visibility/required rule on a multi-select source crashes the form ("Array to string conversion") | Open |
+| RV-BUG-13 | S2 | Visibility/required rule on a multi-select source crashes the form ("Array to string conversion") | **Fix in review** (`feature/rv-bug-conditional-routing`) |
 | RV-BUG-14 | S2 | Returning to sequential numbering after random can collide and then block every new request (counter rollback) | Open |
 | RV-BUG-15 | S3 | Chat send failures recorded as Sent (never retried/shown); unmapped WhatsApp kinds recorded Sent, not Skipped | Open |
 | RV-BUG-16 | S3 | Quiet-hours-deferred chat messages lose their copy and signed link; sent even if the step moved on | Open |
