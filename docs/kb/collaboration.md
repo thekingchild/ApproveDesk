@@ -30,9 +30,9 @@ The author can edit for 15 minutes. After that the text is locked. Each edit wri
 
 Remind approver notifies the people who currently hold the step, including an active delegate. You cannot remind yourself.
 
-The organization can set quiet hours on Approval settings. A reminder sent inside that window is recorded immediately and delivered when the window ends. Overnight ranges such as 22:00–07:00 are allowed. Empty quiet hours send immediately.
+The organization can set quiet hours on Approval settings. A reminder sent inside that window is recorded immediately and delivered when the window ends. If the step has moved on by then, the held chat reminder is dropped. Overnight ranges such as 22:00–07:00 are allowed. Empty quiet hours send immediately.
 
-Reminders are rate limited: one to the same person on the same request each hour, and a small daily cap per sender on that request. Reminder rows are not edited or deleted.
+Reminders are rate limited: one to the same person on the same request each hour, and a small daily cap per sender on that request. The cap counts how many times you press **Send reminder**, not how many approvers each press reaches, so a step with many approvers can still be reminded. If some approvers were reminded within the last hour, they are left out and the confirmation names them; the others still get the reminder. You see an error only when everyone on the step was reminded too recently. Reminder rows are not edited or deleted.
 
 ## Out of office
 

@@ -24,6 +24,14 @@ class SubmissionDecidedNotification extends Notification implements ShouldQueue
     use RendersNotificationCopy;
     use RespectsNotificationFrequency;
 
+    /** @var array<string, list<string>> */
+    private const DECIDING_ACTIONS = [
+        'approved' => ['approve', 'approve_with_conditions', 'auto_approve'],
+        'rejected' => ['reject', 'auto_reject'],
+        'returned' => ['return'],
+        'awaiting_information' => ['request_information'],
+    ];
+
     public function __construct(
         public readonly Submission $submission,
         public readonly SubmissionStatus $decision,
@@ -64,14 +72,27 @@ class SubmissionDecidedNotification extends Notification implements ShouldQueue
         ];
     }
 
+    /**
+     * The comment on the action that produced this decision. An older return
+     * or rejection comment must not appear on a later approval (RV-BUG-17).
+     */
     private function lastDecisionComment(): ?string
     {
         $instance = $this->submission->workflowInstance()->first();
 
-        return $instance?->actions()
-            ->whereIn('action', ['reject', 'return', 'request_information'])
+        // actions() is ordered oldest first; reorder so latest() really is the newest.
+        $latest = $instance?->actions()
+            ->whereIn('action', array_merge(...array_values(self::DECIDING_ACTIONS)))
+            ->reorder()
             ->latest('id')
-            ->first()
-            ?->comment;
+            ->first();
+
+        if ($latest === null || ! in_array($latest->action->value, self::DECIDING_ACTIONS[$this->decision->value] ?? [], true)) {
+            return null;
+        }
+
+        $comment = trim((string) $latest->comment);
+
+        return $comment !== '' ? $comment : null;
     }
 }

@@ -5,16 +5,21 @@ namespace App\Models;
 use App\Enums\NotificationDeliveryStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
  * @property int $user_id
+ * @property int|null $submission_id
  * @property string $kind
  * @property string $channel
  * @property NotificationDeliveryStatus $status
  * @property int $attempts
  * @property string|null $last_error
  * @property array<string, mixed>|null $payload
+ * @property Carbon|null $sent_at
+ * @property Carbon|null $next_retry_at
+ * @property Carbon|null $created_at
  */
 class NotificationDelivery extends Model
 {

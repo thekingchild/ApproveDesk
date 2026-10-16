@@ -23,6 +23,8 @@ class SendNotificationDigests implements ShouldBeUnique, ShouldQueue
     public function handle(): void
     {
         User::query()
+            // Deactivated and anonymized people get no digest (RV-BUG-20).
+            ->where('is_active', true)
             ->whereIn('notification_frequency', [
                 NotificationFrequency::Daily,
                 NotificationFrequency::Weekly,
@@ -39,7 +41,9 @@ class SendNotificationDigests implements ShouldBeUnique, ShouldQueue
         $days = $user->notification_frequency === NotificationFrequency::Weekly ? 7 : 1;
         $lastSent = $user->last_notification_digest_at;
 
-        if ($lastSent !== null && $lastSent->isAfter(now()->subDays($days))) {
+        // Compare calendar days, not exact instants: a run that starts a few
+        // seconds earlier than yesterday's is still due (RV-BUG-18).
+        if ($lastSent !== null && $lastSent->copy()->startOfDay()->isAfter(now()->subDays($days)->startOfDay())) {
             return;
         }
 

@@ -31,7 +31,19 @@ final readonly class OutboundNotification
             ? $notification->toArray($notifiable)
             : [];
 
-        $kind = (string) ($payload['kind'] ?? class_basename($notification));
+        return self::fromPayload($payload, $notifiable, class_basename($notification));
+    }
+
+    /**
+     * Rebuilds the full message (copy, signed approval link) from a stored
+     * delivery payload, so a send deferred by quiet hours carries the same
+     * content as an immediate one, rendered against the current step (RV-BUG-16).
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    public static function fromPayload(array $payload, User $notifiable, string $fallbackKind = 'update'): self
+    {
+        $kind = (string) ($payload['kind'] ?? $fallbackKind);
         $title = trim((string) ($payload['title'] ?? ''));
         $reference = trim((string) ($payload['reference_number'] ?? ''));
 

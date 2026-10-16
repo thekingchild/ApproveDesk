@@ -108,14 +108,20 @@ final class ChannelSettings
         Setting::put($this->errorKey($channel), $this->redact($channel, $message));
     }
 
-    public function recordSendFailure(NotificationChannelKey $channel, string $message): void
+    /**
+     * Records the channel health error and returns the redacted message so the
+     * driver can report the same text on the delivery row (RV-BUG-15).
+     */
+    public function recordSendFailure(NotificationChannelKey $channel, string $message): string
     {
         $redacted = $this->redact($channel, $message);
         Setting::put($this->errorKey($channel), $redacted);
-        Log::warning('Optional notification channel skipped after a send error.', [
+        Log::warning('Optional notification channel send failed.', [
             'channel' => $channel->value,
             'error' => $redacted,
         ]);
+
+        return $redacted;
     }
 
     public function redact(NotificationChannelKey $channel, string $message): string

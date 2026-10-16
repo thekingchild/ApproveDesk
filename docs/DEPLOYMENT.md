@@ -66,7 +66,7 @@ Schedule::command('queue:work --stop-when-empty --max-time=50 --tries=3 --timeou
     ->everyMinute()->withoutOverlapping(5)->runInBackground();
 ```
 
-The worker exits after 50 seconds, so ticks never stack, and its overlap lock expires after 5 minutes if the host kills it. Keep `DB_QUEUE_RETRY_AFTER` (default 150) above `--timeout`, or a slow job is handed to a second worker while the first is still running. Scheduled jobs (escalations, out-of-office fallbacks, delivery retries, digests, retention) are unique: a copy is not queued while another is waiting or running. Operations snapshots older than 14 days are pruned daily.
+The worker exits after 50 seconds, so ticks never stack, and its overlap lock expires after 5 minutes if the host kills it. Keep `DB_QUEUE_RETRY_AFTER` (default 150) above `--timeout`, or a slow job is handed to a second worker while the first is still running. Scheduled jobs (escalations, out-of-office fallbacks, delivery retries, digests, retention) are unique: a copy is not queued while another is waiting or running. Operations snapshots older than 14 days are pruned daily. The chat delivery retry job sends at most 20 held or failed messages per run and stops starting new sends after 45 seconds, so it stays inside the 90-second worker timeout; a larger backlog drains over successive 15-minute runs.
 
 **Optional .htaccess hardening** (force HTTPS, protect sensitive paths):
 

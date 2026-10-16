@@ -6,6 +6,7 @@ use App\Contracts\OptionalNotificationChannel;
 use App\DTOs\ChannelTestResult;
 use App\DTOs\OutboundNotification;
 use App\Enums\NotificationChannelKey;
+use App\Exceptions\NotificationDeliveryException;
 use App\Models\Setting;
 use App\Models\User;
 use App\Services\Notifications\ChannelSettings;
@@ -39,7 +40,7 @@ final class TelegramNotificationChannel implements OptionalNotificationChannel
     public function send(User $notifiable, OutboundNotification $message): void
     {
         if (! $this->isEnabled() || ! $this->isConfigured() || ! $this->canReceive($notifiable)) {
-            return;
+            throw NotificationDeliveryException::skipped('Channel is off, not configured, or the person is not linked.');
         }
 
         $token = $this->settings->credentials($this->key())['bot_token'] ?? '';
@@ -53,11 +54,15 @@ final class TelegramNotificationChannel implements OptionalNotificationChannel
                     'disable_web_page_preview' => false,
                 ]);
 
-            if ($response->failed() || $response->json('ok') !== true) {
-                $this->settings->recordSendFailure($this->key(), 'Telegram send failed: '.$response->status());
-            }
+            $refused = $response->failed() || $response->json('ok') !== true;
         } catch (Throwable $exception) {
-            $this->settings->recordSendFailure($this->key(), $exception->getMessage());
+            throw NotificationDeliveryException::failed($this->settings->recordSendFailure($this->key(), $exception->getMessage()));
+        }
+
+        if ($refused) {
+            throw NotificationDeliveryException::failed(
+                $this->settings->recordSendFailure($this->key(), 'Telegram send failed: '.$response->status()),
+            );
         }
     }
 

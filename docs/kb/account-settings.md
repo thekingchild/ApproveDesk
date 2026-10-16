@@ -18,7 +18,7 @@ If an administrator turns on **Require a second factor**, you must confirm an au
 
 ## Notifications
 
-Choose Immediate, Daily, Weekly, or In-app only. Immediate sends as events happen. Daily and weekly send a digest. In-app only keeps the bell and does not email you.
+Choose Immediate, Daily, Weekly, or In-app only. Immediate sends as events happen. Daily and weekly send a digest. A daily digest goes out once each calendar day, a weekly one once every seven days. In-app only keeps the bell and does not email you.
 
 In-app only does not mute Microsoft Teams, Slack, WhatsApp, or Telegram. Those optional channels are organisation settings. If they are on and your account is mapped, they still notify you. See [Notification channels](notification-channels.md).
 

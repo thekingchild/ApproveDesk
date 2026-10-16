@@ -13,15 +13,15 @@ use App\Models\IntegrationDelivery;
 use App\Models\NotificationDelivery;
 use App\Models\Submission;
 use App\Models\User;
-use App\Services\Collaboration\QuietHours;
+use App\Models\WorkflowTemplate;
 use App\Services\Integrations\ConnectorRegistry;
-use App\Services\Notifications\ChannelRegistry;
 use App\Services\Notifications\ChannelSettings;
-use App\Services\Notifications\NotificationDeliveryRecorder;
+use App\Services\WorkflowEngine;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Notification;
 use RuntimeException;
 use Tests\TestCase;
 
@@ -90,7 +90,10 @@ class DatabaseQueueRetryTest extends TestCase
         ]);
 
         $user = User::factory()->create(['telegram_user_id' => '42']);
+        WorkflowTemplate::factory()->default()->sequential([$user])->create();
         $submission = Submission::factory()->create(['title' => 'Retry me']);
+        Notification::fake();
+        app(WorkflowEngine::class)->initialize($submission);
         $delivery = NotificationDelivery::query()->create([
             'user_id' => $user->id,
             'kind' => 'action_required',
@@ -107,11 +110,7 @@ class DatabaseQueueRetryTest extends TestCase
         RetryNotificationDeliveries::dispatch();
         $this->assertDatabaseHas('jobs', ['queue' => 'default']);
 
-        (new RetryNotificationDeliveries)->handle(
-            app(QuietHours::class),
-            app(ChannelRegistry::class),
-            app(NotificationDeliveryRecorder::class),
-        );
+        app()->call([new RetryNotificationDeliveries, 'handle']);
 
         $this->assertSame(NotificationDeliveryStatus::Sent, $delivery->fresh()->status);
         Http::assertSent(fn ($request) => str_contains($request->url(), 'sendMessage')

@@ -2,10 +2,14 @@
 
 namespace App\Services\Notifications;
 
+use App\Contracts\NotificationChannel;
+use App\DTOs\OutboundNotification;
 use App\Enums\NotificationDeliveryStatus;
+use App\Exceptions\NotificationDeliveryException;
 use App\Models\NotificationDelivery;
 use App\Models\User;
 use App\Services\Collaboration\QuietHours;
+use Throwable;
 
 final class NotificationDeliveryRecorder
 {
@@ -28,6 +32,31 @@ final class NotificationDeliveryRecorder
             'payload' => $payload,
             'next_retry_at' => $deferred ? $this->quietHours->nextOpenAt() : null,
         ]);
+    }
+
+    /**
+     * Sends through the driver and records what really happened: Sent only
+     * when the provider accepted the message, Skipped when the channel could
+     * not carry it, Failed (with a retry for critical kinds) otherwise
+     * (RV-BUG-15). Never throws: optional channels stay fail-open.
+     */
+    public function deliver(NotificationChannel $driver, User $user, OutboundNotification $message, NotificationDelivery $delivery): void
+    {
+        try {
+            $driver->send($user, $message);
+        } catch (NotificationDeliveryException $exception) {
+            $exception->skipped
+                ? $this->markSkipped($delivery, $exception->getMessage())
+                : $this->markFailed($delivery, $exception->getMessage(), true);
+
+            return;
+        } catch (Throwable $exception) {
+            $this->markFailed($delivery, $exception->getMessage(), true);
+
+            return;
+        }
+
+        $this->markSent($delivery);
     }
 
     public function markSent(NotificationDelivery $delivery): void
@@ -58,7 +87,7 @@ final class NotificationDeliveryRecorder
         $shouldRetry = $retry && $critical && $attempts < 3;
 
         $delivery->forceFill([
-            'status' => $shouldRetry ? NotificationDeliveryStatus::Failed : NotificationDeliveryStatus::Failed,
+            'status' => NotificationDeliveryStatus::Failed,
             'attempts' => $attempts,
             'last_error' => $error,
             'next_retry_at' => $shouldRetry ? now()->addMinutes(15 * $attempts) : null,
