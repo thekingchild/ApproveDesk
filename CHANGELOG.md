@@ -24,6 +24,8 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Security
 
+- Publishing from the workflow builder now requires the **Publish workflows** permission, as on the Workflow templates screen.
+- Custom outcome keys are limited to lowercase letters, numbers, and underscores, and are rendered safely, so a key can no longer inject script into the approver's decision buttons. Unknown decisions are refused instead of being recorded as Approve.
 - **Separation of duties:** requesters can no longer approve, decide, or be delegated their own requests. This is a new setting under **Settings → Approval settings**, on by default. If a step would be approved only by the requester, the request stops with a message naming the step until an administrator changes who approves it. Requests already in progress follow the rule immediately.
 - Rich text (request bodies, announcements, and the API `body` field) can no longer carry script through legacy raw-text tags such as `<xmp>` or `<noembed>`. The sanitizer now rebuilds output from an allow-list, and stored content is re-sanitized when displayed.
 - The rich-text editor (Tiptap 3.32, ProseMirror) is updated to fix a paste-handling XSS and prototype-pollution issues reported by `npm audit`. Build tooling (`concurrently`) moved to development dependencies. `npm audit` reports no vulnerabilities.

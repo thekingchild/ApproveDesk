@@ -323,6 +323,13 @@ new #[Title('Submission')] class extends Component {
 
         $outcomes = app(\App\Services\Workflow\StepOutcomes::class)->forVersion($this->submission->workflowInstance?->templateVersion);
         $outcome = collect($outcomes)->firstWhere('key', $action);
+
+        if ($outcome === null && WorkflowActionType::tryFrom($action) === null) {
+            Flux::toast(__('That decision is not available on this step.'), variant: 'danger');
+
+            return;
+        }
+
         $requiresComment = $outcome['requires_comment'] ?? in_array($action, ['reject', 'return', 'request_information', 'escalate', 'approve_with_conditions'], true);
 
         if ($requiresComment && trim($this->actionComment) === '') {
@@ -983,7 +990,7 @@ new #[Title('Submission')] class extends Component {
                 <flux:button variant="primary" wire:click="act('approve_with_conditions')" data-test="approve-with-conditions" data-requires-online>{{ __('Approve with conditions') }}</flux:button>
                 @foreach (app(\App\Services\Workflow\StepOutcomes::class)->forVersion($submission->workflowInstance?->templateVersion) as $outcome)
                     @if ($outcome['custom'])
-                        <flux:button variant="subtle" wire:click="act('{{ $outcome['key'] }}')" data-test="outcome-{{ $outcome['key'] }}">{{ $outcome['label'] }}</flux:button>
+                        <flux:button variant="subtle" wire:click="act({{ \Illuminate\Support\Js::from($outcome['key']) }})" data-test="outcome-{{ $outcome['key'] }}">{{ $outcome['label'] }}</flux:button>
                     @endif
                 @endforeach
                 <flux:modal.trigger name="reject-modal">

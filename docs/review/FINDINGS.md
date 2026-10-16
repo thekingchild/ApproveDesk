@@ -183,7 +183,7 @@ Sources: three read-only reviews (engine/audit, authorization, input-output/file
 - Fix: authorize `update` per row (with RV-SEC-04's rule); lock `$preview` or re-analyse on commit.
 
 ### RV-SEC-07 — Workflow builder publishes without `workflows.publish`
-- Severity: **S2** · Status: Open · Location: `pages/admin/workflow-builder.blade.php:276-282`
+- Severity: **S2** · Status: **Fix in review** (branch `feature/rv-sec-builder`). Residual, by design for now: saving a template that has never been used still auto-publishes for `workflows.manage` holders (`UpdateWorkflowTemplateAction`); revisit with RV-SEC-13 · Location: `pages/admin/workflow-builder.blade.php:276-282`
 - Evidence (probe): `confirmPublish()` authorizes only `update`.
 - Fix: `authorize('publish')` in `requestPublish`/`confirmPublish` and inside `PublishWorkflowTemplateVersionAction`.
 
@@ -198,7 +198,7 @@ Sources: three read-only reviews (engine/audit, authorization, input-output/file
 - Fix: suppress chat approve (send the confirmation URL) when a second factor is required; verify Teams JWT and Slack user; single-use tokens; owner/re-auth for identity mapping.
 
 ### RV-SEC-11 — Custom outcome key injected into a Livewire action expression
-- Severity: **S2** · Status: Open · Location: `submissions/show.blade.php:957`; `workflow-builder.blade.php:485-496`
+- Severity: **S2** · Status: **Fix in review** (branch `feature/rv-sec-builder`; keys validated on create/update, unsafe stored keys ignored on read, rendered with `Js::from`) · Location: `submissions/show.blade.php:957`; `workflow-builder.blade.php:485-496`
 - Evidence (probe): an admin saves outcome key ``x');alert(document.domain);('``; it renders inside `wire:click="act('…')"` and executes for approvers.
 - Fix: validate keys `^[a-z0-9_]{1,40}$` server-side; render with `@js()`.
 
@@ -217,7 +217,7 @@ Sources: three read-only reviews (engine/audit, authorization, input-output/file
 | RV-SEC-16 | S3 | Custom-code save accepts a password confirmation of any age; second factor is login-time only | `settings/branding.blade.php:208-209` |
 | RV-SEC-17 | S3 | S3 backup endpoint validated but not pinned; virtual-host bucket name never validated (suspected) | `S3BackupTransport.php:71-77` |
 | RV-SEC-19 | S3 | Disposition review has no four-eyes or still-pending check | `ReviewDispositionAction` |
-| RV-ENG-08 | S4 | Unknown `act()` argument is treated as Approve | `submissions/show.blade.php:313` |
+| RV-ENG-08 | S4 | **Fix in review** (`feature/rv-sec-builder`) — Unknown `act()` argument is treated as Approve | `submissions/show.blade.php:313` |
 | RV-ENG-09 | S4 | Escalate timeout on the last step fails and is logged every 15 min forever | `WorkflowEngine.php:428-430` |
 | RV-BUG-04 | S4 | Double submit of a draft returns a 500 (unique constraint) | `SubmitSubmissionAction` |
 | RV-SEC-18 | S4 | Minor: optional Telegram webhook secret; CSV formula escaping in two exports; unsanitized download filename header; VAPID key in plaintext; inline `svg` mapping; CSV import row cap; Sanctum tokens never expire; role-name checks in dashboard/auditor; hidden owner name via tampered mentions | various |

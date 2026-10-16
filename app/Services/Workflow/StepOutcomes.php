@@ -5,9 +5,35 @@ namespace App\Services\Workflow;
 use App\Enums\OutcomeBehavior;
 use App\Enums\WorkflowActionType;
 use App\Models\WorkflowTemplateVersion;
+use Illuminate\Validation\ValidationException;
 
 final class StepOutcomes
 {
+    /** Custom outcome keys are rendered into Livewire action expressions; keep them inert. */
+    public const KEY_PATTERN = '/^[a-z0-9_]{1,40}$/';
+
+    /**
+     * @param  array<int, array<string, mixed>>  $outcomes
+     *
+     * @throws ValidationException when a custom outcome key or behavior is invalid
+     */
+    public static function assertValid(array $outcomes): void
+    {
+        foreach ($outcomes as $outcome) {
+            $key = (string) ($outcome['key'] ?? '');
+
+            if (preg_match(self::KEY_PATTERN, $key) !== 1) {
+                throw ValidationException::withMessages([
+                    'outcomes' => __('Outcome keys use 1 to 40 lowercase letters, numbers, or underscores. ":key" is not allowed.', ['key' => $key]),
+                ]);
+            }
+
+            if (OutcomeBehavior::tryFrom((string) ($outcome['behavior'] ?? '')) === null) {
+                throw ValidationException::withMessages(['outcomes' => __('Choose a valid behavior for outcome ":key".', ['key' => $key])]);
+            }
+        }
+    }
+
     /**
      * @return list<array{key: string, label: string, behavior: string, requires_comment: bool, custom: bool}>
      */
@@ -59,7 +85,7 @@ final class StepOutcomes
         ];
 
         $custom = collect($version?->outcomes ?? [])
-            ->filter(fn (mixed $row): bool => is_array($row) && filled($row['key'] ?? null))
+            ->filter(fn (mixed $row): bool => is_array($row) && preg_match(self::KEY_PATTERN, (string) ($row['key'] ?? '')) === 1)
             ->map(fn (array $row): array => [
                 'key' => (string) $row['key'],
                 'label' => (string) ($row['label'] ?? $row['key']),
