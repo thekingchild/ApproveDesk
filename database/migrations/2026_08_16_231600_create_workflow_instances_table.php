@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\SchemaTimestamps;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -15,7 +16,7 @@ return new class extends Migration
             $table->foreignId('current_step_id')->nullable()
                 ->constrained('workflow_template_steps')->nullOnDelete();
             $table->string('status', 20)->default('active');
-            $table->timestamp('started_at');
+            SchemaTimestamps::required($table, 'started_at');
             $table->timestamp('completed_at')->nullable();
             $table->timestamps();
 

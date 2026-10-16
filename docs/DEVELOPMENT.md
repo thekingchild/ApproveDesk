@@ -53,6 +53,18 @@ php artisan queue:work                # process queued notifications locally
 npm run build                         # production asset build (what CI ships)
 ```
 
+Tests refuse to start if `bootstrap/cache/config.php` or a route cache exists, or if the database is not in-memory SQLite (or a `*test*` MySQL/MariaDB database). Cached config makes PHPUnit ignore `phpunit.xml`, and `RefreshDatabase` would then wipe your development database. Run `php artisan optimize:clear` after any local `config:cache`.
+
+### Performance dataset
+
+`PerformanceSeeder` builds a large, realistic dataset (every transition goes through `WorkflowEngine`). It runs only in the `local` environment and is not part of `DatabaseSeeder`. Use a separate SQLite file:
+
+```bash
+touch database/perf.sqlite
+DB_DATABASE=$PWD/database/perf.sqlite php artisan migrate --seed
+DB_DATABASE=$PWD/database/perf.sqlite PERF_USERS=300 PERF_SUBMISSIONS=3000 php artisan db:seed --class=PerformanceSeeder
+```
+
 ## Working on the Workflow Engine
 
 - Engine code: `app/Services/WorkflowEngine.php` — start every change by writing the failing topology test in `tests/Feature/Workflow/`.
@@ -62,7 +74,7 @@ npm run build                         # production asset build (what CI ships)
 
 ## Testing against MySQL (occasional parity check)
 
-SQLite covers the daily loop. GitHub Actions also runs the suite against MySQL 8. You do not need MySQL on the development machine.
+SQLite covers the daily loop. GitHub Actions also runs the suite against MySQL 8 and MariaDB 10.6. You do not need MySQL on the development machine.
 
 To run the same MySQL job locally (optional Docker):
 
@@ -71,6 +83,8 @@ docker run --name ad-mysql -e MYSQL_ROOT_PASSWORD=secret -e MYSQL_DATABASE=appro
 DB_CONNECTION=mysql DB_HOST=127.0.0.1 DB_DATABASE=approvedesk_test \
 DB_USERNAME=root DB_PASSWORD=secret php artisan test
 ```
+
+For MariaDB, use `mariadb:10.6` with `MARIADB_ROOT_PASSWORD`/`MARIADB_DATABASE` and `DB_CONNECTION=mariadb`.
 
 ## Turnstile test keys
 

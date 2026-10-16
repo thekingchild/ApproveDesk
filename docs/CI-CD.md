@@ -17,7 +17,7 @@ Platform: **GitHub Actions**. Quality CI runs on every pull request and on `main
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| `ci.yml` — **Quality** | every push to `main` + PR | Pint lint → PHPStan → PHPUnit tests (SQLite, parallel) → coverage gates → PHPUnit on MySQL 8 → Vite asset build → upload build artifact |
+| `ci.yml` — **Quality** | every push to `main` + PR | Pint lint → PHPStan → PHPUnit tests (SQLite, parallel) → coverage gates → PHPUnit on MySQL 8 and MariaDB 10.6 → Vite asset build → upload build artifact |
 | `publish-release.yml` | push of `v*` tag | Re-run Quality against the tag → create the GitHub Release notes. No host deployment, SSH, rsync, or environment secrets. |
 
 Local equivalent before pushing (this is the CI contract — same commands):
@@ -35,10 +35,11 @@ npm run build
 
 ## 3. Quality workflow — `.github/workflows/ci.yml`
 
-The checked-in workflow is the source of truth. It runs four jobs:
+The checked-in workflow is the source of truth. It runs five jobs:
 
 - **php** — SQLite in-memory: dependency audit, Pint, PHPStan, parallel tests, 80% `app/` coverage, 97% `WorkflowEngine`.
 - **mysql** — sequential PHPUnit against MySQL 8.
+- **mariadb** — sequential PHPUnit against MariaDB 10.6 (the oldest supported MariaDB).
 - **assets** — production Composer install and Vite build; uploads `public/build`.
 - **browser** — Dusk; `continue-on-error: true` so it does not block merge.
 

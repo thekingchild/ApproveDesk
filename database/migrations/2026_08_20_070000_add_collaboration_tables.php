@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\SchemaTimestamps;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -50,7 +51,7 @@ return new class extends Migration
             $table->foreignId('recipient_id')->constrained('users')->cascadeOnDelete();
             $table->foreignId('step_id')->nullable()->constrained('workflow_template_steps')->nullOnDelete();
             $table->text('message')->nullable();
-            $table->timestamp('scheduled_for');
+            SchemaTimestamps::required($table, 'scheduled_for');
             $table->boolean('delayed_for_quiet_hours')->default(false);
             $table->timestamp('created_at')->useCurrent();
 
@@ -61,8 +62,8 @@ return new class extends Migration
         Schema::create('user_out_of_office', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
-            $table->timestamp('starts_at');
-            $table->timestamp('ends_at');
+            SchemaTimestamps::required($table, 'starts_at');
+            SchemaTimestamps::required($table, 'ends_at');
             $table->foreignId('fallback_user_id')->nullable()->constrained('users')->nullOnDelete();
             $table->string('message')->nullable();
             $table->timestamps();

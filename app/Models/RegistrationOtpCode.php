@@ -3,10 +3,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 
 /**
  * Hashed, single-use registration confirmation codes (Phase UO.2).
  * The plaintext code is never stored; attempts and expiry are enforced here.
+ *
+ * @property Carbon $expires_at
  */
 class RegistrationOtpCode extends Model
 {
