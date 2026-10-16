@@ -24,7 +24,8 @@ final class SaveRequestTypeDraftAction
                 'slug' => $this->uniqueSlug($name),
                 'description' => $description,
             ]);
-            $requestType->update(['name' => $name, 'description' => $description, 'is_active' => true]);
+            // Editing never re-opens an archived type; only Restore does (RV-BUG-31).
+            $requestType->update(['name' => $name, 'description' => $description]);
 
             $draft = $requestType->versions()->where('status', RequestTypeVersionStatus::Draft)->first();
 

@@ -6,6 +6,7 @@ use App\Actions\WorkflowTemplates\SaveWorkflowSelectionRulesAction;
 use App\Services\Workflow\WorkflowTemplateSelector;
 use App\Actions\RequestTypes\CloneRequestTypeAction;
 use App\Actions\RequestTypes\PublishRequestTypeVersionAction;
+use App\Actions\RequestTypes\RestoreRequestTypeAction;
 use App\Actions\RequestTypes\SaveRequestTypeDraftAction;
 use App\Enums\RequestFieldType;
 use App\Models\RequestType;
@@ -337,6 +338,15 @@ new #[Title('Request types')] class extends Component {
         Flux::toast('Request type archived.', variant: 'success');
     }
 
+    public function restore(int $id): void
+    {
+        $type = RequestType::findOrFail($id);
+        $this->authorize('update', $type);
+        app(RestoreRequestTypeAction::class)->execute($type);
+        unset($this->requestTypes);
+        Flux::toast('Request type restored.', variant: 'success');
+    }
+
     public function cloneType(int $id): void
     {
         $source = RequestType::findOrFail($id);
@@ -603,7 +613,7 @@ new #[Title('Request types')] class extends Component {
             return true;
         }
 
-        $actual = $this->previewValues[(string) $field['visibilityField']] ?? '';
+        $actual = $this->previewValue((string) $field['visibilityField']);
         $expected = (string) ($field['visibilityValue'] ?? '');
 
         return match ((string) $field['visibilityOperator']) {
@@ -613,6 +623,18 @@ new #[Title('Request types')] class extends Component {
             'not_empty' => ! blank($actual),
             default => true,
         };
+    }
+
+    /** A hidden field's sample value counts as empty, as on the real form (RV-BUG-29). */
+    private function previewValue(string $key): mixed
+    {
+        foreach ($this->fields as $index => $field) {
+            if (($field['key'] ?? null) === $key && ! $this->previewVisible($index)) {
+                return '';
+            }
+        }
+
+        return $this->previewValues[$key] ?? '';
     }
 
     /** Whether a visible field is currently required against the preview values (P6B-UI-01). */
@@ -632,7 +654,7 @@ new #[Title('Request types')] class extends Component {
             return false;
         }
 
-        $actual = $this->previewValues[(string) $field['requiredField']] ?? '';
+        $actual = $this->previewValue((string) $field['requiredField']);
 
         return match ((string) $field['requiredOperator']) {
             'equals' => (string) $actual === (string) ($field['requiredValue'] ?? ''),
@@ -688,7 +710,7 @@ new #[Title('Request types')] class extends Component {
                     <flux:table.cell><span class="text-sm">{{ $this->workflowLabel($type) }}</span></flux:table.cell>
                     <flux:table.cell>{{ $type->versions->count() }}</flux:table.cell>
                     <flux:table.cell><flux:badge :color="$type->is_active ? 'lime' : 'zinc'">{{ $type->is_active ? __('Active') : __('Archived') }}</flux:badge></flux:table.cell>
-                    <flux:table.cell><div class="flex flex-wrap justify-end gap-2"><flux:button size="sm" wire:click="editType({{ $type->id }})">{{ __('Edit') }}</flux:button><flux:button size="sm" wire:click="cloneType({{ $type->id }})">{{ __('Clone') }}</flux:button><flux:button size="sm" variant="danger" wire:click="archive({{ $type->id }})" wire:confirm="Archive this request type?">{{ __('Archive') }}</flux:button></div></flux:table.cell>
+                    <flux:table.cell><div class="flex flex-wrap justify-end gap-2"><flux:button size="sm" wire:click="editType({{ $type->id }})">{{ __('Edit') }}</flux:button><flux:button size="sm" wire:click="cloneType({{ $type->id }})">{{ __('Clone') }}</flux:button>@if ($type->is_active)<flux:button size="sm" variant="danger" wire:click="archive({{ $type->id }})" wire:confirm="Archive this request type?">{{ __('Archive') }}</flux:button>@else<flux:button size="sm" wire:click="restore({{ $type->id }})" wire:confirm="Restore this request type so people can submit it again?">{{ __('Restore') }}</flux:button>@endif</div></flux:table.cell>
                 </flux:table.row>
             @empty
                 <flux:table.row><flux:table.cell colspan="5"><x-ui.empty-state title="No custom request types" description="Create the first versioned request form." /></flux:table.cell></flux:table.row>
