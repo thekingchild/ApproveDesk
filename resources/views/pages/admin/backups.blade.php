@@ -216,6 +216,18 @@ new #[Title('Backups')] class extends Component
         return BackupSnapshot::query()->with(['destination', 'promoter'])->latest('taken_at')->latest('id')->limit(40)->get();
     }
 
+    /** Workflow actions recorded after a database snapshot; a promote removes them from the live history. */
+    public function actionsLostBy(BackupSnapshot $snapshot): int
+    {
+        return max(0, $this->liveWorkflowActions() - (int) ($snapshot->manifest['workflow_actions'] ?? 0));
+    }
+
+    #[Computed]
+    public function liveWorkflowActions(): int
+    {
+        return \App\Models\WorkflowAction::query()->count();
+    }
+
     /** @return \Illuminate\Support\Collection<int, BackupRestoreEvent> */
     #[Computed]
     public function restoreEvents(): \Illuminate\Support\Collection
@@ -415,7 +427,11 @@ new #[Title('Backups')] class extends Component
                                         <flux:button size="xs" :href="$this->downloadUrl($snapshot)">{{ __('Download') }}</flux:button>
                                     @endcan
                                     @can('backups.promote')
-                                        <flux:button size="xs" variant="danger" wire:click="promote({{ $snapshot->id }})" data-test="promote-snapshot-{{ $snapshot->id }}">{{ __('Promote') }}</flux:button>
+                                        @if ($snapshot->kind === \App\Enums\BackupSnapshotKind::Database)
+                                            <flux:button size="xs" variant="danger" wire:click="promote({{ $snapshot->id }})" wire:confirm="{{ __('Replace this database with snapshot :id? :count workflow actions recorded after it will be removed from the live history. A safety backup of the current database is taken first, and the site stays in maintenance mode until the restore is checked.', ['id' => $snapshot->id, 'count' => $this->actionsLostBy($snapshot)]) }}" data-test="promote-snapshot-{{ $snapshot->id }}">{{ __('Promote') }}</flux:button>
+                                        @else
+                                            <flux:button size="xs" variant="danger" wire:click="promote({{ $snapshot->id }})" data-test="promote-snapshot-{{ $snapshot->id }}">{{ __('Promote') }}</flux:button>
+                                        @endif
                                     @endcan
                                     @can('backups.local_copies.remove')
                                         @if ($this->canRemoveLocal($snapshot))
@@ -446,6 +462,12 @@ new #[Title('Backups')] class extends Component
                     {{ $event->kind->value }}
                     {{ $event->snapshot_name }}
                     {{ __('restored by :name', ['name' => $event->actor_name]) }}
+                    @if ($event->safety_snapshot_id)
+                        · {{ __('safety backup :id', ['id' => $event->safety_snapshot_id]) }}
+                    @endif
+                    @if ($event->discarded_workflow_actions)
+                        · <span class="font-medium text-amber-700 dark:text-amber-400" data-test="restore-discarded">{{ trans_choice(':count later workflow action removed|:count later workflow actions removed', $event->discarded_workflow_actions) }}</span>
+                    @endif
                 </li>
             @empty
                 <li class="text-zinc-500">{{ __('No snapshots have been restored yet.') }}</li>

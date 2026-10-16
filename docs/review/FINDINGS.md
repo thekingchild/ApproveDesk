@@ -133,7 +133,7 @@ Sources: three read-only reviews (engine/audit, authorization, input-output/file
 - Evidence (probes): submitter listed on a User/Role step; department manager submitting for their own department; FormField step where the submitter picks themselves; delegation to the submitter. `WorkflowEngine::authorize()` (`app/Services/WorkflowEngine.php:239-268`) and `AssigneeResolver` never compare the actor with `submitter_id`.
 
 ### RV-DATA-03 — MySQL backup promote drops live tables before a non-atomic reload, with no pre-promote copy
-- Severity: **S1** (data loss; owner-initiated) · Status: Open
+- Severity: **S1** (data loss; owner-initiated) · Status: **Fix in review** (branch `feature/rv-data-promote-safety`). Shared hosting usually cannot create a scratch schema, so instead of `RENAME TABLE` the promote: enters maintenance mode → takes and verifies a safety backup → loads → verifies → reopens; any failure reloads the safety backup, and a failed rollback keeps maintenance mode on with a critical log naming the safety snapshot. Restore trail records the safety snapshot and discarded workflow actions; the confirmation warns of the loss beforehand
 - Location: `app/Actions/Backups/PromoteDatabaseBackupAction.php:182-200`
 - Evidence: `SET FOREIGN_KEY_CHECKS=0`, drop every table, `DB::unprepared($sql)`, then bring the app up and verify. A failure mid-load leaves a partial database; the SQLite path keeps a `.pre-promote` copy, the MySQL path does not. A successful promote silently discards newer `workflow_actions`, and the restore trail doesn't record how many.
 - Fix: snapshot before dropping; load into a scratch schema and swap with `RENAME TABLE`; stay in maintenance until verified; record the live-vs-snapshot `workflow_actions` delta.

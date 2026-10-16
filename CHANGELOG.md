@@ -14,6 +14,7 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Fixed
 
+- **Database promote on MySQL/MariaDB is now recoverable.** ApproveDesk takes and verifies a safety backup first, stays in maintenance mode until the restored database passes its check, and automatically puts the safety backup back if the restore fails (staying in maintenance mode if even that fails). The confirmation warns how many later workflow actions will be removed, and Restore history records the safety backup and that count. New nullable `backup_restore_events` columns.
 - On MariaDB, requests waiting for an approver chosen in a form field now appear in that approver's dashboard and API lists.
 - Deleting a user can no longer alter workflow history. Request history references are now protected in the database, people who appear in delegations or comments count as having history (so they are anonymized rather than deleted), and the unconfirmed-registration clean-up skips anyone who appears in history.
 - Withdrawing a request now goes through the workflow engine. It is recorded in the request history, and it can no longer overwrite a decision that was completed at the same moment.

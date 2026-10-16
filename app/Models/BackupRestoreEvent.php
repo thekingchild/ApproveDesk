@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use LogicException;
 
-#[Fillable(['snapshot_id', 'actor_id', 'actor_name', 'kind', 'snapshot_name'])]
+#[Fillable(['snapshot_id', 'actor_id', 'actor_name', 'kind', 'snapshot_name', 'discarded_workflow_actions', 'safety_snapshot_id'])]
 class BackupRestoreEvent extends Model
 {
     public const UPDATED_AT = null;
@@ -17,6 +17,8 @@ class BackupRestoreEvent extends Model
     {
         return [
             'kind' => BackupSnapshotKind::class,
+            'discarded_workflow_actions' => 'integer',
+            'safety_snapshot_id' => 'integer',
         ];
     }
 
