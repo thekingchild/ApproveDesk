@@ -120,7 +120,7 @@ class WorkflowEngine
                 }
             }
 
-            $this->authorize($instance, $actor, $action);
+            $onBehalfOf = $this->authorize($instance, $actor, $action);
 
             if (in_array($action, [
                 WorkflowActionType::ApproveWithConditions,
@@ -136,6 +136,7 @@ class WorkflowEngine
                 'instance_id' => $instance->id,
                 'step_id' => $instance->current_step_id,
                 'actor_id' => $actor->id,
+                'on_behalf_of_id' => $onBehalfOf,
                 'action' => $action,
                 'outcome_key' => $outcomeKey ?? $action->value,
                 'comment' => $comment,
@@ -257,9 +258,11 @@ class WorkflowEngine
     }
 
     /**
+     * @return int|null the delegator whose seat the actor fills, or null for the actor's own seat
+     *
      * @throws WorkflowException when the actor may not perform this action
      */
-    private function authorize(WorkflowInstance $instance, User $actor, WorkflowActionType $action): void
+    private function authorize(WorkflowInstance $instance, User $actor, WorkflowActionType $action): ?int
     {
         if ($instance->status !== WorkflowStatus::Active) {
             throw WorkflowException::instanceNotActive($instance->status->value);
@@ -276,9 +279,9 @@ class WorkflowEngine
         }
 
         $directlyAssigned = $step->assignedUsers($instance->submission)->contains($actor);
-        $delegated = $this->hasActiveIncomingDelegation($instance, $step, $actor);
+        $delegatorId = $directlyAssigned ? null : $this->activeIncomingDelegatorId($instance, $step, $actor);
 
-        if (! $directlyAssigned && ! $delegated) {
+        if (! $directlyAssigned && $delegatorId === null) {
             throw WorkflowException::actorNotAssigned($actor->email, $step->name);
         }
 
@@ -288,10 +291,15 @@ class WorkflowEngine
             throw WorkflowException::delegationNotAllowed('your authority is currently delegated');
         }
 
-        // Comments are repeatable; state-changing actions are one per actor per step.
-        if ($action !== WorkflowActionType::Comment && $this->hasActedOn($instance, $step, $actor)) {
+        // Comments are repeatable; state-changing actions are one per seat per step.
+        // A delegate fills the delegator's seat, so the two never count twice (RV-ENG-03).
+        if ($action !== WorkflowActionType::Comment
+            && ($this->hasActedOn($instance, $step, $actor->id)
+                || ($delegatorId !== null && $this->hasActedOn($instance, $step, $delegatorId)))) {
             throw WorkflowException::duplicateAction($actor->email);
         }
+
+        return $delegatorId;
     }
 
     private function authorizeDelegation(
@@ -315,7 +323,7 @@ class WorkflowEngine
             throw WorkflowException::actorNotAssigned($delegator->email, $step->name);
         }
 
-        if ($this->hasActedOn($instance, $step, $delegator)) {
+        if ($this->hasActedOn($instance, $step, $delegator->id)) {
             throw WorkflowException::delegationNotAllowed('you have already decided this step');
         }
 
@@ -352,16 +360,18 @@ class WorkflowEngine
         }
     }
 
-    private function hasActiveIncomingDelegation(
+    private function activeIncomingDelegatorId(
         WorkflowInstance $instance,
         WorkflowTemplateStep $step,
         User $user,
-    ): bool {
-        return Delegation::query()->active()
+    ): ?int {
+        $delegatorId = Delegation::query()->active()
             ->where('instance_id', $instance->id)
             ->where('step_id', $step->id)
             ->where('delegate_id', $user->id)
-            ->exists();
+            ->value('delegator_id');
+
+        return $delegatorId === null ? null : (int) $delegatorId;
     }
 
     private function hasActiveOutgoingDelegation(
@@ -516,8 +526,7 @@ class WorkflowEngine
                 WorkflowActionType::Approve,
                 WorkflowActionType::ApproveWithConditions,
             ])
-            ->distinct()
-            ->count('actor_id');
+            ->count(DB::raw('distinct coalesce(on_behalf_of_id, actor_id)'));
 
         $completion = $step->groupCompletion();
         $assigneeCount = $step->assignedUsers($instance->submission)->unique('id')->count();
@@ -705,12 +714,16 @@ class WorkflowEngine
         }
     }
 
-    private function hasActedOn(WorkflowInstance $instance, WorkflowTemplateStep $step, User $actor): bool
+    /**
+     * Has this seat decided the step in the current round, in person or through a delegate?
+     */
+    private function hasActedOn(WorkflowInstance $instance, WorkflowTemplateStep $step, int $seatUserId): bool
     {
         return ReviewRound::constrain(WorkflowAction::query())
             ->where('instance_id', $instance->id)
             ->where('step_id', $step->id)
-            ->where('actor_id', $actor->id)
+            ->where(fn ($seat) => $seat->where('on_behalf_of_id', $seatUserId)
+                ->orWhere(fn ($own) => $own->whereNull('on_behalf_of_id')->where('actor_id', $seatUserId)))
             ->whereIn('action', [
                 WorkflowActionType::Approve,
                 WorkflowActionType::ApproveWithConditions,

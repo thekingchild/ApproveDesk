@@ -35,6 +35,7 @@ final class ApprovalReportService
             'workflowInstance.templateVersion.steps',
             'workflowInstance.currentStep',
             'workflowInstance.actions.actor',
+            'workflowInstance.actions.onBehalfOf:id,name',
             'workflowInstance.actions.step',
         ]);
 
@@ -86,7 +87,9 @@ final class ApprovalReportService
                 ->sortBy(fn ($action): string => sprintf('%020d-%020d', $action->created_at?->getTimestamp() ?? 0, $action->id))
                 ->map(fn ($action): array => [
                     'step' => $action->step->name,
-                    'actor' => $action->actor_id === null ? 'System' : $action->actor->name,
+                    'actor' => $action->actor_id === null
+                        ? 'System'
+                        : $action->actor->name.($action->on_behalf_of_id !== null ? ' (on behalf of '.$action->onBehalfOf->name.')' : ''),
                     'outcome' => $this->outcomeLabel($action, $instance->templateVersion),
                     'acted_at' => $action->created_at?->copy()->timezone((string) config('app.timezone'))->format('d M Y H:i') ?? '—',
                     'comment' => $action->comment,

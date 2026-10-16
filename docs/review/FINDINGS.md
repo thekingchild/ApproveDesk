@@ -143,7 +143,7 @@ Sources: three read-only reviews (engine/audit, authorization, input-output/file
 - Fix: required `expectedStepId` on `processAction()`/`delegate()`, checked after the lock; pass it from every caller.
 
 ### RV-ENG-03 — One quorum/“All” seat counted twice (delegate + delegator)
-- Severity: **S2** · Status: Open · Location: `WorkflowEngine.php:481-489, 673-686`
+- Severity: **S2** · Status: **Fix in review** (branch `feature/rv-eng-delegated-seat`). New migration adds nullable `workflow_actions.on_behalf_of_id` (restrict on delete); the engine counts distinct seats and treats a delegate's decision as the delegator's. Pre-existing delegate decisions have no seat recorded and keep the old counting · Location: `WorkflowEngine.php:481-489, 673-686`
 - Evidence (probe): quorum 2 of {A,B,C}; A delegates to D, D approves; after expiry A approves → step complete without B or C.
 - Fix: count approvals by seat (record on-behalf-of); treat “my delegate already decided” as a duplicate.
 
