@@ -17,6 +17,8 @@ use App\Services\ApproverWorkbench;
 use App\Services\Collaboration\ExpectedProgress;
 use App\Services\Collaboration\MentionParser;
 use App\Services\Workflow\AssigneeDirectory;
+use App\Services\Workflow\AssigneeResolver;
+use App\Support\SeparationOfDuties;
 use App\Services\WorkflowEngine;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
@@ -168,7 +170,11 @@ new #[Title('Submission')] class extends Component {
             return false;
         }
 
-        $direct = $step->assignedUsers()->contains($user);
+        if (SeparationOfDuties::forbids($user, $this->submission)) {
+            return false;
+        }
+
+        $direct = $step->assignedUsers($this->submission)->contains($user);
         $incoming = Delegation::query()->active()
             ->where('instance_id', $instance->id)
             ->where('step_id', $step->id)
@@ -189,6 +195,18 @@ new #[Title('Submission')] class extends Component {
             ->where('actor_id', $user->id)
             ->whereIn('action', ['approve', 'reject', 'escalate'])
             ->isNotEmpty();
+    }
+
+    /** True when the viewer would be an approver on the current step but separation of duties excludes them. */
+    #[Computed]
+    public function selfApprovalBlocked(): bool
+    {
+        $step = $this->submission->workflowInstance?->currentStep;
+
+        return $step !== null
+            && $this->submission->workflowInstance->status->value === 'active'
+            && SeparationOfDuties::forbids(Auth::user(), $this->submission)
+            && app(AssigneeResolver::class)->candidates($step, $this->submission)->contains(Auth::user());
     }
 
     /** @return array{previous: string|null, next: string|null} */
@@ -219,7 +237,7 @@ new #[Title('Submission')] class extends Component {
 
         return $instance?->status->value === 'active'
             && $step?->allow_delegation
-            && $step->assignedUsers()->contains($user)
+            && $step->assignedUsers($this->submission)->contains($user)
             && ! Delegation::query()->active()
                 ->where('instance_id', $instance->id)
                 ->where('step_id', $step->id)
@@ -236,7 +254,11 @@ new #[Title('Submission')] class extends Component {
     public function delegateCandidates(): \Illuminate\Database\Eloquent\Collection
     {
         $step = $this->submission->workflowInstance?->currentStep;
-        $excluded = $step?->assignedUsers()->pluck('id')->all() ?? [];
+        $excluded = $step?->assignedUsers($this->submission)->pluck('id')->all() ?? [];
+
+        if (SeparationOfDuties::enabled()) {
+            $excluded[] = $this->submission->submitter_id;
+        }
 
         return User::query()
             ->assignable()
@@ -926,6 +948,13 @@ new #[Title('Submission')] class extends Component {
                 </div>
             @endif
         </flux:modal>
+    @endif
+
+    @if ($this->selfApprovalBlocked)
+        <flux:callout variant="secondary" icon="information-circle" class="mt-6" data-test="self-approval-blocked">
+            <flux:callout.heading>{{ __('You cannot approve your own request') }}</flux:callout.heading>
+            <flux:callout.text>{{ __('You are on this step, but you submitted this request, so another approver must decide it. You can still comment.') }}</flux:callout.text>
+        </flux:callout>
     @endif
 
     @if ($this->canAct)

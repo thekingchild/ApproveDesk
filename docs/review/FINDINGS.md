@@ -128,7 +128,7 @@ Sources: three read-only reviews (engine/audit, authorization, input-output/file
 - Fix: rebuild output into a fresh DOM from the allow-list (all text nodes re-created, so always escaped); re-sanitize announcements and the API `body` on output. Tests for 10 raw-text payloads, idempotence, and stored announcements.
 
 ### RV-ENG-01 — Requesters can approve their own requests (no separation of duties)
-- Severity: **S1** · Status: Open — **decided 2026-10-16**: new approval setting "Requesters cannot approve their own requests", **on by default**; reject self-approval and self-delegation in the engine; if the requester was a step's only approver, flag the step for an administrator.
+- Severity: **S1** · Status: **Fix in review** (branch `feature/rv-eng-separation-of-duties`) — decided 2026-10-16: setting "Requesters cannot approve their own requests", **on by default**. The requester is removed from every resolved assignee set, self-delegation is refused, and the engine rejects any state-changing action by the requester. If the requester would be a step's **only** approver, routing stops with a message naming the step (decided 2026-10-16; an administrator "reassign step" tool is a separate follow-up, RV-FEAT-01).
 - Evidence (probes): submitter listed on a User/Role step; department manager submitting for their own department; FormField step where the submitter picks themselves; delegation to the submitter. `WorkflowEngine::authorize()` (`app/Services/WorkflowEngine.php:239-268`) and `AssigneeResolver` never compare the actor with `submitter_id`.
 
 ### RV-DATA-03 — MySQL backup promote drops live tables before a non-atomic reload, with no pre-promote copy
@@ -163,7 +163,7 @@ Sources: three read-only reviews (engine/audit, authorization, input-output/file
 - Fix: new migration → `restrictOnDelete`; extend the evidence check; make prune skip users with evidence.
 
 ### RV-BUG-01 — Manager / department / form-field approvers see no action buttons on the request page
-- Severity: **S2** · Status: Open · Location: `resources/views/pages/submissions/show.blade.php:171, 222, 239`
+- Severity: **S2** · Status: **Fix in review** (with RV-ENG-01; regression test `test_dynamic_approvers_can_act_from_the_request_page`) · Location: `resources/views/pages/submissions/show.blade.php:171, 222, 239`
 - Evidence (probe): `$step->assignedUsers()` is called without the submission, so dynamic assignees resolve to nobody and `canAct` is false.
 - Fix: pass `$instance->submission`.
 
@@ -221,6 +221,7 @@ Sources: three read-only reviews (engine/audit, authorization, input-output/file
 | RV-ENG-09 | S4 | Escalate timeout on the last step fails and is logged every 15 min forever | `WorkflowEngine.php:428-430` |
 | RV-BUG-04 | S4 | Double submit of a draft returns a 500 (unique constraint) | `SubmitSubmissionAction` |
 | RV-SEC-18 | S4 | Minor: optional Telegram webhook secret; CSV formula escaping in two exports; unsanitized download filename header; VAPID key in plaintext; inline `svg` mapping; CSV import row cap; Sanctum tokens never expire; role-name checks in dashboard/auditor; hidden owner name via tampered mentions | various |
+| RV-FEAT-01 | — | Follow-up feature: administrator "reassign step" for requests whose only approver is excluded (engine-recorded, audited, with Help) | — |
 | RV-ENG-10 | ? | Suspected: Escalate advances a group step on one assignee's action | `WorkflowEngine.php:421-433` |
 | RV-ENG-11 | ? | Suspected: “All” step can stall when its assignee set shrinks after others approved | `isStepSatisfied` |
 

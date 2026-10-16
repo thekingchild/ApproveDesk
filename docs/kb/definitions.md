@@ -70,6 +70,10 @@ The search field on a workflow step that finds users, roles, or departments with
 
 How a step decides who acts: named people, a role, department members, the requester's manager, the department manager, a person picked on the form, or another connected system.
 
+## [Separation of duties](/help/approval-settings)
+
+The rule that the person who submits a request cannot also approve it. When **Requesters cannot approve their own requests** is on, the requester is left out of every step on their own request and cannot receive a delegation for it.
+
 ## [Group completion](/help/workflow-templates)
 
 How a step with more than one assignee finishes: first response, all assignees, or quorum N-of-M.

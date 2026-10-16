@@ -68,6 +68,21 @@ class WorkflowException extends RuntimeException
         return new self("Step [{$step}] has no resolvable assignees for this request.");
     }
 
+    public static function selfApprovalNotAllowed(): self
+    {
+        return new self('You submitted this request, so you cannot approve, decide, or take over a step on it.');
+    }
+
+    public static function selfDelegationNotAllowed(): self
+    {
+        return new self('Delegation is not allowed: the requester cannot act on their own request.');
+    }
+
+    public static function onlyApproverIsRequester(string $step): self
+    {
+        return new self("Step [{$step}] would be approved only by the requester, which separation of duties does not allow. An administrator must change who approves this step.");
+    }
+
     public static function unknownOutcome(string $outcome): self
     {
         return new self("Workflow outcome [{$outcome}] is not defined for this version.");

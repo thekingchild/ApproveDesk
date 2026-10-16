@@ -3,11 +3,13 @@
 use App\Actions\Settings\UpdateApprovalReferenceSchemaAction;
 use App\Actions\Settings\UpdateApprovalSettingsAction;
 use App\Actions\Settings\UpdateEmailApprovalSecurityAction;
+use App\Actions\Settings\UpdateSelfApprovalPolicyAction;
 use App\Actions\Settings\UpdateNudgeSettingsAction;
 use App\Services\Collaboration\QuietHours;
 use App\Services\Workflow\BusinessCalendar;
 use App\Support\ApprovalReferenceSchema;
 use App\Support\EmailApprovalLinks;
+use App\Support\SeparationOfDuties;
 use Flux\Flux;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -28,6 +30,8 @@ new #[Title('Approval settings')] class extends Component {
     public string $referenceGenerationMode = ApprovalReferenceSchema::DEFAULT_GENERATION_MODE;
 
     public bool $emailApprovalSecondFactorRequired = false;
+
+    public bool $blockSelfApproval = true;
 
     /** @var array<int, int> */
     public array $workingDays = [1, 2, 3, 4, 5];
@@ -56,6 +60,7 @@ new #[Title('Approval settings')] class extends Component {
             $this->referenceGenerationMode = $schema->generationMode();
         }
         $this->emailApprovalSecondFactorRequired = EmailApprovalLinks::requiresSecondFactor();
+        $this->blockSelfApproval = SeparationOfDuties::enabled();
         $calendar = app(BusinessCalendar::class);
         $this->workingDays = $calendar->workingDays();
         $this->holidays = implode("\n", $calendar->holidays());
@@ -120,6 +125,7 @@ new #[Title('Approval settings')] class extends Component {
         UpdateApprovalSettingsAction $updateSettings,
         UpdateNudgeSettingsAction $updateNudges,
         UpdateEmailApprovalSecurityAction $updateEmailSecurity,
+        UpdateSelfApprovalPolicyAction $updateSelfApproval,
     ): void
     {
         $this->authorize('approval_settings.manage');
@@ -131,6 +137,7 @@ new #[Title('Approval settings')] class extends Component {
         $validated = $this->validate([
             'emailLinkExpirationHours' => ['required', 'integer', 'min:1', 'max:'.EmailApprovalLinks::MAX_EXPIRATION_HOURS],
             'emailApprovalSecondFactorRequired' => ['boolean'],
+            'blockSelfApproval' => ['boolean'],
             'workingDays' => ['required', 'array', 'min:1'],
             'workingDays.*' => ['integer', 'min:1', 'max:7'],
             'holidays' => ['nullable', 'string', 'max:5000'],
@@ -167,6 +174,8 @@ new #[Title('Approval settings')] class extends Component {
 
             return;
         }
+
+        $updateSelfApproval->execute($validated['blockSelfApproval']);
 
         $updateSettings->execute(
             $validated['emailLinkExpirationHours'],
@@ -275,6 +284,24 @@ new #[Title('Approval settings')] class extends Component {
             :description="__('Signed links stop working after this period. Choose between 1 and 720 hours.')"
             required
         />
+
+        <flux:card class="space-y-3" data-test="self-approval-card">
+            <div>
+                <flux:heading size="sm">{{ __('Separation of duties') }}</flux:heading>
+                <flux:text class="mt-1">
+                    {{ __('Stop requesters from approving, deciding, or being delegated their own requests, even when a workflow step would include them.') }}
+                </flux:text>
+            </div>
+            <flux:checkbox
+                wire:model="blockSelfApproval"
+                :label="__('Requesters cannot approve their own requests')"
+                data-test="block-self-approval"
+            />
+            <flux:error name="blockSelfApproval" />
+            <flux:text class="text-sm">
+                {{ __('If a step would be approved only by the requester, the request cannot move to that step until an administrator changes who approves it.') }}
+            </flux:text>
+        </flux:card>
 
         <flux:card class="space-y-3" data-test="approval-link-second-factor-card">
             <div>
