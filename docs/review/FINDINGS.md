@@ -203,6 +203,11 @@ Sources: three read-only reviews (engine/audit, authorization, input-output/file
 - Evidence (probe): an admin saves outcome key ``x');alert(document.domain);('``; it renders inside `wire:click="act('…')"` and executes for approvers.
 - Fix: validate keys `^[a-z0-9_]{1,40}$` server-side; render with `@js()`.
 
+### RV-PERF-06 — Hot-path queries without supporting indexes
+- Severity: S3 · Status: **Fix in review** (branch `feature/rv-perf-indexes`)
+- Evidence: step completion and review-round checks filter `workflow_actions` by (instance_id, step_id, action) — only (instance_id, actor_id) existed; the unread-notification badge (every page) filters `notifications` by read_at; analytics/lists filter `submissions` by created_at.
+- Fix: additive migration with three named indexes. SQLite query plans confirm use (covering index for the unread count). MySQL/MariaDB `EXPLAIN` on the performance dataset is still to do (no local MySQL; CI blocked by billing).
+
 ### Further Wave 1 findings (S3/S4)
 
 | ID | Sev | Finding | Location |
