@@ -388,4 +388,32 @@ class ApprovalReferenceSchemaTest extends TestCase
 
         return $owner;
     }
+
+    public function test_sequential_numbering_skips_numbers_issued_in_random_mode(): void
+    {
+        $user = User::factory()->create();
+        Setting::put('approvals.reference.digit_length', '4');
+        $create = fn (): Submission => Submission::factory()->create(['submitter_id' => $user->id]);
+
+        $create();
+        $scope = '4:SUB-'.now()->format('Y').'-';
+        ApprovalReferenceCounter::query()->where('scope', $scope)->update(['current_value' => 1000]);
+
+        Setting::put('approvals.reference.generation_mode', 'random');
+        app()->instance(RandomDigitGenerator::class, new class extends RandomDigitGenerator
+        {
+            public function next(int $length): string
+            {
+                return '1002';
+            }
+        });
+        $this->assertSame('SUB-'.now()->format('Y').'-1002', $create()->reference_number);
+
+        Setting::put('approvals.reference.generation_mode', 'sequential');
+        $references = [$create()->reference_number, $create()->reference_number, $create()->reference_number];
+
+        $year = now()->format('Y');
+        $this->assertSame(["SUB-{$year}-1001", "SUB-{$year}-1003", "SUB-{$year}-1004"], $references);
+        $this->assertSame(1004, (int) ApprovalReferenceCounter::query()->where('scope', $scope)->value('current_value'));
+    }
 }

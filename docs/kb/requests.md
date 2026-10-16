@@ -18,7 +18,11 @@ Open drafts from **My submissions** using the Drafts view.
 
 ## Files and comments
 
-Attachments are private. People with access to the request download them through a short-lived signed link. Comments stay on the request and are part of the record. You can reply to a top-level comment, mention a person (they are added as a follower), and edit your own comment for 15 minutes. Earlier wording is kept in the edit history.
+Attachments are private. People with access to the request download them through a short-lived signed link.
+
+You can remove an attachment while editing a draft, a returned request, or an information response. On a draft that was never submitted, the file is deleted. Once a request has been submitted, approvers may already have relied on the file, so removing it only takes it out of the current attachments: the request page lists it under **Removed by the requester** with who removed it and when, it can still be downloaded by people who can download the request's files, and evidence packs include it. Attachments on a request under legal hold cannot be removed. Every addition and removal is recorded in the file history.
+
+Comments stay on the request and are part of the record. You can reply to a top-level comment, mention a person (they are added as a follower), and edit your own comment for 15 minutes. Earlier wording is kept in the edit history.
 
 Followers can open the request even if they are not on the workflow. Unfollow yourself from the Followers card. Reminders go to the current approver from the same page.
 

@@ -23,7 +23,7 @@ final class EvidencePackBuilder
             'department:id,name',
             'requestTypeVersion.requestType',
             'fieldValues.field',
-            'files',
+            'files' => fn ($files) => $files->withTrashed()->with('remover:id,name'),
             'comments.author:id,name',
             'workflowInstance.template',
             'workflowInstance.templateVersion',
@@ -101,6 +101,8 @@ final class EvidencePackBuilder
                 'mime_type' => $file->mime_type,
                 'size_bytes' => $file->size_bytes,
                 'sha256' => $contents === null ? null : hash('sha256', $contents),
+                'removed_at' => $file->deleted_at?->toIso8601String(),
+                'removed_by' => $file->remover?->name,
             ];
         })->all();
 

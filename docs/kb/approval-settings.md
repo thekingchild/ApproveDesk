@@ -17,7 +17,7 @@ Choose:
 
 The preview shows the next ID shape before you use it. The original default remains `SUB-YYYY-00001`, so updating an existing installation does not silently change its numbering.
 
-Sequential numbers restart when an included year or month changes. If neither date part is included, the sequence is continuous. Returning to an earlier format or date period resumes its protected counter. Changing the number of digits starts a separate counter. Random IDs retry collisions and always use the selected number of digits. If a sequential format runs out of numbers of that length, ApproveDesk stops issuing IDs rather than making them longer.
+Sequential numbers restart when an included year or month changes. If neither date part is included, the sequence is continuous. Returning to an earlier format or date period resumes its protected counter. Changing the number of digits starts a separate counter. Random IDs retry collisions and always use the selected number of digits. Switching from Random back to Sequential is safe: sequential numbering skips any number a random ID already used. If a sequential format runs out of numbers of that length, ApproveDesk stops issuing IDs rather than making them longer.
 
 A format change affects only approvals created after the save. Existing IDs, links, reports, and audit history remain unchanged. Avoid changing the format during a high-volume intake window unless everyone who records IDs has been told.
 

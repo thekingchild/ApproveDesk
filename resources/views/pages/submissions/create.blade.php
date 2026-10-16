@@ -2,6 +2,7 @@
 
 use App\Actions\Submissions\AttachSubmissionFilesAction;
 use App\Actions\Submissions\CreateSubmissionAction;
+use App\Actions\Submissions\RemoveSubmissionFileAction;
 use App\Actions\Submissions\SubmitSubmissionAction;
 use App\Actions\Submissions\SyncLegacySubmissionFieldValuesAction;
 use App\DTOs\SubmissionData;
@@ -219,9 +220,7 @@ new #[Title('New submission')] class extends Component {
             ->first();
 
         if ($file) {
-            $this->authorize('update', $file->submission);
-            \Illuminate\Support\Facades\Storage::disk($file->disk)->delete($file->stored_path);
-            $file->delete();
+            app(RemoveSubmissionFileAction::class)->execute($file->submission, $file, Auth::user());
         }
 
         unset($this->savedFiles);
@@ -364,13 +363,14 @@ new #[Title('New submission')] class extends Component {
                         @foreach ($this->savedFiles as $saved)
                             <li class="flex items-center justify-between gap-3">
                                 <span>📎 {{ $saved->original_name }}</span>
-                                <flux:button size="xs" variant="ghost" wire:click="removeSavedFile({{ $saved->id }})" wire:confirm="{{ __('Remove this file?') }}">
+                                <flux:button size="xs" variant="ghost" wire:click="removeSavedFile({{ $saved->id }})" wire:confirm="{{ __('Remove this file? If the request was already submitted, the file stays in its history for approvers and auditors.') }}">
                                     {{ __('Remove') }}
                                 </flux:button>
                             </li>
                         @endforeach
                     </ul>
                 @endif
+                <flux:error name="attachments" />
             </div>
         @else
             <flux:card>

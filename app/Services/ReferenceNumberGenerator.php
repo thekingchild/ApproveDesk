@@ -63,6 +63,14 @@ class ReferenceNumberGenerator
             }
 
             $next = max((int) $counter->current_value, $maxExisting) + 1;
+
+            // Numbers issued while random mode was on may sit ahead of the counter.
+            // Skip them; otherwise the insert fails, rolls the counter back, and
+            // every later request retries the same number (RV-BUG-14).
+            while ($next <= $maximum && $this->isTaken($this->schema->format($next))) {
+                $next++;
+            }
+
             if ($next > $maximum) {
                 throw new RuntimeException('The sequential approval ID range for this format is exhausted.');
             }
@@ -73,12 +81,18 @@ class ReferenceNumberGenerator
         }, 3);
     }
 
+    private function isTaken(string $reference): bool
+    {
+        return Submission::withTrashed()->where('reference_number', $reference)->exists()
+            || ApprovalReferenceCounter::query()->where('scope', 'r:'.$reference)->exists();
+    }
+
     private function generateRandom(): string
     {
         for ($attempt = 0; $attempt < 25; $attempt++) {
             $reference = $this->schema->format($this->randomDigits->next($this->schema->digitLength()));
 
-            if (Submission::withTrashed()->where('reference_number', $reference)->exists()) {
+            if ($this->isTaken($reference)) {
                 continue;
             }
 

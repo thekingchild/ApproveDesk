@@ -6,6 +6,7 @@ use Database\Factories\SubmissionFileFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
 /**
@@ -18,6 +19,8 @@ use Illuminate\Support\Carbon;
  * @property int $size_bytes
  * @property int $uploaded_by
  * @property bool $is_redacted
+ * @property int|null $removed_by
+ * @property Carbon|null $deleted_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -32,11 +35,11 @@ class SubmissionFile extends Model
     ];
 
     /** @use HasFactory<SubmissionFileFactory> */
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'submission_id', 'original_name', 'stored_path', 'disk',
-        'mime_type', 'size_bytes', 'uploaded_by', 'is_redacted',
+        'mime_type', 'size_bytes', 'uploaded_by', 'is_redacted', 'removed_by',
     ];
 
     protected function casts(): array
@@ -66,5 +69,13 @@ class SubmissionFile extends Model
     public function uploader(): BelongsTo
     {
         return $this->belongsTo(User::class, 'uploaded_by');
+    }
+
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function remover(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'removed_by');
     }
 }
