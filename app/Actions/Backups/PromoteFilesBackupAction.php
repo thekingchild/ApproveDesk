@@ -9,10 +9,12 @@ use App\Models\User;
 use App\Services\Backups\BackupIntegrity;
 use App\Services\Backups\BackupRestoreTrail;
 use App\Support\LongRunningOperation;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
+use RuntimeException;
 use ZipArchive;
 
 final class PromoteFilesBackupAction
@@ -60,15 +62,24 @@ final class PromoteFilesBackupAction
             $zip->close();
         }
 
-        $previous = 'submissions-previous-'.now()->format('YmdHis');
-        if (Storage::disk('local')->exists('submissions')) {
-            rename(Storage::disk('local')->path('submissions'), Storage::disk('local')->path($previous));
-        }
-
-        $extracted = Storage::disk('local')->path($holding.'/submissions');
-        if (is_dir($extracted)) {
-            rename($extracted, Storage::disk('local')->path('submissions'));
-        }
+        $stamp = now()->format('YmdHis');
+        $local = Storage::disk('local');
+        $this->swapIn(
+            $local->path($holding.'/submissions'),
+            $local->path('submissions'),
+            $local->path('submissions-previous-'.$stamp),
+            replaceWhenMissing: true,
+        );
+        // Branding artwork is part of the snapshot and lives on the public disk
+        // (RV-BUG-23). The artwork it replaces is set aside on the private disk
+        // so it is not web-reachable. A snapshot without artwork keeps today's.
+        $this->swapIn(
+            $local->path($holding.'/branding'),
+            Storage::disk('public')->path('branding'),
+            $local->path('branding-previous-'.$stamp),
+            replaceWhenMissing: false,
+        );
+        $local->deleteDirectory($holding);
 
         $attributes = [
             'status' => BackupSnapshotStatus::Promoted,
@@ -87,6 +98,44 @@ final class PromoteFilesBackupAction
         ]);
 
         return $snapshot->fresh() ?? $snapshot;
+    }
+
+    /**
+     * Move the live folder aside, then move the restored copy into place. The
+     * previous tree is only moved, never deleted (BK-RST-03).
+     */
+    private function swapIn(string $restored, string $live, string $previous, bool $replaceWhenMissing): void
+    {
+        if (! is_dir($restored) && ! $replaceWhenMissing) {
+            return;
+        }
+
+        if (is_dir($live)) {
+            $this->moveDirectory($live, $previous);
+        }
+
+        if (is_dir($restored)) {
+            $parent = dirname($live);
+            if (! is_dir($parent) && ! mkdir($parent, 0775, true) && ! is_dir($parent)) {
+                throw new RuntimeException('The restored files could not be put in place.');
+            }
+
+            $this->moveDirectory($restored, $live);
+        }
+    }
+
+    private function moveDirectory(string $from, string $to): void
+    {
+        if (@rename($from, $to)) {
+            return;
+        }
+
+        // The public and private disks can sit on different filesystems.
+        if (! File::copyDirectory($from, $to)) {
+            throw new RuntimeException('The restored files could not be put in place.');
+        }
+
+        File::deleteDirectory($from);
     }
 
     private function extractEntry(ZipArchive $zip, string $root, string $name): void
