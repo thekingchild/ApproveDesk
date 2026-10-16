@@ -28,7 +28,7 @@ After you submit, the workflow card shows the current step, the expected next st
 
 Submit when the form is complete. That starts the workflow assigned to the request type.
 
-Withdraw cancels an in-flight request that you own. Use it when the work is no longer needed.
+Withdraw cancels an in-flight request that you own. Use it when the work is no longer needed. The withdrawal is recorded in the request history. If an approver finishes the request at the same moment, their decision stands and the request can no longer be withdrawn.
 
 If an approver returns the request, status becomes Returned. Open the request and choose Edit. Change the allowed fields or attachments, then submit again. The workflow continues from the return; it does not rewrite earlier decisions.
 

@@ -628,7 +628,14 @@ new #[Title('Submission')] class extends Component {
     {
         $this->authorize('withdraw', $this->submission);
 
-        app(\App\Actions\Submissions\WithdrawSubmissionAction::class)->execute($this->submission);
+        try {
+            app(\App\Actions\Submissions\WithdrawSubmissionAction::class)->execute($this->submission, Auth::user());
+        } catch (WorkflowException) {
+            Flux::toast(__('This request has already been decided, so it can no longer be withdrawn.'), variant: 'danger');
+            $this->redirect(route('submissions.show', $this->submission), navigate: true);
+
+            return;
+        }
 
         Flux::toast('Submission withdrawn.', variant: 'success');
 
@@ -915,7 +922,7 @@ new #[Title('Submission')] class extends Component {
                             @if ($entry->on_behalf_of_id)
                                 <span class="text-zinc-500" data-test="on-behalf-of">{{ __('on behalf of :name', ['name' => $entry->onBehalfOf?->name ?? __('a former user')]) }}</span>
                             @endif
-                            <flux:badge class="mx-1" color="{{ ['approve' => 'lime', 'auto_approve' => 'lime', 'condition_matched' => 'blue', 'condition_not_matched' => 'zinc', 'reject' => 'red', 'return' => 'amber', 'comment' => 'zinc', 'delegate' => 'blue', 'escalate' => 'blue'][$entry->action->value] ?? 'zinc' }}">{{ str($entry->action->value)->replace('_', ' ') }}</flux:badge>
+                            <flux:badge class="mx-1" color="{{ ['approve' => 'lime', 'auto_approve' => 'lime', 'condition_matched' => 'blue', 'condition_not_matched' => 'zinc', 'reject' => 'red', 'return' => 'amber', 'comment' => 'zinc', 'delegate' => 'blue', 'escalate' => 'blue', 'withdraw' => 'zinc'][$entry->action->value] ?? 'zinc' }}">{{ str($entry->action->value)->replace('_', ' ') }}</flux:badge>
                             <span class="text-xs text-zinc-400">{{ $entry->created_at?->format('d M Y H:i') }}</span>
                             @if ($entry->comment)<p class="mt-1 rounded-md bg-zinc-50 p-2 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">{{ $entry->comment }}</p>@endif
                         </li>

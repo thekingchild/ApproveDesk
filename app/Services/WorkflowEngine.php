@@ -155,7 +155,8 @@ class WorkflowEngine
                 WorkflowActionType::AutoApprove,
                 WorkflowActionType::AutoReject,
                 WorkflowActionType::ConditionMatched,
-                WorkflowActionType::ConditionNotMatched => throw WorkflowException::unsupportedStepType($action->value),
+                WorkflowActionType::ConditionNotMatched,
+                WorkflowActionType::Withdraw => throw WorkflowException::unsupportedStepType($action->value),
             };
         });
 
@@ -731,6 +732,48 @@ class WorkflowEngine
                 WorkflowActionType::Escalate,
             ])
             ->exists();
+    }
+
+    /**
+     * The requester pulls a request out of review. Locks the instance first (the
+     * engine's lock order), re-checks it is still open, records the withdrawal in
+     * the append-only history, then cancels the instance and the submission
+     * (RV-ENG-05).
+     */
+    public function withdraw(WorkflowInstance $instance, User $actor, ?string $comment = null): WorkflowInstance
+    {
+        return DB::transaction(function () use ($instance, $actor, $comment): WorkflowInstance {
+            /** @var WorkflowInstance $instance */
+            $instance = WorkflowInstance::query()
+                ->with(['submission'])
+                ->whereKey($instance->getKey())
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if (! in_array($instance->status, [WorkflowStatus::Active, WorkflowStatus::OnHold], true)
+                || $instance->current_step_id === null) {
+                throw WorkflowException::instanceNotActive($instance->status->value);
+            }
+
+            WorkflowAction::create([
+                'instance_id' => $instance->id,
+                'step_id' => $instance->current_step_id,
+                'actor_id' => $actor->id,
+                'action' => WorkflowActionType::Withdraw,
+                'outcome_key' => WorkflowActionType::Withdraw->value,
+                'comment' => $comment,
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+            ]);
+
+            $instance->update([
+                'status' => WorkflowStatus::Cancelled,
+                'completed_at' => now(),
+            ]);
+            $instance->submission->update(['status' => SubmissionStatus::Withdrawn]);
+
+            return $instance;
+        });
     }
 
     /**
