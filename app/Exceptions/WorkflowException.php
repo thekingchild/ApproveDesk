@@ -83,6 +83,12 @@ class WorkflowException extends RuntimeException
         return new self("Step [{$step}] would be approved only by the requester, which separation of duties does not allow. An administrator must change who approves this step.");
     }
 
+    /** @param list<string> $labels */
+    public static function missingRequiredFields(array $labels): self
+    {
+        return new self('Complete the required fields before submitting: '.implode(', ', $labels).'.');
+    }
+
     public static function staleStep(): self
     {
         return new self('This request has moved on since you opened it. Reload to see its current step.');

@@ -23,10 +23,12 @@ The machine-readable contract is at `GET /api/v1/openapi.json` (also stored in `
 | `GET` | `/api/v1/submissions` | `submissions:read` | Accessible submissions; accepts `status`, `type`, `per_page`, and `cursor` |
 | `POST` | `/api/v1/submissions` | `submissions:write` | Create a draft; include `submit: true` to submit immediately |
 | `GET` | `/api/v1/submissions/{id}` | `submissions:read` | One accessible submission, workflow, and audit actions |
-| `POST` | `/api/v1/submissions/{id}/submit` | `submissions:write` | Submit an owned eligible draft/returned submission |
+| `POST` | `/api/v1/submissions/{id}/submit` | `submissions:write` | Submit an owned eligible draft/returned submission; send `comment` (required when answering an information request) |
 | `POST` | `/api/v1/submissions/{id}/actions` | `approvals:act` | Record an assigned approver action through the workflow engine |
 
 Workflow actions accept `approve`, `reject`, `return`, `request_information`, `escalate`, and `comment`. The engine enforces the current step, delegation, duplicate-action, and comment requirements; the API never updates workflow state directly.
+
+If a submission cannot be sent for approval (for example no approver can be resolved, separation of duties leaves only the requester, or a required custom field is empty), both submit endpoints answer 422 with the reason under `errors.submit`. `POST /api/v1/submissions` with `submit: true` is all-or-nothing: on a 422 nothing is created.
 
 When creating a submission, `department_id` may only be your own department (or omitted); other departments are refused because the department decides department-manager routing.
 

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Actions\Submissions\CreateSubmissionAction;
 use App\Actions\Submissions\SubmitSubmissionAction;
 use App\DTOs\SubmissionData;
+use App\Exceptions\WorkflowException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\IndexSubmissionRequest;
 use App\Http\Requests\Api\V1\ShowSubmissionRequest;
@@ -14,6 +15,8 @@ use App\Models\Submission;
 use App\Services\Workflow\AssignedStepConstraint;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class SubmissionController extends Controller
 {
@@ -57,14 +60,18 @@ class SubmissionController extends Controller
         SubmitSubmissionAction $submitSubmission,
     ): JsonResponse {
         $validated = $request->validated();
-        $submission = $createSubmission->execute(
-            SubmissionData::fromValidated($validated),
-            $request->user(),
-            ! ($validated['submit'] ?? false),
-        );
+        $submit = (bool) ($validated['submit'] ?? false);
 
-        if ($validated['submit'] ?? false) {
-            $submitSubmission->execute($submission);
+        // Create and submit together: a refused submit must not leave a stranded
+        // Pending request with no workflow behind it (RV-BUG-07).
+        try {
+            $submission = DB::transaction(function () use ($createSubmission, $submitSubmission, $validated, $request, $submit): Submission {
+                $submission = $createSubmission->execute(SubmissionData::fromValidated($validated), $request->user(), ! $submit);
+
+                return $submit ? $submitSubmission->execute($submission) : $submission;
+            });
+        } catch (WorkflowException $exception) {
+            throw ValidationException::withMessages(['submit' => [$exception->getMessage()]]);
         }
 
         return (new SubmissionResource($submission->load($this->relations())))
