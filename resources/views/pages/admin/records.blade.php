@@ -157,7 +157,13 @@ new #[Title('Records')] class extends Component
     public function releaseHold(int $holdId, ReleaseLegalHoldAction $release): void
     {
         $this->authorize('settings.manage');
-        $release->execute(Auth::user(), LegalHold::query()->findOrFail($holdId));
+        // Domain refusals are shown on the card, not as a server error (RV-BUG-26).
+        try {
+            $release->execute(Auth::user(), LegalHold::query()->findOrFail($holdId));
+        } catch (\InvalidArgumentException $exception) {
+            unset($this->holds);
+            throw ValidationException::withMessages(['holdRelease' => $exception->getMessage()]);
+        }
         unset($this->holds);
         Flux::toast('Legal hold released.', variant: 'success');
     }
@@ -172,7 +178,11 @@ new #[Title('Records')] class extends Component
         if ($submission === null) {
             throw ValidationException::withMessages(['dispositionReference' => 'No request has that reference.']);
         }
-        $request->execute(Auth::user(), $submission, $this->dispositionNotes);
+        try {
+            $request->execute(Auth::user(), $submission, $this->dispositionNotes);
+        } catch (\InvalidArgumentException $exception) {
+            throw ValidationException::withMessages(['dispositionReference' => $exception->getMessage()]);
+        }
         unset($this->reviews);
         Flux::toast('Disposition review opened.', variant: 'success');
     }
@@ -180,7 +190,12 @@ new #[Title('Records')] class extends Component
     public function approveDisposition(int $reviewId, ReviewDispositionAction $review): void
     {
         $this->authorize('settings.manage');
-        $review->execute(Auth::user(), DispositionReview::query()->findOrFail($reviewId), DispositionStatus::Approved);
+        try {
+            $review->execute(Auth::user(), DispositionReview::query()->findOrFail($reviewId), DispositionStatus::Approved);
+        } catch (\InvalidArgumentException $exception) {
+            unset($this->reviews);
+            throw ValidationException::withMessages(['dispositionReview' => $exception->getMessage()]);
+        }
         unset($this->reviews);
         Flux::toast('Disposition approved.', variant: 'success');
     }
@@ -191,7 +206,7 @@ new #[Title('Records')] class extends Component
         $this->validate(['verifyFile' => ['required', 'file', 'max:20480']]);
         $path = $this->verifyFile->getRealPath();
         $result = $verifier->verifyPath((string) $path);
-        $this->verifyResult = $result->ok ? 'This pack is intact.' : $result->error;
+        $this->verifyResult = $result->message();
     }
 } ?>
 
@@ -271,6 +286,7 @@ new #[Title('Records')] class extends Component
                     <li class="text-zinc-500">{{ __('No legal holds.') }}</li>
                 @endforelse
             </ul>
+            <flux:error name="holdRelease" class="mt-2" />
         </flux:card>
 
         <flux:card>
@@ -293,6 +309,7 @@ new #[Title('Records')] class extends Component
                     <li class="text-zinc-500">{{ __('No disposition reviews.') }}</li>
                 @endforelse
             </ul>
+            <flux:error name="dispositionReview" class="mt-2" />
         </flux:card>
 
         <flux:card class="lg:col-span-2">

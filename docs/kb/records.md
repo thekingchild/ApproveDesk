@@ -6,7 +6,7 @@ Open **Administration → Records**.
 
 ## When to use it
 
-Use this screen when an auditor needs time-bounded read access, a request must not be deleted, a finished request is ready for disposal, or you need to check an evidence pack.
+Use this screen when an auditor needs time-bounded read access, a request must not be retired, a finished request is ready for disposal, or you need to check an evidence pack.
 
 ## How the live screens work
 
@@ -18,20 +18,23 @@ Every evidence-pack download is written to an export log.
 
 ### Legal holds
 
-Enter a request reference and a reason. A hold blocks automatic deletion. **Release** ends the hold.
+Enter a request reference and a reason. A hold stops retention from retiring the request. **Release** ends the hold. A request can have one active hold at a time. If someone else already released a hold, **Release** tells you so.
 
 ### Retention and disposition
 
-Set how many days drafts and finished requests are kept. Drafts older than the draft window are removed unless they have a hold. Finished requests (approved, rejected, or withdrawn) are removed only after that window **and** an approved disposition review.
+Set how many days drafts and finished requests are kept. Drafts older than the draft window are retired unless they have a hold. Finished requests (approved, rejected, or withdrawn) are retired only after that window **and** an approved disposition review. Retention runs once a day; a very large backlog is worked through over several days.
 
-Open a disposition review from a request reference, then approve it when disposal is allowed. Each review is decided once. While **Requesters cannot approve their own requests** is on (Approval settings), a different person must decide a disposition you opened. Auditors' access ends when their grant ends, even if they followed requests while it was active.
+**Retired** means the request disappears from lists, search, dashboards, and its own page. It is **not erased**: ApproveDesk keeps the request, its workflow history, comments, and files stored as audit evidence, and its reference number is never reused. ApproveDesk never permanently deletes a request on its own.
+
+Open a disposition review from a request reference, then approve it when disposal is allowed. A review that someone already decided shows a message instead of an error. Disposition is only for finished requests: a draft, or a request still in review, returned, or waiting for information, is refused with a message. Each review is decided once. While **Requesters cannot approve their own requests** is on (Approval settings), a different person must decide a disposition you opened. Auditors' access ends when their grant ends, even if they followed requests while it was active.
 
 ### Verify a pack
 
-Upload a downloaded evidence pack. Intact packs are confirmed. Altered files or a broken signature are refused.
+Upload a downloaded evidence pack. An intact pack shows **Verified**. Altered files, extra files added to the zip, a changed manifest (for example its date or request number), or a broken signature are refused. Packs downloaded before signed manifests were introduced show **Unsigned (legacy)**: their files still match, but their date and request number are not signed, so download a fresh pack when you need a fully verified copy.
 
 ## What not to do
 
 - Do not grant auditor access without an end date you intend to honour.
 - Do not release a legal hold to make retention run if the matter is still open.
+- Do not expect retention to free storage or erase personal data: retired requests are kept as evidence. For a person's data, see [Security and privacy](/help/security-and-privacy).
 - Do not treat a failed pack check as a problem with the original request — download a fresh pack from ApproveDesk.

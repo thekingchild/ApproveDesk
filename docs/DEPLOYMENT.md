@@ -68,6 +68,10 @@ Schedule::command('queue:work --stop-when-empty --max-time=50 --tries=3 --timeou
 
 The worker exits after 50 seconds, so ticks never stack, and its overlap lock expires after 5 minutes if the host kills it. Keep `DB_QUEUE_RETRY_AFTER` (default 150) above `--timeout`, or a slow job is handed to a second worker while the first is still running. Scheduled jobs (escalations, out-of-office fallbacks, delivery retries, digests, retention) are unique: a copy is not queued while another is waiting or running. Operations snapshots older than 14 days are pruned daily.
 
+Nightly housekeeping (03:30–03:40) also prunes read in-app notifications older than 180 days, notification delivery attempts older than 180 days (except those about a request under an active legal hold), failed queue jobs older than 30 days (`queue:prune-failed --hours=720`), and generated evidence-pack zips older than 30 days (`evidence:prune-files`; the `evidence_packs` rows and export log are kept, and every download builds a fresh zip). The activity log is audit evidence and is **not** pruned; if it must be trimmed, run `php artisan activitylog:clean --days=N` deliberately after checking your retention policy. Unread notifications and `workflow_actions` are never pruned.
+
+Retention (`ApplyRetentionJob`, daily 04:15) **soft-deletes** requests: they leave every screen but the row, its workflow history, comments and files stay in the database as audit evidence, and nothing purges them. The job stops taking new rows after about 55 seconds and continues on the next run, so a large first backlog clears over several days. To bring a retired request back, set its `submissions.deleted_at` to `NULL`.
+
 **Optional .htaccess hardening** (force HTTPS, protect sensitive paths):
 
 ```apache
