@@ -295,7 +295,7 @@ class UserOnboardingTest extends TestCase
         $fresh = User::factory()->create(['email_verified_at' => null]);
         // Self-registrations always have a confirmation code on record.
         foreach ([$stale, $fresh] as $registrant) {
-            \App\Models\RegistrationOtpCode::query()->create(['email' => $registrant->email, 'code_hash' => 'x', 'expires_at' => now()->subDays(4), 'attempts' => 0]);
+            RegistrationOtpCode::query()->create(['email' => $registrant->email, 'code_hash' => 'x', 'expires_at' => now()->subDays(4), 'attempts' => 0]);
         }
         $verified = User::factory()->create();
 
