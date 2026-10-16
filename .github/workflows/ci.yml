@@ -126,6 +126,7 @@ jobs:
 
   mariadb:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     services:
       mariadb:
@@ -174,7 +175,8 @@ jobs:
           php artisan key:generate
 
       - name: Tests on MariaDB 10.6
-        run: php artisan test
+        # --debug prints each test as it starts, so a hang names the test.
+        run: vendor/bin/phpunit --debug
 
   assets:
     runs-on: ubuntu-latest
