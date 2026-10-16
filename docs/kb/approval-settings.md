@@ -48,7 +48,7 @@ Turn on **Require sign-in and a second factor for approval links** when the name
 
 The setting affects every link still within its original expiry, including messages already sent. The person enabling it must already have a second factor and verify it in the current session. People without a factor are directed to **Settings → Security**.
 
-This option covers messages that open the ApproveDesk approval page. Direct approval buttons inside Teams and Slack use their own signed action. Keep `{{approval_url}}` in action-required email copy.
+This option covers messages that open the ApproveDesk approval page. While it is on, Teams and Slack cards no longer approve in one click: their button opens the same confirmation page, and Approve buttons on cards sent earlier stop working. Slack approvals are accepted only from the approver's own linked Slack account. Keep `{{approval_url}}` in action-required email copy.
 
 ## Business calendar
 
