@@ -10,9 +10,9 @@ Request field and file changes also appear on **Request history**, with a short 
 
 ## Evidence pack
 
-Administrators and auditors with an active grant can download an **evidence pack** from the request. The pack is a signed zip of the request, workflow version, assignments, actions, comments, delegations (including expired and ended ones, with the delegate's name), notifications, file hashes, and timestamps.
+Administrators and auditors with an active grant can download an **evidence pack** from the request. The pack is a signed zip of the request, workflow version, assignments, actions, comments, delegations (including expired and ended ones, with the delegate's name), notifications, file hashes, and timestamps. It also holds the request history (title, body, status, priority, and due-date changes), every earlier wording of edited comments, the file history (each attachment added or removed, by whom, with its hash), and the in-app notifications sent about the request. Notifications sent through Slack, Teams, WhatsApp, Telegram, or browser push are listed with their delivery result. Emails are not listed, because ApproveDesk does not keep a per-request record of each email sent.
 
-Open **Administration → Records** and use **Verify an evidence pack** to check a downloaded file. A changed file or a broken signature is refused.
+Open **Administration → Records** and use **Verify an evidence pack** to check a downloaded file. A changed file, a file added to the zip, a changed manifest, or a broken signature is refused. Packs downloaded before signed manifests show **Unsigned (legacy)** instead of **Verified**.
 
 ## What you cannot change
 

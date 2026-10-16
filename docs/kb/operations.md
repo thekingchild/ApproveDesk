@@ -20,7 +20,7 @@ A fresh scheduler run means the minute job that drains waiting work is still fir
 
 Failed webhooks, integration actions, notices, and queue jobs appear in one list. **Replay** sends that same item again. It does not create a second record and does not change the approval.
 
-A delivered item cannot be replayed from here.
+A delivered item cannot be replayed from here. Failed background jobs are cleared automatically after 30 days, and chat and push delivery attempts after 180 days (except those about a request under a legal hold), so replay anything you need before then.
 
 ### Stuck requests
 
@@ -41,4 +41,4 @@ After a deploy, apply waiting database changes from **Administration → Updates
 - Do not treat Replay as a way to approve or reject a request.
 - Do not ignore a stale scheduler card — waiting work will pile up until the minute job runs again.
 - Do not use **Check this copy** as a substitute for the host backup.
-- Do not delete failed deliveries to “clean up”; replay or leave them for the record.
+- Do not delete failed deliveries to “clean up”; replay them or let the automatic clean-up remove them.

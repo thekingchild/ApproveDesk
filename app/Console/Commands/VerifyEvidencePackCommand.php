@@ -22,7 +22,14 @@ class VerifyEvidencePackCommand extends Command
             return self::FAILURE;
         }
 
-        $this->info('Evidence pack is intact.');
+        // Older packs only signed their file hashes: report them, never as "verified" (RV-SEC-21).
+        if ($result->legacy) {
+            $this->warn($result->message());
+
+            return self::SUCCESS;
+        }
+
+        $this->info('Evidence pack is intact and its manifest signature is verified.');
 
         return self::SUCCESS;
     }

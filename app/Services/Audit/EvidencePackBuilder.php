@@ -7,8 +7,11 @@ use App\Models\Delegation;
 use App\Models\NotificationDelivery;
 use App\Models\Submission;
 use App\Models\SubmissionFile;
+use App\Models\SubmissionFileRevision;
+use App\Models\SubmissionRevision;
 use App\Models\User;
 use App\Services\Privacy\ExportRedactor;
+use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Facades\Storage;
 
 final class EvidencePackBuilder
@@ -25,6 +28,9 @@ final class EvidencePackBuilder
             'fieldValues.field',
             'files' => fn ($files) => $files->withTrashed()->with('remover:id,name'),
             'comments.author:id,name',
+            'comments.revisions.editor:id,name',
+            'revisions.actor:id,name',
+            'fileRevisions.actor:id,name',
             'workflowInstance.template',
             'workflowInstance.templateVersion',
             'workflowInstance.currentStep',
@@ -140,6 +146,42 @@ final class EvidencePackBuilder
                 'created_at' => $delivery->created_at?->toIso8601String(),
             ])->all();
 
+        // Histories kept by the app but missing from packs before RV-DATA-07.
+        // Oldest first, so the files read as a timeline.
+        $requestRevisions = $submission->revisions->sortBy('id')->values()->map(fn (SubmissionRevision $revision): array => [
+            'id' => $revision->id,
+            'actor' => $revision->actor?->name,
+            'summary' => $revision->summary,
+            'before' => $revision->before,
+            'after' => $revision->after,
+            'created_at' => $revision->created_at?->toIso8601String(),
+        ])->all();
+
+        $commentRevisions = [];
+        foreach ($submission->comments as $comment) {
+            foreach ($comment->revisions as $revision) {
+                $commentRevisions[] = [
+                    'id' => $revision->id,
+                    'comment_id' => $comment->id,
+                    'editor' => $revision->editor?->name,
+                    'previous_body' => $revision->body,
+                    'replaced_at' => $revision->created_at?->toIso8601String(),
+                ];
+            }
+        }
+        usort($commentRevisions, fn (array $a, array $b): int => $a['id'] <=> $b['id']);
+
+        $fileHistory = $submission->fileRevisions->sortBy('id')->values()->map(fn (SubmissionFileRevision $revision): array => [
+            'id' => $revision->id,
+            'file_id' => $revision->submission_file_id,
+            'action' => $revision->action,
+            'name' => $revision->original_name,
+            'sha256' => $revision->sha256,
+            'size_bytes' => $revision->size_bytes,
+            'actor' => $revision->actor?->name,
+            'created_at' => $revision->created_at?->toIso8601String(),
+        ])->all();
+
         $timestamps = [
             'generated_at' => now()->toIso8601String(),
             'request_created_at' => $submission->created_at?->toIso8601String(),
@@ -155,7 +197,43 @@ final class EvidencePackBuilder
             'delegations.json' => $this->encode($delegations),
             'notifications.json' => $this->encode($notifications),
             'timestamps.json' => $this->encode($timestamps),
+            'request_revisions.json' => $this->encode($requestRevisions),
+            'comment_revisions.json' => $this->encode($commentRevisions),
+            'file_history.json' => $this->encode($fileHistory),
+            'in_app_notifications.json' => $this->encode($this->inAppNotifications($submission)),
         ];
+    }
+
+    /**
+     * In-app (database channel) notifications about this request. Laravel keeps
+     * them in `notifications` with the request id inside the JSON payload, not in
+     * notification_deliveries (RV-DATA-07). Email is not recorded per request.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function inAppNotifications(Submission $submission): array
+    {
+        $rows = DatabaseNotification::query()
+            ->where('data->submission_id', $submission->id)
+            ->orderBy('created_at')
+            ->get(['id', 'type', 'notifiable_type', 'notifiable_id', 'data', 'read_at', 'created_at']);
+
+        $names = User::query()
+            ->whereIn('id', $rows->where('notifiable_type', (new User)->getMorphClass())->pluck('notifiable_id')->unique()->all())
+            ->pluck('name', 'id');
+
+        $list = [];
+        foreach ($rows as $notification) {
+            $list[] = [
+                'id' => $notification->id,
+                'user' => $names[$notification->notifiable_id] ?? null,
+                'kind' => $notification->data['kind'] ?? class_basename($notification->type),
+                'read_at' => $notification->read_at?->toIso8601String(),
+                'created_at' => $notification->created_at?->toIso8601String(),
+            ];
+        }
+
+        return $list;
     }
 
     /** Streams the file through the hash so large attachments are not held in memory (RV-PERF-12). */

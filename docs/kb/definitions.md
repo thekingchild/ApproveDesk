@@ -184,7 +184,7 @@ The email link or Teams/Slack **Approve** button for the current step. Tampered,
 
 ## [Evidence pack](/help/audit-trail)
 
-A signed download of one request: the form, workflow version, actions, comments, delegations, notifications, file hashes, and timestamps. Verification detects a changed file.
+A signed download of one request: the form, workflow version, actions, comments and their edit history, request and file history, delegations, notifications, file hashes, and timestamps. Verification detects a changed file, an added file, or a changed manifest.
 
 ## [Auditor access](/help/records)
 
@@ -192,15 +192,15 @@ A time-bounded, read-only grant. The person can open requests and download evide
 
 ## [Legal hold](/help/records)
 
-A flag on a request that blocks automatic deletion until someone releases it.
+A flag on a request that stops retention from retiring it until someone releases it.
 
 ## [Retention](/help/records)
 
-How long drafts and finished requests are kept before they may be removed.
+How long drafts and finished requests stay in lists and search before they are retired. Retired requests are hidden, not erased: they stay stored as audit evidence.
 
 ## [Disposition](/help/records)
 
-A review that must be approved before a finished request past its retention window is removed.
+A review that must be approved before a finished request past its retention window is retired. Only finished requests (approved, rejected, or withdrawn) can have one.
 
 ## [Sensitive field](/help/request-types)
 

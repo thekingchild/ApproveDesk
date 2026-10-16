@@ -27,13 +27,16 @@ final class GenerateEvidencePackAction
             $hashes[$name] = hash('sha256', $contents);
         }
 
-        $signature = $this->signer->sign($hashes);
-        $manifest = json_encode([
+        // The signature covers every manifest field, not only the hashes (RV-SEC-21).
+        $signed = [
+            'format' => EvidencePackSigner::MANIFEST_FORMAT,
             'generated_at' => now()->toIso8601String(),
             'submission_id' => $submission->id,
+            'reference_number' => $submission->reference_number,
             'files' => $hashes,
-            'signature' => $signature,
-        ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
+        ];
+        $signature = $this->signer->signManifest($signed);
+        $manifest = json_encode([...$signed, 'signature' => $signature], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
 
         $relative = 'evidence/'.$submission->id.'/'.now()->format('YmdHis').'-'.$submission->id.'-'.Str::lower(Str::random(8)).'.zip';
         $absolute = Storage::disk('local')->path($relative);

@@ -7,6 +7,7 @@ use App\Actions\Audit\ReviewDispositionAction;
 use App\Actions\Collaboration\FollowSubmissionAction;
 use App\Actions\Collaboration\PostCommentAction;
 use App\Enums\DispositionStatus;
+use App\Enums\SubmissionStatus;
 use App\Exceptions\CollaborationException;
 use App\Models\Department;
 use App\Models\Setting;
@@ -83,7 +84,7 @@ class WaveOneAuthorizationTest extends TestCase
     {
         $requester = User::factory()->create()->assignRole('admin');
         $reviewer = User::factory()->create()->assignRole('admin');
-        $review = app(RequestDispositionAction::class)->execute($requester, Submission::factory()->create(), 'Past retention');
+        $review = app(RequestDispositionAction::class)->execute($requester, Submission::factory()->create(['status' => SubmissionStatus::Approved]), 'Past retention');
 
         try {
             app(ReviewDispositionAction::class)->execute($requester, $review, DispositionStatus::Approved);
@@ -102,7 +103,7 @@ class WaveOneAuthorizationTest extends TestCase
     {
         Setting::put(SeparationOfDuties::SETTING, '0');
         $admin = User::factory()->create()->assignRole('admin');
-        $review = app(RequestDispositionAction::class)->execute($admin, Submission::factory()->create(), 'Past retention');
+        $review = app(RequestDispositionAction::class)->execute($admin, Submission::factory()->create(['status' => SubmissionStatus::Approved]), 'Past retention');
 
         $decided = app(ReviewDispositionAction::class)->execute($admin, $review, DispositionStatus::Approved);
 

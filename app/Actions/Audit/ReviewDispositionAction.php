@@ -4,6 +4,7 @@ namespace App\Actions\Audit;
 
 use App\Enums\DispositionStatus;
 use App\Models\DispositionReview;
+use App\Models\Submission;
 use App\Models\User;
 use App\Support\SeparationOfDuties;
 use Illuminate\Support\Facades\DB;
@@ -32,6 +33,15 @@ final class ReviewDispositionAction
 
             if (SeparationOfDuties::enabled() && (int) $locked->requested_by === (int) $actor->id) {
                 throw new InvalidArgumentException('A different person must review a disposition you requested.');
+            }
+
+            // Reviews opened before RV-BUG-26, or a request reopened since, must not be approved for disposal.
+            if ($status === DispositionStatus::Approved) {
+                $submission = Submission::withTrashed()->find($locked->submission_id);
+                if ($submission === null) {
+                    throw new InvalidArgumentException('That request no longer exists.');
+                }
+                RequestDispositionAction::ensureFinished($submission);
             }
 
             $locked->forceFill([
