@@ -212,6 +212,7 @@ new #[Title('Submission')] class extends Component {
             ->where('instance_id', $instance->id)
             ->where('step_id', $step->id)
             ->where('delegator_id', $user->id)
+            ->whereHas('delegate', fn ($delegate) => $delegate->where('is_active', true))
             ->exists();
 
         if ((! $direct && ! $incoming) || $outgoing) {
@@ -268,6 +269,7 @@ new #[Title('Submission')] class extends Component {
                 ->where('instance_id', $instance->id)
                 ->where('step_id', $step->id)
                 ->where('delegator_id', $user->id)
+                ->whereHas('delegate', fn ($delegate) => $delegate->where('is_active', true))
                 ->exists()
             && ! ReviewRound::forSeat($instance->actions, $step->id, (int) $user->id)
                 ->whereIn('action', ['approve', 'reject', 'escalate'])
@@ -291,6 +293,37 @@ new #[Title('Submission')] class extends Component {
             ->whereNotIn('id', $excluded)
             ->orderBy('name')
             ->get();
+    }
+
+    /** The viewer's current or upcoming delegation on this step, if any (for "Take back"). */
+    #[Computed]
+    public function myDelegation(): ?Delegation
+    {
+        $instance = $this->submission->workflowInstance;
+        if ($instance === null || $instance->status->value !== 'active') {
+            return null;
+        }
+
+        return Delegation::query()
+            ->with('delegate:id,name')
+            ->where('instance_id', $instance->id)
+            ->where('step_id', $instance->current_step_id)
+            ->where('delegator_id', Auth::id())
+            ->where('expires_at', '>', now())
+            ->latest('id')
+            ->first();
+    }
+
+    public function takeBackDelegation(): void
+    {
+        $delegation = $this->myDelegation;
+        if ($delegation === null) {
+            return;
+        }
+
+        app(WorkflowEngine::class)->revokeDelegation($delegation, Auth::user(), __('Taken back by the approver.'));
+        Flux::toast(__('This step is yours again.'), variant: 'success');
+        $this->redirect(route('submissions.show', $this->submission), navigate: true);
     }
 
     public function delegateApproval(): void
@@ -971,7 +1004,7 @@ new #[Title('Submission')] class extends Component {
                             @if ($entry->on_behalf_of_id)
                                 <span class="text-zinc-500" data-test="on-behalf-of">{{ __('on behalf of :name', ['name' => $entry->onBehalfOf?->name ?? __('a former user')]) }}</span>
                             @endif
-                            <flux:badge class="mx-1" color="{{ ['approve' => 'lime', 'auto_approve' => 'lime', 'condition_matched' => 'blue', 'condition_not_matched' => 'zinc', 'reject' => 'red', 'return' => 'amber', 'comment' => 'zinc', 'delegate' => 'blue', 'escalate' => 'blue', 'withdraw' => 'zinc'][$entry->action->value] ?? 'zinc' }}">{{ str($entry->action->value)->replace('_', ' ') }}</flux:badge>
+                            <flux:badge class="mx-1" color="{{ ['approve' => 'lime', 'auto_approve' => 'lime', 'condition_matched' => 'blue', 'condition_not_matched' => 'zinc', 'reject' => 'red', 'return' => 'amber', 'comment' => 'zinc', 'delegate' => 'blue', 'delegation_revoked' => 'zinc', 'escalate' => 'blue', 'withdraw' => 'zinc'][$entry->action->value] ?? 'zinc' }}">{{ str($entry->action->value)->replace('_', ' ') }}</flux:badge>
                             <span class="text-xs text-zinc-400">{{ $entry->created_at?->format('d M Y H:i') }}</span>
                             @if ($entry->comment)<p class="mt-1 rounded-md bg-zinc-50 p-2 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">{{ $entry->comment }}</p>@endif
                         </li>
@@ -1020,6 +1053,16 @@ new #[Title('Submission')] class extends Component {
                 </div>
             @endif
         </flux:modal>
+    @endif
+
+    @if ($this->myDelegation)
+        <flux:callout variant="secondary" icon="user-plus" class="mt-6" data-test="my-delegation">
+            <flux:callout.heading>{{ __('You delegated this step to :name', ['name' => $this->myDelegation->delegate?->name]) }}</flux:callout.heading>
+            <flux:callout.text>{{ __('Until :time. Take it back to decide yourself; the change is recorded in the history.', ['time' => $this->myDelegation->expires_at->timezone((string) config('app.timezone'))->format('d M Y H:i')]) }}</flux:callout.text>
+            <x-slot name="actions">
+                <flux:button size="sm" wire:click="takeBackDelegation" wire:confirm="{{ __('Take this step back from :name now?', ['name' => $this->myDelegation->delegate?->name]) }}" data-test="take-back-delegation">{{ __('Take back') }}</flux:button>
+            </x-slot>
+        </flux:callout>
     @endif
 
     @if ($this->selfApprovalBlocked)

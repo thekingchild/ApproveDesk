@@ -244,9 +244,9 @@ Sources: two read-only feature-area reviews with 43 probe tests (every listed CO
 | RV-SEC-20 | **S1** | Microsoft sign-in links an existing account (admins included) by unverified `email`/`preferred_username` and skips that account's second factor (`OAuthClient.php:186`, `ResolveOAuthUserAction.php:33`, `OAuthController.php:44`) | **Fix in review** (`feature/rv-sec-oauth-verified`) |
 | RV-BUG-05 | **S1** | Saving on **Workflow templates** resets every step's completion rule to its step-type default ("All" → first response) and drops custom outcomes, auto-publishing on unused templates (`workflow-templates.blade.php:350, 358-366`) | **Fix in review** (`feature/rv-bug-templates-page-save`) |
 | RV-BUG-06 | S2 | Changing your email on Profile clears `email_verified_at`; `users:prune-unconfirmed` then deletes the (old) account | **Fix in review** (`feature/rv-bug-prune-registrations`) |
-| RV-DATA-05 | S2 | Daily `PurgeExpiredDelegations` deletes delegation rows, so evidence packs lose who the delegate was; `workflow.json` omits `delegated_to`/window | Open |
+| RV-DATA-05 | S2 | Daily `PurgeExpiredDelegations` deletes delegation rows, so evidence packs lose who the delegate was; `workflow.json` omits `delegated_to`/window | **Fix in review** (`feature/rv-bug-prune-registrations`) |
 | RV-BUG-07 | S2 | Submit failures (e.g. no resolvable approver): raw 500 in UI; custom-form retries leave an orphan draft per attempt; API create+submit leaves a stranded Pending request with no workflow | Open |
-| RV-ENG-12 | S2 | Delegations can't be revoked: a deactivated delegate, or a deleted/shortened out-of-office period, leaves the delegator locked out until expiry | Open |
+| RV-ENG-12 | S2 | Delegations can't be revoked: a deactivated delegate, or a deleted/shortened out-of-office period, leaves the delegator locked out until expiry | **Fix in review** (`feature/rv-bug-prune-registrations`) |
 | RV-BUG-08 | S2 | Condition branch targets are positions; moving/deleting/duplicating steps in builder or templates page re-points branches silently | Open |
 | RV-BUG-09 | S2 | Builder resave turns `in`/`not_in` lists into a string that never matches | Open |
 | RV-BUG-10 | S2 | Builder publishes conditions on unknown fields; every submission on that template then fails | Open |
