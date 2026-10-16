@@ -263,6 +263,7 @@ new #[Title('Workflow builder')] class extends Component {
 
     public function requestPublish(): void
     {
+        $this->authorize('publish', $this->model());
         $this->persist();
         $draft = $this->model()->draftVersion ?? $this->model()->publishedVersion;
         if ($draft === null) {
@@ -275,6 +276,7 @@ new #[Title('Workflow builder')] class extends Component {
 
     public function confirmPublish(): void
     {
+        $this->authorize('publish', $this->model());
         $this->persist();
         $draft = $this->model()->draftVersion;
         if ($draft !== null) {

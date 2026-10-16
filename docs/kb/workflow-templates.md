@@ -32,7 +32,7 @@ Open **Administration → Workflow templates** and add a template.
 - Add Approval, Condition, Automatic, or Notification nodes. Duplicate, delete, reorder, undo, and redo stay in this editing session.
 - Run a read-only simulation with sample request data to see the route. It does not record decisions.
 - Compare versions by their steps and names. Restore an older version as a new draft, then publish if it should apply to new work.
-- Save records a draft if the chain changed. **Publish version** asks for confirmation, then freezes that graph for new requests and retires the previous published version.
+- Save records a draft if the chain changed. **Publish version** asks for confirmation, then freezes that graph for new requests and retires the previous published version. Publishing requires the **Publish workflows** permission; people who can only edit workflows can save drafts.
 - Write a short change summary so later administrators can see why the chain changed.
 
 You do not have to pick a submission type. The old Document / Note / Memo / Request checkboxes are optional labels only. They do not block a second template, and they do not choose the chain for new work.
@@ -54,7 +54,7 @@ Group completion is first response, all assignees, or quorum N-of-M. Sequential,
 
 Deadlines can use elapsed hours or business hours. Business hours use organization working days, office hours, and holidays from **Settings → Approval settings**. Elapsed hours count every hour on the clock.
 
-Custom outcomes on a published version add extra decision buttons. Approve with conditions is always available and requires a comment. Every custom outcome maps to approve, reject, return, request information, or escalate.
+Custom outcomes on a published version add extra decision buttons. Approve with conditions is always available and requires a comment. Every custom outcome maps to approve, reject, return, request information, or escalate. An outcome **key** uses 1 to 40 lowercase letters, numbers, or underscores (for example `approve_budget`); the label is what approvers see.
 
 ## Timeouts
 
