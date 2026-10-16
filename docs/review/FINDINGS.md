@@ -105,6 +105,7 @@ DB_DATABASE=$PWD/database/perf.sqlite PERF_USERS=300 PERF_SUBMISSIONS=3000 php a
 ### RV-DATA-01 — MariaDB 10.6 is supported but untested
 - Severity: S2 · Status: **Fixed** (CI job added in PR #23) · Location: `.github/workflows/ci.yml` (`mariadb` job)
 - First run: 882 of 949 tests fail, all from one cause → RV-DATA-02.
+- Second blocker (RV-TEST-05): after RV-DATA-02 the job stalled in `InstallerTest` for 30+ minutes. A CI watchdog showed connection A idle inside an open transaction and connection B's `drop table …` (migrate:fresh) "Waiting for table metadata lock". Cause: `InstallerTest::restoreTestingDatabase()` forced `database.default=sqlite` and purged only `mysql` before `RefreshDatabase` rolled back, so the rollback went to sqlite and the `mariadb` transaction leaked (on MySQL the purge happened to close it). Fixed on branch `feature/rv-test-mariadb-installer` by restoring and keeping the recorded testing connection.
 
 ### RV-DATA-02 — Migrations fail or silently corrupt timestamps on MariaDB 10.6–10.9
 - Severity: **S1** · Status: **Fix in review** (PR #23, commit `d3b9803`)
@@ -223,6 +224,7 @@ Sources: three read-only reviews (engine/audit, authorization, input-output/file
 | RV-SEC-18 | S4 | Minor: optional Telegram webhook secret; CSV formula escaping in two exports; unsanitized download filename header; VAPID key in plaintext; inline `svg` mapping; CSV import row cap; Sanctum tokens never expire; role-name checks in dashboard/auditor; hidden owner name via tampered mentions | various |
 | RV-FEAT-01 | — | Follow-up feature: administrator "reassign step" for requests whose only approver is excluded (engine-recorded, audited, with Help) | — |
 | RV-DOC-01 | S4 | `docs/openapi-v1.yaml` is a 73-line stub that omits most endpoints (including `POST /submissions/{id}/actions`); `docs/API.md` is the only contract | `docs/openapi-v1.yaml` |
+| RV-TEST-05 | S2 | **Fix in review** — `InstallerTest` leaked the RefreshDatabase transaction on non-`mysql` connections, hanging the MariaDB job | `tests/Feature/InstallerTest.php` |
 | RV-ENG-10 | ? | Suspected: Escalate advances a group step on one assignee's action | `WorkflowEngine.php:421-433` |
 | RV-ENG-11 | ? | Suspected: “All” step can stall when its assignee set shrinks after others approved | `isStepSatisfied` |
 
