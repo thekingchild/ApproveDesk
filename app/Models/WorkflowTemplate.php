@@ -93,6 +93,25 @@ class WorkflowTemplate extends Model
     }
 
     /**
+     * Fingerprint of what an editor sees: the template row and its editable
+     * version. Every structural save rewrites the steps (new ids), and a
+     * publish changes the version status, so any change by someone else
+     * alters it (RV-BUG-37).
+     */
+    public function editionToken(): string
+    {
+        $version = $this->editableVersion();
+
+        return hash('sha256', json_encode([
+            $this->updated_at?->toIso8601String(),
+            $version?->id,
+            $version?->status->value,
+            $version?->updated_at?->toIso8601String(),
+            $version?->steps->pluck('id')->all(),
+        ], JSON_THROW_ON_ERROR));
+    }
+
+    /**
      * @return HasMany<WorkflowInstance, $this>
      */
     public function instances(): HasMany

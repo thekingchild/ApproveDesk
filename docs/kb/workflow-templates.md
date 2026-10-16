@@ -34,6 +34,7 @@ Open **Administration → Workflow templates** and add a template.
 - Compare versions by their steps and names. Restore an older version as a new draft, then publish if it should apply to new work.
 - Save records a draft if the chain changed. **Publish version** asks for confirmation, then freezes that graph for new requests and retires the previous published version. Publishing requires the **Publish workflows** permission; people who can only edit workflows can save drafts.
 - Write a short change summary so later administrators can see why the chain changed.
+- If another administrator saves or publishes this template after you opened it, your **Save draft** or **Publish version** is refused with a message, and nothing you entered is written over their work. Reload the page to see their version, then make your change again. The same check applies when you edit from the **Workflow templates** list.
 
 You do not have to pick a submission type. The old Document / Note / Memo / Request checkboxes are optional labels only. They do not block a second template, and they do not choose the chain for new work.
 
@@ -46,7 +47,15 @@ You do not have to pick a submission type. The old Document / Note / Memo / Requ
 - Automatic: the system records an approval when the rule matches.
 - Notification: the request records that a notice is due and continues. Delivery uses the channels you have configured.
 
-Assignees can be named people, a role, department members, the requester's line manager, the department manager, a person selected on the form, or another connected system. Manager and form-field assignees are resolved when the request starts.
+Assignees can be named people, a role, department members, the requester's line manager, the department manager, a person selected on the form, or another connected system.
+
+Assignees are looked up from current data whenever a step is checked. They are not copied onto the request when it is submitted. Some examples:
+
+- If the requester's line manager changes while a request waits on a **Requester's manager** step, the new manager sees it and the old one no longer does.
+- If a requester edits the person chosen in a form field while revising a returned request, the step goes to the newly chosen person.
+- A person who is deactivated or loses the role drops off the step.
+
+When a step becomes current, the system checks that at least one active person can act on it. This happens when the request starts, when it moves to the next step, and when a returned request is resubmitted. If nobody qualifies, the request does not move: the requester sees a message naming the step and the request stays where it was. This also happens when the only match is the requester while self-approval is blocked. Fix the assignment (for example, set the manager or choose another person on the form) and try again.
 
 For named people, roles, and departments, type at least two characters to search. Chosen records appear as chips. The page does not list everyone.
 

@@ -21,20 +21,43 @@ class BusinessCalendarTest extends TestCase
         $this->assertSame('2026-12-28 09:00:00', $deadline->format('Y-m-d H:i:s'));
     }
 
-    public function test_weekend_start_uses_hour_tick_landing(): void
+    /** RV-BUG-34: Sunday 23:00-24:00 is not working time, so 8 hours end at 08:00, not 07:00. */
+    public function test_weekend_start_counts_from_monday_midnight(): void
     {
         $calendar = $this->calendar(hours: []);
         $deadline = $calendar->addBusinessHours(CarbonImmutable::parse('2026-12-26 09:00:00'), 8);
 
-        $this->assertSame('2026-12-28 07:00:00', $deadline->format('Y-m-d H:i:s'));
+        $this->assertSame('2026-12-28 08:00:00', $deadline->format('Y-m-d H:i:s'));
     }
 
-    public function test_holiday_midnight_uses_hour_tick_landing(): void
+    /** RV-BUG-34: 15 hours from Thursday 09:00 are used up at the end of Thursday. */
+    public function test_hours_used_up_at_the_end_of_a_working_day_land_on_its_midnight(): void
     {
         $calendar = $this->calendar(hours: [], holidays: ['2026-12-25']);
         $deadline = $calendar->addBusinessHours(CarbonImmutable::parse('2026-12-24 09:00:00'), 15);
 
-        $this->assertSame('2026-12-28 00:00:00', $deadline->format('Y-m-d H:i:s'));
+        $this->assertSame('2026-12-25 00:00:00', $deadline->format('Y-m-d H:i:s'));
+    }
+
+    /** RV-BUG-34: partial hours on either side of a non-working day are counted exactly. */
+    public function test_24_hour_mode_counts_partial_hours_at_day_boundaries(): void
+    {
+        $calendar = $this->calendar(hours: []);
+
+        // Sunday 23:30 + 1h: the Sunday half hour does not count.
+        $this->assertSame('2026-12-28 01:00:00', $calendar->addBusinessHours(CarbonImmutable::parse('2026-12-27 23:30:00'), 1)->format('Y-m-d H:i:s'));
+        // Friday 23:30 + 1h: half an hour on Friday, the rest on Monday.
+        $this->assertSame('2026-12-28 00:30:00', $calendar->addBusinessHours(CarbonImmutable::parse('2026-12-25 23:30:00'), 1)->format('Y-m-d H:i:s'));
+        // Within one working day nothing changes.
+        $this->assertSame('2026-12-22 13:00:00', $calendar->addBusinessHours(CarbonImmutable::parse('2026-12-22 09:00:00'), 4)->format('Y-m-d H:i:s'));
+    }
+
+    public function test_24_hour_mode_without_any_working_day_fails_instead_of_looping(): void
+    {
+        $calendar = new BusinessCalendar([], [], []);
+
+        $this->expectException(RuntimeException::class);
+        $calendar->addBusinessHours(CarbonImmutable::parse('2026-12-22 09:00:00'), 1);
     }
 
     public function test_zero_hours_returns_start(): void
