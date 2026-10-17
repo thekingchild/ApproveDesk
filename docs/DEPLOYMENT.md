@@ -6,7 +6,7 @@ How ApproveDesk reaches a server and gets configured. Routine releases are autom
 
 | Requirement | Spec |
 |---|---|
-| PHP | 8.4.1+ (8.4 or 8.5) with: BCMath, Ctype, cURL, DOM, FileInfo, JSON, Mbstring, OpenSSL, PCRE, PDO, Tokenizer, XML, ZIP, GD; pdo_mysql |
+| PHP | 8.4.1+ (8.4 or 8.5) with: BCMath, Ctype, cURL, DOM, FileInfo, JSON, Mbstring, OpenSSL, PCRE, PDO, Tokenizer, XML, ZIP, GD; pdo_mysql; GMP for browser push notifications |
 | Database | MySQL 8.0+ / MariaDB 10.6+ |
 | Web server | Apache/Nginx+PHP-FPM |
 | Scheduler | 1 cron entry per minute on shared hosting; managed inside the container |

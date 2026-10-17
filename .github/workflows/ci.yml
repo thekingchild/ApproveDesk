@@ -89,9 +89,9 @@ jobs:
       - name: Install system packages and PHP extensions
         run: |
           apt-get update
-          apt-get install -y --no-install-recommends git unzip libzip-dev libpng-dev libjpeg62-turbo-dev libfreetype6-dev libicu-dev
+          apt-get install -y --no-install-recommends git unzip libzip-dev libpng-dev libjpeg62-turbo-dev libfreetype6-dev libicu-dev libgmp-dev
           docker-php-ext-configure gd --with-freetype --with-jpeg
-          docker-php-ext-install -j"$(nproc)" bcmath gd intl zip
+          docker-php-ext-install -j"$(nproc)" bcmath gd gmp intl zip
           php -r 'exit(PHP_VERSION === "8.4.1" ? 0 : 1);'
 
       - name: Install Composer
