@@ -43,7 +43,7 @@
 
                 <flux:sidebar.group :heading="__('Submissions')" class="grid">
                     <flux:sidebar.item icon="folder" :href="route('submissions.index')" :current="request()->routeIs('submissions.index')" wire:navigate>
-                        {{ auth()->user()->can('submissions.view.all') ? __('All submissions') : __('My submissions') }}
+                        {{ app(\App\Services\SubmissionVisibility::class)->seesEverything(auth()->user()) ? __('All submissions') : __('My submissions') }}
                     </flux:sidebar.item>
                     @can('create', \App\Models\Submission::class)
                         <flux:sidebar.item icon="plus-circle" :href="route('submissions.choose-type')" :current="request()->routeIs('submissions.create') || request()->routeIs('submissions.custom.*') || request()->routeIs('submissions.choose-type')" wire:navigate>

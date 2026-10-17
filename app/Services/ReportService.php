@@ -36,7 +36,8 @@ final class ReportService
      */
     public function dashboard(User $user): array
     {
-        $organization = $user->can('submissions.view.all');
+        // The same rule as the request list and request page, auditors included (RV-ARC-16).
+        $organization = app(SubmissionVisibility::class)->seesEverything($user);
         $canSubmit = $user->can('submissions.create');
         $canApprove = $user->can('approvals.act');
         $submissions = Submission::query()

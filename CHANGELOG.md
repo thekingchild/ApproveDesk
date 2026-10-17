@@ -15,6 +15,7 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Fixed
 
+- **Auditors see every request in the list and on the dashboard while their access is active (RV-ARC-16).** An auditor with an active grant could open any request, but the request list and dashboard showed only their own. Both now follow the same rule as the request page, and the menu says **All submissions**. When the grant ends, they see only their own again.
 - **Administrators' accounts show an Edit button only to the System owner (RV-DOC-03).** Other user managers saw **Edit** on an administrator, but saving was always refused with a message about the administrator role. The button is now hidden, an administrator's display-name request is decided by the System owner, and Help describes the rule correctly.
 - **Failed backups are cleared after 30 days (RV-OPS-07).** Backup retention removed old successful backups but kept every failed attempt forever.
 - **Pages read the theme and backup settings with fewer database queries (RV-PERF-20).**
