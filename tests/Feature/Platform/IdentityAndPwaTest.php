@@ -134,9 +134,9 @@ class IdentityAndPwaTest extends TestCase
         $change = app(RequestDisplayNameChangeAction::class)->execute($requester, 'Requested Name');
 
         Livewire::actingAs($reviewer)
-            ->test('pages::admin.users')
+            ->test('admin.users.name-changes')
             ->assertSee('Requested Name')
-            ->call('rejectNameChange', $change->id, 'Identity could not be verified.')
+            ->call('startReject', $change->id)->set('rejectionReason', 'Identity could not be verified.')->call('reject')
             ->assertHasNoErrors();
 
         $this->assertDatabaseHas('display_name_changes', [

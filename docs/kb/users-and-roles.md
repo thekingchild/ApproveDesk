@@ -29,7 +29,7 @@ A person can hold more than one role. Mixed roles add up — they receive every 
 
 When you grant roles on **Administration → Users**, every role you assign must stay within your own access. A non-owner cannot change their own roles from this screen. Saving name, email, department, phone, or other profile fields does not change the roles the person already holds, including roles you cannot grant.
 
-Display-name requests from **Settings → Profile** appear on this screen. Approve or reject them; the current name stays until you approve. You cannot approve your own request.
+Display-name requests from **Settings → Profile** appear on this screen. Approve or reject them; the current name stays until you approve. **Reject** opens a reason field under the request; the reason (up to 1,000 characters) is sent to the person. You cannot approve your own request.
 
 Built-in roles can be cloned but not edited or deleted. Archive a custom role to stop new assignments without removing it from people who already hold it.
 

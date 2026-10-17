@@ -21,7 +21,7 @@ class AlpineCspSafeTemplatesTest extends TestCase
         'optional chaining' => '/\?\./',
         'nullish coalescing' => '/\?\?/',
         'template literal' => '/`/',
-        'browser global' => '/\b(window|document|Intl|localStorage|navigator|console|JSON|Math|Date|setTimeout|alert|confirm)\b/',
+        'browser global' => '/\b(window|document|Intl|localStorage|navigator|console|JSON|Math|Date|setTimeout|alert|confirm|prompt)\b/',
         'async/await' => '/\b(async|await)\b/',
         'statement' => '/\b(if|for|while|let|const|var|return)\b\s*[\(\w{]/',
         'more than one statement' => '/;\s*\S/',
@@ -37,7 +37,8 @@ class AlpineCspSafeTemplatesTest extends TestCase
 
             foreach ($tags as $tag) {
                 $component = preg_match('/^(flux:|x-|livewire:)/', $tag[1][0]) === 1;
-                preg_match_all('/(x-[\w:.-]+|@[a-z][\w.:-]*|:[a-z][\w-]*)\s*=\s*"([^"]*)"/s', $tag[2][0], $attributes, PREG_SET_ORDER);
+                // Alpine attributes, plus wire: event actions, which the CSP build also parses.
+                preg_match_all('/(x-[\w:.-]+|@[a-z][\w.:-]*|:[a-z][\w-]*|wire:(?:click|submit|change|input|blur|focus|keydown|keyup)[\w.:-]*)\s*=\s*"([^"]*)"/s', $tag[2][0], $attributes, PREG_SET_ORDER);
 
                 foreach ($attributes as [, $name, $value]) {
                     if (($name[0] === ':' && $component) || preg_match('/^@(if|else|endif|foreach|csrf|method|js|json|error|enderror|php)\b/', $name) === 1) {

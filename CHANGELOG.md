@@ -15,6 +15,7 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Fixed
 
+- **Users screen (RV-ARC-08).** Rejecting a display-name request asks for the reason in a field on the page instead of a browser pop-up. Administrators no longer see the hidden System owner's pending name changes, and the line-manager picker can no longer show or accept the owner account. The screen is now split into smaller parts (list, name review, capacity, user dialog) with no change to how it works.
 - **Request-type builder browser drafts work.** The builder's **Restore draft** used to save an empty snapshot and then blank the form; it now keeps what you typed, and opening the builder no longer overwrites a pending draft before you restore or discard it.
 - **Rich-text toolbar on new requests works.** Bold, lists and the other toolbar buttons on the request body failed with an editor error; they now apply.
 - **Retention changes are recorded (RV-ARC-14).** Changing how long drafts and finished requests are kept on **Records** now writes an activity-log entry with who changed it and the old and new values. The retention rules, new-device sign-in alerts, and digest timing each live in one place, so the Records page and the daily jobs can no longer disagree about defaults or limits.

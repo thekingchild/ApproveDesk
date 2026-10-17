@@ -70,8 +70,8 @@ class ActiveUserLimitTest extends TestCase
         $held = $this->createUser('held@example.test', true);
 
         Livewire::actingAs($this->owner)
-            ->test('pages::admin.users')
-            ->call('editUser', $held->id)
+            ->test('admin.users.user-form')
+            ->call('edit', $held->id)
             ->set('isActive', false)
             ->call('save')
             ->assertHasNoErrors();
@@ -79,8 +79,8 @@ class ActiveUserLimitTest extends TestCase
         $this->createUser('replacement@example.test', true);
 
         Livewire::actingAs($this->owner)
-            ->test('pages::admin.users')
-            ->call('editUser', $held->id)
+            ->test('admin.users.user-form')
+            ->call('edit', $held->id)
             ->set('isActive', true)
             ->call('save')
             ->assertHasErrors(['isActive']);
@@ -91,10 +91,10 @@ class ActiveUserLimitTest extends TestCase
         User::factory()->create()->assignRole('approver');
 
         Livewire::actingAs($this->owner)
-            ->test('pages::admin.users')
+            ->test('admin.users.capacity')
             ->set('unlimitedUsers', false)
             ->set('maxActiveUsers', '1')
-            ->call('saveCapacity')
+            ->call('save')
             ->assertHasErrors(['maxActiveUsers']);
     }
 
@@ -104,8 +104,10 @@ class ActiveUserLimitTest extends TestCase
 
         Livewire::actingAs($admin)
             ->test('pages::admin.users')
-            ->assertDontSee('Active-user capacity')
-            ->call('saveCapacity')
+            ->assertDontSee('Active-user capacity');
+
+        Livewire::actingAs($admin)
+            ->test('admin.users.capacity')
             ->assertForbidden();
     }
 
@@ -148,11 +150,11 @@ class ActiveUserLimitTest extends TestCase
     public function test_owner_can_set_and_clear_the_limit(): void
     {
         Livewire::actingAs($this->owner)
-            ->test('pages::admin.users')
+            ->test('admin.users.capacity')
             ->assertSee('Active-user capacity')
             ->set('unlimitedUsers', false)
             ->set('maxActiveUsers', (string) User::query()->where('is_active', true)->count())
-            ->call('saveCapacity')
+            ->call('save')
             ->assertHasNoErrors();
 
         $this->assertSame(
@@ -161,9 +163,9 @@ class ActiveUserLimitTest extends TestCase
         );
 
         Livewire::actingAs($this->owner)
-            ->test('pages::admin.users')
+            ->test('admin.users.capacity')
             ->set('unlimitedUsers', true)
-            ->call('saveCapacity')
+            ->call('save')
             ->assertHasNoErrors();
 
         $this->assertNull(SiteLimit::query()->findOrFail(SiteLimit::SINGLETON_ID)->max_active_users);

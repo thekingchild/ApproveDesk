@@ -40,7 +40,7 @@ class UserManagementTest extends TestCase
         $department = Department::factory()->create();
 
         Livewire::actingAs($admin)
-            ->test('pages::admin.users')
+            ->test('admin.users.user-form')
             ->set('name', 'Amina Bello')
             ->set('email', 'amina@example.test')
             ->set('departmentId', (string) $department->id)
@@ -66,7 +66,7 @@ class UserManagementTest extends TestCase
         $admin = User::factory()->create()->assignRole('admin');
 
         Livewire::actingAs($admin)
-            ->test('pages::admin.users')
+            ->test('admin.users.user-form')
             ->set('name', 'Kemi SMS')
             ->set('email', 'kemi@example.test')
             ->set('phone', '08012345678')
@@ -77,7 +77,7 @@ class UserManagementTest extends TestCase
             ->assertHasErrors(['phone']);
 
         Livewire::actingAs($admin)
-            ->test('pages::admin.users')
+            ->test('admin.users.user-form')
             ->set('name', 'Kemi SMS')
             ->set('email', 'kemi@example.test')
             ->set('phone', '+234 801 234 5678')
@@ -97,8 +97,8 @@ class UserManagementTest extends TestCase
         $user = User::factory()->create()->assignRole('submitter');
 
         Livewire::actingAs($admin)
-            ->test('pages::admin.users')
-            ->call('editUser', $user->id)
+            ->test('admin.users.user-form')
+            ->call('edit', $user->id)
             ->set('departmentId', (string) $department->id)
             ->set('roles', ['approver'])
             ->set('isActive', false)
@@ -118,7 +118,7 @@ class UserManagementTest extends TestCase
         $admin = User::factory()->create()->assignRole('admin');
 
         Livewire::actingAs($admin)
-            ->test('pages::admin.users')
+            ->test('admin.users.user-form')
             ->set('name', 'Privilege Escalation')
             ->set('email', 'elevated@example.test')
             ->set('roles', ['super-admin'])
@@ -139,8 +139,8 @@ class UserManagementTest extends TestCase
         ]);
 
         Livewire::actingAs($superAdmin)
-            ->test('pages::admin.users')
-            ->call('editUser', $superAdmin->id)
+            ->test('admin.users.user-form')
+            ->call('edit', $superAdmin->id)
             ->assertForbidden();
 
         $this->assertTrue($superAdmin->fresh()->hasRole('super-admin'));
@@ -153,8 +153,8 @@ class UserManagementTest extends TestCase
         $user = User::factory()->create(['password' => 'original-password'])->assignRole('approver');
 
         Livewire::actingAs($admin)
-            ->test('pages::admin.users')
-            ->call('editUser', $user->id)
+            ->test('admin.users.user-form')
+            ->call('edit', $user->id)
             ->set('password', 'forged-new-password')
             ->set('password_confirmation', 'forged-new-password')
             ->call('save')
@@ -188,8 +188,8 @@ class UserManagementTest extends TestCase
         $editor->givePermissionTo(['users.update', 'users.view']);
 
         $component = Livewire::actingAs($editor)
-            ->test('pages::admin.users')
-            ->call('editUser', $editor->id)
+            ->test('admin.users.user-form')
+            ->call('edit', $editor->id)
             ->set('roles', ['approver'])
             ->call('save');
 
@@ -210,8 +210,8 @@ class UserManagementTest extends TestCase
         $target = User::factory()->create()->assignRole('viewer');
 
         Livewire::actingAs($editor)
-            ->test('pages::admin.users')
-            ->call('editUser', $target->id)
+            ->test('admin.users.user-form')
+            ->call('edit', $target->id)
             ->set('roles', ['department-head'])
             ->call('save')
             ->assertHasErrors(['roles']);
@@ -227,8 +227,8 @@ class UserManagementTest extends TestCase
         $editor->givePermissionTo(['users.update', 'users.view']);
 
         Livewire::actingAs($editor)
-            ->test('pages::admin.users')
-            ->call('editUser', $editor->id)
+            ->test('admin.users.user-form')
+            ->call('edit', $editor->id)
             ->assertSee('Read only viewer')
             ->assertSee('You cannot change your own roles.')
             ->assertSee('You cannot change your own account status.')
@@ -246,8 +246,8 @@ class UserManagementTest extends TestCase
         $target = User::factory()->create()->assignRole($preserved);
 
         Livewire::actingAs($editor)
-            ->test('pages::admin.users')
-            ->call('editUser', $target->id)
+            ->test('admin.users.user-form')
+            ->call('edit', $target->id)
             ->assertSee('Roles you cannot remove:')
             ->assertSee('Quarter close reviewer')
             ->assertSeeHtml('data-test="preserved-roles-read-only"');

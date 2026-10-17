@@ -156,8 +156,8 @@ class PhaseOneAcceptanceTest extends TestCase
         string $role,
     ): User {
         Livewire::actingAs($admin)
-            ->test('pages::admin.users')
-            ->call('createUser')
+            ->test('admin.users.user-form')
+            ->call('create')
             ->set('name', $name)
             ->set('email', $email)
             ->set('roles', [$role])
