@@ -31,7 +31,7 @@
                         <flux:checkbox wire:model.live="previewValues.{{ $field['key'] }}" :label="$field['label'] ?: __('Untitled field')" :checked="(bool) ($field['default'] ?? false)" />
                     @elseif (in_array($field['type'], ['number', 'currency'], true))
                         <flux:input
-                            wire:model.live="previewValues.{{ $field['key'] }}"
+                            wire:model.live.debounce.300ms="previewValues.{{ $field['key'] }}"
                             type="number"
                             :label="$field['label'] ?: __('Untitled field')"
                             :placeholder="$field['placeholder']"
@@ -39,14 +39,14 @@
                         />
                     @elseif (in_array($field['type'], ['date', 'date_time'], true))
                         <flux:input
-                            wire:model.live="previewValues.{{ $field['key'] }}"
+                            wire:model.live.debounce.300ms="previewValues.{{ $field['key'] }}"
                             type="{{ $field['type'] === 'date' ? 'date' : 'datetime-local' }}"
                             :label="$field['label'] ?: __('Untitled field')"
                             :description="$field['help']"
                         />
                     @elseif ($field['type'] === 'long_text' || $field['type'] === 'rich_text')
                         <flux:textarea
-                            wire:model.live="previewValues.{{ $field['key'] }}"
+                            wire:model.live.debounce.300ms="previewValues.{{ $field['key'] }}"
                             :label="$field['label'] ?: __('Untitled field')"
                             :placeholder="$field['placeholder']"
                             :description="$field['help']"
@@ -58,7 +58,7 @@
                         </div>
                     @else
                         <flux:input
-                            wire:model.live="previewValues.{{ $field['key'] }}"
+                            wire:model.live.debounce.300ms="previewValues.{{ $field['key'] }}"
                             :label="$field['label'] ?: __('Untitled field')"
                             :placeholder="$field['placeholder']"
                             :description="$field['help']"

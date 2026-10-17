@@ -2,21 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\PushSubscriptionRequest;
 use App\Models\PushSubscription;
-use App\Rules\ValidOutboundUrl;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 class PushSubscriptionController extends Controller
 {
-    public function store(Request $request): JsonResponse
+    public function store(PushSubscriptionRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'endpoint' => ['required', 'url', 'max:2000', new ValidOutboundUrl],
-            'keys.p256dh' => ['required', 'string', 'max:255'],
-            'keys.auth' => ['required', 'string', 'max:255'],
-            'contentEncoding' => ['nullable', 'string', 'max:32'],
-        ]);
+        $validated = $request->validated();
 
         PushSubscription::query()->updateOrCreate(
             [
@@ -33,9 +27,9 @@ class PushSubscriptionController extends Controller
         return response()->json(['ok' => true]);
     }
 
-    public function destroy(Request $request): JsonResponse
+    public function destroy(PushSubscriptionRequest $request): JsonResponse
     {
-        $endpoint = $request->validate(['endpoint' => ['required', 'url', 'max:2000']])['endpoint'];
+        $endpoint = $request->validated('endpoint');
         PushSubscription::query()
             ->where('user_id', $request->user()->id)
             ->where('endpoint', $endpoint)

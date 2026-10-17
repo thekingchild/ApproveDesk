@@ -193,7 +193,7 @@ new #[Title('Custom request')] class extends Component {
                 @endif
                 <div class="space-y-1" wire:key="custom-field-{{ $field->id }}">
                     @if ($field->type === RequestFieldType::LongText || $field->type === RequestFieldType::RichText)
-                        <flux:textarea wire:model.live="values.{{ $field->key }}" :label="$field->label" :placeholder="$config['placeholder'] ?? ''" :required="app(RequestSchemaCompiler::class)->isRequired($field, $visibleValues)" dusk="custom-field-{{ $field->key }}" />
+                        <flux:textarea wire:model.live.debounce.300ms="values.{{ $field->key }}" :label="$field->label" :placeholder="$config['placeholder'] ?? ''" :required="app(RequestSchemaCompiler::class)->isRequired($field, $visibleValues)" dusk="custom-field-{{ $field->key }}" />
                     @elseif (in_array($field->type, [RequestFieldType::Select, RequestFieldType::User, RequestFieldType::Department], true))
                         <flux:select wire:model.live="values.{{ $field->key }}" :label="$field->label" :required="app(RequestSchemaCompiler::class)->isRequired($field, $visibleValues)" dusk="custom-field-{{ $field->key }}"><flux:select.option value="">{{ __('Choose…') }}</flux:select.option>@foreach ($field->type === RequestFieldType::User ? $this->users : ($field->type === RequestFieldType::Department ? $this->departments : collect($config['options'] ?? [])) as $option)<flux:select.option :value="is_object($option) ? $option->id : $option">{{ is_object($option) ? $option->name : $option }}</flux:select.option>@endforeach</flux:select>
                     @elseif ($field->type === RequestFieldType::MultiSelect)
@@ -207,7 +207,7 @@ new #[Title('Custom request')] class extends Component {
                     @elseif ($field->type === RequestFieldType::Calculated)
                         <flux:input :value="$visibleValues[$field->key] ?? 0" :label="$field->label" readonly />
                     @else
-                        <flux:input wire:model.live="values.{{ $field->key }}" :type="match($field->type) { RequestFieldType::Number, RequestFieldType::Currency => 'number', RequestFieldType::Date => 'date', RequestFieldType::DateTime => 'datetime-local', RequestFieldType::Url => 'url', RequestFieldType::Email => 'email', default => 'text' }" :label="$field->label" :placeholder="$config['placeholder'] ?? ''" :required="app(RequestSchemaCompiler::class)->isRequired($field, $visibleValues)" dusk="custom-field-{{ $field->key }}" />
+                        <flux:input wire:model.live.debounce.300ms="values.{{ $field->key }}" :type="match($field->type) { RequestFieldType::Number, RequestFieldType::Currency => 'number', RequestFieldType::Date => 'date', RequestFieldType::DateTime => 'datetime-local', RequestFieldType::Url => 'url', RequestFieldType::Email => 'email', default => 'text' }" :label="$field->label" :placeholder="$config['placeholder'] ?? ''" :required="app(RequestSchemaCompiler::class)->isRequired($field, $visibleValues)" dusk="custom-field-{{ $field->key }}" />
                     @endif
                     @if ($config['help'] ?? null)<p class="text-sm text-zinc-600 dark:text-zinc-300">{{ $config['help'] }}</p>@endif
                     <flux:error name="values.{{ $field->key }}" />

@@ -15,6 +15,14 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Fixed
 
+- **Smaller hardening fixes from the code review.**
+  - Branding images are served only as JPG, PNG, WebP or ICO, the types uploads accept; SVG and GIF files are no longer served (RV-SEC-24). A logo or background uploaded as GIF or SVG by an older version needs uploading again.
+  - A request holds at most 25 attachments (RV-LAR-21).
+  - **Records → Verify an evidence pack** accepts only the `.zip` file.
+  - Uploaded SVG files are never shown as a preview.
+  - Typing in a request form, the request-type preview, or the approval ID prefix no longer sends a request on every keystroke.
+  - Stored secrets (integration credentials, webhook signing secrets, backup destination settings, browser-push keys) are kept out of any data the app exposes as JSON.
+  - The user import template uses example contact details.
 - **Cloning a request type keeps its field settings.** **Clone** used to copy each field's label, type and required flag but drop the searchable, filterable, reportable, sensitive and approver-summary flags. A copy of a form with a sensitive field therefore showed that field's answers to everyone who could see the request. Clones now keep every flag. Check any request type you cloned before this fix and turn **Sensitive** back on where needed.
 - **Integration dead letters show their request (RV-LAR-03).** The failed-deliveries table on **Integrations** left the request reference blank because it read a field that does not exist. It now shows the request's reference number. Development and test runs now fail on this kind of mistake (reading a misspelled or unloaded field, or filling one the record does not accept) instead of quietly showing nothing.
 - **Telegram linking and integration credentials follow the same rules as everywhere else (RV-ARC-11).** A Telegram account can no longer be linked to two people: the bot now says it is already linked to someone else. A deactivated person's link no longer works, and linking and unlinking are recorded in the activity log. Saving or clearing an integration's credentials is recorded in the activity log too (field names only, never the values), and each field is length-checked.

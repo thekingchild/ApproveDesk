@@ -30,7 +30,7 @@ Open a disposition review from a request reference, then approve it when disposa
 
 ### Verify a pack
 
-Upload a downloaded evidence pack. An intact pack shows **Verified**. Altered files, extra files added to the zip, a changed manifest (for example its date or request number), or a broken signature are refused. Packs downloaded before signed manifests were introduced show **Unsigned (legacy)**: their files still match, but their date and request number are not signed, so download a fresh pack when you need a fully verified copy.
+Upload a downloaded evidence pack (the `.zip` file). An intact pack shows **Verified**. Altered files, extra files added to the zip, a changed manifest (for example its date or request number), or a broken signature are refused. Packs downloaded before signed manifests were introduced show **Unsigned (legacy)**: their files still match, but their date and request number are not signed, so download a fresh pack when you need a fully verified copy.
 
 ## What not to do
 

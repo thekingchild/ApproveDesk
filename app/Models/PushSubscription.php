@@ -16,6 +16,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class PushSubscription extends Model
 {
+    /** Browser push keys never appear in arrays or JSON (RV-LAR-05). */
+    protected $hidden = ['auth_token', 'public_key'];
+
     protected $fillable = ['user_id', 'endpoint', 'public_key', 'auth_token', 'content_encoding'];
 
     protected static function booted(): void

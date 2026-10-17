@@ -26,6 +26,9 @@ class WebhookEndpoint extends Model
     /** @use HasFactory<WebhookEndpointFactory> */
     use HasFactory;
 
+    /** The signing secret never appear in arrays or JSON (RV-LAR-05). */
+    protected $hidden = ['secret'];
+
     protected $fillable = ['name', 'url', 'secret', 'events', 'is_active', 'created_by'];
 
     protected function casts(): array

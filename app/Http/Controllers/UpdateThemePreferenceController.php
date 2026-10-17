@@ -3,17 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Themes\UpdateUserThemePreferenceAction;
+use App\Http\Requests\UpdateThemePreferenceRequest;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 
 class UpdateThemePreferenceController extends Controller
 {
-    public function __invoke(Request $request, UpdateUserThemePreferenceAction $action): RedirectResponse
+    public function __invoke(UpdateThemePreferenceRequest $request, UpdateUserThemePreferenceAction $action): RedirectResponse
     {
-        $validated = $request->validate([
-            'theme_id' => ['nullable', 'integer'],
-        ]);
+        $validated = $request->validated();
         $user = $request->user();
         abort_unless($user instanceof User, 403);
         $action->execute($user, isset($validated['theme_id']) ? (int) $validated['theme_id'] : null);
