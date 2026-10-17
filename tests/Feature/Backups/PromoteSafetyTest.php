@@ -9,6 +9,7 @@ use App\Enums\BackupSnapshotStatus;
 use App\Models\BackupRestoreEvent;
 use App\Models\BackupSnapshot;
 use App\Models\User;
+use App\Services\Backups\BackupRestoreTrail;
 use App\Services\Backups\MysqlDumpLoader;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -147,6 +148,27 @@ class PromoteSafetyTest extends TestCase
             // The safety backup is verified before the live tables are replaced.
             $this->assertSame(BackupSnapshotStatus::Verified, BackupSnapshot::query()->find($event->safety_snapshot_id)?->status);
             $this->assertFalse(app()->isDownForMaintenance());
+        } finally {
+            $this->resetDatabase();
+        }
+    }
+
+    public function test_rv_data_10_mysql_promote_keeps_later_backups_and_restore_history(): void
+    {
+        $this->requireMysql();
+        $admin = User::factory()->create()->assignRole('admin');
+        $snapshot = $this->verifiedSnapshot();
+        $later = app(CreateDatabaseBackupAction::class)->execute();
+        app(BackupRestoreTrail::class)->record($later, $admin);
+        $earlierRestore = BackupRestoreEvent::query()->latest('id')->firstOrFail();
+
+        try {
+            app(PromoteDatabaseBackupAction::class)->execute($snapshot, $admin, (string) $snapshot->id);
+
+            $this->assertNotNull(BackupSnapshot::query()->find($later->id), 'A backup taken after the snapshot is still listed.');
+            $this->assertNotNull(BackupRestoreEvent::query()->find($earlierRestore->id), 'Earlier restore history survives.');
+            $event = BackupRestoreEvent::query()->where('snapshot_id', $snapshot->id)->latest('id')->firstOrFail();
+            $this->assertNotNull(BackupSnapshot::query()->find($event->safety_snapshot_id), 'The safety backup stays listed.');
         } finally {
             $this->resetDatabase();
         }
