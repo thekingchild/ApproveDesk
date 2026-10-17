@@ -118,6 +118,24 @@ class IntegrationHubTest extends TestCase
         $this->assertSame(IntegrationDeliveryStatus::Delivered, $delivery->fresh()->status);
     }
 
+    public function test_rv_lar_02_delivered_payload_carries_the_reference_number(): void
+    {
+        $connector = IntegrationConnector::factory()->create();
+        $action = IntegrationAction::factory()->for($connector, 'connector')->create();
+        $submission = $this->submittedSubmission();
+        $this->assertNotNull($submission->reference_number);
+        $delivery = IntegrationDelivery::factory()->create([
+            'integration_action_id' => $action->id,
+            'submission_id' => $submission->id,
+        ]);
+
+        Http::fake(['https://hooks.example.test/*' => Http::response('ok', 200)]);
+
+        (new DeliverIntegrationAction($delivery->id))->handle(app(ConnectorRegistry::class));
+
+        Http::assertSent(fn ($request): bool => $request['submission']['reference'] === $submission->reference_number);
+    }
+
     public function test_already_delivered_action_is_not_queued_again(): void
     {
         $connector = IntegrationConnector::factory()->create(['is_enabled' => true]);

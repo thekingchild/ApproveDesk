@@ -254,12 +254,6 @@ parameters:
 			path: app/Services/Collaboration/OutOfOfficeFallback.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\Submission\:\:\$reference\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/Integrations/ConnectorHttpClient.php
-
-		-
 			message: '#^Using nullsafe property access on non\-nullable type App\\Models\\RequestType\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 1
@@ -276,12 +270,6 @@ parameters:
 			identifier: nullsafe.neverNull
 			count: 3
 			path: app/Services/Integrations/ConnectorHttpClient.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Submission\:\:\$reference\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/Integrations/Connectors/MailConnector.php
 
 		-
 			message: '#^Expression on left side of \?\? is not nullable\.$#'
