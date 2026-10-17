@@ -24,7 +24,7 @@ Native mobile and enterprise work must not be pulled forward merely because a cu
 
 Phases 0–4 from the original plan are complete. The current baseline includes:
 
-- Laravel 13, PHP 8.3+, Livewire 4, Alpine.js, Tailwind CSS 4, and Flux UI.
+- Laravel 13, PHP 8.4.1+ (raised from 8.3 on 2026-10-17, RV-TEST-06), Livewire 4, Alpine.js, Tailwind CSS 4, and Flux UI.
 - Installer-first deployment for cPanel/Plesk plus container deployment.
 - Roles, departments, policies, branded authentication, passkeys, 2FA, Google/Microsoft OAuth.
 - Draft submissions, private attachments, comments, signed previews/downloads, and rich text.

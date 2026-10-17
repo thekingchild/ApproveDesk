@@ -241,7 +241,7 @@ Target environment: shared hosting, file cache, database queue, single cron, PHP
 - [ ] Casts declared via `casts()` method; `encrypted` casts for secrets; dates as immutable where practical.
 - [ ] Factories exist for every model and produce valid states.
 - [ ] PHPStan: burn down the 87 baseline entries by category; consider level 8 for `app/Services/WorkflowEngine.php` and `app/Actions/**`.
-- [ ] Rector dry-run for Laravel 13 / PHP 8.3 idioms (report only; apply selectively).
+- [ ] Rector dry-run for Laravel 13 / PHP 8.4 idioms (report only; apply selectively).
 - [ ] Livewire 4: `wire:model` modifiers, `#[Computed]` caching, `#[Locked]`, lazy loading for heavy sections, file uploads via temporary URLs with validation.
 
 ### 6.7 `DATA` — Schema & migrations (Wave 2)

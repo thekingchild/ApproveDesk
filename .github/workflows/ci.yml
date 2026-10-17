@@ -72,9 +72,55 @@ jobs:
           path: coverage.xml
           retention-days: 7
 
+  php-minimum:
+    # The lowest supported PHP, exactly: setup-php only pins minor versions, so
+    # this runs in the official 8.4.1 image (RV-TEST-06). Tests only.
+    name: php 8.4.1
+    runs-on: ubuntu-latest
+    container:
+      image: php:8.4.1-cli-bookworm
+
+    env:
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ":memory:"
+      COMPOSER_ALLOW_SUPERUSER: "1"
+
+    steps:
+      - name: Install system packages and PHP extensions
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends git unzip libzip-dev libpng-dev libjpeg62-turbo-dev libfreetype6-dev libicu-dev
+          docker-php-ext-configure gd --with-freetype --with-jpeg
+          docker-php-ext-install -j"$(nproc)" bcmath gd intl zip
+          php -r 'exit(PHP_VERSION === "8.4.1" ? 0 : 1);'
+
+      - name: Install Composer
+        run: |
+          curl -sS https://getcomposer.org/installer -o /tmp/composer-setup.php
+          php /tmp/composer-setup.php --install-dir=/usr/local/bin --filename=composer
+
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Install dependencies
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Prepare application
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Parallel tests
+        run: php artisan test --parallel
+
   php-newest:
-    # The newest supported PHP, tests only; the php job above (8.4) also runs lint,
-    # static analysis and coverage (RV-TEST-06). Not a required check yet.
+    # The newest supported PHP, tests only; the php job above (latest 8.4) also
+    # runs lint, static analysis and coverage (RV-TEST-06).
     name: php 8.5
     runs-on: ubuntu-latest
 

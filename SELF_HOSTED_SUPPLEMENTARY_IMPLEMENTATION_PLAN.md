@@ -6,7 +6,7 @@
 
 **Architecture:** Add an explicit singleton system-owner record instead of inferring ownership from a role or user ID at runtime. Keep the internal `super-admin` role for compatibility, but reserve it for the singleton owner; all other administration is delegated through existing non-owner roles. Add owner-only recovery actions with recent reauthentication, durable security-event records, notification, and session/token revocation. Add a singleton site-limit record and one transaction/row-lock service used by every production account-activation path. Do not use a global Eloquent scope for owner invisibility, because it would corrupt relationship loading, historical attribution, evidence, and workflow behavior.
 
-**Tech Stack:** Laravel 13, PHP 8.3+, Livewire 4 anonymous page components, Flux UI, Fortify 2FA/passkeys/password broker, Sanctum, Spatie Permission, SQLite tests, MySQL/MariaDB production.
+**Tech Stack:** Laravel 13, PHP 8.4.1+, Livewire 4 anonymous page components, Flux UI, Fortify 2FA/passkeys/password broker, Sanctum, Spatie Permission, SQLite tests, MySQL/MariaDB production.
 
 **Roadmap boundary:** This plan is only for the **single-company, self-hosted ApproveDesk line based on v2.5.5**. It must not implement or modify ApproveDesk SaaS tenancy, billing, platform-console, organization, or entitlement roadmap items. ApproveDesk SaaS must use a separate repository or a `saas`-named branch and maintain its own roadmap. Do not reuse Phase 10–15 SaaS task IDs here.
 
