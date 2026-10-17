@@ -66,6 +66,30 @@ final class TelegramNotificationChannel implements OptionalNotificationChannel
         }
     }
 
+    /**
+     * A plain bot reply to a chat, such as the confirmation after linking.
+     * Never throws: the reply is a courtesy, not a delivery to retry.
+     */
+    public function sendText(string $chatId, string $text): bool
+    {
+        $token = $this->settings->credentials($this->key())['bot_token'] ?? '';
+        if (! $this->isEnabled() || $token === '') {
+            return false;
+        }
+
+        try {
+            $response = Http::timeout(10)
+                ->acceptJson()
+                ->post('https://api.telegram.org/bot'.$token.'/sendMessage', ['chat_id' => $chatId, 'text' => $text]);
+
+            return $response->successful() && $response->json('ok') === true;
+        } catch (Throwable $exception) {
+            $this->settings->recordSendFailure($this->key(), $exception->getMessage());
+
+            return false;
+        }
+    }
+
     public function testConnection(): ChannelTestResult
     {
         if (! $this->isConfigured()) {

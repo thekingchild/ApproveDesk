@@ -2,21 +2,21 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Notifications\LinkTelegramAccountAction;
 use App\Enums\NotificationChannelKey;
-use App\Models\User;
+use App\Services\Notifications\Channels\TelegramNotificationChannel;
 use App\Services\Notifications\ChannelSettings;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Http;
 
 /**
  * Telegram inbound webhook. Shared hosting cannot long-poll getUpdates.
- * Linking uses /start {token}. Notify-only: no workflow mutations.
+ * Linking uses /start {token} (LinkTelegramAccountAction). Notify-only: no
+ * workflow mutations.
  */
 class TelegramWebhookController extends Controller
 {
-    public function __invoke(Request $request, ChannelSettings $settings): Response
+    public function __invoke(Request $request, ChannelSettings $settings, LinkTelegramAccountAction $link, TelegramNotificationChannel $telegram): Response
     {
         $channel = NotificationChannelKey::Telegram;
 
@@ -33,20 +33,9 @@ class TelegramWebhookController extends Controller
         $fromId = data_get($request->all(), 'message.from.id');
 
         if (str_starts_with($text, '/start ') && is_numeric($fromId)) {
-            $token = trim(substr($text, 7));
-            $userId = Cache::pull('telegram-link:'.$token);
-            if (is_numeric($userId)) {
-                $user = User::query()->find((int) $userId);
-                if ($user) {
-                    $user->forceFill(['telegram_user_id' => (string) $fromId])->save();
-                    $bot = $settings->credentials($channel)['bot_token'] ?? '';
-                    if ($bot !== '') {
-                        Http::timeout(10)->acceptJson()->post('https://api.telegram.org/bot'.$bot.'/sendMessage', [
-                            'chat_id' => $fromId,
-                            'text' => 'ApproveDesk is linked. You will receive notifications here when this organisation has Telegram enabled.',
-                        ]);
-                    }
-                }
+            $reply = $link->execute(trim(substr($text, 7)), (string) $fromId)->reply();
+            if ($reply !== null) {
+                $telegram->sendText((string) $fromId, $reply);
             }
         }
 

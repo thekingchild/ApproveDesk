@@ -11,7 +11,8 @@ final class SaveUserChannelIdentityAction
 {
     public function execute(User $user, NotificationChannelKey $channel, ?string $externalId, ?User $actor = null): void
     {
-        if ($user->isSystemOwner()) {
+        // The owner may link their own chat account; nobody else may map it.
+        if ($user->isSystemOwner() && ($actor === null || ! $actor->is($user))) {
             throw new InvalidArgumentException('The System owner cannot be mapped from user administration.');
         }
 
