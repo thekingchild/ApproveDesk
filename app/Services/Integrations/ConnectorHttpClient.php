@@ -59,7 +59,7 @@ final class ConnectorHttpClient
             'event' => 'workflow.completed',
             'submission' => [
                 'id' => $submission->id,
-                'reference' => $submission->reference,
+                'reference' => $submission->reference_number,
                 'title' => $submission->title,
                 'status' => $submission->status->value,
                 'type' => $submission->type->value,

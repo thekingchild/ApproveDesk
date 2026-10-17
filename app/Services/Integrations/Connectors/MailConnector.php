@@ -57,7 +57,7 @@ final class MailConnector implements Connector
             ...$this->http->submissionPayload($submission),
             'from' => $credentials['from'] ?? '',
             'to' => $to,
-            'subject' => 'Approved: '.($submission->title ?? $submission->reference),
+            'subject' => 'Approved: '.($submission->title ?? $submission->reference_number),
         ];
 
         return $this->http->post(
