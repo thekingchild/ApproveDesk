@@ -8,6 +8,7 @@ use App\Models\Submission;
 use App\Models\User;
 use App\Notifications\ActionRequiredNotification;
 use App\Notifications\NotificationDigest;
+use App\Services\Notifications\DigestSchedule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Facades\Notification;
@@ -59,7 +60,7 @@ class NotificationPreferencesTest extends TestCase
             'updated_at' => now()->subHour(),
         ]);
 
-        app(SendNotificationDigests::class)->handle();
+        app(SendNotificationDigests::class)->handle(app(DigestSchedule::class));
 
         Notification::assertSentTo(
             $user,
