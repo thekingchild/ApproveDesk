@@ -6,7 +6,7 @@ Status: Accepted (recorded retroactively; `settings` table in force since v2.0.0
 
 ## Context
 
-ApproveDesk targets cPanel/Plesk shared hosting. Administrators there often cannot edit `.env`, run `php artisan config:cache`, or restart PHP. The web installer writes only bootstrap values to `.env` (`APP_KEY`, database, `CACHE_STORE=file`, `SESSION_DRIVER=file`; `app/Support/Installer.php:150`). Yet branding, registration, security toggles, backup schedules, notification channels, outbound mail, session lifetime, and OAuth sign-in all have to be changeable from the browser. They are read on nearly every request (login page, layout chrome, middleware, mail), so reading them must not cost a query per key.
+ApproveDesk targets cPanel/Plesk shared hosting. Administrators there often cannot edit `.env`, run `php artisan config:cache`, or restart PHP. The web installer writes only bootstrap values to `.env` (`APP_KEY`, database, `CACHE_STORE=file`, `SESSION_DRIVER=file`; `app/Services/Install/Installer.php:150`). Yet branding, registration, security toggles, backup schedules, notification channels, outbound mail, session lifetime, and OAuth sign-in all have to be changeable from the browser. They are read on nearly every request (login page, layout chrome, middleware, mail), so reading them must not cost a query per key.
 
 ## Decision
 

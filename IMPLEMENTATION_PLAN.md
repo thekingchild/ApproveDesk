@@ -625,7 +625,7 @@ That is the whole update path. If a replacement site is a zip of `index.html` + 
 ### LP.1 Directory and serving — Complete (2026-08-23)
 
 - **LP-DIR-01 — Complete:** Create `website/` with `README.md` restating this contract and a first `index.html` that already contains the auth hook.
-- **LP-SRV-01 — Complete:** Replace `Route::view('/', 'welcome')` with a `PublicWebsiteController` (thin) plus `App\Support\PublicWebsite` (path resolve, MIME, HTML injection). `GET /` is named `home`.
+- **LP-SRV-01 — Complete:** Replace `Route::view('/', 'welcome')` with a `PublicWebsiteController` (thin) plus `App\Http\PublicWebsite` (path resolve, MIME, HTML injection). `GET /` is named `home`.
 - **LP-SRV-02 — Complete:** Register a **last** fallback GET route that serves a safe file from `website/` only when no earlier Laravel route matched. App routes, Fortify, settings, Livewire, and `/build` stay first. Retire `resources/views/welcome.blade.php`.
 
 ### LP.2 Auth-aware header — Complete (2026-08-23)
