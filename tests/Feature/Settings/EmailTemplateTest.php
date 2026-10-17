@@ -97,6 +97,8 @@ class EmailTemplateTest extends TestCase
 
     public function test_rendered_action_required_mail_still_has_a_signed_confirmation_url(): void
     {
+        // The link's expiry and the assertion's clock must read the same second.
+        $this->freezeTime();
         $approver = User::factory()->create()->assignRole('approver');
         WorkflowTemplate::factory()->default()->sequential([$approver])->create();
         $submission = Submission::factory()->create();
