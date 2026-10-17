@@ -14,7 +14,7 @@ use App\Models\BackupRestoreEvent;
 use App\Models\BackupSnapshot;
 use App\Services\Backups\BackupRecorder;
 use App\Support\BackupSettings;
-use App\Support\ScheduledBackupHealth;
+use App\Services\Backups\ScheduledBackupHealth;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\URL;

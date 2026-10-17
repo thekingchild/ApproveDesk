@@ -4,8 +4,8 @@ namespace App\Console\Commands;
 
 use App\Actions\Backups\CreateDatabaseBackupAction;
 use App\Enums\BackupSnapshotKind;
+use App\Services\Backups\ScheduledBackupHealth;
 use App\Support\BackupSettings;
-use App\Support\ScheduledBackupHealth;
 use Illuminate\Console\Command;
 
 class CreateDatabaseBackupCommand extends Command
