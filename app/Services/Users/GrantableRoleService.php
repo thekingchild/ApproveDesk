@@ -2,6 +2,7 @@
 
 namespace App\Services\Users;
 
+use App\Enums\SystemRole;
 use App\Models\Role;
 use App\Models\User;
 use App\Services\Roles\RolePermissionService;
@@ -15,7 +16,7 @@ final class GrantableRoleService
     public function for(User $actor): array
     {
         $roles = Role::query()
-            ->where('name', '!=', 'super-admin')
+            ->where('name', '!=', SystemRole::SuperAdmin->value)
             ->whereHas('profile', fn ($query) => $query->where('is_archived', false))
             ->with(['permissions', 'profile'])
             ->orderBy('name')
@@ -24,14 +25,14 @@ final class GrantableRoleService
         $names = [];
         $ceiling = $this->permissions->ceiling($actor);
         foreach ($roles as $role) {
-            if ($role->name === 'admin') {
-                if ($actor->isSystemOwner()) {
+            if ($role->name === SystemRole::Admin->value) {
+                if ($actor->can('system_owner')) {
                     $names[] = (string) $role->name;
                 }
 
                 continue;
             }
-            if ($actor->isSystemOwner()) {
+            if ($actor->can('system_owner')) {
                 $names[] = (string) $role->name;
 
                 continue;
@@ -64,7 +65,7 @@ final class GrantableRoleService
     public function assertCanSync(User $actor, User $target, array $roles): void
     {
         $this->assertCanAssign($actor, $roles);
-        if (! $actor->isSystemOwner() && $target->hasRole('admin')) {
+        if (! $actor->can('system_owner') && $target->hasRole(SystemRole::Admin->value)) {
             throw ValidationException::withMessages(['roles' => __('Only the System owner may change the administrator role.')]);
         }
     }

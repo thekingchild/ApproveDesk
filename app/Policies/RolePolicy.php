@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\SystemRole;
 use App\Models\Role;
 use App\Models\User;
 
@@ -14,7 +15,7 @@ class RolePolicy
 
     public function view(User $user, Role $role): bool
     {
-        return $this->viewAny($user) && ($role->name !== 'super-admin' || $user->isSystemOwner());
+        return $this->viewAny($user) && ($role->name !== SystemRole::SuperAdmin->value || $user->isSystemOwner());
     }
 
     public function create(User $user): bool
@@ -25,14 +26,14 @@ class RolePolicy
     public function update(User $user, Role $role): bool
     {
         return $this->create($user)
-            && $role->name !== 'super-admin'
+            && $role->name !== SystemRole::SuperAdmin->value
             && ! (bool) $role->profile?->is_protected
             && ! (bool) $role->profile?->is_archived;
     }
 
     public function clone(User $user, Role $role): bool
     {
-        return $this->create($user) && $role->name !== 'super-admin';
+        return $this->create($user) && $role->name !== SystemRole::SuperAdmin->value;
     }
 
     public function archive(User $user, Role $role): bool

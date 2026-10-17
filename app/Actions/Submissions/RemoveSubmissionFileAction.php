@@ -8,6 +8,7 @@ use App\Models\SubmissionFile;
 use App\Models\SubmissionFileRevision;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
@@ -26,7 +27,7 @@ final class RemoveSubmissionFileAction
     public function execute(Submission $submission, SubmissionFile $file, User $actor): void
     {
         abort_unless($file->submission_id === $submission->id, 404);
-        abort_unless($actor->can('update', $submission), 403);
+        Gate::forUser($actor)->authorize('update', $submission);
 
         if ($submission->isOnLegalHold()) {
             throw ValidationException::withMessages([

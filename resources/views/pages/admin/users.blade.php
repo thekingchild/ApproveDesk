@@ -375,7 +375,7 @@ new #[Title('User management')] class extends Component {
         </flux:card>
     @endif
 
-    @if (Auth::user()?->isSystemOwner())
+    @if (Auth::user()?->can('system_owner'))
         <flux:card class="space-y-4" data-test="active-user-capacity">
             <div>
                 <flux:heading size="sm">{{ __('Active-user capacity') }}</flux:heading>
@@ -495,7 +495,7 @@ new #[Title('User management')] class extends Component {
                 </div>
 
                 <div class="sm:col-span-2">
-                    @php($editingSelf = $editingUserId && Auth::id() === $editingUserId && ! Auth::user()?->isSystemOwner())
+                    @php($editingSelf = $editingUserId && Auth::id() === $editingUserId && ! Auth::user()?->can('system_owner'))
                     @if ($editingSelf)
                         <p class="text-sm font-medium">{{ __('Roles') }}</p>
                         <div class="mt-2 flex flex-wrap gap-1" data-test="self-roles-read-only">

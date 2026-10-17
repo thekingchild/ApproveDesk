@@ -8,6 +8,7 @@ use App\Models\WorkflowSelectionRule;
 use App\Models\WorkflowTemplate;
 use App\Services\SubmissionConditionEvaluator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 
@@ -20,7 +21,7 @@ final class SaveWorkflowSelectionRulesAction
      */
     public function execute(RequestType $type, array $rules, User $actor): void
     {
-        abort_unless($actor->can('update', $type), 403);
+        Gate::forUser($actor)->authorize('update', $type);
 
         DB::transaction(function () use ($type, $rules): void {
             WorkflowSelectionRule::query()->where('request_type_id', $type->id)->delete();

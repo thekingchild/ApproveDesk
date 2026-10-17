@@ -31,7 +31,7 @@ new #[Title('Roles & permissions')] class extends Component {
     public function roles(): \Illuminate\Database\Eloquent\Collection
     {
         return RoleProfile::query()
-            ->whereHas('role', fn ($query) => $query->where('name', '!=', 'super-admin'))
+            ->whereHas('role', fn ($query) => $query->where('name', '!=', \App\Enums\SystemRole::SuperAdmin->value))
             ->with(['role' => fn ($query) => $query->withCount(['users', 'permissions'])])
             ->orderBy('is_archived')
             ->orderByDesc('is_builtin')

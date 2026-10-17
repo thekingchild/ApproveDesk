@@ -31,8 +31,8 @@ final readonly class HelpArticle
     {
         return match ($this->audience) {
             'all' => true,
-            'owner' => $user->isSystemOwner(),
-            'permission' => $user->isSystemOwner() || $this->hasAnyPermission($user, $this->requiredPermissions),
+            'owner' => $user->can('system_owner'),
+            'permission' => $user->can('system_owner') || $this->hasAnyPermission($user, $this->requiredPermissions),
             default => false,
         };
     }
@@ -41,7 +41,7 @@ final readonly class HelpArticle
     {
         return $this->screenRoute !== null
             && ($this->screenPermission === null
-                || $user->isSystemOwner()
+                || $user->can('system_owner')
                 || $this->hasAnyPermission($user, [$this->screenPermission]));
     }
 

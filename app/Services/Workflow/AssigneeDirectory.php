@@ -3,6 +3,7 @@
 namespace App\Services\Workflow;
 
 use App\Enums\AssigneeType;
+use App\Enums\SystemRole;
 use App\Models\Department;
 use App\Models\User;
 use Illuminate\Support\Collection;
@@ -85,7 +86,7 @@ final class AssigneeDirectory
         $like = '%'.$this->escapeLike($term).'%';
 
         return Role::query()
-            ->where('name', '!=', 'super-admin')
+            ->where('name', '!=', SystemRole::SuperAdmin->value)
             ->when($excludeIds !== [], fn ($query) => $query->whereNotIn('id', $excludeIds))
             ->where('name', 'like', $like)
             ->orderBy('name')

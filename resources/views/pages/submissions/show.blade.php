@@ -255,6 +255,8 @@ new #[Title('Submission')] class extends Component {
 
     public function takeBackDelegation(): void
     {
+        // The workflow engine decides eligibility and explains refusals (ADR 0008).
+        $this->authorize('view', $this->submission);
         $delegation = $this->myDelegation;
         if ($delegation === null) {
             return;
@@ -267,6 +269,8 @@ new #[Title('Submission')] class extends Component {
 
     public function delegateApproval(): void
     {
+        // The workflow engine decides eligibility and explains refusals (ADR 0008).
+        $this->authorize('view', $this->submission);
         $validated = $this->validate([
             'delegateUserId' => ['required', 'integer', Rule::exists(User::class, 'id')->where('is_active', true)],
             'delegationStartsAt' => ['nullable', 'date'],
@@ -323,6 +327,8 @@ new #[Title('Submission')] class extends Component {
 
     public function act(string $action): void
     {
+        // The workflow engine decides eligibility and explains refusals (ADR 0008).
+        $this->authorize('view', $this->submission);
         $this->resetValidation();
 
         $outcomes = app(\App\Services\Workflow\StepOutcomes::class)->forVersion($this->submission->workflowInstance?->templateVersion);
@@ -452,6 +458,7 @@ new #[Title('Submission')] class extends Component {
 
     public function follow(): void
     {
+        $this->authorize('follow', $this->submission);
         try {
             app(FollowSubmissionAction::class)->execute($this->submission, Auth::user(), Auth::user(), [
                 'notify_comments' => $this->notifyComments,
@@ -469,6 +476,7 @@ new #[Title('Submission')] class extends Component {
 
     public function unfollow(): void
     {
+        $this->authorize('view', $this->submission);
         try {
             app(UnfollowSubmissionAction::class)->execute($this->submission, Auth::user(), Auth::user());
         } catch (CollaborationException $exception) {
@@ -483,6 +491,7 @@ new #[Title('Submission')] class extends Component {
 
     public function addWatcher(int $userId): void
     {
+        $this->authorize('addWatcher', $this->submission);
         try {
             app(FollowSubmissionAction::class)->execute(
                 $this->submission,
@@ -502,6 +511,7 @@ new #[Title('Submission')] class extends Component {
 
     public function removeWatcher(int $userId): void
     {
+        $this->authorize('addWatcher', $this->submission);
         try {
             app(UnfollowSubmissionAction::class)->execute(
                 $this->submission,
@@ -519,6 +529,7 @@ new #[Title('Submission')] class extends Component {
 
     public function saveWatcherPreferences(): void
     {
+        $this->authorize('follow', $this->submission);
         try {
             app(UpdateWatcherPreferencesAction::class)->execute(
                 $this->submission,
@@ -537,6 +548,7 @@ new #[Title('Submission')] class extends Component {
 
     public function addMention(int $userId): void
     {
+        $this->authorize('comment', $this->submission);
         $parser = app(MentionParser::class);
         $this->comment = $parser->appendToken($this->comment, $userId);
         $this->mentionedUserIds = array_values(array_unique([...$this->mentionedUserIds, $userId]));
@@ -546,6 +558,7 @@ new #[Title('Submission')] class extends Component {
 
     public function removeMention(int $userId): void
     {
+        $this->authorize('comment', $this->submission);
         $this->mentionedUserIds = array_values(array_filter($this->mentionedUserIds, fn (int $id): bool => $id !== $userId));
         $this->comment = trim((string) preg_replace('/@\{'.$userId.'\}/', '', $this->comment));
         unset($this->mentionResults);
@@ -553,6 +566,7 @@ new #[Title('Submission')] class extends Component {
 
     public function sendNudge(): void
     {
+        $this->authorize('nudge', $this->submission);
         try {
             $result = app(NudgeApproversAction::class)->execute(
                 $this->submission,

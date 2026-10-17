@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\SystemRole;
 use App\Models\User;
 use App\Services\Roles\RolePermissionService;
 
@@ -44,7 +45,7 @@ class UserPolicy
         }
 
         return $user->isSystemOwner()
-            || (! $target->hasAnyRole(['admin', 'super-admin'])
+            || (! $target->hasAnyRole([SystemRole::Admin->value, SystemRole::SuperAdmin->value])
                 && ! app(RolePermissionService::class)->exceedsCeiling($user, $target));
     }
 

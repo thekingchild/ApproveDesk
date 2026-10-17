@@ -84,7 +84,7 @@ new #[Title('Records')] class extends Component
     #[Computed]
     public function auditors(): \Illuminate\Database\Eloquent\Collection
     {
-        return User::query()->assignable()->role('auditor')->orderBy('name')->get(['id', 'name', 'email']);
+        return User::query()->assignable()->role(\App\Enums\SystemRole::Auditor->value)->orderBy('name')->get(['id', 'name', 'email']);
     }
 
     public function grantAccess(GrantAuditorAccessAction $grant): void

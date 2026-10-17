@@ -3,6 +3,7 @@
 namespace App\Services\Roles;
 
 use App\Enums\RoleChangeAction;
+use App\Enums\SystemRole;
 use App\Models\Role;
 use App\Models\RoleChangeEvent;
 use App\Models\RoleProfile;
@@ -73,7 +74,7 @@ final class RolePermissionService
     public function clone(User $actor, Role $source, string $label): Role
     {
         $this->assertManager($actor);
-        if ($source->name === 'super-admin') {
+        if ($source->name === SystemRole::SuperAdmin->value) {
             throw $this->validation('role', __('The internal System owner role cannot be cloned.'));
         }
         $permissions = [];
@@ -195,7 +196,7 @@ final class RolePermissionService
     private function assertEditable(Role $role): void
     {
         $profile = RoleProfile::query()->where('role_id', $role->id)->first();
-        if ($role->name === 'super-admin' || $profile === null || $profile->is_protected || $profile->is_archived) {
+        if ($role->name === SystemRole::SuperAdmin->value || $profile === null || $profile->is_protected || $profile->is_archived) {
             throw $this->validation('role', __('Protected, built-in, and archived roles cannot be edited.'));
         }
     }

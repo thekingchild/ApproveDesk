@@ -4,8 +4,8 @@ namespace App\Actions\Settings;
 
 use App\Models\Setting;
 use App\Models\User;
-use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
@@ -17,9 +17,7 @@ final class UpdateApprovalReferenceSchemaAction
      */
     public function execute(User $actor, array $input): array
     {
-        if (! $actor->isSystemOwner()) {
-            throw new AuthorizationException('Only the System owner can change the approval ID format.');
-        }
+        Gate::forUser($actor)->authorize('approval_reference.manage');
 
         $validated = Validator::make($input, [
             'prefix' => ['required', 'string', 'max:12', 'regex:/^[A-Za-z0-9]+$/'],

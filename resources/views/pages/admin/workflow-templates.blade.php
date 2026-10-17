@@ -432,7 +432,7 @@ new #[Title('Workflow templates')] class extends Component {
     {
         $count = match ($type) {
             AssigneeType::User => User::query()->assignable()->where('is_active', true)->whereKey($ids)->count(),
-            AssigneeType::Role => Role::query()->where('name', '!=', 'super-admin')->whereKey($ids)->count(),
+            AssigneeType::Role => Role::query()->where('name', '!=', \App\Enums\SystemRole::SuperAdmin->value)->whereKey($ids)->count(),
             AssigneeType::Department => Department::query()->whereKey($ids)->count(),
             default => 0,
         };

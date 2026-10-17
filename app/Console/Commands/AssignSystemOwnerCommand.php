@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Enums\SystemRole;
 use App\Models\SystemOwner;
 use App\Models\User;
 use Illuminate\Console\Command;
@@ -39,12 +40,12 @@ class AssignSystemOwnerCommand extends Command
                 throw new \RuntimeException('A system owner was assigned concurrently.');
             }
 
-            User::query()->whereKeyNot($target)->role('super-admin')->each(function (User $legacy): void {
-                $legacy->assignRole('admin');
-                $legacy->removeRole('super-admin');
+            User::query()->whereKeyNot($target)->role(SystemRole::SuperAdmin->value)->each(function (User $legacy): void {
+                $legacy->assignRole(SystemRole::Admin->value);
+                $legacy->removeRole(SystemRole::SuperAdmin->value);
             });
 
-            $target->assignRole('super-admin');
+            $target->assignRole(SystemRole::SuperAdmin->value);
             SystemOwner::query()->create([
                 'id' => SystemOwner::SINGLETON_ID,
                 'user_id' => $target->id,

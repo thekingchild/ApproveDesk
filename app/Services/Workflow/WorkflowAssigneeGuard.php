@@ -4,6 +4,7 @@ namespace App\Services\Workflow;
 
 use App\DTOs\WorkflowTemplateStepData;
 use App\Enums\AssigneeType;
+use App\Enums\SystemRole;
 use App\Models\User;
 use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Role;
@@ -27,7 +28,7 @@ final class WorkflowAssigneeGuard
                     ->count() === count($ids),
                 AssigneeType::Role => ! Role::query()
                     ->whereKey($ids)
-                    ->where('name', 'super-admin')
+                    ->where('name', SystemRole::SuperAdmin->value)
                     ->exists(),
                 AssigneeType::Department => ! User::query()
                     ->whereIn('department_id', $ids)

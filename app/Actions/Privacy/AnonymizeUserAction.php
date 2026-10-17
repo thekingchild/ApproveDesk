@@ -2,6 +2,7 @@
 
 namespace App\Actions\Privacy;
 
+use App\Enums\SystemRole;
 use App\Models\Comment;
 use App\Models\Delegation;
 use App\Models\SubmissionWatcher;
@@ -41,11 +42,11 @@ final class AnonymizeUserAction
             /** @var User $target */
             $target = User::query()->whereKey($target->getKey())->lockForUpdate()->firstOrFail();
 
-            if ($target->hasRole('super-admin')) {
+            if ($target->hasRole(SystemRole::SuperAdmin->value)) {
                 $otherActiveSuperAdmins = User::query()
                     ->whereKeyNot($target)
                     ->where('is_active', true)
-                    ->role('super-admin')
+                    ->role(SystemRole::SuperAdmin->value)
                     ->exists();
 
                 if (! $otherActiveSuperAdmins) {
