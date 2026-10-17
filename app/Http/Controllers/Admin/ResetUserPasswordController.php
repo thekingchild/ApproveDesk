@@ -6,6 +6,7 @@ use App\Actions\Users\ResetUserPasswordAction;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
 final class ResetUserPasswordController
@@ -29,6 +30,6 @@ final class ResetUserPasswordController
 
     private function authorizeRecover(Request $request, User $user): void
     {
-        abort_unless($request->user()?->can('recover', $user), 403);
+        Gate::authorize('recover', $user);
     }
 }

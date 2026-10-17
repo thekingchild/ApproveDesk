@@ -2,6 +2,7 @@
 
 namespace App\Actions\Audit;
 
+use App\Enums\SystemRole;
 use App\Models\AuditorAccess;
 use App\Models\User;
 use Carbon\CarbonInterface;
@@ -11,7 +12,7 @@ final class GrantAuditorAccessAction
 {
     public function execute(User $grantor, User $auditor, CarbonInterface $startsAt, CarbonInterface $endsAt, string $reason): AuditorAccess
     {
-        if (! $auditor->hasRole('auditor')) {
+        if (! $auditor->hasRole(SystemRole::Auditor->value)) {
             throw new InvalidArgumentException('Only an auditor account can receive a time-bounded grant.');
         }
 

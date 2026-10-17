@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Contracts\ExternalAssigneeResolver;
 use App\Enums\NotificationChannelKey;
+use App\Enums\SystemRole;
 use App\Events\SubmissionCreated;
 use App\Events\WorkflowAdvanced;
 use App\Events\WorkflowCompleted;
@@ -154,6 +155,8 @@ class AppServiceProvider extends ServiceProvider
             return $user->isSystemOwner() ? true : null;
         });
 
+        $this->defineNamedGates();
+
         RateLimiter::for('api', fn (Request $request): Limit => RateLimitProfiles::limit(
             'api',
             (string) ($request->user()?->getAuthIdentifier() ?? $request->ip()),
@@ -294,5 +297,18 @@ class AppServiceProvider extends ServiceProvider
         } catch (Throwable) {
             // Settings table or cache may be unavailable during installer and test bootstrap.
         }
+    }
+
+    /**
+     * Abilities that are not about a model and not in the permission
+     * catalogue (ADR 0008). Components and services ask for these instead of
+     * comparing role names or calling isSystemOwner() on the actor. The owner
+     * already passes every ability through Gate::before.
+     */
+    private function defineNamedGates(): void
+    {
+        Gate::define('system_owner', fn (User $user): bool => $user->isSystemOwner());
+        Gate::define('approval_reference.manage', fn (User $user): bool => $user->isSystemOwner());
+        Gate::define('dashboard.admin', fn (User $user): bool => $user->isSystemOwner() || $user->hasRole(SystemRole::Admin->value));
     }
 }

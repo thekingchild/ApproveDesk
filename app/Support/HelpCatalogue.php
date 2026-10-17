@@ -315,7 +315,7 @@ final class HelpCatalogue
             ->take(5)
             ->pluck('slug')
             ->all();
-        $owner = $user->isSystemOwner() ? ['system-owner-controls'] : [];
+        $owner = $user->can('system_owner') ? ['system-owner-controls'] : [];
         $slugs = array_values(array_unique([
             'definitions',
             ...$owner,

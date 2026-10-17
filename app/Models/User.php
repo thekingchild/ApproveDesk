@@ -5,6 +5,7 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Actions\Privacy\AnonymizeUserAction;
 use App\Enums\NotificationFrequency;
+use App\Enums\SystemRole;
 use App\Services\Users\SystemOwnerService;
 use Carbon\CarbonInterface;
 use Database\Factories\UserFactory;
@@ -240,7 +241,7 @@ class User extends Authenticatable implements PasskeyUser
 
     public function isReadOnlyAuditor(): bool
     {
-        return $this->hasRole('auditor')
+        return $this->hasRole(SystemRole::Auditor->value)
             && ! $this->can('settings.manage')
             && ! $this->can('approvals.act');
     }

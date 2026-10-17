@@ -2,6 +2,7 @@
 
 namespace App\Services\Users;
 
+use App\Enums\SystemRole;
 use App\Models\Department;
 use App\Models\User;
 use App\Services\Roles\RoleAssignmentService;
@@ -313,7 +314,7 @@ class UserImportService
                             // Same rules as editing on the Users screen (RV-SEC-06): importing
                             // must not let someone change people they could not edit by hand.
                             if (! Gate::forUser($actor)->allows('update', $existing)
-                                || (! $actor->isSystemOwner() && $existing->hasAnyRole(['admin', 'super-admin']))) {
+                                || (! $actor->can('system_owner') && $existing->hasAnyRole([SystemRole::Admin->value, SystemRole::SuperAdmin->value]))) {
                                 $counts['skipped']++;
 
                                 continue;

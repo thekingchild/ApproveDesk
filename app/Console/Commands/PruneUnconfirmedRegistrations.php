@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Enums\SystemRole;
 use App\Models\User;
 use Illuminate\Console\Command;
 
@@ -30,7 +31,7 @@ class PruneUnconfirmedRegistrations extends Command
             ->whereExists(fn ($codes) => $codes->selectRaw('1')
                 ->from('registration_otp_codes')
                 ->whereColumn('registration_otp_codes.email', 'users.email'))
-            ->whereDoesntHave('roles', fn ($query) => $query->where('name', 'super-admin'))
+            ->whereDoesntHave('roles', fn ($query) => $query->where('name', SystemRole::SuperAdmin->value))
             // Page by id: offset paging skips rows when deleting as it goes.
             ->lazyById()
             ->each(function (User $user) use (&$deleted): void {

@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Enums\SystemRole;
 use App\Exceptions\InstallerException;
 use App\Models\SiteLimit;
 use App\Models\SystemOwner;
@@ -377,7 +378,7 @@ class Installer
 
             // email_verified_at is intentionally not mass-assignable.
             $owner->forceFill(['email_verified_at' => now()])->save();
-            $owner->assignRole('super-admin');
+            $owner->assignRole(SystemRole::SuperAdmin->value);
 
             SystemOwner::query()->create([
                 'id' => SystemOwner::SINGLETON_ID,

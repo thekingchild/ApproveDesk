@@ -50,7 +50,7 @@ new #[Title('Approval settings')] class extends Component {
     {
         $this->authorize('approval_settings.manage');
         $this->emailLinkExpirationHours = EmailApprovalLinks::expirationHours();
-        if (auth()->user()?->isSystemOwner()) {
+        if (auth()->user()?->can('approval_reference.manage')) {
             $schema = app(ApprovalReferenceSchema::class);
             $this->referencePrefix = $schema->prefix();
             $this->referenceSeparator = $schema->separator();
@@ -95,9 +95,7 @@ new #[Title('Approval settings')] class extends Component {
 
     public function saveReferenceSchema(UpdateApprovalReferenceSchemaAction $action): void
     {
-        if (! auth()->user()?->isSystemOwner()) {
-            throw new \Illuminate\Auth\Access\AuthorizationException('Only the System owner can change the approval ID format.');
-        }
+        $this->authorize('approval_reference.manage');
 
         $validated = $this->validate([
             'referencePrefix' => ['required', 'string', 'max:12', 'regex:/^[A-Za-z0-9]+$/'],
@@ -209,7 +207,7 @@ new #[Title('Approval settings')] class extends Component {
         <x-ui.help-link article="approval-settings" />
     </div>
 
-    @if (auth()->user()?->isSystemOwner())
+    @if (auth()->user()?->can('approval_reference.manage'))
         <flux:card class="mb-6 space-y-4" data-test="approval-reference-schema-card">
             <div>
                 <flux:heading size="sm">{{ __('Approval ID format') }}</flux:heading>

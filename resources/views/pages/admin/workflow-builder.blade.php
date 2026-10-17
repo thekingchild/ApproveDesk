@@ -313,6 +313,7 @@ new #[Title('Workflow builder')] class extends Component {
 
     public function restoreVersion(int $versionId): void
     {
+        $this->authorize('update', $this->model());
         $version = WorkflowTemplateVersion::query()->findOrFail($versionId);
         abort_unless($version->workflow_template_id === $this->templateId, 404);
         app(RestoreWorkflowTemplateVersionAction::class)->execute($version, Auth::user());

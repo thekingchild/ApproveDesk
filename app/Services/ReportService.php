@@ -111,7 +111,7 @@ final class ReportService
 
     private function homeMode(User $user, bool $canSubmit, bool $canApprove, bool $organization): string
     {
-        if ($user->hasAnyRole(['super-admin', 'admin'])) {
+        if ($user->can('dashboard.admin')) {
             return 'administrator';
         }
 

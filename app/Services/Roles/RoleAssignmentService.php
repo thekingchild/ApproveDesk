@@ -3,6 +3,7 @@
 namespace App\Services\Roles;
 
 use App\Enums\RoleChangeAction;
+use App\Enums\SystemRole;
 use App\Models\Role;
 use App\Models\RoleChangeEvent;
 use App\Models\RoleProfile;
@@ -24,7 +25,7 @@ final class RoleAssignmentService
             if ($locked->isSystemOwner()) {
                 throw ValidationException::withMessages(['roles' => __('The System owner’s roles cannot be changed.')]);
             }
-            if (! $actor->isSystemOwner() && $locked->hasRole('admin')) {
+            if (! $actor->isSystemOwner() && $locked->hasRole(SystemRole::Admin->value)) {
                 throw ValidationException::withMessages(['roles' => __('Only the System owner may change the administrator role.')]);
             }
 
@@ -46,7 +47,7 @@ final class RoleAssignmentService
                     }
 
                     $profile = $existingRole->profile;
-                    $cannotRemove = in_array($existingRole->name, ['admin', 'super-admin'], true)
+                    $cannotRemove = in_array($existingRole->name, [SystemRole::Admin->value, SystemRole::SuperAdmin->value], true)
                         || $profile === null
                         || $profile->is_archived
                         || ($profile->is_builtin && ! $actor->can('users.manage') && ! $actor->can('users.update'))
@@ -72,10 +73,10 @@ final class RoleAssignmentService
             }
 
             foreach ($resolved as $role) {
-                if ($role->name === 'super-admin') {
+                if ($role->name === SystemRole::SuperAdmin->value) {
                     throw ValidationException::withMessages(['roles' => __('The internal System owner role cannot be assigned.')]);
                 }
-                if ($role->name === 'admin') {
+                if ($role->name === SystemRole::Admin->value) {
                     if (! $actor->isSystemOwner() && ! in_array($role->id, $existing, true)) {
                         throw ValidationException::withMessages(['roles' => __('Only the System owner may assign Administrator authority.')]);
                     }
@@ -108,8 +109,8 @@ final class RoleAssignmentService
                 }
             }
 
-            $existingAdmin = Role::query()->where('name', 'admin')->whereIn('id', $existing)->exists();
-            $newAdmin = $resolved->contains(fn (Role $role): bool => $role->name === 'admin');
+            $existingAdmin = Role::query()->where('name', SystemRole::Admin->value)->whereIn('id', $existing)->exists();
+            $newAdmin = $resolved->contains(fn (Role $role): bool => $role->name === SystemRole::Admin->value);
             if (! $actor->isSystemOwner() && $existingAdmin !== $newAdmin) {
                 throw ValidationException::withMessages(['roles' => __('Only the System owner may change the administrator role.')]);
             }
