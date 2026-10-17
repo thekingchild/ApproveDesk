@@ -297,6 +297,37 @@ class WorkflowEngine
     }
 
     /**
+     * Could $actor decide the current step right now? Runs the same checks as
+     * processAction() without writing anything, so screens and lists agree
+     * with what the engine will accept (RV-ARC-01).
+     */
+    public function canAct(WorkflowInstance $instance, User $actor): bool
+    {
+        try {
+            $this->authorize($instance, $actor, WorkflowActionType::Approve);
+
+            return true;
+        } catch (WorkflowException) {
+            return false;
+        }
+    }
+
+    /**
+     * Could $delegator hand the current step to someone else right now (and has
+     * not already)? The delegate-specific checks run when a delegate is chosen.
+     */
+    public function canDelegate(WorkflowInstance $instance, User $delegator): bool
+    {
+        try {
+            $step = $this->authorizeDelegator($instance, $delegator);
+
+            return ! $this->hasActiveOutgoingDelegation($instance, $step, $delegator);
+        } catch (WorkflowException) {
+            return false;
+        }
+    }
+
+    /**
      * @return int|null the delegator whose seat the actor fills, or null for the actor's own seat
      *
      * @throws WorkflowException when the actor may not perform this action
@@ -348,23 +379,7 @@ class WorkflowEngine
         CarbonInterface $expiresAt,
         CarbonInterface $startsAt,
     ): void {
-        if ($instance->status !== WorkflowStatus::Active) {
-            throw WorkflowException::instanceNotActive($instance->status->value);
-        }
-
-        $step = $instance->currentStep;
-
-        if ($step === null || ! $step->allow_delegation) {
-            throw WorkflowException::delegationNotAllowed('the current step disables it');
-        }
-
-        if (! $step->assignedUsers($instance->submission)->contains($delegator)) {
-            throw WorkflowException::actorNotAssigned($delegator->email, $step->name);
-        }
-
-        if ($this->hasActedOn($instance, $step, $delegator->id)) {
-            throw WorkflowException::delegationNotAllowed('you have already decided this step');
-        }
+        $step = $this->authorizeDelegator($instance, $delegator);
 
         if (! $delegate->is_active || $delegate->is($delegator)) {
             throw WorkflowException::delegationNotAllowed('select a different active user');
@@ -397,6 +412,36 @@ class WorkflowEngine
             ->exists()) {
             throw WorkflowException::delegationNotAllowed('the delegate is out of office during this period');
         }
+    }
+
+    /**
+     * The delegator-side delegation rules: an active instance, a step that allows
+     * delegation, a direct assignee who has not decided it and has not already
+     * handed it to an active delegate.
+     *
+     * @throws WorkflowException
+     */
+    private function authorizeDelegator(WorkflowInstance $instance, User $delegator): WorkflowTemplateStep
+    {
+        if ($instance->status !== WorkflowStatus::Active) {
+            throw WorkflowException::instanceNotActive($instance->status->value);
+        }
+
+        $step = $instance->currentStep;
+
+        if ($step === null || ! $step->allow_delegation) {
+            throw WorkflowException::delegationNotAllowed('the current step disables it');
+        }
+
+        if (! $step->assignedUsers($instance->submission)->contains($delegator)) {
+            throw WorkflowException::actorNotAssigned($delegator->email, $step->name);
+        }
+
+        if ($this->hasActedOn($instance, $step, $delegator->id)) {
+            throw WorkflowException::delegationNotAllowed('you have already decided this step');
+        }
+
+        return $step;
     }
 
     private function activeIncomingDelegatorId(
