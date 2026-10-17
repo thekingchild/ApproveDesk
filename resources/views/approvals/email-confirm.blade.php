@@ -11,7 +11,7 @@
                 <div><dt class="text-zinc-500">{{ __('Approver') }}</dt><dd class="font-medium">{{ $approver->name }}</dd></div>
                 <div><dt class="text-zinc-500">{{ __('Submitted by') }}</dt><dd class="font-medium">{{ $submission->submitter->name }}</dd></div>
                 <div><dt class="text-zinc-500">{{ __('Current step') }}</dt><dd class="font-medium">{{ $step->name }}</dd></div>
-                <div><dt class="text-zinc-500">{{ __('Link expires') }}</dt><dd class="font-medium">{{ $expiresAt->toDayDateTimeString() }}</dd></div>
+                <div><dt class="text-zinc-500">{{ __('Link expires') }}</dt><dd class="font-medium"><x-time :at="$expiresAt" format="long" /></dd></div>
             </dl>
         </flux:card>
 

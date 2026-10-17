@@ -435,7 +435,7 @@ new #[Title('Notification channels')] class extends Component {
                     <tbody>
                         @forelse ($deliveries as $delivery)
                             <tr class="border-t border-zinc-200 dark:border-zinc-800">
-                                <td class="py-2 pr-4 whitespace-nowrap">{{ $delivery->created_at?->format('d M H:i') }}</td>
+                                <td class="py-2 pr-4 whitespace-nowrap"><x-time :at="$delivery->created_at" /></td>
                                 <td class="py-2 pr-4">{{ $delivery->user?->name }}</td>
                                 <td class="py-2 pr-4">{{ $delivery->channel }}</td>
                                 <td class="py-2 pr-4">{{ $delivery->kind }}</td>

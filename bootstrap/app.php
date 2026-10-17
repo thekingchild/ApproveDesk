@@ -12,6 +12,7 @@ use App\Http\Middleware\PrepareFirstRunEnvironment;
 use App\Http\Middleware\RedirectUnconfirmedRegistration;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\VerifyTurnstileWhenEnabled;
+use App\Support\LocalTime;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -40,6 +41,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'email-approval.second-factor' => EnsureEmailApprovalSecondFactor::class,
             'owner.reauthenticated' => EnsureSystemOwnerReauthenticated::class,
         ]);
+        // Set by JavaScript and read only as a display preference (RV-ARC-17).
+        $middleware->encryptCookies(except: [LocalTime::COOKIE]);
         $middleware->validateCsrfTokens(except: [
             'integrations/telegram/webhook',
             'integrations/slack/interactions',

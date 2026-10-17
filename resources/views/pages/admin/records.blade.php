@@ -60,8 +60,8 @@ new #[Title('Records')] class extends Component
         $this->authorize('settings.manage');
         $this->draftDays = (string) Setting::get('retention.draft_days', '90');
         $this->completedDays = (string) Setting::get('retention.completed_days', '2555');
-        $this->accessStartsAt = now()->format('Y-m-d H:i');
-        $this->accessEndsAt = now()->addMonth()->format('Y-m-d H:i');
+        $this->accessStartsAt = \App\Support\LocalTime::inputValue(now());
+        $this->accessEndsAt = \App\Support\LocalTime::inputValue(now()->addMonth());
     }
 
     #[Computed]

@@ -446,7 +446,7 @@ new #[Title('My submissions')] class extends Component {
                         @endphp
                         <flux:table.cell :data-label="$field->label">{{ app(\App\Services\RequestFieldAccess::class)->displayValue($customValue) }}</flux:table.cell>
                     @endforeach
-                    <flux:table.cell :data-label="__('Updated')" class="text-zinc-600 dark:text-zinc-300">{{ $submission->updated_at?->diffForHumans() }}</flux:table.cell>
+                    <flux:table.cell :data-label="__('Updated')" class="text-zinc-600 dark:text-zinc-300"><x-time :at="$submission->updated_at" format="relative" /></flux:table.cell>
                 </flux:table.row>
             @empty
                 <flux:table.row>

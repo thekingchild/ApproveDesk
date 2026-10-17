@@ -46,7 +46,7 @@
                                         <span class="font-mono text-xs">{{ $submission->reference_number }}</span>
                                         <span>{{ $submission->submitter->name }}</span>
                                         @if ($submission->department)<span>{{ $submission->department->name }}</span>@endif
-                                        <span>{{ $submission->updated_at?->diffForHumans() }}</span>
+                                        <x-time :at="$submission->updated_at" format="relative" />
                                     </span>
                                 </a>
                             </li>

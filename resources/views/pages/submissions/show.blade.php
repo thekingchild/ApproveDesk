@@ -182,7 +182,7 @@ new #[Title('Submission')] class extends Component {
                 'state' => $state,
                 'actors' => $automatic ? __('System') : $assignedUsers->pluck('name')->implode(', '),
                 'progress' => $requiredApprovals === null ? null : "{$approvalCount} / {$requiredApprovals} approvals",
-                'acted_at' => $stepActions->first()?->created_at?->format('d M Y H:i'),
+                'acted_at' => ($actedAt = $stepActions->first()?->created_at) !== null ? \App\Support\LocalTime::forViewer($actedAt) : null,
             ];
         })->all();
     }
@@ -811,7 +811,7 @@ new #[Title('Submission')] class extends Component {
             <div><dt class="text-xs text-zinc-500">{{ __('Type') }}</dt><dd class="font-medium">{{ ucfirst($submission->type->value) }}</dd></div>
             <div><dt class="text-xs text-zinc-500">{{ __('Submitted by') }}</dt><dd class="font-medium">{{ $submission->submitter->name }}</dd></div>
             <div><dt class="text-xs text-zinc-500">{{ __('Department') }}</dt><dd class="font-medium">{{ $submission->department?->name ?? '—' }}</dd></div>
-            <div><dt class="text-xs text-zinc-500">{{ __('Due date') }}</dt><dd class="font-medium">{{ $submission->due_date?->format('d M Y') ?? '—' }}</dd></div>
+            <div><dt class="text-xs text-zinc-500">{{ __('Due date') }}</dt><dd class="font-medium">{{ $submission->due_date?->format(\App\Support\LocalTime::FORMATS['date']) ?? '—' }}</dd></div>
         </dl>
     </flux:card>
 
@@ -822,7 +822,7 @@ new #[Title('Submission')] class extends Component {
                 @foreach ($this->revisionHistory as $revision)
                     <li>
                         <span class="font-medium">{{ $revision->summary }}</span>
-                        <span class="text-zinc-500"> · {{ $revision->actor?->name ?? __('System') }} · {{ $revision->created_at?->format('d M Y H:i') }}</span>
+                        <span class="text-zinc-500"> · {{ $revision->actor?->name ?? __('System') }} · <x-time :at="$revision->created_at" /></span>
                         @if (is_array($revision->before))
                             <div class="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
                                 @foreach ($revision->before as $field => $old)
@@ -918,7 +918,7 @@ new #[Title('Submission')] class extends Component {
                         <dt class="text-xs text-zinc-500">{{ __('Estimated due') }}</dt>
                         <dd class="font-medium" data-test="estimated-due">
                             @if ($this->expectedProgress['estimated_due_at'])
-                                {{ $this->expectedProgress['estimated_due_at']->timezone(config('app.timezone'))->format('d M Y H:i') }}
+                                <x-time :at="$this->expectedProgress['estimated_due_at']" />
                                 <span class="text-xs font-normal text-zinc-500">({{ app(\App\Services\Collaboration\ExpectedProgress::class)->calendarLabel($this->expectedProgress['calendar']) }})</span>
                             @else
                                 {{ __('No step deadline') }}
@@ -961,7 +961,7 @@ new #[Title('Submission')] class extends Component {
                                 <span class="text-zinc-500" data-test="on-behalf-of">{{ __('on behalf of :name', ['name' => $entry->onBehalfOf?->name ?? __('a former user')]) }}</span>
                             @endif
                             <flux:badge class="mx-1" color="{{ ['approve' => 'lime', 'auto_approve' => 'lime', 'condition_matched' => 'blue', 'condition_not_matched' => 'zinc', 'reject' => 'red', 'return' => 'amber', 'comment' => 'zinc', 'delegate' => 'blue', 'delegation_revoked' => 'zinc', 'escalate' => 'blue', 'withdraw' => 'zinc'][$entry->action->value] ?? 'zinc' }}">{{ str($entry->action->value)->replace('_', ' ') }}</flux:badge>
-                            <span class="text-xs text-zinc-400">{{ $entry->created_at?->format('d M Y H:i') }}</span>
+                            <span class="text-xs text-zinc-400"><x-time :at="$entry->created_at" /></span>
                             @if ($entry->comment)<p class="mt-1 rounded-md bg-zinc-50 p-2 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">{{ $entry->comment }}</p>@endif
                         </li>
                     @endforeach
@@ -1005,7 +1005,7 @@ new #[Title('Submission')] class extends Component {
                 <ul class="mt-2 space-y-2 text-sm" data-test="removed-attachments">
                     @foreach ($submission->removedFiles as $file)
                         <li class="flex items-center justify-between gap-3 text-zinc-500">
-                            <span><span class="line-through">{{ $file->original_name }}</span> <span class="text-xs">· {{ __('removed by :name on :date', ['name' => $file->remover?->name ?? __('a former user'), 'date' => $file->deleted_at?->format('d M Y H:i')]) }}</span></span>
+                            <span><span class="line-through">{{ $file->original_name }}</span> <span class="text-xs">· {{ __('removed by :name on :date', ['name' => $file->remover?->name ?? __('a former user'), 'date' => $file->deleted_at !== null ? \App\Support\LocalTime::forViewer($file->deleted_at) : '—']) }}</span></span>
                             @can('downloadFiles', $submission)
                                 <flux:link :href="$this->fileUrl($file)" target="_blank">{{ __('Download') }}</flux:link>
                             @endcan
@@ -1225,7 +1225,7 @@ new #[Title('Submission')] class extends Component {
             @forelse ($this->commentThreads as $c)
                 <li class="text-sm" data-test="comment-{{ $c->id }}">
                     <span class="font-medium">{{ $c->author->name }}</span>
-                    <span class="text-xs text-zinc-400">{{ $c->created_at->format('d M Y H:i') }}</span>
+                    <span class="text-xs text-zinc-400"><x-time :at="$c->created_at" /></span>
                     @if ($c->edited_at)
                         <span class="text-xs text-zinc-400">{{ __('(edited)') }}</span>
                     @endif
@@ -1246,7 +1246,7 @@ new #[Title('Submission')] class extends Component {
                             <summary>{{ __('Edit history') }}</summary>
                             <ul class="mt-1 space-y-1">
                                 @foreach ($c->revisions as $revision)
-                                    <li>{{ $revision->created_at->format('d M Y H:i') }}: {{ $revision->body }}</li>
+                                    <li><x-time :at="$revision->created_at" />: {{ $revision->body }}</li>
                                 @endforeach
                             </ul>
                         </details>
@@ -1264,7 +1264,7 @@ new #[Title('Submission')] class extends Component {
                             @foreach ($c->replies as $reply)
                                 <li>
                                     <span class="font-medium">{{ $reply->author->name }}</span>
-                                    <span class="text-xs text-zinc-400">{{ $reply->created_at->format('d M Y H:i') }}</span>
+                                    <span class="text-xs text-zinc-400"><x-time :at="$reply->created_at" /></span>
                                     @if ($reply->edited_at)
                                         <span class="text-xs text-zinc-400">{{ __('(edited)') }}</span>
                                     @endif

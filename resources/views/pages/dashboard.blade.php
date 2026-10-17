@@ -257,7 +257,7 @@ new #[Title('Dashboard')] class extends Component {
                                     {{ str_replace('_', ' ', $submission->status->value) }}
                                 </flux:badge>
                             </td>
-                            <td class="py-3 text-right text-zinc-500">{{ $submission->updated_at?->diffForHumans() }}</td>
+                            <td class="py-3 text-right text-zinc-500"><x-time :at="$submission->updated_at" format="relative" /></td>
                         </tr>
                     @empty
                         <tr>

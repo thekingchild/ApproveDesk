@@ -225,7 +225,7 @@ new #[Title('Notifications')] class extends Component {
                             </div>
 
                             <div class="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-zinc-600 dark:text-zinc-300">
-                                <time datetime="{{ $notification->created_at?->toIso8601String() }}">{{ $notification->created_at?->diffForHumans() }}</time>
+                                <x-time :at="$notification->created_at" format="relative" />
                                 <span>·</span>
                                 <span>{{ $this->deliveryLabelFor($notification) }}</span>
                             </div>
