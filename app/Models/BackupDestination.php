@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Throwable;
 
@@ -23,6 +24,9 @@ class BackupDestination extends Model
     protected $hidden = ['config'];
 
     protected $fillable = ['name', 'kind', 'config', 'enabled', 'last_error', 'last_tested_at'];
+
+    /** @var array<int|string, true> Destinations already reported as unreadable in this process. */
+    private static array $reportedUnreadable = [];
 
     /**
      * @return array<string, string>
@@ -57,10 +61,34 @@ class BackupDestination extends Model
         try {
             $decoded = json_decode(Crypt::decryptString($stored), true);
         } catch (Throwable) {
+            // Usually the app key changed. Say so, instead of quietly behaving as
+            // if no credentials were saved (RV-LAR-05).
+            if (! isset(self::$reportedUnreadable[$this->getKey()])) {
+                self::$reportedUnreadable[$this->getKey()] = true;
+                Log::warning('backup.destination_credentials_unreadable', ['destination_id' => $this->getKey()]);
+            }
+
             return [];
         }
 
         return is_array($decoded) ? array_map(strval(...), $decoded) : [];
+    }
+
+    /** Saved credentials exist but cannot be decrypted with the current app key. */
+    public function credentialsUnreadable(): bool
+    {
+        $stored = (string) $this->config;
+        if ($stored === '') {
+            return false;
+        }
+
+        try {
+            Crypt::decryptString($stored);
+
+            return false;
+        } catch (Throwable) {
+            return true;
+        }
     }
 
     /**

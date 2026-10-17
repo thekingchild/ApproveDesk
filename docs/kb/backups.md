@@ -16,7 +16,7 @@ Use this screen after a deploy, before a risky change, or when you need a copy o
 
 ### Destinations
 
-The local disk is always used. **S3-compatible** and **Google Drive** are separate cards. A remote destination that is missing its secret is skipped and does not fail the local copy. Secrets are not shown again.
+The local disk is always used. **S3-compatible** and **Google Drive** are separate cards. A remote destination that is missing its secret is skipped and does not fail the local copy. Secrets are not shown again. If the saved credentials can no longer be read (usually because the installation's app key was changed), the destination says so in red; enter the credentials again.
 
 Each snapshot is named with the date and time it was taken, shown in a **Date and time** column, newest first. Downloads use that same stamp. Each snapshot also shows its size. The list totals **Database** and **Files** so you can see how large the archives are.
 

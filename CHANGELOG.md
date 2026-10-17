@@ -154,6 +154,8 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Security
 
+- **Browser push secrets are stored encrypted (RV-LAR-05).** A database update encrypts existing browser push subscriptions; nobody needs to subscribe again.
+- **Unreadable backup destination credentials are reported (RV-LAR-05).** When a destination's saved credentials cannot be decrypted, usually after an app key change, **Backups** says so and asks for them again, and the log records it. Before, the destination silently behaved as if no credentials were saved.
 - **Custom code loads only from sites the owner lists (RV-SEC-15, ADR 0005 step 2).** **Settings → Branding → Advanced: analytics and custom code** has a new **Allowed sites for this code** list. It replaces the old behaviour of allowing every HTTPS address mentioned in the code, comments included. After an update the list starts with those addresses, so nothing breaks. Adding a site needs the same confirmation as changing the code.
 - **The browser security policy reports what it blocks.** Violations are logged to `storage/logs/csp-*.log` through a throttled, size-limited endpoint that strips query strings. With `LIVEWIRE_CSP_SAFE=true`, Alpine runs in its CSP-safe build and the stricter policy is reported without being enforced, the next step toward removing `'unsafe-eval'`.
 - **Permission checks in one style (ADR 0008).** Owner-only and administrator-only screens now ask for a named permission instead of comparing role names, every action on the request page checks permission before it runs, restoring a workflow version is checked inside the restore itself, and account-recovery controllers use the standard authorization check. No one gains or loses access.
