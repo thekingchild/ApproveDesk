@@ -10,6 +10,7 @@ use App\Models\WorkflowInstance;
 use App\Services\Workflow\AssignedStepConstraint;
 use App\Services\Workflow\AssigneeResolver;
 use App\Services\Workflow\ReviewRound;
+use App\Support\SeparationOfDuties;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
@@ -49,7 +50,7 @@ class ApproverWorkbench
                     'submission.department',
                     'currentStep',
                     'actions',
-                    'delegations',
+                    'delegations.delegate:id,is_active',
                 ])
                 ->where(function ($query) use ($user, $recentlyDecided): void {
                     $query->where(function ($open) use ($user): void {
@@ -133,16 +134,18 @@ class ApproverWorkbench
                 ->whereColumn('delegations.step_id', 'workflow_instances.current_step_id'));
     }
 
+    /** The engine's own check, so batch approval and retries agree with the request page (RV-ARC-01). */
     public function canAct(WorkflowInstance $instance, User $user): bool
     {
-        $instance->loadMissing(['currentStep', 'actions', 'delegations']);
-
-        return $instance->status === WorkflowStatus::Active
-            && $this->eligibility($instance, $user)['eligible']
-            && ! $this->hasDecidedCurrentStep($instance, $user);
+        return app(WorkflowEngine::class)->canAct($instance, $user);
     }
 
-    /** @return array{eligible: bool, delegated_to_me: bool, delegated_by_me: bool} */
+    /**
+     * In-memory mirror of WorkflowEngine::canAct() for the list, which checks
+     * many instances at once; keep the two in step.
+     *
+     * @return array{eligible: bool, delegated_to_me: bool, delegated_by_me: bool}
+     */
     private function eligibility(WorkflowInstance $instance, User $user): array
     {
         $activeDelegations = $instance->delegations->filter(fn ($delegation) => $delegation->step_id === $instance->current_step_id
@@ -150,10 +153,14 @@ class ApproverWorkbench
             && $delegation->expires_at > now());
         $delegatedToUser = $activeDelegations->contains('delegate_id', $user->id);
         $delegatedByUser = $activeDelegations->contains('delegator_id', $user->id);
+        // A delegation to someone since deactivated no longer holds the step (RV-ENG-12).
+        $heldByMyDelegate = $activeDelegations->contains(fn ($delegation) => $delegation->delegator_id === $user->id
+            && $delegation->delegate->is_active);
         $direct = $instance->currentStep?->assignedUsers($instance->submission)->contains($user) ?? false;
 
         return [
-            'eligible' => $delegatedToUser || ($direct && ! $delegatedByUser),
+            'eligible' => ($delegatedToUser || ($direct && ! $heldByMyDelegate))
+                && ! SeparationOfDuties::forbids($user, $instance->submission),
             'delegated_to_me' => $delegatedToUser,
             'delegated_by_me' => $delegatedByUser,
         ];

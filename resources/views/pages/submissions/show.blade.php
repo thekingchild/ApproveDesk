@@ -190,41 +190,7 @@ new #[Title('Submission')] class extends Component {
     {
         $instance = $this->submission->workflowInstance;
 
-        if ($instance === null || $instance->status->value !== 'active') {
-            return false;
-        }
-
-        $user = Auth::user();
-        $step = $instance->currentStep;
-
-        if ($step === null) {
-            return false;
-        }
-
-        if (SeparationOfDuties::forbids($user, $this->submission)) {
-            return false;
-        }
-
-        $direct = $this->assigneesFor($step)->contains($user);
-        $incoming = Delegation::query()->active()
-            ->where('instance_id', $instance->id)
-            ->where('step_id', $step->id)
-            ->where('delegate_id', $user->id)
-            ->exists();
-        $outgoing = $direct && Delegation::query()->active()
-            ->where('instance_id', $instance->id)
-            ->where('step_id', $step->id)
-            ->where('delegator_id', $user->id)
-            ->whereHas('delegate', fn ($delegate) => $delegate->where('is_active', true))
-            ->exists();
-
-        if ((! $direct && ! $incoming) || $outgoing) {
-            return false;
-        }
-
-        return ! ReviewRound::forSeat($instance->actions, $step->id, (int) $user->id)
-            ->whereIn('action', ['approve', 'reject', 'escalate'])
-            ->isNotEmpty();
+        return $instance !== null && app(WorkflowEngine::class)->canAct($instance, Auth::user());
     }
 
     /** True when the viewer would be an approver on the current step but separation of duties excludes them. */
@@ -243,21 +209,8 @@ new #[Title('Submission')] class extends Component {
     public function canDelegate(): bool
     {
         $instance = $this->submission->workflowInstance;
-        $step = $instance?->currentStep;
-        $user = Auth::user();
 
-        return $instance?->status->value === 'active'
-            && $step?->allow_delegation
-            && $this->assigneesFor($step)->contains($user)
-            && ! Delegation::query()->active()
-                ->where('instance_id', $instance->id)
-                ->where('step_id', $step->id)
-                ->where('delegator_id', $user->id)
-                ->whereHas('delegate', fn ($delegate) => $delegate->where('is_active', true))
-                ->exists()
-            && ! ReviewRound::forSeat($instance->actions, $step->id, (int) $user->id)
-                ->whereIn('action', ['approve', 'reject', 'escalate'])
-                ->isNotEmpty();
+        return $instance !== null && app(WorkflowEngine::class)->canDelegate($instance, Auth::user());
     }
 
     #[Computed]
