@@ -10,11 +10,13 @@ use App\Services\Announcements\AnnouncementBannerService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 
 class AnnouncementBanner extends Component
 {
     /** @var list<int> */
+    #[Locked]
     public array $announcementIds = [];
 
     public function mount(AnnouncementBannerService $banners): void
@@ -48,16 +50,12 @@ class AnnouncementBanner extends Component
     /** @return Collection<int, Announcement> */
     public function announcements(): Collection
     {
-        if ($this->announcementIds === []) {
+        $user = Auth::user();
+        if (! $user instanceof User) {
             return new Collection;
         }
 
-        return Announcement::query()
-            ->whereKey($this->announcementIds)
-            ->whereIn('id', $this->announcementIds)
-            ->orderByDesc('published_at')
-            ->orderByDesc('id')
-            ->get();
+        return app(AnnouncementBannerService::class)->stillTargetedAmong($user, $this->announcementIds);
     }
 
     public function render(): View
