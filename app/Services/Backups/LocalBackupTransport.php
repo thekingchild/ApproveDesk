@@ -2,6 +2,7 @@
 
 namespace App\Services\Backups;
 
+use App\Contracts\BackupTransport;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 

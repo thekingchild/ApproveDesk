@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\Backups;
+namespace App\Contracts;
 
 interface BackupTransport
 {

@@ -2,6 +2,7 @@
 
 namespace App\Services\Backups;
 
+use App\Contracts\BackupTransport;
 use App\Models\BackupDestination;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;

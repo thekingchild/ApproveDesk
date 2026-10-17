@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Contracts\DnsResolver;
 use App\Contracts\ExternalAssigneeResolver;
 use App\Enums\NotificationChannelKey;
 use App\Enums\SystemRole;
@@ -46,7 +47,6 @@ use App\Services\Users\SystemOwnerService;
 use App\Services\Workflow\AssigneeResolver;
 use App\Support\CloudflareRocketLoader;
 use App\Support\CorrelationId;
-use App\Support\DnsResolver;
 use App\Support\FeaturePermission;
 use App\Support\Installer;
 use App\Support\OutboundDestination;

@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Contracts\DnsResolver;
 use InvalidArgumentException;
 
 final class OutboundDestination

@@ -2,6 +2,7 @@
 
 namespace App\Services\Backups;
 
+use App\Contracts\BackupTransport;
 use App\Enums\BackupDestinationKind;
 use App\Models\BackupDestination;
 use RuntimeException;
