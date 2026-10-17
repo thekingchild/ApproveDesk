@@ -11,6 +11,7 @@ All notable changes to ApproveDesk are documented here. The project follows
 - CI runs the test suite on MariaDB 10.6 as well as MySQL 8.
 - `PerformanceSeeder` builds a large local dataset for performance review. It never runs outside the `local` environment.
 - Code review plan (`REVIEW_PLAN.md`) and findings register (`docs/review/FINDINGS.md`).
+- Architecture decision records 0005–0014: proposed decisions on the Content Security Policy, Livewire component layout, the `Support`/`Services`/`Contracts` boundary and who authorizes what, plus records of existing decisions on the System owner and permission ceiling, settings storage, backups and promote, branding and themes, deployment targets, and approval IDs.
 
 ### Fixed
 
