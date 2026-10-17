@@ -88,7 +88,7 @@ new #[Title('User management')] class extends Component {
     public function pendingNameChanges(): \Illuminate\Database\Eloquent\Collection
     {
         return DisplayNameChange::query()
-            ->where('status', 'pending')
+            ->where('status', \App\Enums\DisplayNameChangeStatus::Pending)
             ->with('user')
             ->latest()
             ->get();

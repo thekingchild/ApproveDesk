@@ -2,6 +2,7 @@
 
 namespace App\Actions\Submissions;
 
+use App\Enums\SubmissionStatus;
 use App\Events\SubmissionCreated;
 use App\Exceptions\WorkflowException;
 use App\Models\Submission;
@@ -30,7 +31,7 @@ final class SubmitSubmissionAction
             $instance = $submission->workflowInstance()->first();
 
             if ($instance === null) {
-                $submission->update(['status' => 'pending']);
+                $submission->update(['status' => SubmissionStatus::Pending]);
                 $instance = $this->engine->initialize($submission);
                 DB::afterCommit(fn () => event(new SubmissionCreated($submission, $instance)));
             } else {

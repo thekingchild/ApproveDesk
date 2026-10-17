@@ -33,6 +33,14 @@ Open search from the sidebar, or press Command-K / Control-K. Search looks at re
 
 The bell in the sidebar shows unread count. Open it to read items, mark them read, and follow the link into the request. Delivery of email and digest copies is controlled in your account notification settings.
 
+## Times and time zones
+
+**What it is.** Times on screens (comments, request history, the workflow timeline, notifications, delegation and out-of-office periods) are shown in your device's own time zone. ApproveDesk remembers it from your browser, so it stays right after you sign in again.
+
+**How to use it.** Hover over a time to see the exact date, time, and time zone. Times you type into date-and-time fields are read in the same zone.
+
+**What not to expect.** Printed approval reports, analytics exports, backup schedules, and approval-settings working hours use the installation time zone, which those screens name. Due dates are calendar dates and never move between days.
+
 ## Help
 
 Help sits at the bottom of the sidebar, next to Notifications. It does not add another Administration item. On phones it is the life-ring icon in the header. The menu opens a short list of guides; **Help centre** lists every article you can read.

@@ -28,7 +28,7 @@ class RoleChangeEventTest extends TestCase
         ]);
 
         $this->expectException(LogicException::class);
-        $event->update(['action' => 'tampered']);
+        $event->update(['before' => ['tampered' => true]]);
     }
 
     public function test_role_change_events_cannot_be_deleted(): void

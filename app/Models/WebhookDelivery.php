@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\WebhookDeliveryStatus;
+use App\Enums\WebhookEvent;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
@@ -11,7 +12,7 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property int $endpoint_id
  * @property string $event_id
- * @property string $event
+ * @property WebhookEvent $event
  * @property array<string, mixed> $payload
  * @property WebhookDeliveryStatus $status
  * @property int $attempts
@@ -34,6 +35,7 @@ class WebhookDelivery extends Model
         return [
             'payload' => 'array',
             'status' => WebhookDeliveryStatus::class,
+            'event' => WebhookEvent::class,
             'delivered_at' => 'datetime',
             'next_attempt_at' => 'datetime',
         ];

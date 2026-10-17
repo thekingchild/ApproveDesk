@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\SubmissionStatus;
 use App\Models\Submission;
 use App\Models\Department;
 use App\Models\User;
@@ -118,7 +119,7 @@ new #[Title('My submissions')] class extends Component {
         return \App\Models\RequestFieldDefinition::query()
             ->whereHas('requestTypeVersion', fn (Builder $version) => $version
                 ->where('request_type_id', (int) $this->requestTypeFilter)
-                ->where('status', 'published'))
+                ->where('status', \App\Enums\RequestTypeVersionStatus::Published->value))
             ->where(fn (Builder $field) => $field
                 ->where('is_filterable', true)
                 ->orWhere('is_reportable', true))
@@ -219,32 +220,17 @@ new #[Title('My submissions')] class extends Component {
     /** @var array<string, string> */
     protected function statuses(): array
     {
-        return [
-            '' => 'All statuses',
-            'draft' => 'Draft',
-            'in_review' => 'In review',
-            'approved' => 'Approved',
-            'rejected' => 'Rejected',
-            'returned' => 'Returned',
-            'awaiting_information' => 'Awaiting information',
-            'withdrawn' => 'Withdrawn',
-        ];
+        // Pending is momentary (between submit and the first step), so it isn't offered as a filter.
+        $statuses = ['' => __('All statuses')];
+        foreach (SubmissionStatus::cases() as $status) {
+            if ($status !== SubmissionStatus::Pending) {
+                $statuses[$status->value] = $status->label();
+            }
+        }
+
+        return $statuses;
     }
 
-    /** @var array<string, string> */
-    protected function badgeColors(): array
-    {
-        return [
-            'draft' => 'zinc',
-            'pending' => 'blue',
-            'in_review' => 'blue',
-            'approved' => 'lime',
-            'rejected' => 'red',
-            'returned' => 'amber',
-            'awaiting_information' => 'amber',
-            'withdrawn' => 'zinc',
-        ];
-    }
 
     #[\Livewire\Attributes\Computed]
     public function submissions(): \Illuminate\Contracts\Pagination\LengthAwarePaginator
@@ -432,9 +418,7 @@ new #[Title('My submissions')] class extends Component {
                     @if ($this->organizationView)<flux:table.cell :data-label="__('Submitter')">{{ $submission->submitter->name }}</flux:table.cell>@endif
                     <flux:table.cell :data-label="__('Type')">{{ ucfirst($submission->type->value) }}</flux:table.cell>
                     <flux:table.cell :data-label="__('Status')">
-                        <flux:badge :color="$this->badgeColors()[$submission->status->value] ?? 'zinc'">
-                            {{ str_replace('_', ' ', $submission->status->value) }}
-                        </flux:badge>
+                        <x-submission-status-badge :status="$submission->status" />
                         @if ($submission->workflowInstance?->isOverdue())
                             <flux:badge color="red" class="ms-1">{{ __('Overdue') }}</flux:badge>
                         @endif
@@ -446,7 +430,7 @@ new #[Title('My submissions')] class extends Component {
                         @endphp
                         <flux:table.cell :data-label="$field->label">{{ app(\App\Services\RequestFieldAccess::class)->displayValue($customValue) }}</flux:table.cell>
                     @endforeach
-                    <flux:table.cell :data-label="__('Updated')" class="text-zinc-600 dark:text-zinc-300">{{ $submission->updated_at?->diffForHumans() }}</flux:table.cell>
+                    <flux:table.cell :data-label="__('Updated')" class="text-zinc-600 dark:text-zinc-300"><x-time :at="$submission->updated_at" format="relative" /></flux:table.cell>
                 </flux:table.row>
             @empty
                 <flux:table.row>

@@ -315,7 +315,7 @@ new #[Title('Approvals')] class extends Component {
                                 @else
                                     <flux:badge color="zinc">{{ __('No SLA') }}</flux:badge>
                                 @endif
-                                <flux:badge color="{{ ['urgent' => 'red', 'high' => 'amber', 'normal' => 'blue', 'low' => 'zinc'][$submission->priority->value] }}">{{ $submission->priority->value }}</flux:badge>
+                                <x-submission-priority-badge :priority="$submission->priority" />
                             </div>
                         </div>
 
@@ -325,7 +325,7 @@ new #[Title('Approvals')] class extends Component {
                             <div><dt class="text-xs text-zinc-500">{{ __('Current step') }}</dt><dd class="font-medium">{{ $instance->currentStep?->name ?? '—' }}</dd></div>
                             <div><dt class="text-xs text-zinc-500">{{ __('Attachments') }}</dt><dd class="font-medium">{{ $submission->files_count }}</dd></div>
                             <div><dt class="text-xs text-zinc-500">{{ __('Assignment') }}</dt><dd class="font-medium">{{ str($item['delegation'])->replace('_', ' ') }}</dd></div>
-                            <div><dt class="text-xs text-zinc-500">{{ __('Last activity') }}</dt><dd class="font-medium">{{ $item['last_activity']?->diffForHumans() ?? '—' }}</dd></div>
+                            <div><dt class="text-xs text-zinc-500">{{ __('Last activity') }}</dt><dd class="font-medium"><x-time :at="$item['last_activity']" format="relative" /></dd></div>
                         </dl>
                     </div>
                     <flux:button variant="ghost" wire:click="openPreview({{ $instance->id }})" aria-label="{{ __('Preview :title', ['title' => $submission->title]) }}">{{ __('Preview') }}</flux:button>

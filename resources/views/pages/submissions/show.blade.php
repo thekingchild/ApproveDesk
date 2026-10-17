@@ -165,7 +165,7 @@ new #[Title('Submission')] class extends Component {
 
             $state = match (true) {
                 $stepActions->contains('action', WorkflowActionType::Reject) => 'rejected',
-                $instance->current_step_id === $step->id && in_array($instance->status->value, ['active', 'on_hold'], true) => 'active',
+                $instance->current_step_id === $step->id && in_array($instance->status, [\App\Enums\WorkflowStatus::Active, \App\Enums\WorkflowStatus::OnHold], true) => 'active',
                 $stepActions->contains(fn ($action) => in_array($action->action, [
                     WorkflowActionType::Approve,
                     WorkflowActionType::Escalate,
@@ -182,7 +182,7 @@ new #[Title('Submission')] class extends Component {
                 'state' => $state,
                 'actors' => $automatic ? __('System') : $assignedUsers->pluck('name')->implode(', '),
                 'progress' => $requiredApprovals === null ? null : "{$approvalCount} / {$requiredApprovals} approvals",
-                'acted_at' => $stepActions->first()?->created_at?->format('d M Y H:i'),
+                'acted_at' => ($actedAt = $stepActions->first()?->created_at) !== null ? \App\Support\LocalTime::forViewer($actedAt) : null,
             ];
         })->all();
     }
@@ -202,7 +202,7 @@ new #[Title('Submission')] class extends Component {
         $step = $this->submission->workflowInstance?->currentStep;
 
         return $step !== null
-            && $this->submission->workflowInstance->status->value === 'active'
+            && $this->submission->workflowInstance->status === \App\Enums\WorkflowStatus::Active
             && SeparationOfDuties::forbids(Auth::user(), $this->submission)
             && app(AssigneeResolver::class)->candidates($step, $this->submission)->contains(Auth::user());
     }
@@ -239,7 +239,7 @@ new #[Title('Submission')] class extends Component {
     public function myDelegation(): ?Delegation
     {
         $instance = $this->submission->workflowInstance;
-        if ($instance === null || $instance->status->value !== 'active') {
+        if ($instance === null || $instance->status !== \App\Enums\WorkflowStatus::Active) {
             return null;
         }
 
@@ -768,12 +768,8 @@ new #[Title('Submission')] class extends Component {
             @can('update', $submission)
                 <flux:button :href="$submission->requestTypeVersion->requestType->is_system ? route('submissions.edit', $submission) : route('submissions.custom.edit', $submission)" variant="primary" wire:navigate>{{ $submission->status === \App\Enums\SubmissionStatus::Draft ? __('Edit draft') : __('Edit and respond') }}</flux:button>
             @endcan
-            <flux:badge color="{{ ['draft' => 'zinc', 'in_review' => 'blue', 'approved' => 'lime', 'rejected' => 'red', 'returned' => 'amber', 'awaiting_information' => 'amber', 'withdrawn' => 'zinc', 'pending' => 'blue'][$submission->status->value] ?? 'zinc' }}">
-                {{ str_replace('_', ' ', $submission->status->value) }}
-            </flux:badge>
-            <flux:badge color="{{ ['low' => 'zinc', 'normal' => 'blue', 'high' => 'amber', 'urgent' => 'red'][$submission->priority->value] ?? 'zinc' }}">
-                {{ $submission->priority->value }}
-            </flux:badge>
+            <x-submission-status-badge :status="$submission->status" />
+            <x-submission-priority-badge :priority="$submission->priority" />
             @if ($submission->workflowInstance?->deadlineAt())
                 <flux:badge :color="$submission->workflowInstance->isOverdue() ? 'red' : 'zinc'">
                     {{ $submission->workflowInstance->isOverdue()
@@ -782,7 +778,7 @@ new #[Title('Submission')] class extends Component {
                 </flux:badge>
             @endif
             @can('nudge', $submission)
-                @if ($submission->workflowInstance?->status->value === 'active')
+                @if ($submission->workflowInstance?->status === \App\Enums\WorkflowStatus::Active)
                     <flux:modal.trigger name="nudge-modal">
                         <flux:button size="sm" variant="ghost" data-test="nudge-trigger">{{ __('Remind approver') }}</flux:button>
                     </flux:modal.trigger>
@@ -811,7 +807,7 @@ new #[Title('Submission')] class extends Component {
             <div><dt class="text-xs text-zinc-500">{{ __('Type') }}</dt><dd class="font-medium">{{ ucfirst($submission->type->value) }}</dd></div>
             <div><dt class="text-xs text-zinc-500">{{ __('Submitted by') }}</dt><dd class="font-medium">{{ $submission->submitter->name }}</dd></div>
             <div><dt class="text-xs text-zinc-500">{{ __('Department') }}</dt><dd class="font-medium">{{ $submission->department?->name ?? '—' }}</dd></div>
-            <div><dt class="text-xs text-zinc-500">{{ __('Due date') }}</dt><dd class="font-medium">{{ $submission->due_date?->format('d M Y') ?? '—' }}</dd></div>
+            <div><dt class="text-xs text-zinc-500">{{ __('Due date') }}</dt><dd class="font-medium">{{ $submission->due_date?->format(\App\Support\LocalTime::FORMATS['date']) ?? '—' }}</dd></div>
         </dl>
     </flux:card>
 
@@ -822,7 +818,7 @@ new #[Title('Submission')] class extends Component {
                 @foreach ($this->revisionHistory as $revision)
                     <li>
                         <span class="font-medium">{{ $revision->summary }}</span>
-                        <span class="text-zinc-500"> · {{ $revision->actor?->name ?? __('System') }} · {{ $revision->created_at?->format('d M Y H:i') }}</span>
+                        <span class="text-zinc-500"> · {{ $revision->actor?->name ?? __('System') }} · <x-time :at="$revision->created_at" /></span>
                         @if (is_array($revision->before))
                             <div class="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
                                 @foreach ($revision->before as $field => $old)
@@ -853,7 +849,7 @@ new #[Title('Submission')] class extends Component {
                     </li>
                 @endforeach
                 @foreach ($submission->fileRevisions as $fileRevision)
-                    <li>{{ $fileRevision->action }} · {{ $fileRevision->original_name }}</li>
+                    <li>{{ $fileRevision->action->label() }} · {{ $fileRevision->original_name }}</li>
                 @endforeach
             </ul>
         </flux:card>
@@ -918,7 +914,7 @@ new #[Title('Submission')] class extends Component {
                         <dt class="text-xs text-zinc-500">{{ __('Estimated due') }}</dt>
                         <dd class="font-medium" data-test="estimated-due">
                             @if ($this->expectedProgress['estimated_due_at'])
-                                {{ $this->expectedProgress['estimated_due_at']->timezone(config('app.timezone'))->format('d M Y H:i') }}
+                                <x-time :at="$this->expectedProgress['estimated_due_at']" />
                                 <span class="text-xs font-normal text-zinc-500">({{ app(\App\Services\Collaboration\ExpectedProgress::class)->calendarLabel($this->expectedProgress['calendar']) }})</span>
                             @else
                                 {{ __('No step deadline') }}
@@ -961,7 +957,7 @@ new #[Title('Submission')] class extends Component {
                                 <span class="text-zinc-500" data-test="on-behalf-of">{{ __('on behalf of :name', ['name' => $entry->onBehalfOf?->name ?? __('a former user')]) }}</span>
                             @endif
                             <flux:badge class="mx-1" color="{{ ['approve' => 'lime', 'auto_approve' => 'lime', 'condition_matched' => 'blue', 'condition_not_matched' => 'zinc', 'reject' => 'red', 'return' => 'amber', 'comment' => 'zinc', 'delegate' => 'blue', 'delegation_revoked' => 'zinc', 'escalate' => 'blue', 'withdraw' => 'zinc'][$entry->action->value] ?? 'zinc' }}">{{ str($entry->action->value)->replace('_', ' ') }}</flux:badge>
-                            <span class="text-xs text-zinc-400">{{ $entry->created_at?->format('d M Y H:i') }}</span>
+                            <span class="text-xs text-zinc-400"><x-time :at="$entry->created_at" /></span>
                             @if ($entry->comment)<p class="mt-1 rounded-md bg-zinc-50 p-2 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">{{ $entry->comment }}</p>@endif
                         </li>
                     @endforeach
@@ -1005,7 +1001,7 @@ new #[Title('Submission')] class extends Component {
                 <ul class="mt-2 space-y-2 text-sm" data-test="removed-attachments">
                     @foreach ($submission->removedFiles as $file)
                         <li class="flex items-center justify-between gap-3 text-zinc-500">
-                            <span><span class="line-through">{{ $file->original_name }}</span> <span class="text-xs">· {{ __('removed by :name on :date', ['name' => $file->remover?->name ?? __('a former user'), 'date' => $file->deleted_at?->format('d M Y H:i')]) }}</span></span>
+                            <span><span class="line-through">{{ $file->original_name }}</span> <span class="text-xs">· {{ __('removed by :name on :date', ['name' => $file->remover?->name ?? __('a former user'), 'date' => $file->deleted_at !== null ? \App\Support\LocalTime::forViewer($file->deleted_at) : '—']) }}</span></span>
                             @can('downloadFiles', $submission)
                                 <flux:link :href="$this->fileUrl($file)" target="_blank">{{ __('Download') }}</flux:link>
                             @endcan
@@ -1225,7 +1221,7 @@ new #[Title('Submission')] class extends Component {
             @forelse ($this->commentThreads as $c)
                 <li class="text-sm" data-test="comment-{{ $c->id }}">
                     <span class="font-medium">{{ $c->author->name }}</span>
-                    <span class="text-xs text-zinc-400">{{ $c->created_at->format('d M Y H:i') }}</span>
+                    <span class="text-xs text-zinc-400"><x-time :at="$c->created_at" /></span>
                     @if ($c->edited_at)
                         <span class="text-xs text-zinc-400">{{ __('(edited)') }}</span>
                     @endif
@@ -1246,7 +1242,7 @@ new #[Title('Submission')] class extends Component {
                             <summary>{{ __('Edit history') }}</summary>
                             <ul class="mt-1 space-y-1">
                                 @foreach ($c->revisions as $revision)
-                                    <li>{{ $revision->created_at->format('d M Y H:i') }}: {{ $revision->body }}</li>
+                                    <li><x-time :at="$revision->created_at" />: {{ $revision->body }}</li>
                                 @endforeach
                             </ul>
                         </details>
@@ -1264,7 +1260,7 @@ new #[Title('Submission')] class extends Component {
                             @foreach ($c->replies as $reply)
                                 <li>
                                     <span class="font-medium">{{ $reply->author->name }}</span>
-                                    <span class="text-xs text-zinc-400">{{ $reply->created_at->format('d M Y H:i') }}</span>
+                                    <span class="text-xs text-zinc-400"><x-time :at="$reply->created_at" /></span>
                                     @if ($reply->edited_at)
                                         <span class="text-xs text-zinc-400">{{ __('(edited)') }}</span>
                                     @endif
@@ -1327,9 +1323,9 @@ new #[Title('Submission')] class extends Component {
     @endcan
 
     @can('submit', $submission)
-        @if (in_array($submission->status->value, ['returned', 'awaiting_information'], true))
+        @if ($submission->status->needsRequester())
             <div class="space-y-3">
-                @if ($submission->status->value === 'awaiting_information')
+                @if ($submission->status === \App\Enums\SubmissionStatus::AwaitingInformation)
                     <flux:textarea wire:model="resubmissionComment" :label="__('Response to the information request')" rows="3" />
                     <flux:error name="resubmissionComment" />
                 @endif

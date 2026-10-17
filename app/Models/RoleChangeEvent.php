@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\RoleChangeAction;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -14,7 +15,7 @@ class RoleChangeEvent extends Model
 
     protected function casts(): array
     {
-        return ['before' => 'array', 'after' => 'array'];
+        return ['before' => 'array', 'after' => 'array', 'action' => RoleChangeAction::class];
     }
 
     protected static function booted(): void

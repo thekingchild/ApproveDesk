@@ -195,7 +195,7 @@ new #[Title('Backups')] class extends Component
 
     public function canRemoveLocal(BackupSnapshot $snapshot): bool
     {
-        return $snapshot->destination?->kind->value === 'local'
+        return $snapshot->destination?->kind === \App\Enums\BackupDestinationKind::Local
             && in_array($snapshot->path, $this->remotelyCopiedPaths, true);
     }
 
@@ -235,7 +235,7 @@ new #[Title('Backups')] class extends Component
         return BackupSnapshot::query()
             ->whereIn('path', $paths)
             ->successful()
-            ->whereHas('destination', fn ($query) => $query->where('kind', '!=', 'local'))
+            ->whereHas('destination', fn ($query) => $query->where('kind', '!=', \App\Enums\BackupDestinationKind::Local->value))
             ->distinct()
             ->pluck('path')
             ->map(fn ($path): string => (string) $path)
@@ -371,7 +371,7 @@ new #[Title('Backups')] class extends Component
                             <span class="text-red-600">{{ $destination->last_error }}</span>
                         @endif
                     </span>
-                    @if ($destination->kind->value !== 'local')
+                    @if ($destination->kind !== \App\Enums\BackupDestinationKind::Local)
                         <form method="POST" action="{{ route('admin.backups.destinations.test', $destination) }}">
                             @csrf
                             <flux:button type="submit" size="xs">{{ __('Test') }}</flux:button>

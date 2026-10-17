@@ -184,12 +184,7 @@ class ApproverWorkbench
      */
     private function compareItems(array $left, array $right): int
     {
-        $priorityRank = static fn (WorkflowInstance $instance): int => match ($instance->submission->priority->value) {
-            'urgent' => 0,
-            'high' => 1,
-            'normal' => 2,
-            default => 3,
-        };
+        $priorityRank = static fn (WorkflowInstance $instance): int => $instance->submission->priority->rank();
         $leftRank = [
             $left['needs_me'] ? 0 : 1,
             $left['instance']->isOverdue() ? 0 : 1,

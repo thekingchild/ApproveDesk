@@ -22,6 +22,10 @@ The enabled application theme used when a person has not chosen another availabl
 
 An optional marketing page at the site address. It is off by default, so guests go to Login and signed-in people go to Dashboard. When an administrator turns it on, guests see **Log in** and, when self-registration is allowed, **Sign up**; signed-in people see **Dashboard**.
 
+## [Your time zone](/help/getting-around)
+
+The time zone of the device you are using. Screens show times in it; printed reports and schedules use the installation time zone instead.
+
 ## [Request](/help/requests)
 
 A single case waiting for a decision. It has a form, optional files, comments, a status, and a workflow history. Requesters create requests. Approvers act on them.

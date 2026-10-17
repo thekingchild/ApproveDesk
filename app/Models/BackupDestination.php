@@ -11,6 +11,9 @@ use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Str;
 use Throwable;
 
+/**
+ * @property BackupDestinationKind $kind
+ */
 class BackupDestination extends Model
 {
     /** @use HasFactory<BackupDestinationFactory> */
