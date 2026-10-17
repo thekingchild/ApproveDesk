@@ -142,7 +142,8 @@ class BrandingTest extends TestCase
 
         $html = $this->get('/login')->assertOk()->getContent();
 
-        $this->assertStringContainsString('<script>window.APPROVEDESK_MARK = 1;</script>', $html);
+        // Owner code gets this response's script nonce so the CSP lets it run (ADR 0005).
+        $this->assertMatchesRegularExpression('#<script nonce="[^"]+">window.APPROVEDESK_MARK = 1;</script>#', $html);
     }
 
     public function test_javascript_protocol_sources_are_stripped_from_custom_code(): void

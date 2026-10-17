@@ -89,7 +89,7 @@ new #[Title('Notification settings')] class extends Component {
         <flux:heading size="sm">{{ __('This device') }}</flux:heading>
         <p class="text-sm text-zinc-500">{{ __('Install ApproveDesk and allow browser notifications if you want alerts when this tab is closed.') }}</p>
         <div class="flex flex-wrap gap-3">
-            <flux:button type="button" id="install-app-button">{{ __('Install app') }}</flux:button>
+            <flux:button type="button" id="install-app-button" data-install-fallback="{{ __('Use your browser’s Install or Add to Home Screen command if the prompt does not appear.') }}">{{ __('Install app') }}</flux:button>
             <flux:button
                 type="button"
                 x-data
@@ -116,13 +116,3 @@ new #[Title('Notification settings')] class extends Component {
         </div>
     @endif
 </x-pages::settings.layout>
-
-<script>
-    document.getElementById('install-app-button')?.addEventListener('click', async () => {
-        if (window.approveDeskInstallPrompt) {
-            window.approveDeskInstallPrompt.prompt()
-            return
-        }
-        alert(@json(__('Use your browser’s Install or Add to Home Screen command if the prompt does not appear.')))
-    })
-</script>

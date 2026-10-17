@@ -47,6 +47,7 @@ Open **Settings → Branding → Advanced: analytics and custom code**. This con
 - Never put passwords, API secrets, private keys, or user-specific data in the field.
 - Confirm your password and second factor before saving. If this session has not confirmed your password recently (within the password-confirmation window, three hours by default), **Save branding** opens the confirmation page and keeps the snippet you entered.
 - Remove the code immediately if it causes an unsafe redirect, captures form data, or breaks navigation.
+- `<script>` blocks and scripts loaded from HTTPS addresses in the snippet run as usual. Inline event attributes such as `onclick="..."` or `onload="..."` do not run, because the browser security policy blocks them; put that code in a `<script>` block instead.
 
 People with ordinary Branding access can manage identity and appearance but cannot view or change this field.
 

@@ -567,13 +567,13 @@ new #[Title('User management')] class extends Component {
                 <div class="flex flex-wrap gap-2">
                     <form method="POST" action="{{ route('admin.users.recovery.password', $editingUserId) }}">
                         @csrf
-                        <flux:button type="submit" variant="danger" data-test="recover-password" onclick="return confirm({{ json_encode(__('Invalidate this password and email a reset link?')) }})">
+                        <flux:button type="submit" variant="danger" data-test="recover-password" data-confirm="{{ __('Invalidate this password and email a reset link?') }}">
                             {{ __('Invalidate password and email reset link') }}
                         </flux:button>
                     </form>
                     <form method="POST" action="{{ route('admin.users.recovery.second-factor', $editingUserId) }}">
                         @csrf
-                        <flux:button type="submit" variant="danger" data-test="recover-second-factor" onclick="return confirm({{ json_encode(__('Remove the authenticator, recovery codes, and passkeys?')) }})">
+                        <flux:button type="submit" variant="danger" data-test="recover-second-factor" data-confirm="{{ __('Remove the authenticator, recovery codes, and passkeys?') }}">
                             {{ __('Remove authenticator, recovery codes, and passkeys') }}
                         </flux:button>
                     </form>

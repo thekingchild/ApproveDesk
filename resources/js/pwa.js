@@ -15,6 +15,24 @@ function bindInstallPrompt() {
     })
 }
 
+// Was an inline <script> on the notification settings page; inline scripts
+// are blocked by the Content Security Policy (ADR 0005).
+function bindInstallButton() {
+    document.addEventListener('click', (event) => {
+        const button = event.target instanceof Element ? event.target.closest('#install-app-button') : null
+        if (!button) {
+            return
+        }
+
+        if (window.approveDeskInstallPrompt) {
+            window.approveDeskInstallPrompt.prompt()
+            return
+        }
+
+        window.alert(button.getAttribute('data-install-fallback') || '')
+    })
+}
+
 function bindOfflineDecisions() {
     const sync = () => {
         document.querySelectorAll('[data-requires-online]').forEach((node) => {
@@ -149,6 +167,7 @@ window.approveDeskPush = {
 
 registerServiceWorker()
 bindInstallPrompt()
+bindInstallButton()
 bindOfflineDecisions()
 document.addEventListener('DOMContentLoaded', bindDraftCache)
 document.addEventListener('livewire:navigated', bindDraftCache)

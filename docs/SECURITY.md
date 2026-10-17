@@ -21,8 +21,16 @@ After any rotation, confirm `/up` and a test sign-in. Keep the previous secret o
 Every response includes `Content-Security-Policy`, `X-Content-Type-Options`,
 `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, and
 `Cross-Origin-Opener-Policy`. HTTPS responses also send
-`Strict-Transport-Security`. The CSP allows `'unsafe-inline'` and
-`'unsafe-eval'` for the current Livewire/Alpine/Flux frontend. When an
+`Strict-Transport-Security`. Scripts follow ADR 0005: `script-src` carries
+a fresh nonce on every response (`Vite::useCspNonce()` in `SecurityHeaders`),
+so inline scripts run only when Blade, Livewire, or Flux stamped that nonce
+on them; injected `<script>` tags and inline event attributes are blocked.
+`'unsafe-eval'` remains until Alpine runs in its CSP build (ADR 0005 step 2),
+and `style-src` keeps `'unsafe-inline'`. Owner custom code and the drop-in
+public website are trusted owner content: their `<script>` tags receive the
+nonce when rendered (`App\Support\CspNonce`). In local development the Vite
+dev server origin is allowed while `npm run dev` runs, and debug-mode error
+pages are sent without a CSP so stack traces stay usable. When an
 administrator saves analytics or custom code, HTTPS hosts found in that
 snippet are added to `script-src`, `connect-src`, `img-src`, and `frame-src`
 so common tracking providers can load. Empty custom code leaves the policy

@@ -109,7 +109,9 @@ final class PublicWebsite
 
     public function inject(string $html, ?User $user, bool $registrationOpen): string
     {
-        $html = $this->injectCustomCode($html);
+        // The drop-in site and custom code are owner content: their scripts get
+        // this response's nonce so the Content Security Policy lets them run.
+        $html = CspNonce::addToScripts($this->injectCustomCode($html));
         $nav = $this->authNav($user, $registrationOpen);
 
         $replaced = preg_replace(

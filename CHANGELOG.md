@@ -116,6 +116,7 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Security
 
+- **Injected scripts no longer run (RV-SEC-15, ADR 0005 step 1).** The Content Security Policy now gives each page its own script nonce and drops `'unsafe-inline'` from `script-src`, so a `<script>` tag or `onclick=` attribute that reached a page through a bug is blocked by the browser. ApproveDesk's own inline scripts, Flux, owner custom code, and the public website keep working. Custom code that relies on inline event attributes must move that code into a `<script>` block.
 - **Microsoft sign-in can no longer take over accounts ("nOAuth").** With a multi-tenant Microsoft setup (`common`/`organizations`), the email Microsoft reports is not verified, so ApproveDesk no longer uses it to create accounts or connect existing ones; already-connected accounts keep working. Pin the Microsoft tenant to your directory ID to allow creation and connection. Social sign-in now also requires the account's authenticator code, and passkey accounts must use their passkey.
 - Changing another person's Slack, Teams, or Telegram identity now follows the same rule as changing their email (administrators and people with more access only by the System owner), and every change is logged.
 - S3 backup destinations are pinned to the addresses that passed the outbound check, and virtual-hosted bucket names (`bucket.endpoint`) are checked too, so DNS changes cannot redirect backups to internal hosts.
