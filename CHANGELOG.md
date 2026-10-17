@@ -21,6 +21,10 @@ All notable changes to ApproveDesk are documented here. The project follows
   - The web-push signing key is now encrypted in the database like every other stored secret (RV-LAR-04). Existing keys are moved over on first use, so browsers stay subscribed.
   - Sign-in alerts, account-recovery notices, and display-name decisions are queued instead of sent during the request, so a mail outage no longer turns a successful sign-in or an administrator's recovery action into an error page (RV-LAR-06).
   - An integration or webhook delivery whose job times out or runs out of retries is now marked dead-letter or failed (and can be replayed from Operations) instead of staying Pending forever. A connector's rate limit now waits without using up one of the delivery's attempts (RV-LAR-07).
+- **Pages only act on the records they were opened for.**
+  - Updating a backup destination now checks every field the way adding one does, so a bad endpoint or an over-long name shows a form error instead of an error page (RV-LAR-08).
+  - The record a page is editing (user, department, role, workflow template, request type, webhook, announcement, theme, workflow in the builder, inbox preview, comment, and file preview) can no longer be changed from the browser. Editing a comment on a request only finds comments on that request, and saving re-checks that you may still edit it (RV-LAR-15). A lock on the request-type builder that was silently ignored now applies (RV-ARC-04).
+  - CSV user imports are limited to 5,000 rows, as the Help already said and spreadsheets already enforced (RV-LAR-17).
 - **Notifications tell the truth and reach the right people.**
   - Chat notifications that Slack, Teams, Telegram or WhatsApp refuse now show as Failed in the delivery log, and approval requests are retried, instead of showing as Sent. Notification types without a WhatsApp template show as Skipped.
   - Chat messages held during reminder quiet hours keep their full wording and secure approval link, and are dropped if the request has moved past that step.

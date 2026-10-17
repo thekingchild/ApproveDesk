@@ -11,6 +11,7 @@ use App\Services\ApproverWorkbench;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -51,6 +52,7 @@ new #[Title('Approvals')] class extends Component {
     /** @var array<int, string> */
     public array $selected = [];
 
+    #[Locked]
     public ?int $previewInstanceId = null;
 
     /** @return \Illuminate\Support\Collection<int, array<string, mixed>> */

@@ -32,6 +32,7 @@ new #[Title('Workflow templates')] class extends Component {
 
     public string $search = '';
 
+    #[Locked]
     public ?int $editingTemplateId = null;
 
     public bool $editingTemplateUsed = false;
