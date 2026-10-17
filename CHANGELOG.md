@@ -14,6 +14,7 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Fixed
 
+- **Announcements only show to the people they are for (RV-SEC-23).** The announcement banner no longer accepts announcement IDs from the browser, and it re-checks that each announcement is still published and aimed at the viewer before showing it. Previously a signed-in user could make the banner display draft, archived, or other-audience announcements.
 - **Notifications tell the truth and reach the right people.**
   - Chat notifications that Slack, Teams, Telegram or WhatsApp refuse now show as Failed in the delivery log, and approval requests are retried, instead of showing as Sent. Notification types without a WhatsApp template show as Skipped.
   - Chat messages held during reminder quiet hours keep their full wording and secure approval link, and are dropped if the request has moved past that step.

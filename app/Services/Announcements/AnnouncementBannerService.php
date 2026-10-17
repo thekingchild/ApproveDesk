@@ -93,6 +93,36 @@ final class AnnouncementBannerService
         return $this->matchesAudience($announcement, $roleIds);
     }
 
+    /**
+     * The announcements among $ids that are still published and aimed at $user, newest first.
+     * Display-mode state is ignored so a show-once banner stays up for the page it was shown on.
+     *
+     * @param  list<int>  $ids
+     * @return Collection<int, Announcement>
+     */
+    public function stillTargetedAmong(User $user, array $ids): Collection
+    {
+        if ($ids === [] || ! $user->is_active) {
+            return new Collection;
+        }
+
+        $announcements = Announcement::query()
+            ->whereKey($ids)
+            ->where('status', AnnouncementStatus::Published->value)
+            ->whereNotNull('published_at')->whereNull('archived_at')
+            ->orderByDesc('published_at')->orderByDesc('id')->get();
+
+        $roleIds = $announcements->contains(
+            fn (Announcement $announcement): bool => $announcement->audience === AnnouncementAudience::Roles,
+        )
+            ? array_values($user->roles()->pluck('roles.id')->map(fn ($id): int => (int) $id)->all())
+            : [];
+
+        return $announcements
+            ->filter(fn (Announcement $announcement): bool => $this->matchesAudience($announcement, $roleIds))
+            ->values();
+    }
+
     /** @param list<int> $roleIds */
     private function matchesAudience(Announcement $announcement, array $roleIds): bool
     {
