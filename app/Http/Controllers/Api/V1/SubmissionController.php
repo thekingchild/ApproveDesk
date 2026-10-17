@@ -58,7 +58,7 @@ class SubmissionController extends Controller
                 return $submit ? $submitSubmission->execute($submission) : $submission;
             });
         } catch (WorkflowException $exception) {
-            throw ValidationException::withMessages(['submit' => [$exception->getMessage()]]);
+            throw ValidationException::withMessages(['submit' => [$exception->userMessage()]]);
         }
 
         return (new SubmissionResource($submission->load($this->relations())))
