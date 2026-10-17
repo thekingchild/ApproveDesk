@@ -8,8 +8,14 @@ use App\Models\Setting;
 use App\Models\Submission;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Foundation\Queue\Queueable;
 
+/**
+ * Retires requests past their retention window by soft-deleting them. Nothing
+ * is purged: the request, its workflow history and its files stay stored as
+ * audit evidence (RV-DATA-08).
+ */
 class ApplyRetentionJob implements ShouldBeUnique, ShouldQueue
 {
     use Queueable;
@@ -21,18 +27,28 @@ class ApplyRetentionJob implements ShouldBeUnique, ShouldQueue
      */
     public int $uniqueFor = 3600;
 
+    /** Below the scheduled worker's --timeout=90 so the job, not the worker, is stopped (RV-PERF-16). */
+    public int $timeout = 75;
+
+    /** Stop taking new rows after this long; the rest are picked up on the next run (RV-PERF-16). */
+    public const TIME_BUDGET_SECONDS = 55;
+
+    public const CHUNK = 200;
+
+    private float $deadline = 0.0;
+
     public function handle(): void
     {
+        $this->deadline = microtime(true) + self::TIME_BUDGET_SECONDS;
         $draftDays = max(1, (int) Setting::get('retention.draft_days', '90'));
         $completedDays = max(1, (int) Setting::get('retention.completed_days', '2555'));
 
-        Submission::query()
+        $this->retire(Submission::query()
             ->where('status', SubmissionStatus::Draft)
             ->where('created_at', '<', now()->subDays($draftDays))
-            ->whereDoesntHave('legalHolds', fn ($query) => $query->active())
-            ->each(fn (Submission $submission) => $submission->delete());
+            ->whereDoesntHave('legalHolds', fn ($query) => $query->active()));
 
-        Submission::query()
+        $this->retire(Submission::query()
             ->whereIn('status', [
                 SubmissionStatus::Approved,
                 SubmissionStatus::Rejected,
@@ -40,7 +56,27 @@ class ApplyRetentionJob implements ShouldBeUnique, ShouldQueue
             ])
             ->where('updated_at', '<', now()->subDays($completedDays))
             ->whereDoesntHave('legalHolds', fn ($query) => $query->active())
-            ->whereHas('dispositionReviews', fn ($query) => $query->where('status', DispositionStatus::Approved->value))
-            ->each(fn (Submission $submission) => $submission->delete());
+            ->whereHas('dispositionReviews', fn ($query) => $query->where('status', DispositionStatus::Approved->value)));
+    }
+
+    /**
+     * Keyset pagination: each() paged by OFFSET while rows dropped out of the
+     * result set as they were soft-deleted, so every other page was skipped
+     * (RV-PERF-16). Each page is retired with one UPDATE; Submission has no
+     * delete listeners to skip.
+     *
+     * @param  Builder<Submission>  $query
+     */
+    private function retire(Builder $query): void
+    {
+        $query->select('id')->chunkById(self::CHUNK, function ($page): bool {
+            if (microtime(true) >= $this->deadline) {
+                return false;
+            }
+
+            Submission::query()->whereKey($page->modelKeys())->delete();
+
+            return true;
+        });
     }
 }

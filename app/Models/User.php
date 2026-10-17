@@ -179,6 +179,24 @@ class User extends Authenticatable implements PasskeyUser
             && str_starts_with($this->email, 'anonymized-');
     }
 
+    /**
+     * Memoized per request on this user object: the layout renders a desktop and
+     * a mobile notification indicator for the same signed-in user (RV-PERF-19).
+     */
+    public function unreadNotificationCount(): int
+    {
+        return once(fn (): int => $this->unreadNotifications()->count());
+    }
+
+    /**
+     * Deactivated and anonymized people get no workflow notifications on any
+     * channel: they cannot sign in to act on them (RV-BUG-20).
+     */
+    public function canReceiveNotifications(): bool
+    {
+        return $this->is_active && ! $this->isAnonymized();
+    }
+
     public function isSystemOwner(): bool
     {
         $ownerId = app(SystemOwnerService::class)->ownerId();

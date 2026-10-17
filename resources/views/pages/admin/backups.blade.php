@@ -84,7 +84,7 @@ new #[Title('Backups')] class extends Component
             throw \Illuminate\Validation\ValidationException::withMessages(['backup' => $exception->getMessage()]);
         }
 
-        unset($this->snapshots, $this->restoreEvents);
+        unset($this->snapshots, $this->remotelyCopiedPaths, $this->workflowActionsAtSnapshot, $this->restoreEvents);
         Flux::toast(__('Database snapshot stored.'), variant: 'success');
     }
 
@@ -98,7 +98,7 @@ new #[Title('Backups')] class extends Component
             throw \Illuminate\Validation\ValidationException::withMessages(['backup' => $exception->getMessage()]);
         }
 
-        unset($this->snapshots, $this->restoreEvents);
+        unset($this->snapshots, $this->remotelyCopiedPaths, $this->workflowActionsAtSnapshot, $this->restoreEvents);
         Flux::toast(__('Files snapshot stored.'), variant: 'success');
     }
 
@@ -110,7 +110,7 @@ new #[Title('Backups')] class extends Component
         } catch (\InvalidArgumentException $exception) {
             throw \Illuminate\Validation\ValidationException::withMessages(['promoteConfirmation' => $exception->getMessage()]);
         }
-        unset($this->snapshots, $this->restoreEvents);
+        unset($this->snapshots, $this->remotelyCopiedPaths, $this->workflowActionsAtSnapshot, $this->restoreEvents);
         Flux::toast(__('Snapshot checked out.'), variant: 'success');
     }
 
@@ -130,7 +130,7 @@ new #[Title('Backups')] class extends Component
         }
 
         $this->promoteConfirmation = '';
-        unset($this->snapshots, $this->restoreEvents);
+        unset($this->snapshots, $this->remotelyCopiedPaths, $this->workflowActionsAtSnapshot, $this->restoreEvents);
         Flux::toast(__('Snapshot promoted.'), variant: 'success');
     }
 
@@ -151,7 +151,7 @@ new #[Title('Backups')] class extends Component
             throw \Illuminate\Validation\ValidationException::withMessages(['promoteConfirmation' => $exception->getMessage()]);
         }
 
-        unset($this->snapshots, $this->restoreEvents);
+        unset($this->snapshots, $this->remotelyCopiedPaths, $this->workflowActionsAtSnapshot, $this->restoreEvents);
         Flux::toast(__('Local copy removed. Remote copies were kept.'), variant: 'success');
     }
 
@@ -159,7 +159,7 @@ new #[Title('Backups')] class extends Component
     {
         $this->authorize('backups.local_copies.remove');
         $removed = $action->executeEligible();
-        unset($this->snapshots, $this->restoreEvents);
+        unset($this->snapshots, $this->remotelyCopiedPaths, $this->workflowActionsAtSnapshot, $this->restoreEvents);
         Flux::toast(
             $removed === 0
                 ? __('No local copies had a remote replica.')
@@ -195,31 +195,80 @@ new #[Title('Backups')] class extends Component
 
     public function canRemoveLocal(BackupSnapshot $snapshot): bool
     {
-        $snapshot->loadMissing('destination');
-
-        if ($snapshot->destination?->kind->value !== 'local') {
-            return false;
-        }
-
-        return BackupSnapshot::query()
-            ->where('path', $snapshot->path)
-            ->where('id', '!=', $snapshot->id)
-            ->successful()
-            ->whereHas('destination', fn ($query) => $query->where('kind', '!=', 'local'))
-            ->exists();
+        return $snapshot->destination?->kind->value === 'local'
+            && in_array($snapshot->path, $this->remotelyCopiedPaths, true);
     }
 
-    /** @return \Illuminate\Support\Collection<int, BackupSnapshot> */
+    /**
+     * Snapshot rows for the table only. The manifest is left out: a files
+     * manifest lists every stored file with its checksum (RV-PERF-17).
+     *
+     * @return \Illuminate\Support\Collection<int, BackupSnapshot>
+     */
     #[Computed]
     public function snapshots(): \Illuminate\Support\Collection
     {
-        return BackupSnapshot::query()->with(['destination', 'promoter'])->latest('taken_at')->latest('id')->limit(40)->get();
+        return BackupSnapshot::query()
+            ->select(['id', 'kind', 'destination_id', 'status', 'path', 'bytes', 'verified_at', 'promoted_at', 'taken_at', 'created_at'])
+            ->with('destination')
+            ->latest('taken_at')
+            ->latest('id')
+            ->limit(40)
+            ->get();
+    }
+
+    /**
+     * Paths of listed snapshots that also have a successful copy on a remote
+     * destination, found in one query instead of one per row.
+     *
+     * @return list<string>
+     */
+    #[Computed]
+    public function remotelyCopiedPaths(): array
+    {
+        $paths = $this->snapshots->pluck('path')->filter()->unique()->values()->all();
+
+        if ($paths === []) {
+            return [];
+        }
+
+        return BackupSnapshot::query()
+            ->whereIn('path', $paths)
+            ->successful()
+            ->whereHas('destination', fn ($query) => $query->where('kind', '!=', 'local'))
+            ->distinct()
+            ->pluck('path')
+            ->map(fn ($path): string => (string) $path)
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Workflow action counts recorded in the listed database snapshots' small
+     * manifests, keyed by snapshot id (RV-PERF-17).
+     *
+     * @return array<int, int>
+     */
+    #[Computed]
+    public function workflowActionsAtSnapshot(): array
+    {
+        $ids = $this->snapshots->where('kind', BackupSnapshotKind::Database)->pluck('id')->all();
+
+        if ($ids === []) {
+            return [];
+        }
+
+        return BackupSnapshot::query()
+            ->whereIn('id', $ids)
+            ->get(['id', 'manifest'])
+            ->mapWithKeys(fn (BackupSnapshot $snapshot): array => [$snapshot->id => (int) ($snapshot->manifestArray()['workflow_actions'] ?? 0)])
+            ->all();
     }
 
     /** Workflow actions recorded after a database snapshot; a promote removes them from the live history. */
     public function actionsLostBy(BackupSnapshot $snapshot): int
     {
-        return max(0, $this->liveWorkflowActions() - (int) ($snapshot->manifest['workflow_actions'] ?? 0));
+        return max(0, $this->liveWorkflowActions() - ($this->workflowActionsAtSnapshot[$snapshot->id] ?? 0));
     }
 
     #[Computed]

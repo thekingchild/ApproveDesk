@@ -46,8 +46,12 @@ final readonly class SubmissionData
             'title' => $this->title,
             'body' => $this->body,
             'priority' => $this->priority,
-            'department_id' => $this->departmentId,
             'due_date' => $this->dueDate,
+            // No department on the form means "keep the stored one": editing a
+            // draft or returned request must not clear it (RV-BUG-32).
+            ...($this->departmentId === null ? [] : [
+                'department_id' => $this->departmentId,
+            ]),
             ...($this->requestTypeVersionId === null ? [] : [
                 'request_type_version_id' => $this->requestTypeVersionId,
             ]),

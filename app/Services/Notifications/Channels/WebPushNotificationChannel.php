@@ -6,6 +6,7 @@ use App\Contracts\OptionalNotificationChannel;
 use App\DTOs\ChannelTestResult;
 use App\DTOs\OutboundNotification;
 use App\Enums\NotificationChannelKey;
+use App\Exceptions\NotificationDeliveryException;
 use App\Models\User;
 use App\Services\Notifications\WebPushService;
 
@@ -36,7 +37,7 @@ final class WebPushNotificationChannel implements OptionalNotificationChannel
     public function send(User $notifiable, OutboundNotification $message): void
     {
         if (! $this->canReceive($notifiable)) {
-            return;
+            throw NotificationDeliveryException::skipped('The person has no browser push subscription.');
         }
 
         $notifiable->loadMissing('pushSubscriptions');

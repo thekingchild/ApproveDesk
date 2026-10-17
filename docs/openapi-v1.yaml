@@ -48,9 +48,10 @@ paths:
       parameters:
         - in: header
           name: Idempotency-Key
-          schema: { type: string }
+          schema: { type: string, maxLength: 255 }
       responses:
         "201": { description: Created }
+        "409": { description: "Idempotency-Key reused with a different body, or the first request with this key is still running (Retry-After is set)" }
   /submissions/{id}:
     get:
       security: [{ bearerAuth: [] }]

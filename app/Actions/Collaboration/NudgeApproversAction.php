@@ -2,6 +2,7 @@
 
 namespace App\Actions\Collaboration;
 
+use App\DTOs\NudgeResult;
 use App\Enums\WorkflowStatus;
 use App\Exceptions\CollaborationException;
 use App\Models\Delegation;
@@ -13,6 +14,7 @@ use App\Notifications\SubmissionNudgeNotification;
 use App\Services\Collaboration\QuietHours;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 final class NudgeApproversAction
 {
@@ -23,9 +25,11 @@ final class NudgeApproversAction
     public function __construct(private readonly QuietHours $quietHours) {}
 
     /**
-     * @return Collection<int, SubmissionNudge>
+     * Reminds every current approver. The daily cap counts reminder actions
+     * by this person, and anyone reminded within the interval is skipped and
+     * reported back rather than blocking the others (RV-BUG-19).
      */
-    public function execute(Submission $submission, User $actor, ?string $message = null): Collection
+    public function execute(Submission $submission, User $actor, ?string $message = null): NudgeResult
     {
         if (! $actor->can('nudge', $submission)) {
             throw CollaborationException::cannotNudge('you do not have access to this request');
@@ -45,43 +49,42 @@ final class NudgeApproversAction
 
         $interval = max(1, (int) Setting::get('nudge.rate_limit_minutes', (string) self::DEFAULT_INTERVAL_MINUTES));
         $maxPerDay = max(1, (int) Setting::get('nudge.max_per_day', (string) self::DEFAULT_MAX_PER_DAY));
-        $sinceDay = now()->subDay();
 
-        $actorCount = SubmissionNudge::query()
-            ->where('actor_id', $actor->id)
-            ->where('submission_id', $submission->id)
-            ->where('created_at', '>=', $sinceDay)
-            ->count();
-
-        if ($actorCount + $recipients->count() > $maxPerDay) {
+        if ($this->actionsInLastDay($submission, $actor) >= $maxPerDay) {
             throw CollaborationException::cannotNudge("you can send at most {$maxPerDay} reminders on this request in 24 hours");
+        }
+
+        $recentlyReminded = SubmissionNudge::query()
+            ->where('submission_id', $submission->id)
+            ->whereIn('recipient_id', $recipients->pluck('id'))
+            ->where('created_at', '>=', now()->subMinutes($interval))
+            ->distinct()
+            ->pluck('recipient_id');
+
+        [$skipped, $toRemind] = $recipients->partition(fn (User $user): bool => $recentlyReminded->contains($user->id));
+
+        if ($toRemind->isEmpty()) {
+            throw CollaborationException::cannotNudge(
+                $skipped->pluck('name')->join(', ', ' and ').' '.($skipped->count() === 1 ? 'was' : 'were')
+                .' already reminded in the last '.$interval.' minutes',
+            );
         }
 
         $quiet = $this->quietHours->isQuiet();
         $scheduledFor = $this->quietHours->nextOpenAt();
         $trimmed = ($message !== null && trim($message) !== '') ? trim($message) : null;
+        $batchId = (string) Str::uuid();
 
-        return DB::transaction(function () use ($submission, $actor, $recipients, $step, $interval, $quiet, $scheduledFor, $trimmed): Collection {
+        $nudges = DB::transaction(function () use ($submission, $actor, $toRemind, $step, $quiet, $scheduledFor, $trimmed, $batchId): Collection {
             $nudges = collect();
 
-            foreach ($recipients as $recipient) {
-                $recent = SubmissionNudge::query()
-                    ->where('submission_id', $submission->id)
-                    ->where('recipient_id', $recipient->id)
-                    ->where('created_at', '>=', now()->subMinutes($interval))
-                    ->exists();
-
-                if ($recent) {
-                    throw CollaborationException::cannotNudge(
-                        $recipient->name.' was already reminded in the last '.$interval.' minutes',
-                    );
-                }
-
+            foreach ($toRemind as $recipient) {
                 $nudge = SubmissionNudge::query()->create([
                     'submission_id' => $submission->id,
                     'actor_id' => $actor->id,
                     'recipient_id' => $recipient->id,
                     'step_id' => $step->id,
+                    'batch_id' => $batchId,
                     'message' => $trimmed,
                     'scheduled_for' => $scheduledFor,
                     'delayed_for_quiet_hours' => $quiet,
@@ -96,6 +99,24 @@ final class NudgeApproversAction
 
             return $nudges;
         });
+
+        return new NudgeResult($nudges, $skipped->values());
+    }
+
+    /**
+     * One click is one action, however many approvers it reaches. Rows from
+     * before batch_id existed count as one action each.
+     */
+    private function actionsInLastDay(Submission $submission, User $actor): int
+    {
+        return SubmissionNudge::query()
+            ->where('actor_id', $actor->id)
+            ->where('submission_id', $submission->id)
+            ->where('created_at', '>=', now()->subDay())
+            ->get(['id', 'batch_id'])
+            ->map(fn (SubmissionNudge $nudge): string => $nudge->batch_id ?? 'row-'.$nudge->id)
+            ->unique()
+            ->count();
     }
 
     /**

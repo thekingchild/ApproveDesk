@@ -4,7 +4,9 @@ namespace App\Listeners;
 
 use App\Events\SubmissionCreated;
 use App\Events\WorkflowAdvanced;
+use App\Models\User;
 use App\Notifications\ActionRequiredNotification;
+use Illuminate\Support\Facades\Notification;
 
 /**
  * Whenever a submission enters review or advances to a new step, every
@@ -25,15 +27,16 @@ class NotifyCurrentApprovers
         }
 
         $step = $instance->currentStep()->first();
+        // Load the submission once, not once per approver (RV-PERF-15).
+        $submission = $instance->submission()->first();
 
-        if ($step === null) {
+        if ($step === null || $submission === null) {
             return;
         }
 
-        $step->assignedUsers($instance->submission)
-            ->filter(fn ($user) => $user->is_active)
-            ->each(fn ($user) => $user->notify(
-                new ActionRequiredNotification($instance->submission()->first()),
-            ));
+        $approvers = $step->assignedUsers($submission)
+            ->filter(fn (User $user): bool => $user->canReceiveNotifications());
+
+        Notification::send($approvers, new ActionRequiredNotification($submission));
     }
 }

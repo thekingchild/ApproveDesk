@@ -8,7 +8,6 @@ use App\Enums\NotificationDeliveryStatus;
 use App\Models\User;
 use App\Services\Notifications\NotificationDeliveryRecorder;
 use Illuminate\Notifications\Notification;
-use Throwable;
 
 /**
  * Laravel notification driver adapter. Fail-open: send errors are recorded
@@ -39,11 +38,6 @@ final class OptionalLaravelNotificationChannel
             return;
         }
 
-        try {
-            $this->driver->send($notifiable, $message);
-            $this->recorder->markSent($delivery);
-        } catch (Throwable $exception) {
-            $this->recorder->markFailed($delivery, $exception->getMessage(), true);
-        }
+        $this->recorder->deliver($this->driver, $notifiable, $message, $delivery);
     }
 }

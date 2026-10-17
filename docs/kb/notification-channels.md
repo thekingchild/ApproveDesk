@@ -16,7 +16,7 @@ Cards show whether each optional channel is off, missing credentials, or ready. 
 
 ### Email copy
 
-Pick a notification kind, edit the subject and body, preview it, save it, or restore the default. Merge fields such as `{{title}}` and `{{approval_url}}` are replaced when a message is sent. **Action required** copy must include `{{approval_url}}`. Saving does not change signed-link lifetime or whether the named approver must sign in.
+Pick a notification kind, edit the subject and body, preview it, save it, or restore the default. Merge fields such as `{{title}}` and `{{approval_url}}` are replaced when a message is sent. A merge field with nothing to fill it, such as `{{comment}}` when the approver left no comment, is left blank; a line that ends up empty is dropped. The decision email shows only the comment written with that decision, never an older return or rejection comment. **Action required** copy must include `{{approval_url}}`. Saving does not change signed-link lifetime or whether the named approver must sign in.
 
 Administrators control that requirement on **Settings → Approval settings**. When it is on, the link in email, Telegram, WhatsApp, or another message still opens the request, but only after the named approver signs in and verifies a second factor in that browser session.
 
@@ -253,7 +253,7 @@ Map a person to a Teams, Slack, or Telegram ID. **Remove** clears that mapping. 
 
 ### Delivery
 
-Recent optional-channel attempts show sent, skipped, deferred, or failed. Reminder quiet hours also delay chat and browser push; they do not delay the inbox. Failed action-required chat retries up to three times. A failed chat delivery does not fail the approval.
+Recent optional-channel attempts show sent, skipped, deferred, or failed. **Sent** means the chat service accepted the message. **Failed** means the service refused it or could not be reached; the error column shows why. **Skipped** means the channel could not carry that message, for example a WhatsApp kind with no approved template mapping, or a person who is no longer linked or active. Reminder quiet hours also delay chat and browser push; they do not delay the inbox. A held message is sent when the window ends with the same wording and secure link as an immediate one. A held approval request or reminder is skipped if the request has moved past that step, or the person can no longer act on it. Failed action-required chat retries up to three times; a large backlog is worked through over several 15-minute runs. A failed chat delivery does not fail the approval. Delivery attempts are kept for 180 days, then cleared automatically; attempts about a request under a legal hold are kept. Inbox notices you have read are cleared from the bell after 180 days; unread notices stay.
 
 Telegram sends a message to the linked account. ApproveDesk does not keep an always-on chat connection. WhatsApp sends only when the kind is mapped to an approved template.
 

@@ -49,4 +49,10 @@ class SubmissionFileRevision extends Model
     {
         return $this->belongsTo(Submission::class);
     }
+
+    /** @return BelongsTo<User, $this> */
+    public function actor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'actor_id');
+    }
 }

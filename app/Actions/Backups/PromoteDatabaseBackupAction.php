@@ -16,6 +16,7 @@ use App\Services\Backups\SqliteSnapshotLoader;
 use App\Services\Operations\BackupVerifier;
 use App\Services\Operations\OperationsReconciler;
 use App\Support\LongRunningOperation;
+use App\Support\PermissionCache;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
@@ -72,8 +73,9 @@ final class PromoteDatabaseBackupAction
         }
 
         $snapshotActions = (int) ($snapshot->manifest['workflow_actions'] ?? $liveActions);
-        // The settings table was replaced wholesale; drop the cached copy.
+        // The settings and permission tables were replaced wholesale; drop cached copies.
         Setting::flushCache();
+        PermissionCache::forgetIfReady();
 
         $this->rememberPromoted($snapshot, $actor, [
             'discarded_workflow_actions' => max(0, $liveActions - $snapshotActions),

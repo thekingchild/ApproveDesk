@@ -92,7 +92,7 @@ new #[Title('Submission')] class extends Component {
             'requestTypeVersion.requestType', 'requestTypeVersion.fields',
             'fieldValues.field', 'fieldValues.userValue', 'fieldValues.departmentValue',
             'workflowInstance.template.steps',
-            'workflowInstance.templateVersion',
+            'workflowInstance.templateVersion.steps',
             'workflowInstance.currentStep',
             'workflowInstance.actions.actor',
             'workflowInstance.actions.onBehalfOf:id,name',
@@ -146,7 +146,10 @@ new #[Title('Submission')] class extends Component {
 
         $actions = $instance->actions->groupBy('step_id');
 
-        return $instance->template->steps->map(function ($step) use ($instance, $actions) {
+        // The chain this request is pinned to, not whatever was published since (RV-BUG-28).
+        $steps = $instance->templateVersion?->steps ?? $instance->template->steps;
+
+        return $steps->map(function ($step) use ($instance, $actions) {
             $stepActions = $actions->get($step->id, collect());
             $assignedUsers = $this->assigneesFor($step);
             $automatic = $step->step_type->isAutomatic();
@@ -273,7 +276,7 @@ new #[Title('Submission')] class extends Component {
             ->whereKeyNot(Auth::id())
             ->whereNotIn('id', $excluded)
             ->orderBy('name')
-            ->get();
+            ->get(['id', 'name', 'email']);
     }
 
     /** The viewer's current or upcoming delegation on this step, if any (for "Take back"). */
@@ -594,7 +597,7 @@ new #[Title('Submission')] class extends Component {
     public function sendNudge(): void
     {
         try {
-            app(NudgeApproversAction::class)->execute(
+            $result = app(NudgeApproversAction::class)->execute(
                 $this->submission,
                 Auth::user(),
                 $this->nudgeMessage !== '' ? $this->nudgeMessage : null,
@@ -606,7 +609,12 @@ new #[Title('Submission')] class extends Component {
         }
 
         $this->reset('nudgeMessage');
-        Flux::toast('Reminder sent.', variant: 'success');
+        Flux::toast(
+            $result->skipped->isEmpty()
+                ? __('Reminder sent.')
+                : __('Reminder sent. Not reminded again yet: :names.', ['names' => $result->skipped->pluck('name')->join(', ')]),
+            variant: 'success',
+        );
     }
 
     #[Computed]

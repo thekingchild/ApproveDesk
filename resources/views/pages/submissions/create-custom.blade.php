@@ -179,11 +179,13 @@ new #[Title('Custom request')] class extends Component {
     <x-ui.page-header :title="$this->version->requestType->name" :description="$this->version->requestType->description ?? __('Complete the fields below.')" />
     <div class="flex gap-2"><flux:badge :color="$step === 1 ? 'indigo' : 'lime'">1. {{ __('Details') }}</flux:badge><flux:badge :color="$step === 2 ? 'indigo' : 'zinc'">2. {{ __('Review') }}</flux:badge></div>
 
+    {{-- Hidden answers count as absent, so a field under a hidden parent stays hidden (RV-BUG-29). --}}
+    @php $visibleValues = app(RequestSchemaCompiler::class)->visibleValues($this->version, $values); @endphp
     @if ($step === 1)
         <form wire:submit="review" class="space-y-6">
             @php $currentSection = null; @endphp
             @foreach ($this->version->fields as $field)
-                @continue(!app(RequestSchemaCompiler::class)->isVisible($field, $values))
+                @continue(!app(RequestSchemaCompiler::class)->isVisible($field, $visibleValues))
                 @php $config = $field->configuration ?? []; @endphp
                 @if (($config['section'] ?? null) !== $currentSection)
                     @php $currentSection = $config['section'] ?? null; @endphp
@@ -191,9 +193,9 @@ new #[Title('Custom request')] class extends Component {
                 @endif
                 <div class="space-y-1" wire:key="custom-field-{{ $field->id }}">
                     @if ($field->type === RequestFieldType::LongText || $field->type === RequestFieldType::RichText)
-                        <flux:textarea wire:model.live="values.{{ $field->key }}" :label="$field->label" :placeholder="$config['placeholder'] ?? ''" :required="app(RequestSchemaCompiler::class)->isRequired($field, $values)" dusk="custom-field-{{ $field->key }}" />
+                        <flux:textarea wire:model.live="values.{{ $field->key }}" :label="$field->label" :placeholder="$config['placeholder'] ?? ''" :required="app(RequestSchemaCompiler::class)->isRequired($field, $visibleValues)" dusk="custom-field-{{ $field->key }}" />
                     @elseif (in_array($field->type, [RequestFieldType::Select, RequestFieldType::User, RequestFieldType::Department], true))
-                        <flux:select wire:model.live="values.{{ $field->key }}" :label="$field->label" :required="app(RequestSchemaCompiler::class)->isRequired($field, $values)" dusk="custom-field-{{ $field->key }}"><flux:select.option value="">{{ __('Choose…') }}</flux:select.option>@foreach ($field->type === RequestFieldType::User ? $this->users : ($field->type === RequestFieldType::Department ? $this->departments : collect($config['options'] ?? [])) as $option)<flux:select.option :value="is_object($option) ? $option->id : $option">{{ is_object($option) ? $option->name : $option }}</flux:select.option>@endforeach</flux:select>
+                        <flux:select wire:model.live="values.{{ $field->key }}" :label="$field->label" :required="app(RequestSchemaCompiler::class)->isRequired($field, $visibleValues)" dusk="custom-field-{{ $field->key }}"><flux:select.option value="">{{ __('Choose…') }}</flux:select.option>@foreach ($field->type === RequestFieldType::User ? $this->users : ($field->type === RequestFieldType::Department ? $this->departments : collect($config['options'] ?? [])) as $option)<flux:select.option :value="is_object($option) ? $option->id : $option">{{ is_object($option) ? $option->name : $option }}</flux:select.option>@endforeach</flux:select>
                     @elseif ($field->type === RequestFieldType::MultiSelect)
                         <label class="block text-sm font-medium">{{ $field->label }}</label><select wire:model.live="values.{{ $field->key }}" multiple class="min-h-28 w-full rounded-lg border bg-white p-2 dark:bg-zinc-900">@foreach ($config['options'] ?? [] as $option)<option value="{{ $option }}">{{ $option }}</option>@endforeach</select>
                     @elseif ($field->type === RequestFieldType::Radio)
@@ -203,9 +205,9 @@ new #[Title('Custom request')] class extends Component {
                     @elseif ($field->type === RequestFieldType::File)
                         <flux:input type="file" wire:model="uploads.{{ $field->key }}" multiple :label="$field->label" :accept="collect($config['allowed_types'] ?? [])->map(fn($type) => '.'.$type)->implode(',')" />
                     @elseif ($field->type === RequestFieldType::Calculated)
-                        <flux:input :value="$values[$field->key] ?? 0" :label="$field->label" readonly />
+                        <flux:input :value="$visibleValues[$field->key] ?? 0" :label="$field->label" readonly />
                     @else
-                        <flux:input wire:model.live="values.{{ $field->key }}" :type="match($field->type) { RequestFieldType::Number, RequestFieldType::Currency => 'number', RequestFieldType::Date => 'date', RequestFieldType::DateTime => 'datetime-local', RequestFieldType::Url => 'url', RequestFieldType::Email => 'email', default => 'text' }" :label="$field->label" :placeholder="$config['placeholder'] ?? ''" :required="app(RequestSchemaCompiler::class)->isRequired($field, $values)" dusk="custom-field-{{ $field->key }}" />
+                        <flux:input wire:model.live="values.{{ $field->key }}" :type="match($field->type) { RequestFieldType::Number, RequestFieldType::Currency => 'number', RequestFieldType::Date => 'date', RequestFieldType::DateTime => 'datetime-local', RequestFieldType::Url => 'url', RequestFieldType::Email => 'email', default => 'text' }" :label="$field->label" :placeholder="$config['placeholder'] ?? ''" :required="app(RequestSchemaCompiler::class)->isRequired($field, $visibleValues)" dusk="custom-field-{{ $field->key }}" />
                     @endif
                     @if ($config['help'] ?? null)<p class="text-sm text-zinc-600 dark:text-zinc-300">{{ $config['help'] }}</p>@endif
                     <flux:error name="values.{{ $field->key }}" />
@@ -214,7 +216,7 @@ new #[Title('Custom request')] class extends Component {
             <div class="flex justify-end gap-2"><flux:button type="button" wire:click="saveDraft" dusk="save-custom-draft">{{ __('Save draft') }}</flux:button><flux:button type="submit" variant="primary" dusk="review-custom-request">{{ __('Review request') }}</flux:button></div>
         </form>
     @else
-        <flux:card><flux:heading size="md">{{ __('Review summary') }}</flux:heading><dl class="mt-4 divide-y divide-zinc-200 dark:divide-zinc-700">@foreach ($this->version->fields as $field) @continue(!app(RequestSchemaCompiler::class)->isVisible($field, $values)) <div class="grid gap-1 py-3 sm:grid-cols-3"><dt class="font-medium">{{ $field->label }}</dt><dd class="sm:col-span-2">{{ is_array($values[$field->key] ?? null) ? implode(', ', $values[$field->key]) : (($values[$field->key] ?? '') !== '' ? $values[$field->key] : '—') }}</dd></div>@endforeach</dl></flux:card>
+        <flux:card><flux:heading size="md">{{ __('Review summary') }}</flux:heading><dl class="mt-4 divide-y divide-zinc-200 dark:divide-zinc-700">@foreach ($this->version->fields as $field) @continue(!app(RequestSchemaCompiler::class)->isVisible($field, $visibleValues)) <div class="grid gap-1 py-3 sm:grid-cols-3"><dt class="font-medium">{{ $field->label }}</dt><dd class="sm:col-span-2">{{ is_array($visibleValues[$field->key] ?? null) ? implode(', ', $visibleValues[$field->key]) : (($visibleValues[$field->key] ?? '') !== '' ? $visibleValues[$field->key] : '—') }}</dd></div>@endforeach</dl></flux:card>
         <div class="flex justify-end gap-2"><flux:button wire:click="$set('step', 1)">{{ __('Back') }}</flux:button><flux:button wire:click="saveDraft">{{ __('Save draft') }}</flux:button><flux:button variant="primary" wire:click="submit" dusk="submit-custom-request">{{ __('Submit for approval') }}</flux:button></div>
     @endif
 </div>

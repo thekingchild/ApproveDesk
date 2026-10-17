@@ -14,6 +14,37 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Fixed
 
+- **Notifications tell the truth and reach the right people.**
+  - Chat notifications that Slack, Teams, Telegram or WhatsApp refuse now show as Failed in the delivery log, and approval requests are retried, instead of showing as Sent. Notification types without a WhatsApp template show as Skipped.
+  - Chat messages held during reminder quiet hours keep their full wording and secure approval link, and are dropped if the request has moved past that step.
+  - Decision emails no longer show a literal `{{comment}}`, and an approval email no longer repeats an earlier return or rejection comment.
+  - Daily digests are no longer skipped when the job starts a few seconds earlier than the day before.
+  - Reminders work on steps with more approvers than the daily cap: the cap counts reminders sent, not people reached, and approvers reminded within the last hour are skipped (and named) instead of blocking the reminder.
+  - Deactivated and anonymized people no longer receive decision, comment, follower, digest or chat notifications. Security emails (sign-in alerts, account recovery) are unchanged.
+  - Notifying a new step's approvers no longer reloads the request once per approver, and the chat retry job handles at most 20 messages per run and stops after 45 seconds.
+- **Forms and requests.**
+  - The request page's step list shows the workflow version the request started on, not a version published later.
+  - Answers to fields hidden by an earlier answer no longer make later fields required, and hidden amounts are left out of calculated totals; the review screen shows the total that is saved.
+  - Saving or publishing a draft of an archived request type no longer re-opens it to requesters; use the new **Restore** button.
+  - Editing a General Request draft or returned request no longer clears its department.
+  - Business-hour deadlines with no office hours set no longer count the hour before a working day.
+  - A date-time field's latest date accepts times on that whole day, and a required checkbox must be ticked before submitting.
+  - Resubmitting a returned request whose step now has nobody to act (for example, the manager has left) is refused with a clear message instead of resuming with no approver.
+  - The workflow builder and template editor refuse to save over changes another administrator saved or published after the page was opened.
+- **People, reports, and backups.**
+  - Anonymizing a person deletes their profile photo, removes them as a follower of requests, and ends any delegation to or from them that is running or scheduled. Delegations that already ended stay in the history.
+  - User import checks phone, department, manager and roles on rows for existing accounts too, refuses phone numbers already used by someone else, and lists a row as a problem when its manager's own row cannot be imported.
+  - The approval report shows each step's real outcome (for example Withdrawn, Rejected, Skipped or Not reached) instead of "Completed", and decided steps name the people who acted.
+  - Promoting a files backup restores the branding artwork saved in the snapshot. The Backups page no longer reads every snapshot's full file list.
+- **Audit and retention.**
+  - Evidence-pack verification rejects packs with extra files added to the zip or a changed manifest. Older packs show as "Unsigned (legacy)" instead of verified.
+  - Evidence packs include the request change history, earlier wordings of edited comments, the attachment history and in-app notifications about the request.
+  - Retention retires every eligible request in one pass instead of skipping some, and stops before the background worker's time limit. Help now explains that retired requests are hidden but kept as audit evidence.
+  - Read in-app notifications and notification delivery attempts older than 180 days, failed background jobs older than 30 days, generated evidence-pack zips older than 30 days, and API idempotency keys older than 7 days are cleaned up nightly. Records about requests under legal hold, and the activity log, are kept.
+  - Disposition reviews can no longer be opened or approved for unfinished requests, and Records shows refused disposition and legal-hold actions as messages instead of a server error.
+  - API requests sent at the same time with the same Idempotency-Key no longer both run; the repeat receives 409 with Retry-After until the first finishes.
+  - The nightly clean-up of unconfirmed sign-ups no longer skips accounts when there are more than 1,000 to remove.
+- **Performance.** Pages no longer clear the permission cache on every request (about 22 ms and 3 queries each), system settings and the unread-notification badge cost no extra queries, the rich-text editor loads only on the page that uses it (the main script drops from 384 kB to 6 kB), people dropdowns load only the names they show, and expired file-cache entries are deleted daily.
 - **Large backups and restores no longer run the server out of memory or strand the site in maintenance mode.** Compression, copies, Google Drive transfers, checks, and SQL restores now stream in 1 MB pieces (a 173 MB dump peaked at 333 MB of memory before). Backup, verify, and promote lift PHP's time limit and keep running if the page is closed. If the request still dies from a fatal error, a SQLite promote puts the old database back and reopens the site; a MySQL/MariaDB promote reopens the site if loading had not started, and otherwise stays in maintenance mode and logs the safety backup to restore.
 - **Faster search, approvals, request pages, and analytics for large organizations.**
   - Global search filters by what you can see in the database instead of checking every matching request one by one (a requester typing two letters took about 12 seconds).

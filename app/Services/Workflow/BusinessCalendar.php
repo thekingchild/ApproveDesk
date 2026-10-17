@@ -185,15 +185,7 @@ final class BusinessCalendar
 
         $windowSpec = $this->workingHours();
         if ($windowSpec === null) {
-            $remaining = $hours;
-            while ($remaining > 0) {
-                $cursor = $cursor->addHour();
-                if ($this->isWorkingDay($cursor)) {
-                    $remaining--;
-                }
-            }
-
-            return $cursor;
+            return $this->addWorkingDaySeconds($cursor, $hours * 3600);
         }
 
         $remaining = $hours * 3600;
@@ -227,6 +219,38 @@ final class BusinessCalendar
                 continue;
             }
 
+            $cursor = $cursor->addSeconds($take);
+            $remaining -= $take;
+        }
+
+        return $cursor;
+    }
+
+    /**
+     * 24-hour mode: count only time that falls on a working day. Judging each
+     * whole hour by the day it ends on counted the last hour before a working
+     * day (Sunday 23:00-24:00), so deadlines came up to an hour early
+     * (RV-BUG-34).
+     */
+    private function addWorkingDaySeconds(CarbonImmutable $cursor, int $remaining): CarbonImmutable
+    {
+        $idleDays = 0;
+
+        while ($remaining > 0) {
+            $nextMidnight = $cursor->startOfDay()->addDay();
+
+            if (! $this->isWorkingDay($cursor)) {
+                if (++$idleDays > self::NEXT_START_MAX_DAYS) {
+                    throw new RuntimeException('Business calendar could not consume remaining seconds');
+                }
+
+                $cursor = $nextMidnight;
+
+                continue;
+            }
+
+            $idleDays = 0;
+            $take = min($remaining, (int) $nextMidnight->timestamp - (int) $cursor->timestamp);
             $cursor = $cursor->addSeconds($take);
             $remaining -= $take;
         }

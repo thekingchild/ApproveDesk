@@ -21,6 +21,7 @@ use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
@@ -72,6 +73,10 @@ new #[Title('Workflow builder')] class extends Component {
 
     /** @var list<array{key: string, label: string, behavior: string, requires_comment: bool}> */
     public array $outcomes = [];
+
+    /** What this editor loaded; a save is refused once someone else changes the template (RV-BUG-37). */
+    #[Locked]
+    public string $editionToken = '';
 
     public function mount(WorkflowTemplate|int $template): void
     {
@@ -329,9 +334,11 @@ new #[Title('Workflow builder')] class extends Component {
             changeSummary: $this->changeSummary !== '' ? $this->changeSummary : null,
             outcomes: $this->normalizedOutcomes(),
         );
-        app(UpdateWorkflowTemplateAction::class)->execute($model, $data, Auth::user());
+        app(UpdateWorkflowTemplateAction::class)->execute($model, $data, Auth::user(), $this->editionToken);
+        $model = $this->model();
+        $this->editionToken = $model->editionToken();
 
-        return $this->model();
+        return $model;
     }
 
     /** @return list<WorkflowTemplateStepData> */
@@ -398,6 +405,7 @@ new #[Title('Workflow builder')] class extends Component {
     private function hydrateFrom(WorkflowTemplate $model): void
     {
         $graph = $model->draftVersion ?? $model->publishedVersion;
+        $this->editionToken = $model->editionToken();
         $this->name = $model->name;
         $this->description = $model->description ?? '';
         $this->isDefault = $model->is_default;

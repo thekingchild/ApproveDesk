@@ -7,14 +7,30 @@ use App\Models\Setting;
 use App\Models\Submission;
 use App\Models\User;
 use App\Models\WorkflowAction;
+use App\Models\WorkflowTemplateStep;
 use App\Models\WorkflowTemplateVersion;
 use App\Services\Workflow\StepOutcomes;
 use App\Support\ApprovalStatusStamp;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 
 final class ApprovalReportService
 {
+    /** Recorded outcomes that settle a step, and the state the report shows for each. */
+    private const STEP_OUTCOME_STATES = [
+        'approve' => 'Completed',
+        'approve_with_conditions' => 'Completed',
+        'auto_approve' => 'Completed',
+        'condition_matched' => 'Completed',
+        'condition_not_matched' => 'Skipped',
+        'escalate' => 'Escalated',
+        'reject' => 'Rejected',
+        'auto_reject' => 'Rejected',
+        'return' => 'Returned',
+        'withdraw' => 'Withdrawn',
+    ];
+
     public function __construct(
         private readonly ApprovalStatusStamp $statusStamp,
     ) {}
@@ -62,20 +78,28 @@ final class ApprovalReportService
         $steps = $stepSource
             ->sortBy('step_order')
             ->map(function ($step) use ($instance, $actionsByStep, $submission): array {
-                $stepActions = $actionsByStep->get($step->id, collect());
+                $stepActions = $actionsByStep->get($step->id, collect())
+                    ->sortBy(fn ($action): string => sprintf('%020d-%020d', $action->created_at?->getTimestamp() ?? 0, $action->id))
+                    ->values();
+                $isCurrent = $instance !== null
+                    && $instance->current_step_id === $step->id
+                    && in_array($instance->status->value, ['active', 'on_hold'], true);
+                $decided = $stepActions->filter(fn ($action): bool => array_key_exists($action->action->value, self::STEP_OUTCOME_STATES));
+                $finished = $instance !== null && ! in_array($instance->status->value, ['active', 'on_hold'], true);
+
+                // The step's state comes from its last recorded outcome, so a
+                // withdrawn step is not reported as completed (RV-BUG-22).
                 $state = match (true) {
-                    $stepActions->contains(fn ($action): bool => in_array($action->action, [WorkflowActionType::Reject, WorkflowActionType::AutoReject], true)) => 'Rejected',
-                    $instance !== null && $instance->current_step_id === $step->id && in_array($instance->status->value, ['active', 'on_hold'], true) => 'Current',
-                    $stepActions->isNotEmpty() => 'Completed',
+                    $isCurrent => 'Current',
+                    $decided->isNotEmpty() => self::STEP_OUTCOME_STATES[$decided->last()->action->value],
+                    $finished => 'Not reached',
                     default => 'Pending',
                 };
 
                 return [
                     'name' => $step->name,
                     'state' => $state,
-                    'actors' => $step->step_type->isAutomatic()
-                        ? 'System'
-                        : $step->assignedUsers($submission)->pluck('name')->implode(', '),
+                    'actors' => $this->stepPeople($step, $submission, $stepActions, $isCurrent || $state === 'Pending'),
                 ];
             })
             ->values()
@@ -117,6 +141,33 @@ final class ApprovalReportService
             'generated_at' => ($generatedAt ?? now())->timezone((string) config('app.timezone')),
             'timezone' => (string) config('app.timezone'),
         ];
+    }
+
+    /**
+     * Steps still waiting show who is assigned now; steps already settled show
+     * the people who actually decided them, as recorded, so later changes to
+     * assignments or deactivated accounts do not rewrite history (RV-BUG-22).
+     *
+     * @param  Collection<int, WorkflowAction>  $stepActions
+     */
+    private function stepPeople(WorkflowTemplateStep $step, Submission $submission, Collection $stepActions, bool $waiting): string
+    {
+        if ($waiting) {
+            return $step->step_type->isAutomatic()
+                ? 'System'
+                : $step->assignedUsers($submission)->pluck('name')->implode(', ');
+        }
+
+        // Withdrawing is the requester's act, not a decision on the step.
+        $decisions = $stepActions->filter(fn (WorkflowAction $action): bool => $action->action !== WorkflowActionType::Withdraw
+            && array_key_exists($action->action->value, self::STEP_OUTCOME_STATES));
+
+        return $decisions
+            ->map(fn (WorkflowAction $action): string => $action->actor_id === null
+                ? 'System'
+                : $action->actor->name.($action->on_behalf_of_id !== null ? ' (on behalf of '.$action->onBehalfOf->name.')' : ''))
+            ->unique()
+            ->implode(', ');
     }
 
     private function assetDataUri(?string $path): ?string

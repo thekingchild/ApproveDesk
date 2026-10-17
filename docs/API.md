@@ -9,7 +9,7 @@ Users create and revoke their own tokens at **Settings → API tokens**. A token
 - `approvals:act` — record an action only when the user is assigned to the current workflow step.
 - `request-types:read` — read published request-type schemas.
 
-Send tokens as a Bearer token. All versioned endpoints are throttled to 60 requests per minute per authenticated user. Repeat a mutating POST with the same Idempotency-Key header to receive the original response; a different body with the same key returns 409.
+Send tokens as a Bearer token. All versioned endpoints are throttled to 60 requests per minute per authenticated user. Repeat a mutating POST with the same Idempotency-Key header to receive the original response; a different body with the same key returns 409. While the first request with a key is still running, a repeat returns 409 with `Retry-After: 1`; retry it to get the original response. A key whose request failed with a 5xx error can be reused. Keys are at most 255 characters (longer keys return 422).
 
 The machine-readable contract is at `GET /api/v1/openapi.json` (also stored in `docs/openapi-v1.yaml`).
 

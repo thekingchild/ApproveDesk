@@ -6,6 +6,7 @@ use App\Contracts\OptionalNotificationChannel;
 use App\DTOs\ChannelTestResult;
 use App\DTOs\OutboundNotification;
 use App\Enums\NotificationChannelKey;
+use App\Exceptions\NotificationDeliveryException;
 use App\Models\User;
 use App\Models\WhatsappMessageTemplate;
 use App\Models\WhatsappNotificationMap;
@@ -15,7 +16,7 @@ use Throwable;
 
 /**
  * WhatsApp outbound is template-mapped (P8-NOT-04). Until a mapping exists,
- * send() skips rather than posting free-form text.
+ * send() skips (and says so) rather than posting free-form text.
  */
 final class WhatsAppNotificationChannel implements OptionalNotificationChannel
 {
@@ -46,7 +47,7 @@ final class WhatsAppNotificationChannel implements OptionalNotificationChannel
     public function send(User $notifiable, OutboundNotification $message): void
     {
         if (! $this->isEnabled() || ! $this->isConfigured() || ! $this->canReceive($notifiable)) {
-            return;
+            throw NotificationDeliveryException::skipped('Channel is off, not configured, or the person is not linked.');
         }
 
         $map = WhatsappNotificationMap::query()->where('kind', $message->kind)->first();
@@ -55,8 +56,9 @@ final class WhatsAppNotificationChannel implements OptionalNotificationChannel
             ->where('language', $map->language)
             ->first();
 
+        // No approved template for this kind: nothing was sent, so the row says Skipped (RV-BUG-15).
         if ($map === null || ! $map->is_healthy || $catalog === null || ! $catalog->isApproved()) {
-            return;
+            throw NotificationDeliveryException::skipped('No approved WhatsApp template is mapped to this notification type.');
         }
 
         $credentials = $this->settings->credentials($this->key());
@@ -95,12 +97,17 @@ final class WhatsAppNotificationChannel implements OptionalNotificationChannel
                     ],
                 ]);
 
-            if ($response->failed()) {
-                $map->forceFill(['is_healthy' => false])->save();
-                $this->settings->recordSendFailure($this->key(), 'WhatsApp send failed: '.$response->status());
-            }
+            $refused = $response->failed();
         } catch (Throwable $exception) {
-            $this->settings->recordSendFailure($this->key(), $exception->getMessage());
+            throw NotificationDeliveryException::failed($this->settings->recordSendFailure($this->key(), $exception->getMessage()));
+        }
+
+        if ($refused) {
+            $map->forceFill(['is_healthy' => false])->save();
+
+            throw NotificationDeliveryException::failed(
+                $this->settings->recordSendFailure($this->key(), 'WhatsApp send failed: '.$response->status()),
+            );
         }
     }
 

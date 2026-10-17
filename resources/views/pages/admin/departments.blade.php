@@ -58,7 +58,7 @@ new #[Title('Department management')] class extends Component {
             ->assignable()
             ->where('is_active', true)
             ->orderBy('name')
-            ->get();
+            ->get(['id', 'name', 'email']);
     }
 
     public function updatedSearch(): void

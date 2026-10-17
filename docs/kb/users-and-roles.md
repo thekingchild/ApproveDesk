@@ -35,7 +35,7 @@ Built-in roles can be cloned but not edited or deleted. Archive a custom role to
 
 ## Inactive accounts
 
-Turn **Active** off to block sign-in and keep the person’s history. Do not reuse that email for a different person.
+Turn **Active** off to block sign-in and keep the person’s history. Inactive and anonymized people stop receiving notifications on every channel: no decision, comment, follower, or digest email, no chat messages, and nothing new in their inbox. Do not reuse that email for a different person.
 
 ## Departments on users
 
@@ -59,10 +59,10 @@ For large onboarding, open **Administration → Users → Import users**. A spre
 4. Preview the import. Ready rows will be created; existing emails and problems are listed. Download the problem report if you need to fix the file.
 5. Confirm. New accounts get a generated password — ask people to use **Forgot password** on the login screen to set their own.
 
-Departments must already exist (the importer will not create them). A manager must be an existing user or appear earlier in the same file. Roles must be ones you are allowed to grant. **Update the existing account** changes only people you could edit on the Users screen yourself: it needs the **Update users** permission, and administrators can be updated only by the System owner. Other existing rows are skipped. Imported people are trusted immediately; they do not go through the self-registration email code. Passwords are never read from the spreadsheet.
+Departments must already exist (the importer will not create them). A manager must be an existing user or appear earlier in the same file on a row that can be imported; if the manager's own row has a problem, the rows that name them are listed as problems too, with the manager's line number, so fix that line first. Phone numbers must be in international form and not already belong to someone else. Rows for existing accounts get the same checks before **Update the existing account** writes them, so a bad phone, department, or manager is listed as a problem instead of being saved. Roles must be ones you are allowed to grant. **Update the existing account** changes only people you could edit on the Users screen yourself: it needs the **Update users** permission, and administrators can be updated only by the System owner. Other existing rows are skipped. Imported people are trusted immediately; they do not go through the self-registration email code. Passwords are never read from the spreadsheet.
 
 ## Anonymize an account
 
-When someone leaves and they have request or decision history, edit the user and choose **Anonymize account**. Their name becomes “Former user”, they cannot sign in, and the history stays on those requests. You cannot anonymize yourself or the System owner.
+When someone leaves and they have request or decision history, edit the user and choose **Anonymize account**. Their name becomes “Former user”, they cannot sign in, and the history stays on those requests. Their profile photo is deleted, they stop following requests, and any delegation to or from them that is running now or due to start later ends at once; the request history records each ended delegation. Delegations that had already ended stay as evidence. You cannot anonymize yourself or the System owner. Anonymizing cannot be undone.
 
 People download their own data from **Settings → Privacy**. See [Security and privacy](security-and-privacy.md).

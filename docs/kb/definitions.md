@@ -32,7 +32,7 @@ A branded, document-ready view of one request, its visible details, workflow pro
 
 ## [Request type](/help/request-types)
 
-A named form, such as Leave Request or Purchase Request. The request type is what a requester chooses. It owns the fields people fill in and the approval chain that starts when they submit.
+A named form, such as Leave Request or Purchase Request. The request type is what a requester chooses. It owns the fields people fill in and the approval chain that starts when they submit. An archived request type stays archived until an administrator chooses Restore.
 
 ## [Workflow template](/help/workflow-templates)
 
@@ -68,7 +68,7 @@ The search field on a workflow step that finds users, roles, or departments with
 
 ## [Assignee resolver](/help/workflow-templates)
 
-How a step decides who acts: named people, a role, department members, the requester's manager, the department manager, a person picked on the form, or another connected system.
+How a step decides who acts: named people, a role, department members, the requester's manager, the department manager, a person picked on the form, or another connected system. It looks people up from current data each time the step is checked, so a change of manager or of the person picked on the form is followed.
 
 ## [Separation of duties](/help/approval-settings)
 
@@ -184,7 +184,7 @@ The email link or Teams/Slack **Approve** button for the current step. Tampered,
 
 ## [Evidence pack](/help/audit-trail)
 
-A signed download of one request: the form, workflow version, actions, comments, delegations, notifications, file hashes, and timestamps. Verification detects a changed file.
+A signed download of one request: the form, workflow version, actions, comments and their edit history, request and file history, delegations, notifications, file hashes, and timestamps. Verification detects a changed file, an added file, or a changed manifest.
 
 ## [Auditor access](/help/records)
 
@@ -192,15 +192,15 @@ A time-bounded, read-only grant. The person can open requests and download evide
 
 ## [Legal hold](/help/records)
 
-A flag on a request that blocks automatic deletion until someone releases it.
+A flag on a request that stops retention from retiring it until someone releases it.
 
 ## [Retention](/help/records)
 
-How long drafts and finished requests are kept before they may be removed.
+How long drafts and finished requests stay in lists and search before they are retired. Retired requests are hidden, not erased: they stay stored as audit evidence.
 
 ## [Disposition](/help/records)
 
-A review that must be approved before a finished request past its retention window is removed.
+A review that must be approved before a finished request past its retention window is retired. Only finished requests (approved, rejected, or withdrawn) can have one.
 
 ## [Sensitive field](/help/request-types)
 
@@ -240,7 +240,7 @@ A zip of your profile, requests, comments, and sign-in history from **Settings �
 
 ## [Account anonymization](/help/users-and-roles)
 
-An administrator action that removes a person’s name and email, blocks sign-in, and keeps their request history.
+An administrator action that removes a person’s name, email, and profile photo, stops their follows and open delegations, blocks sign-in, and keeps their request history.
 
 ## [Display-name request](/help/account-settings)
 

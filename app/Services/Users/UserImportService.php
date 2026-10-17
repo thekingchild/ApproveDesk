@@ -5,6 +5,7 @@ namespace App\Services\Users;
 use App\Models\Department;
 use App\Models\User;
 use App\Services\Roles\RoleAssignmentService;
+use App\Support\E164Phone;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -66,7 +67,10 @@ class UserImportService
 
         $existingEmails = User::query()->pluck('email')->map(fn (string $email): string => mb_strtolower($email))->all();
         $departmentNames = Department::query()->pluck('name')->map(fn (string $name): string => mb_strtolower(trim($name)))->all();
-        $pendingManagerEmails = [];
+        $existingPhones = User::query()->whereNotNull('phone')->pluck('email', 'phone')->map(fn (string $email): string => mb_strtolower($email))->all();
+        // Earlier lines of this file, by email: line number and whether it will be written (RV-BUG-25).
+        $earlierRows = [];
+        $phonesInFile = [];
         $reports = [];
 
         foreach ($rows as $index => $row) {
@@ -76,7 +80,7 @@ class UserImportService
             $email = mb_strtolower(trim((string) $report['email']));
             $department = trim((string) ($report['department'] ?? ''));
             $managerEmail = mb_strtolower(trim((string) ($report['manager_email'] ?? '')));
-            $phone = trim((string) ($report['phone'] ?? ''));
+            $phone = E164Phone::normalize((string) ($report['phone'] ?? '')) ?? '';
             $roles = collect(preg_split('/[;,]+/', (string) ($report['roles'] ?? '')) ?: [])
                 ->map(fn (string $role): string => trim($role))
                 ->filter()
@@ -84,77 +88,44 @@ class UserImportService
                 ->all();
 
             if ($name === '') {
-                $report = [...$report, 'line' => $line, 'status' => 'error', 'message' => __('Name is required.')];
-
-                $reports[] = $report;
+                $reports[] = [...$report, 'line' => $line, 'status' => 'error', 'message' => __('Name is required.')];
 
                 continue;
             }
 
             if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                $report = [...$report, 'line' => $line, 'status' => 'error', 'message' => __('A valid email is required.')];
-
-                $reports[] = $report;
+                $reports[] = [...$report, 'line' => $line, 'status' => 'error', 'message' => __('A valid email is required.')];
 
                 continue;
             }
 
-            if (in_array($email, $existingEmails, true)) {
-                $report = [...$report, 'line' => $line, 'status' => 'duplicate', 'message' => __('An account with this email already exists.')];
+            $isDuplicate = in_array($email, $existingEmails, true);
 
-                $reports[] = $report;
+            // Rows for existing accounts get the same checks as new ones, because
+            // "Update the existing account" writes them (RV-BUG-24).
+            $problem = $this->rowProblem($actor, $email, $department, $departmentNames, $roles, $phone, $existingPhones, $phonesInFile, $managerEmail, $existingEmails, $earlierRows);
 
-                continue;
-            }
-
-            if ($department !== '' && ! in_array(mb_strtolower($department), $departmentNames, true)) {
-                $report = [...$report, 'line' => $line, 'status' => 'error', 'message' => __('Department ":department" does not exist.', ['department' => $department])];
-
-                $reports[] = $report;
-
-                continue;
-            }
-
-            foreach ($roles as $role) {
-                if (! in_array($role, $this->roles->for($actor), true)) {
-                    $reports[] = [...$report, 'line' => $line, 'status' => 'error', 'message' => __('Role ":role" cannot be granted by you or does not exist.', ['role' => $role])];
-
-                    continue 2;
-                }
-            }
-
-            if ($phone !== '' && preg_match('/^\+[1-9]\d{7,14}$/', $phone) !== 1) {
-                $report = [...$report, 'line' => $line, 'status' => 'error', 'message' => __('Phone must be international format, e.g. +2348012345678.')];
-
-                $reports[] = $report;
+            if ($problem !== null) {
+                $reports[] = [...$report, 'line' => $line, 'status' => 'error', 'message' => $isDuplicate
+                    ? __('An account with this email already exists, but this row cannot update it: :problem', ['problem' => $problem])
+                    : $problem];
+                $earlierRows[$email] ??= ['line' => $line, 'usable' => $isDuplicate];
 
                 continue;
             }
 
-            // Manager may exist already or appear on an earlier valid row.
-            if ($managerEmail !== ''
-                && ! in_array($managerEmail, $existingEmails, true)
-                && ! in_array($managerEmail, $pendingManagerEmails, true)
-                && ! in_array($managerEmail, array_map(fn (array $r): string => mb_strtolower(trim((string) $r['email'])), array_slice($rows, 0, $index)), true)) {
-                $report = [...$report, 'line' => $line, 'status' => 'error', 'message' => __('Manager :email is not an existing user and does not appear earlier in this file.', ['email' => $managerEmail])];
-
-                $reports[] = $report;
-
-                continue;
+            if ($phone !== '') {
+                $phonesInFile[$phone] = $email;
             }
 
-            if ($managerEmail !== '') {
-                $existingManager = User::query()->where('email', $managerEmail)->first();
-                if ($existingManager instanceof User && $existingManager->isSystemOwner()) {
-                    $reports[] = [...$report, 'line' => $line, 'status' => 'error', 'message' => __('That manager is not available for assignment.')];
-
-                    continue;
-                }
-
-                $pendingManagerEmails[] = $managerEmail;
+            $report['phone'] = $phone;
+            if (! ($earlierRows[$email]['usable'] ?? false)) {
+                $earlierRows[$email] = ['line' => $line, 'usable' => true];
             }
 
-            $reports[] = [...$report, 'line' => $line, 'status' => 'ready', 'message' => ''];
+            $reports[] = $isDuplicate
+                ? [...$report, 'line' => $line, 'status' => 'duplicate', 'message' => __('An account with this email already exists.')]
+                : [...$report, 'line' => $line, 'status' => 'ready', 'message' => ''];
         }
 
         $remaining = $this->limits->remaining();
@@ -171,6 +142,114 @@ class UserImportService
                     $reports[$index]['message'] = __('The active-user limit has been reached.');
                 }
             }
+        }
+
+        return $this->refuseRowsWhoseManagerWillNotBeCreated($reports, $existingEmails);
+    }
+
+    /**
+     * Field checks shared by new and existing-account rows. Returns the first
+     * problem, or null when the row can be written.
+     *
+     * @param  array<int, string>  $departmentNames
+     * @param  array<int, string>  $roles
+     * @param  array<string, string>  $existingPhones  phone => owner email
+     * @param  array<string, string>  $phonesInFile  phone => email of an earlier usable row
+     * @param  array<int, string>  $existingEmails
+     * @param  array<string, array{line: int, usable: bool}>  $earlierRows
+     */
+    private function rowProblem(
+        User $actor,
+        string $email,
+        string $department,
+        array $departmentNames,
+        array $roles,
+        string $phone,
+        array $existingPhones,
+        array $phonesInFile,
+        string $managerEmail,
+        array $existingEmails,
+        array $earlierRows,
+    ): ?string {
+        if ($department !== '' && ! in_array(mb_strtolower($department), $departmentNames, true)) {
+            return __('Department ":department" does not exist.', ['department' => $department]);
+        }
+
+        foreach ($roles as $role) {
+            if (! in_array($role, $this->roles->for($actor), true)) {
+                return __('Role ":role" cannot be granted by you or does not exist.', ['role' => $role]);
+            }
+        }
+
+        if ($phone !== '' && ! E164Phone::isValid($phone)) {
+            return __('Phone must be international format, e.g. +2348012345678.');
+        }
+
+        if ($phone !== '' && ((isset($existingPhones[$phone]) && $existingPhones[$phone] !== $email)
+            || (isset($phonesInFile[$phone]) && $phonesInFile[$phone] !== $email))) {
+            return __('Phone :phone already belongs to another person.', ['phone' => $phone]);
+        }
+
+        if ($managerEmail === '') {
+            return null;
+        }
+
+        if ($managerEmail === $email) {
+            return __('A person cannot be their own manager.');
+        }
+
+        if (! in_array($managerEmail, $existingEmails, true)) {
+            if (! isset($earlierRows[$managerEmail])) {
+                return __('Manager :email is not an existing user and does not appear earlier in this file.', ['email' => $managerEmail]);
+            }
+
+            // The manager's own row failed, so they will not exist (RV-BUG-25).
+            if (! $earlierRows[$managerEmail]['usable']) {
+                return __('Manager :email is on line :line, which cannot be imported. Fix that line first.', ['email' => $managerEmail, 'line' => $earlierRows[$managerEmail]['line']]);
+            }
+
+            return null;
+        }
+
+        $existingManager = User::query()->where('email', $managerEmail)->first();
+        if ($existingManager instanceof User && $existingManager->isSystemOwner()) {
+            return __('That manager is not available for assignment.');
+        }
+
+        return null;
+    }
+
+    /**
+     * A row whose manager is created by an earlier row in this file can only
+     * be written if that row is still going to be written; the active-user
+     * limit can refuse rows after the first pass (RV-BUG-25).
+     *
+     * @param  list<array<string, mixed>>  $reports
+     * @param  array<int, string>  $existingEmails
+     * @return list<array<string, mixed>>
+     */
+    private function refuseRowsWhoseManagerWillNotBeCreated(array $reports, array $existingEmails): array
+    {
+        $refusedLines = [];
+
+        foreach ($reports as $index => $report) {
+            $email = mb_strtolower(trim((string) ($report['email'] ?? '')));
+
+            if (($report['status'] ?? '') === 'error') {
+                $refusedLines[$email] ??= (int) ($report['line'] ?? 0);
+
+                continue;
+            }
+
+            $managerEmail = mb_strtolower(trim((string) ($report['manager_email'] ?? '')));
+
+            if ($managerEmail === '' || in_array($managerEmail, $existingEmails, true) || ! isset($refusedLines[$managerEmail])) {
+                continue;
+            }
+
+            $reports[$index]['status'] = 'error';
+            $reports[$index]['message'] = __('Manager :email is on line :line, which cannot be imported. Fix that line first.', ['email' => $managerEmail, 'line' => $refusedLines[$managerEmail]]);
+            $refusedLines[$email] ??= (int) ($report['line'] ?? 0);
         }
 
         return $reports;

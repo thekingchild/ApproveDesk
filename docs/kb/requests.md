@@ -26,7 +26,7 @@ Comments stay on the request and are part of the record. You can reply to a top-
 
 Followers can open the request even if they are not on the workflow. Unfollow yourself from the Followers card. Reminders go to the current approver from the same page.
 
-After you submit, the workflow card shows the current step, the expected next step, and an estimated due time when the step has a timeout. See [Collaboration](collaboration.md).
+After you submit, the workflow card shows the current step, the expected next step, and an estimated due time when the step has a timeout. See [Collaboration](collaboration.md). The step list on the request page shows the workflow version the request started on. If an administrator publishes a changed chain later, your request keeps its own steps and names.
 
 ## Submit, withdraw, revise
 
@@ -36,7 +36,7 @@ If ApproveDesk cannot send the request for approval (for example nobody can appr
 
 Withdraw cancels an in-flight request that you own. Use it when the work is no longer needed. The withdrawal is recorded in the request history. If an approver finishes the request at the same moment, their decision stands and the request can no longer be withdrawn.
 
-If an approver returns the request, status becomes Returned. Open the request and choose Edit. Change the allowed fields or attachments, then submit again. The workflow continues from the return; it does not rewrite earlier decisions.
+If an approver returns the request, status becomes Returned. Open the request and choose Edit. Change the allowed fields or attachments, then submit again. The workflow continues from the return; it does not rewrite earlier decisions. Editing a draft or a returned General Request keeps the department it was raised under, even if your own department has changed since. If nobody can act on the step it returns to (for example your manager has left), the request stays Returned and the reason is shown; ask an administrator to fix the assignment, then submit again.
 
 If an approver asks for information, status becomes Awaiting information. Open the request, supply the answer or files they asked for, and send the response. A written answer is required. Only the original submitter can complete that response. If the request cannot go back for approval, your answer is not posted and the reason is shown under it.
 
@@ -50,7 +50,7 @@ Sensitive form fields stay hidden from people who are not allowed to see them, i
 
 An approval report is a document-ready record of one request. Use it when you need a presentable copy for a meeting, filing, an audit response, or an email attachment.
 
-Open the request and choose **Approval report**. The preview shows the organization identity (company name, logo, and favicon), request summary, request details, visible form fields, workflow progress, recorded decisions and comments, and an attachment list. The request's current status appears as a colored stamp at the upper-right so it is easy to identify without covering report content. Choose **Print** for the browser print dialog, or **Download PDF** for a file you can store or send. Times use the installation timezone shown in the report footer.
+Open the request and choose **Approval report**. The preview shows the organization identity (company name, logo, and favicon), request summary, request details, visible form fields, workflow progress, recorded decisions and comments, and an attachment list. The request's current status appears as a colored stamp at the upper-right so it is easy to identify without covering report content. In workflow progress, each step shows its state: **Current**, **Pending**, **Completed**, **Rejected**, **Escalated**, **Skipped**, **Withdrawn**, or **Not reached** (the request ended before that step). Steps already decided name the people who recorded the decision, even if they have since left or been reassigned; steps still waiting name the people assigned now. Choose **Print** for the browser print dialog, or **Download PDF** for a file you can store or send. Times use the installation timezone shown in the report footer.
 
 The report follows the same access rules as the request. A sensitive field you cannot open on the request is not revealed in the preview or PDF. Opening an authorized sensitive value is recorded. Attachment names are listed, but the report does not place the attachment contents inside the PDF.
 

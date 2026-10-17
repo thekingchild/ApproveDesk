@@ -50,11 +50,16 @@ final class ChannelRegistry
      * Laravel `via()` list. Mail and database stay the reliability baseline.
      * Optional channels are appended only when enabled, configured, and the
      * user can receive them. Unconfigured drivers are omitted (skip, not fail).
+     * Deactivated or anonymized people get nothing (RV-BUG-20).
      *
      * @return list<string>
      */
     public function laravelChannels(User $notifiable): array
     {
+        if (! $notifiable->canReceiveNotifications()) {
+            return [];
+        }
+
         $channels = $notifiable->notification_frequency === NotificationFrequency::Immediate
             ? ['mail', 'database']
             : ['database'];

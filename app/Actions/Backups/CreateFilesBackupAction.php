@@ -83,7 +83,7 @@ final class CreateFilesBackupAction
             $found[Storage::disk('local')->path($path)] = $path;
         }
 
-        if (is_dir(storage_path('app/public/branding'))) {
+        if (Storage::disk('public')->directoryExists('branding')) {
             foreach (Storage::disk('public')->allFiles('branding') as $path) {
                 $found[Storage::disk('public')->path($path)] = $path;
             }
