@@ -4,6 +4,8 @@ namespace App\Models;
 
 use App\Enums\WebhookDeliveryStatus;
 use App\Enums\WebhookEvent;
+use Database\Factories\WebhookDeliveryFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
@@ -25,6 +27,9 @@ use Illuminate\Support\Carbon;
  */
 class WebhookDelivery extends Model
 {
+    /** @use HasFactory<WebhookDeliveryFactory> */
+    use HasFactory;
+
     protected $fillable = [
         'endpoint_id', 'event_id', 'event', 'payload', 'status', 'attempts',
         'response_status', 'response_body', 'last_error', 'delivered_at', 'next_attempt_at',

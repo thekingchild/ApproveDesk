@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use Database\Factories\AuditExportLogFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
@@ -15,6 +17,9 @@ use Illuminate\Support\Carbon;
  */
 class AuditExportLog extends Model
 {
+    /** @use HasFactory<AuditExportLogFactory> */
+    use HasFactory;
+
     public const UPDATED_AT = null;
 
     protected $fillable = ['user_id', 'submission_id', 'kind'];

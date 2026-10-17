@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use Database\Factories\LegalHoldFactory;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
@@ -18,6 +20,9 @@ use Illuminate\Support\Carbon;
  */
 class LegalHold extends Model
 {
+    /** @use HasFactory<LegalHoldFactory> */
+    use HasFactory;
+
     protected $fillable = [
         'submission_id', 'placed_by', 'reason', 'placed_at', 'released_at', 'released_by',
     ];

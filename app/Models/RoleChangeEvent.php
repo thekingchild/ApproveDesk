@@ -3,7 +3,9 @@
 namespace App\Models;
 
 use App\Enums\RoleChangeAction;
+use Database\Factories\RoleChangeEventFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use LogicException;
@@ -11,6 +13,9 @@ use LogicException;
 #[Fillable(['actor_id', 'role_id', 'target_user_id', 'action', 'before', 'after'])]
 class RoleChangeEvent extends Model
 {
+    /** @use HasFactory<RoleChangeEventFactory> */
+    use HasFactory;
+
     public const UPDATED_AT = null;
 
     protected function casts(): array

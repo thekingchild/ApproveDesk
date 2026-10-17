@@ -2,13 +2,18 @@
 
 namespace App\Models;
 
+use Database\Factories\RoleProfileFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Fillable(['role_id', 'label', 'slug', 'description', 'is_builtin', 'is_protected', 'is_archived', 'created_by', 'updated_by'])]
 class RoleProfile extends Model
 {
+    /** @use HasFactory<RoleProfileFactory> */
+    use HasFactory;
+
     protected function casts(): array
     {
         return [

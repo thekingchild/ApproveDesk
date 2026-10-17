@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use Database\Factories\AccountRecoveryEventFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use RuntimeException;
@@ -10,6 +12,9 @@ use RuntimeException;
 #[Fillable(['actor_id', 'target_id', 'action', 'metadata'])]
 class AccountRecoveryEvent extends Model
 {
+    /** @use HasFactory<AccountRecoveryEventFactory> */
+    use HasFactory;
+
     public const UPDATED_AT = null;
 
     public const ACTION_PASSWORD_RESET = 'password_reset';

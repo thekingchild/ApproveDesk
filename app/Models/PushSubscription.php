@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use Database\Factories\PushSubscriptionFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -16,6 +18,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class PushSubscription extends Model
 {
+    /** @use HasFactory<PushSubscriptionFactory> */
+    use HasFactory;
+
     /** Browser push keys never appear in arrays or JSON (RV-LAR-05). */
     protected $hidden = ['auth_token', 'public_key'];
 

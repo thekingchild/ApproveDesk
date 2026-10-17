@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use Database\Factories\InAppNotificationFactory;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\MassPrunable;
 use Illuminate\Notifications\DatabaseNotification;
 
@@ -12,6 +14,9 @@ use Illuminate\Notifications\DatabaseNotification;
  */
 class InAppNotification extends DatabaseNotification
 {
+    /** @use HasFactory<InAppNotificationFactory> */
+    use HasFactory;
+
     use MassPrunable;
 
     /** Read notifications older than this are cleared from the inbox. */

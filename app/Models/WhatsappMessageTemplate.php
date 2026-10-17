@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use Database\Factories\WhatsappMessageTemplateFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -15,6 +17,9 @@ use Illuminate\Database\Eloquent\Model;
  */
 class WhatsappMessageTemplate extends Model
 {
+    /** @use HasFactory<WhatsappMessageTemplateFactory> */
+    use HasFactory;
+
     protected $fillable = ['name', 'language', 'status', 'category', 'components', 'placeholder_count', 'fetched_at'];
 
     protected function casts(): array

@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use Database\Factories\ApiIdempotencyKeyFactory;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\MassPrunable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -17,6 +19,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class ApiIdempotencyKey extends Model
 {
+    /** @use HasFactory<ApiIdempotencyKeyFactory> */
+    use HasFactory;
+
     use MassPrunable;
 
     /** Clients retry within minutes; a week keeps replays safe without growing forever. */

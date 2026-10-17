@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use Database\Factories\WorkflowSelectionRuleFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
@@ -19,6 +21,9 @@ use Illuminate\Support\Carbon;
  */
 class WorkflowSelectionRule extends Model
 {
+    /** @use HasFactory<WorkflowSelectionRuleFactory> */
+    use HasFactory;
+
     protected $fillable = [
         'request_type_id', 'workflow_template_id', 'name', 'priority', 'is_active', 'conditions',
     ];

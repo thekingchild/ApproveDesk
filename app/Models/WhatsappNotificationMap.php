@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use Database\Factories\WhatsappNotificationMapFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -14,6 +16,9 @@ use Illuminate\Database\Eloquent\Model;
  */
 class WhatsappNotificationMap extends Model
 {
+    /** @use HasFactory<WhatsappNotificationMapFactory> */
+    use HasFactory;
+
     protected $fillable = ['kind', 'template_name', 'language', 'bindings', 'is_healthy'];
 
     protected function casts(): array
