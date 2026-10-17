@@ -1,8 +1,8 @@
-# 0013. Shared hosting is the supported deployment target; Docker is optional
+# 0013. Shared hosting is the supported deployment target; Docker is not supported
 
 Date: 2026-10-17
 
-Status: Accepted (recorded retroactively; shared-hosting target in force since v2.0.0, Phases 0–4; installer lock hardened in Phase IN, v2.5.1; scheduler worker flags revised by RV-OPS-01, Unreleased)
+Status: Accepted (recorded retroactively; shared-hosting target in force since v2.0.0, Phases 0–4; installer lock hardened in Phase IN, v2.5.1; scheduler worker flags revised by RV-OPS-01, Unreleased; amended 2026-10-17: Docker is not supported)
 
 ## Context
 
@@ -15,10 +15,9 @@ ApproveDesk is meant for organizations that run ordinary cPanel or Plesk account
 - **One cron entry** runs `php artisan schedule:run` every minute. The schedule starts the queue worker itself (`routes/console.php:27-30`): `queue:work --stop-when-empty --max-time=50 --tries=3 --timeout=90`, `everyMinute()`, `withoutOverlapping(5)`, `runInBackground()`. Each tick drains the database queue and exits. It stops after 50 s so ticks do not stack, and the overlap lock expires after 5 minutes if the host kills the worker. `DB_QUEUE_RETRY_AFTER` defaults to 150 so it stays above `--timeout` (`config/queue.php:45`). `ops:heartbeat` runs each minute, and `ops:scheduler-check` reports a stale heartbeat.
 - **First run uses the web installer at `/install`**: requirements, database, migrations and seed, first administrator, finish. `Installer::finalize()` writes `APP_INSTALLED=true` to `.env` and the lock file `storage/app/installed.lock`. After that, `EnsureAppConfigured` returns 404 for every `/install` URL. `Installer::isInstalled()` also accepts `APP_INSTALLED=true` for hosts that cannot write the lock.
 - The installer writes `.env` at the base path (`Installer::envPath()`, `config/installer.php`). Its requirements check requires that directory to be writable, together with `storage/framework`, `storage/logs`, and `bootstrap/cache` (`app/Services/Install/Installer.php:112-119`).
-- **Docker/Compose is optional and community-supported.** It is not a supported target, and CI does not cover it until CI builds the image and runs an install smoke test. What exists today:
-  - The `Dockerfile` builds a PHP 8.4-FPM Alpine image with Nginx and Supervisor. Node is used only in a build stage. The image runs `schedule:work` under Supervisor in place of cron, so the same scheduled worker command drains the queue. It also sets file cache/session and the database queue, and has an `/up` health check.
+- **Docker and container platforms are not supported** (amended 2026-10-17, RV-ARC-22). The project owner decided Docker is not needed for now. The `Dockerfile`, `compose.yaml`, and `docker/` files remain in the repository from v2.0.0, but CI does not build them, docs/DEPLOYMENT.md §6 says not to use them, and problems reported on them are not fixed. What they contain, for anyone who revives them:
+  - The `Dockerfile` builds a PHP 8.4-FPM Alpine image with Nginx and Supervisor. Node is used only in a build stage. Supervisor runs `schedule:work` in place of cron. The image sets file cache/session and the database queue, and has an `/up` health check.
   - `compose.yaml` adds MariaDB 11.4 and one named volume for `storage/`. The entrypoint creates storage directories, links `public/storage`, and runs `migrate` only when `AUTO_MIGRATE=true`.
-  - docs/DEPLOYMENT.md §6–7 documents Compose, EasyPanel, and Coolify, and sends fresh installs to `/install`.
 - Nothing in the application depends on Docker. Features must keep working on the shared-hosting profile above.
 
 ## Consequences
@@ -26,10 +25,10 @@ ApproveDesk is meant for organizations that run ordinary cPanel or Plesk account
 - Background work runs up to about a minute late, which is acceptable for notifications, escalations, and retention. Scheduled jobs must finish inside the worker's 90 s timeout or continue on the next run.
 - The installer needs a writable application directory for the duration of setup. Operators tighten `.env` permissions afterwards (docs/DEPLOYMENT.md §2).
 - CI (`.github/workflows/ci.yml`) tests PHP 8.4 only, against SQLite, MySQL 8.0, and MariaDB 10.6. No workflow builds the Docker image (`publish-release.yml` only creates a GitHub release). Docker regressions and PHP 8.3/8.5 differences can therefore ship unnoticed.
-- Until the smoke test exists, Docker issues are fixed on a best-effort basis. Docs should not present Compose as on par with cPanel/Plesk.
+- Docker issues are not fixed. Supporting containers again would need a new decision, an image that lets the installer write `.env` to a persistent volume, and a CI job that builds the image and smoke-tests `/install`.
 
 ## Open questions
 
-- **RV-ARC-22 (unconfirmed, needs a run).** In the image, `/var/www/html` is copied as root, and only `storage/` and `bootstrap/cache` are given to `www-data` (`Dockerfile:58-60`). `.dockerignore` excludes `.env`. The installer writes `.env` to the base path, so `/install` probably fails the "application directory (.env creation)" requirement, or fails when `ensureBootstrapEnvironment()` writes the file. Even if that write succeeded, `.env` would live in the container layer and not in the `storage/` volume. This is inferred from the code and not tested.
+- **RV-ARC-22** is closed by this amendment rather than fixed: the image probably cannot pass the installer's `.env` check (only `storage/` and `bootstrap/cache` are writable by `www-data`, `Dockerfile:58-60`). It was never confirmed by a run.
 - docs/DEPLOYMENT.md §2 says the requirements check covers writable `storage/` and `bootstrap/cache/`. The code also requires the `.env` directory to be writable. The doc understates the requirement.
 - AGENTS.md and the installer claim PHP 8.3–8.5, but CI runs only 8.4. `^8.3` would also accept a future 8.6. Should CI add a PHP version matrix?

@@ -1,4 +1,4 @@
-# Deployment Guide — Shared Hosting and Containers
+# Deployment Guide — Shared Hosting
 
 How ApproveDesk reaches a server and gets configured. Routine releases are automated by CI ([CI-CD.md](CI-CD.md)); this document covers **server bring-up** and the **installer wizard**, plus the one-time host configuration. Original spec sections 8–9 remain the reference; this guide supersedes them where they conflict (Laravel 13/PHP 8.3, installer-first setup).
 
@@ -102,24 +102,13 @@ Cloudflare may proxy an ApproveDesk hostname, but it must not rewrite or cache t
 
 Cloudflare **Turnstile** in Administration → Security & privacy is independent of the DNS/CDN proxy. Removing the proxy does not disable a configured Turnstile challenge, and disabling Turnstile does not change Cloudflare caching.
 
-## 6. Docker Compose
+## 6. Docker and container platforms (not supported)
 
-The production image contains PHP-FPM, Nginx, and the Laravel scheduler under Supervisor. The scheduled database queue worker still drains and exits once per minute, so Redis is not required. Application uploads, installer state, sessions, and logs live in the persistent `approvedesk-storage` volume.
+ApproveDesk supports shared hosting (sections 1–5) only. Docker, Docker Compose, EasyPanel, Coolify, and similar container platforms are **not supported** (ADR 0013).
 
-1. Copy the repository and create a deployment environment file (do not commit it):
-   ```bash
-   cp .env.example .env.docker
-   ```
-2. At minimum, set `APP_URL`, a production `APP_KEY`, `DB_PASSWORD`, and `DB_ROOT_PASSWORD`. Generate a key with `php artisan key:generate --show` on any trusted checkout.
-3. Start the stack:
-   ```bash
-   docker compose --env-file .env.docker up -d --build
-   ```
-4. Route HTTPS traffic to port 8080, visit `/install`, and complete the first-admin flow. The Compose database values are already available to the app; use host `database` and port `3306` if the installer asks.
+The `Dockerfile`, `compose.yaml`, and `docker/` files in the repository are left over from earlier releases. They are not built or tested in CI, and the web installer probably cannot write `.env` inside that image (RV-ARC-22). Do not use them for a production installation. Problems reported on them are not fixed.
 
-The image exposes `/up` as its health check. Set `AUTO_MIGRATE=true` only for an established installation whose deployment process has already handled backups and migration review. Fresh installations should use `/install` so roles, settings, the first administrator, and the installation lock are created together.
-
-Useful operations:
+## 7. Scheduler checks
 
 ```bash
 php artisan ops:scheduler-check       # read-only heartbeat/backup schedule check
@@ -127,28 +116,6 @@ php artisan schedule:list             # expected scheduled commands and next due
 ```
 
 A local development copy may use `php artisan schedule:work`, but that foreground/background process must be restarted after reboot. Production/shared hosting should use the one-minute `schedule:run` cron above.
-
-```bash
-docker compose logs -f app
-docker compose exec app php artisan about
-docker compose exec app php artisan queue:failed
-docker compose pull && docker compose up -d --build
-```
-
-Back up both named volumes. Never recreate or remove them during a routine release.
-
-## 7. EasyPanel and Coolify
-
-Both platforms can build the checked-in `Dockerfile` directly.
-
-1. Create a MariaDB/MySQL service and an application service from this Git repository using the Dockerfile build type.
-2. Expose container port `8080`; configure the health path as `/up`.
-3. Attach a persistent volume at `/var/www/html/storage`.
-4. Provide `APP_KEY`, `APP_URL`, `DB_CONNECTION=mysql`, `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, and `DB_PASSWORD` as platform secrets. Use `CACHE_STORE=file`, `QUEUE_CONNECTION=database`, and `SESSION_DRIVER=file`. Do not add Redis.
-5. Add SMTP and optional Google/Microsoft variables from [AUTHENTICATION.md](AUTHENTICATION.md).
-6. Deploy, confirm `/up`, then visit `/install`. When the database is a separately managed service, enter that service's internal hostname rather than `database`.
-
-Do not enable multiple app replicas with the local file/session volume. A future high-availability profile would require shared object storage and shared session/cache services; it is roadmap work, not part of the v2.5.5 single-company release.
 
 ## 8. Post-install checklist (per server, once)
 

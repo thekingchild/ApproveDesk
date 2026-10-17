@@ -1,5 +1,8 @@
 # syntax=docker/dockerfile:1.7
 
+# NOT SUPPORTED: kept from v2.0.0 only. ApproveDesk supports shared hosting;
+# this image is not built or tested in CI (docs/DEPLOYMENT.md §6, ADR 0013).
+
 FROM php:8.4-fpm-alpine AS php-base
 
 RUN apk add --no-cache \
