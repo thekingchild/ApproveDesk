@@ -10,16 +10,17 @@ use App\Models\User;
 use App\Models\WorkflowTemplate;
 use App\Models\WorkflowTemplateVersion;
 use App\Services\Workflow\StepOutcomes;
-use App\Services\Workflow\WorkflowAssigneeGuard;
+use App\Services\WorkflowTemplates\WorkflowTemplateRules;
 use Illuminate\Support\Facades\DB;
 
 final class CreateWorkflowTemplateAction
 {
-    public function __construct(private readonly WorkflowAssigneeGuard $assignees) {}
+    public function __construct(private readonly WorkflowTemplateRules $rules) {}
 
     public function execute(WorkflowTemplateData $data, User $creator): WorkflowTemplate
     {
-        $this->assignees->assertAssignable($data->steps);
+        $this->rules->assertTemplate($data);
+        $this->rules->assertSteps($data->steps);
 
         StepOutcomes::assertValid($data->outcomes);
 

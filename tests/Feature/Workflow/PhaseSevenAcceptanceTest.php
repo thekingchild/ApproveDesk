@@ -70,10 +70,13 @@ class PhaseSevenAcceptanceTest extends TestCase
         $this->assertSame($versionOne, $inFlight->template_version_id);
         $this->assertSame('Director review', $inFlight->currentStep?->name);
 
+        $builder = Livewire::actingAs($admin)->test('pages::admin.workflow-builder', ['template' => $template->id]);
         Livewire::actingAs($admin)
-            ->test('pages::admin.workflow-builder', ['template' => $template->id])
+            ->test('admin.workflow-builder.simulation', ['templateId' => $template->id, 'steps' => $builder->get('steps')])
             ->call('simulate')
-            ->assertSee('data-test="simulation-trace"', false)
+            ->assertSee('data-test="simulation-trace"', false);
+
+        $builder
             ->call('addNode', 'approval')
             ->set('steps.3.assigneeIds', [$manager->id])
             ->set('steps.3.name', 'Finance check')

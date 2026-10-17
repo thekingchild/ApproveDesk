@@ -40,8 +40,8 @@ class TemplatesPageSavePreservesBuilderSettingsTest extends TestCase
             ['key' => 'approve_budget', 'label' => 'Approve budget', 'behavior' => 'approve', 'requires_comment' => false],
         ])]);
 
-        Livewire::actingAs($admin)->test('pages::admin.workflow-templates')
-            ->call('editTemplate', $template->id)
+        Livewire::actingAs($admin)->test('admin.workflow-templates.editor')
+            ->call('edit', $template->id)
             ->set('description', 'Clarified wording')
             ->call('save')->assertHasNoErrors();
 
@@ -67,8 +67,8 @@ class TemplatesPageSavePreservesBuilderSettingsTest extends TestCase
             'assignee_ids' => [$a->id, $b->id],
         ]);
 
-        Livewire::actingAs($admin)->test('pages::admin.workflow-templates')
-            ->call('editTemplate', $template->id)
+        Livewire::actingAs($admin)->test('admin.workflow-templates.editor')
+            ->call('edit', $template->id)
             ->set('steps.0.stepType', StepType::Parallel->value)
             ->call('save')->assertHasNoErrors();
 

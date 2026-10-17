@@ -30,9 +30,11 @@ Open **Administration → Workflow templates** and add a template.
 - Add steps from top to bottom.
 - Open **Builder** for the canvas and list views of the same chain. Start and End are implied nodes.
 - Add Approval, Condition, Automatic, or Notification nodes. Duplicate, delete, reorder, undo, and redo stay in this editing session.
-- Run a read-only simulation with sample request data to see the route. It does not record decisions.
+- Run a read-only simulation with sample request data to see the route. It traces the steps as they are on screen, so you can try a change before saving it. It does not save a draft and does not record decisions.
 - Compare versions by their steps and names. Restore an older version as a new draft, then publish if it should apply to new work.
 - Save records a draft if the chain changed. **Publish version** asks for confirmation, then freezes that graph for new requests and retires the previous published version. Publishing requires the **Publish workflows** permission; people who can only edit workflows can save drafts.
+- **Publish version** saves and publishes in one go. If the chain cannot be published (for example a step can never be reached), nothing is saved: your changes stay on screen with the reason, so you can fix them and try again.
+- The builder and the **Workflow templates** list check a chain the same way when you save. A save is refused when an approval step has no active person, a quorum asks for more approvals than there are active assignees, a step has a deadline without a timeout action (or the reverse), the last step escalates, or a form-field or external-system step has no key. The default template must stay active.
 - Write a short change summary so later administrators can see why the chain changed.
 - If another administrator saves or publishes this template after you opened it, your **Save draft** or **Publish version** is refused with a message, and nothing you entered is written over their work. Reload the page to see their version, then make your change again. The same check applies when you edit from the **Workflow templates** list.
 
@@ -69,7 +71,7 @@ A Condition step checks one rule and sends the request down its **true** or **fa
 - Branches follow the step you chose, not its number. Moving or duplicating steps keeps them pointing at the same step. If you delete a step that a branch points to, saving asks you to choose a new target; the branch is never quietly changed to "complete".
 - A condition with more than one rule (from an earlier version or the API) keeps its other rules when you edit the first one.
 
-Group completion is first response, all assignees, or quorum N-of-M. Sequential, parallel, and quorum step types still set that default.
+Group completion is first response, all assignees, or quorum N-of-M. Sequential, parallel, and quorum step types set that default: in the builder, changing a step's type resets its group completion to the new type's default, and you can then choose another.
 
 Deadlines can use elapsed hours or business hours. Business hours use organization working days, office hours, and holidays from **Settings → Approval settings**. Elapsed hours count every hour on the clock.
 

@@ -2,6 +2,7 @@
 
 namespace App\Services\WorkflowTemplates;
 
+use App\DTOs\WorkflowTemplateStepData;
 use App\Enums\StepType;
 use App\Enums\SubmissionPriority;
 use App\Enums\SubmissionType;
@@ -14,6 +15,21 @@ use InvalidArgumentException;
 final class WorkflowGraphSimulator
 {
     public function __construct(private readonly SubmissionConditionEvaluator $conditions) {}
+
+    /**
+     * Trace steps still in an editor, without saving them first (RV-ARC-07).
+     *
+     * @param  array<int, WorkflowTemplateStepData>  $steps
+     * @param  array{title?: string, priority?: string, type?: string, metadata?: array<string, mixed>}  $sample
+     * @return list<array{order: int, name: string, kind: string, detail: string}>
+     */
+    public function traceDraft(array $steps, array $sample = []): array
+    {
+        return $this->trace(
+            collect(array_values($steps))->map(fn (WorkflowTemplateStepData $step, int $index): WorkflowTemplateStep => $step->toUnsavedStep($index + 1)),
+            $sample,
+        );
+    }
 
     /**
      * @param  Collection<int, WorkflowTemplateStep>  $steps

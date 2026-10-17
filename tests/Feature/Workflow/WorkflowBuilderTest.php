@@ -44,7 +44,7 @@ class WorkflowBuilderTest extends TestCase
             ->assertSee('Canvas')
             ->assertSee('List');
 
-        Livewire::actingAs($admin)
+        $builder = Livewire::actingAs($admin)
             ->test('pages::admin.workflow-builder', ['template' => $template->id])
             ->call('addNode', 'notification')
             ->call('undo')
@@ -54,9 +54,16 @@ class WorkflowBuilderTest extends TestCase
             ->set('viewMode', 'list')
             ->assertSee('data-test="workflow-list"', false)
             ->call('moveStep', 1, -1)
-            ->assertSet('steps.0.stepType', 'notification')
+            ->assertSet('steps.0.stepType', 'notification');
+
+        // The simulation traces the unsaved steps and writes nothing (RV-ARC-07).
+        Livewire::actingAs($admin)
+            ->test('admin.workflow-builder.simulation', ['templateId' => $template->id, 'steps' => $builder->get('steps')])
             ->call('simulate')
-            ->assertSee('data-test="simulation-trace"', false);
+            ->assertSee('data-test="simulation-trace"', false)
+            ->assertSee('Notify stakeholders');
+        $this->assertNull($template->fresh()->draftVersion);
+        $this->assertSame(1, $template->versions()->count());
     }
 
     public function test_validator_rejects_unreachable_and_missing_assignees(): void
@@ -136,9 +143,10 @@ class WorkflowBuilderTest extends TestCase
 
         $firstId = $template->versions()->where('version', 1)->value('id');
         Livewire::actingAs($admin)
-            ->test('pages::admin.workflow-builder', ['template' => $template->id])
+            ->test('admin.workflow-builder.versions', ['templateId' => $template->id])
             ->call('restoreVersion', $firstId)
-            ->assertHasNoErrors();
+            ->assertHasNoErrors()
+            ->assertDispatched('workflow-version-restored');
 
         $this->assertNotNull($template->fresh()->draftVersion);
     }

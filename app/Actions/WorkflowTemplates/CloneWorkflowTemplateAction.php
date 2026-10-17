@@ -6,7 +6,6 @@ use App\DTOs\WorkflowTemplateData;
 use App\DTOs\WorkflowTemplateStepData;
 use App\Models\User;
 use App\Models\WorkflowTemplate;
-use App\Models\WorkflowTemplateStep;
 
 final class CloneWorkflowTemplateAction
 {
@@ -22,30 +21,12 @@ final class CloneWorkflowTemplateAction
             submissionTypes: $source->submission_types ?? [],
             isDefault: false,
             isActive: true,
-            steps: $graph->steps->map(fn (WorkflowTemplateStep $step): WorkflowTemplateStepData => $this->stepData($step))->all(),
+            steps: $graph->steps->map(WorkflowTemplateStepData::fromStep(...))->all(),
             changeSummary: 'Cloned from '.$source->name.'.',
             outcomes: $graph->outcomes ?? [],
         );
 
         return app(CreateWorkflowTemplateAction::class)->execute($data, $actor);
-    }
-
-    private function stepData(WorkflowTemplateStep $step): WorkflowTemplateStepData
-    {
-        return new WorkflowTemplateStepData(
-            name: $step->name,
-            stepType: $step->step_type,
-            quorumCount: $step->quorum_count,
-            assigneeType: $step->assignee_type,
-            assigneeIds: $step->assignee_ids ?? [],
-            allowDelegation: $step->allow_delegation,
-            conditions: $step->conditions,
-            timeoutHours: $step->timeout_hours,
-            timeoutAction: $step->timeout_action,
-            completionRule: $step->completion_rule,
-            timeoutCalendar: $step->timeout_calendar,
-            assigneeConfig: $step->assignee_config,
-        );
     }
 
     private function uniqueName(string $name): string

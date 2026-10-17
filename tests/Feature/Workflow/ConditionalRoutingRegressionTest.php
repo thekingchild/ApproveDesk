@@ -65,8 +65,8 @@ class ConditionalRoutingRegressionTest extends TestCase
         $template = $this->routeXyz();
 
         Livewire::actingAs($this->admin)
-            ->test('pages::admin.workflow-templates')
-            ->call('editTemplate', $template->id)
+            ->test('admin.workflow-templates.editor')
+            ->call('edit', $template->id)
             ->call('moveStep', 2, 1)
             ->call('publish')
             ->assertHasNoErrors();
