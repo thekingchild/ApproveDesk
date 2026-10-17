@@ -27,7 +27,7 @@ class SubmissionActionController extends Controller
                 expectedStepId: $request->filled('step_id') ? $request->integer('step_id') : null,
             );
         } catch (WorkflowException $exception) {
-            throw ValidationException::withMessages(['action' => [$exception->getMessage()]]);
+            throw ValidationException::withMessages(['action' => [$exception->userMessage()]]);
         }
 
         return new SubmissionResource($submission->fresh([

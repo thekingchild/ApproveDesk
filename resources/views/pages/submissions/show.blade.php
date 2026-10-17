@@ -312,7 +312,7 @@ new #[Title('Submission')] class extends Component {
                 $this->renderedStepId,
             );
         } catch (WorkflowException $exception) {
-            $this->addError('delegateUserId', $exception->getMessage());
+            $this->addError('delegateUserId', $exception->userMessage());
 
             return;
         }
@@ -353,7 +353,7 @@ new #[Title('Submission')] class extends Component {
                 $this->renderedStepId,
             );
         } catch (WorkflowException $exception) {
-            Flux::toast($exception->getMessage(), variant: 'danger');
+            Flux::toast($exception->userMessage(), variant: 'danger');
 
             return;
         }
@@ -376,7 +376,7 @@ new #[Title('Submission')] class extends Component {
                 $this->mentionedUserIds,
             );
         } catch (CollaborationException $exception) {
-            $this->addError('comment', $exception->getMessage());
+            $this->addError('comment', $exception->userMessage());
 
             return;
         }
@@ -401,7 +401,7 @@ new #[Title('Submission')] class extends Component {
                 $this->replyParentId,
             );
         } catch (CollaborationException $exception) {
-            $this->addError('replyBody', $exception->getMessage());
+            $this->addError('replyBody', $exception->userMessage());
 
             return;
         }
@@ -436,7 +436,7 @@ new #[Title('Submission')] class extends Component {
         try {
             app(EditCommentAction::class)->execute($comment, Auth::user(), $this->editBody);
         } catch (CollaborationException $exception) {
-            $this->addError('editBody', $exception->getMessage());
+            $this->addError('editBody', $exception->userMessage());
 
             return;
         }
@@ -458,7 +458,7 @@ new #[Title('Submission')] class extends Component {
                 'notify_status' => $this->notifyStatus,
             ]);
         } catch (CollaborationException $exception) {
-            Flux::toast($exception->getMessage(), variant: 'danger');
+            Flux::toast($exception->userMessage(), variant: 'danger');
 
             return;
         }
@@ -472,7 +472,7 @@ new #[Title('Submission')] class extends Component {
         try {
             app(UnfollowSubmissionAction::class)->execute($this->submission, Auth::user(), Auth::user());
         } catch (CollaborationException $exception) {
-            Flux::toast($exception->getMessage(), variant: 'danger');
+            Flux::toast($exception->userMessage(), variant: 'danger');
 
             return;
         }
@@ -490,7 +490,7 @@ new #[Title('Submission')] class extends Component {
                 User::query()->findOrFail($userId),
             );
         } catch (CollaborationException $exception) {
-            Flux::toast($exception->getMessage(), variant: 'danger');
+            Flux::toast($exception->userMessage(), variant: 'danger');
 
             return;
         }
@@ -509,7 +509,7 @@ new #[Title('Submission')] class extends Component {
                 User::query()->findOrFail($userId),
             );
         } catch (CollaborationException $exception) {
-            Flux::toast($exception->getMessage(), variant: 'danger');
+            Flux::toast($exception->userMessage(), variant: 'danger');
 
             return;
         }
@@ -527,7 +527,7 @@ new #[Title('Submission')] class extends Component {
                 $this->notifyStatus,
             );
         } catch (CollaborationException $exception) {
-            Flux::toast($exception->getMessage(), variant: 'danger');
+            Flux::toast($exception->userMessage(), variant: 'danger');
 
             return;
         }
@@ -560,7 +560,7 @@ new #[Title('Submission')] class extends Component {
                 $this->nudgeMessage !== '' ? $this->nudgeMessage : null,
             );
         } catch (CollaborationException $exception) {
-            $this->addError('nudgeMessage', $exception->getMessage());
+            $this->addError('nudgeMessage', $exception->userMessage());
 
             return;
         }
@@ -689,7 +689,7 @@ new #[Title('Submission')] class extends Component {
                 app(\App\Actions\Submissions\SubmitSubmissionAction::class)->execute($this->submission);
             });
         } catch (WorkflowException $exception) {
-            $message = __('This request could not be sent for approval: :reason', ['reason' => $exception->getMessage()]);
+            $message = __('This request could not be sent for approval: :reason', ['reason' => $exception->userMessage()]);
             if ($comment !== null) {
                 $this->addError('resubmissionComment', $message);
             }

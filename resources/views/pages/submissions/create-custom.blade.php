@@ -90,7 +90,7 @@ new #[Title('Custom request')] class extends Component {
         try {
             app(SubmitSubmissionAction::class)->execute($submission);
         } catch (WorkflowException $exception) {
-            Flux::toast(__('Saved as a draft but not sent for approval: :reason', ['reason' => $exception->getMessage()]), variant: 'danger');
+            Flux::toast(__('Saved as a draft but not sent for approval: :reason', ['reason' => $exception->userMessage()]), variant: 'danger');
             $this->redirect(route('submissions.show', $submission), navigate: true);
 
             return;

@@ -1,5 +1,6 @@
 <?php
 
+use App\Exceptions\DomainException;
 use App\Http\Middleware\ApplySystemRuntimeConfig;
 use App\Http\Middleware\CorrelateRequests;
 use App\Http\Middleware\EnsureAppConfigured;
@@ -49,4 +50,16 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
+        // A refused domain rule is the user's 422, not a server error (RV-ARC-19).
+        $exceptions->render(function (DomainException $exception, Request $request) {
+            if ($request->is('api/*') || $request->expectsJson()) {
+                return response()->json(['message' => $exception->userMessage()], 422);
+            }
+
+            if (! $request->isMethod('GET')) {
+                return back()->withErrors(['domain' => $exception->userMessage()])->withInput();
+            }
+
+            return null;
+        });
     })->create();

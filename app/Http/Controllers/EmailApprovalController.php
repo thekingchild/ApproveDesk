@@ -46,7 +46,7 @@ class EmailApprovalController extends Controller
         try {
             $approveSubmission->execute($instance, $approver, $step->id);
         } catch (WorkflowException $exception) {
-            return redirect()->route('home')->withErrors(['approval' => $exception->getMessage()]);
+            return redirect()->route('home')->withErrors(['approval' => $exception->userMessage()]);
         }
 
         return redirect()->route('home')->with('status', __('The submission was approved successfully.'));
