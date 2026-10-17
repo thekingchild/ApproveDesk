@@ -179,7 +179,7 @@ class ApprovalEligibilityParityTest extends TestCase
     private function assertRequestPage(User $viewer, bool $canAct, bool $canDelegate): void
     {
         Livewire::actingAs($viewer)
-            ->test('pages::submissions.show', ['submission' => $this->submission->fresh()])
+            ->test('submissions.decision', ['submission' => $this->submission->fresh()])
             ->assertSet('canAct', $canAct)
             ->assertSet('canDelegate', $canDelegate);
     }

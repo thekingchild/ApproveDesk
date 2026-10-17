@@ -109,7 +109,7 @@ class CollaborationActionsTest extends TestCase
         app(WorkflowEngine::class)->initialize($submission);
 
         Livewire::actingAs($approver)
-            ->test('pages::submissions.show', ['submission' => $submission])
+            ->test('submissions.decision', ['submission' => $submission])
             ->assertSee('Request information')
             ->set('actionComment', 'Upload the signed schedule.')
             ->call('act', WorkflowActionType::RequestInformation->value)

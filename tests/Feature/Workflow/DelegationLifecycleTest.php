@@ -81,7 +81,7 @@ class DelegationLifecycleTest extends TestCase
         $this->engine->delegate($this->instance, $this->approver, $this->delegate, now()->addDays(3));
 
         Livewire::actingAs($this->approver)
-            ->test('pages::submissions.show', ['submission' => $this->instance->submission->fresh()])
+            ->test('submissions.decision', ['submission' => $this->instance->submission->fresh()])
             ->assertSee('Take back')
             ->call('takeBackDelegation');
 

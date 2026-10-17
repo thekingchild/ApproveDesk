@@ -43,7 +43,7 @@ class CommentsMentionsTest extends TestCase
         app(WorkflowEngine::class)->initialize($submission);
 
         Livewire::actingAs($submitter)
-            ->test('pages::submissions.show', ['submission' => $submission])
+            ->test('submissions.comments', ['submission' => $submission])
             ->set('mentionQuery', 'Casey')
             ->call('addMention', $mentioned->id)
             ->set('comment', 'Need eyes from @{'.$mentioned->id.'}')
@@ -64,7 +64,7 @@ class CommentsMentionsTest extends TestCase
         app(WorkflowEngine::class)->initialize($submission);
 
         Livewire::actingAs($submitter)
-            ->test('pages::submissions.show', ['submission' => $submission])
+            ->test('submissions.comments', ['submission' => $submission])
             ->set('comment', 'Starting thread.')
             ->call('postComment')
             ->assertHasNoErrors();
@@ -72,7 +72,7 @@ class CommentsMentionsTest extends TestCase
         $parent = Comment::query()->firstOrFail();
 
         Livewire::actingAs($approver)
-            ->test('pages::submissions.show', ['submission' => $submission])
+            ->test('submissions.comments', ['submission' => $submission])
             ->call('startReply', $parent->id)
             ->set('replyBody', 'Here is the reply.')
             ->call('postReply')
@@ -89,7 +89,7 @@ class CommentsMentionsTest extends TestCase
         $submission = Submission::factory()->for($submitter, 'submitter')->create();
 
         Livewire::actingAs($submitter)
-            ->test('pages::submissions.show', ['submission' => $submission])
+            ->test('submissions.comments', ['submission' => $submission])
             ->set('comment', 'Original wording.')
             ->call('postComment')
             ->assertHasNoErrors();
@@ -97,7 +97,7 @@ class CommentsMentionsTest extends TestCase
         $comment = Comment::query()->firstOrFail();
 
         Livewire::actingAs($submitter)
-            ->test('pages::submissions.show', ['submission' => $submission])
+            ->test('submissions.comments', ['submission' => $submission])
             ->call('startEdit', $comment->id)
             ->set('editBody', 'Corrected wording.')
             ->call('saveEdit')
@@ -121,7 +121,7 @@ class CommentsMentionsTest extends TestCase
         $submission = Submission::factory()->for($submitter, 'submitter')->create();
 
         Livewire::actingAs($submitter)
-            ->test('pages::submissions.show', ['submission' => $submission])
+            ->test('submissions.comments', ['submission' => $submission])
             ->set('comment', 'Will go stale.')
             ->call('postComment')
             ->assertHasNoErrors();
@@ -130,7 +130,7 @@ class CommentsMentionsTest extends TestCase
         Carbon::setTestNow('2026-08-20 10:16:00');
 
         Livewire::actingAs($submitter)
-            ->test('pages::submissions.show', ['submission' => $submission])
+            ->test('submissions.comments', ['submission' => $submission])
             ->call('startEdit', $comment->id)
             ->assertForbidden();
     }
@@ -152,7 +152,7 @@ class CommentsMentionsTest extends TestCase
         ]);
 
         Livewire::actingAs($submitter)
-            ->test('pages::submissions.show', ['submission' => $submission])
+            ->test('submissions.comments', ['submission' => $submission])
             ->set('replyParentId', $reply->id)
             ->set('replyBody', 'Too deep.')
             ->call('postReply')

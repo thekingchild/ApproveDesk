@@ -68,10 +68,16 @@ class NamedGatesAndEntryPointsTest extends TestCase
 
         $this->assertTrue($auditor->can('view', $submission), 'Fixture: the auditor can open the request.');
         // A read-only auditor may look but not follow, remind, or mention.
-        $calls = [['follow'], ['sendNudge'], ['saveWatcherPreferences'], ['addMention', $auditor->id]];
+        $calls = [
+            ['submissions.followers', 'follow'],
+            ['pages::submissions.show', 'sendNudge'],
+            ['submissions.followers', 'saveWatcherPreferences'],
+            ['submissions.comments', 'addMention', $auditor->id],
+        ];
         foreach ($calls as $call) {
+            $component = array_shift($call);
             Livewire::actingAs($auditor)
-                ->test('pages::submissions.show', ['submission' => $submission])
+                ->test($component, ['submission' => $submission])
                 ->call(...$call)
                 ->assertForbidden();
         }

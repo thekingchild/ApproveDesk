@@ -106,7 +106,7 @@ class WorkflowOutcomeSecurityTest extends TestCase
         app(WorkflowEngine::class)->initialize($submission);
 
         Livewire::actingAs($approver)
-            ->test('pages::submissions.show', ['submission' => $submission->fresh()])
+            ->test('submissions.decision', ['submission' => $submission->fresh()])
             ->call('act', 'anything');
 
         $this->assertSame(0, WorkflowAction::query()->where('action', 'approve')->count());
