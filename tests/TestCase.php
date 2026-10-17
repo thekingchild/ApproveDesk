@@ -31,6 +31,11 @@ abstract class TestCase extends BaseTestCase
             throw new RuntimeException("Tests must run with APP_ENV=testing on in-memory SQLite or a *test* database; got [{$connection}:{$database}].");
         }
 
+        // Promote tests run `down`; the file driver writes storage/framework/down,
+        // which every parallel worker reads, so other workers' requests got 503s.
+        // Keep maintenance mode in this application's own array cache instead.
+        $app['config']->set('app.maintenance', ['driver' => 'cache', 'store' => 'array']);
+
         return $app;
     }
 
