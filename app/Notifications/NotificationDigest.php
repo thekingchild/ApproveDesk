@@ -16,7 +16,7 @@ class NotificationDigest extends Notification implements ShouldQueue
     use RendersNotificationCopy;
 
     /**
-     * @param  array<int, array{title: string, reference_number: string|null, kind: string, created_at: string}>  $items
+     * @param  array<int, array{title: string, reference_number: string|null, kind: string, created_at: string, submission_id?: int|null}>  $items
      */
     public function __construct(public readonly array $items) {}
 
@@ -45,5 +45,22 @@ class NotificationDigest extends Notification implements ShouldQueue
         }
 
         return $mail->action('Open ApproveDesk', route('dashboard'));
+    }
+
+    /**
+     * Not stored in-app (the digest is mail only); lists the requests it
+     * mentions so each one's evidence pack records the email (RV-DATA-09).
+     *
+     * @return array{kind: string, submission_ids: list<int>}
+     */
+    public function toArray(User $notifiable): array
+    {
+        return [
+            'kind' => 'digest',
+            'submission_ids' => array_values(array_unique(array_filter(array_map(
+                fn (array $item): ?int => isset($item['submission_id']) ? (int) $item['submission_id'] : null,
+                $this->items,
+            )))),
+        ];
     }
 }

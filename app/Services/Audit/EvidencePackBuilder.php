@@ -143,6 +143,7 @@ final class EvidencePackBuilder
                 'kind' => $delivery->kind,
                 'channel' => $delivery->channel,
                 'status' => $delivery->status->value,
+                'sent_at' => $delivery->sent_at?->toIso8601String(),
                 'created_at' => $delivery->created_at?->toIso8601String(),
             ])->all();
 
@@ -207,7 +208,8 @@ final class EvidencePackBuilder
     /**
      * In-app (database channel) notifications about this request. Laravel keeps
      * them in `notifications` with the request id inside the JSON payload, not in
-     * notification_deliveries (RV-DATA-07). Email is not recorded per request.
+     * notification_deliveries (RV-DATA-07). Emails and chat messages are in
+     * notifications.json (RV-DATA-09).
      *
      * @return list<array<string, mixed>>
      */

@@ -25,6 +25,9 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
+    // Listeners are registered explicitly in AppServiceProvider. Discovery would
+    // register each of them a second time, so every notification went out twice.
+    ->withEvents(discover: false)
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->prepend(ApplySystemRuntimeConfig::class);
         $middleware->prepend(PrepareFirstRunEnvironment::class);
