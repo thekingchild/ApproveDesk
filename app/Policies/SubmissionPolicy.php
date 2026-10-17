@@ -7,6 +7,7 @@ use App\Models\Delegation;
 use App\Models\Submission;
 use App\Models\User;
 use App\Models\WorkflowAction;
+use App\Services\SubmissionVisibility;
 use App\Services\WorkflowEngine;
 
 class SubmissionPolicy
@@ -15,11 +16,7 @@ class SubmissionPolicy
     {
         // Requesters always see their own requests (they must answer information
         // requests and revise returns), so View own requests is not a gate here.
-        if ($submission->submitter_id === $user->id || $user->can('submissions.view.all')) {
-            return true;
-        }
-
-        if ($user->can('audit.view') && $user->hasActiveAuditorAccess()) {
+        if ($submission->submitter_id === $user->id || app(SubmissionVisibility::class)->seesEverything($user)) {
             return true;
         }
 

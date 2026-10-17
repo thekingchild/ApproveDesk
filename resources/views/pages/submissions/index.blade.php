@@ -1,5 +1,6 @@
 <?php
 
+use App\Services\SubmissionVisibility;
 use App\Enums\SubmissionStatus;
 use App\Models\Submission;
 use App\Models\Department;
@@ -81,10 +82,11 @@ new #[Title('My submissions')] class extends Component {
         })->all();
     }
 
+    /** Everyone's requests for people who see everything, including auditors with active access (RV-ARC-16). */
     #[\Livewire\Attributes\Computed]
     public function organizationView(): bool
     {
-        return Auth::user()->can('submissions.view.all');
+        return app(SubmissionVisibility::class)->seesEverything(Auth::user());
     }
 
     #[\Livewire\Attributes\Computed]
