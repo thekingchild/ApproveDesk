@@ -63,8 +63,8 @@ class UserDataExportAndAnonymizeTest extends TestCase
         $action = WorkflowAction::factory()->create(['actor_id' => $target->id]);
 
         Livewire::actingAs($admin)
-            ->test('pages::admin.users')
-            ->call('anonymizeUser', $target->id)
+            ->test('admin.users.user-form')
+            ->call('edit', $target->id)->call('anonymize')
             ->assertHasNoErrors();
 
         $target->refresh();

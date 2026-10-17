@@ -31,7 +31,8 @@ class LockedRecordKeysTest extends TestCase
     public static function adminPageKeys(): array
     {
         return [
-            'users' => ['pages::admin.users', 'editingUserId'],
+            'users' => ['admin.users.user-form', 'editingUserId'],
+            'users name review' => ['admin.users.name-changes', 'rejectingId'],
             'departments' => ['pages::admin.departments', 'editingDepartmentId'],
             'roles' => ['pages::admin.roles', 'editingRoleId'],
             'workflow templates' => ['pages::admin.workflow-templates', 'editingTemplateId'],

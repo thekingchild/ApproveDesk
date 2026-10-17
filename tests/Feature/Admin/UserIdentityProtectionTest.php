@@ -35,8 +35,8 @@ class UserIdentityProtectionTest extends TestCase
         $admin = User::factory()->create()->assignRole('admin');
 
         Livewire::actingAs($admin)
-            ->test('pages::admin.users')
-            ->call('editUser', $victim->id)
+            ->test('admin.users.user-form')
+            ->call('edit', $victim->id)
             ->assertSeeHtml('data-test="email-locked"')
             ->set('email', 'attacker@example.com')
             ->call('save')
@@ -51,8 +51,8 @@ class UserIdentityProtectionTest extends TestCase
         $admin = User::factory()->create()->assignRole('admin');
 
         Livewire::actingAs($admin)
-            ->test('pages::admin.users')
-            ->call('editUser', $victim->id)
+            ->test('admin.users.user-form')
+            ->call('edit', $victim->id)
             ->set('name', 'Renamed Steward')
             ->call('save')
             ->assertHasNoErrors();
@@ -66,8 +66,8 @@ class UserIdentityProtectionTest extends TestCase
         $admin = User::factory()->create()->assignRole('admin');
 
         Livewire::actingAs($admin)
-            ->test('pages::admin.users')
-            ->call('editUser', $user->id)
+            ->test('admin.users.user-form')
+            ->call('edit', $user->id)
             ->set('email', 'new@example.com')
             ->call('save')
             ->assertHasNoErrors();
@@ -84,8 +84,8 @@ class UserIdentityProtectionTest extends TestCase
         $this->assertFalse($admin->can('activate', $peer));
 
         Livewire::actingAs($admin)
-            ->test('pages::admin.users')
-            ->call('anonymizeUser', $peer->id)
+            ->test('admin.users.user-form')
+            ->call('edit', $peer->id)->call('anonymize')
             ->assertForbidden();
 
         $this->assertFalse($peer->fresh()->isAnonymized());
