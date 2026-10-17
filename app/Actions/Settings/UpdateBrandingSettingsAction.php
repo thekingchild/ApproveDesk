@@ -4,41 +4,19 @@ namespace App\Actions\Settings;
 
 use App\DTOs\BrandingSettingsData;
 use App\Models\Setting;
-use App\Models\User;
-use App\Support\Branding;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 
 final class UpdateBrandingSettingsAction
 {
-    public function execute(BrandingSettingsData $data, ?User $actor = null): void
+    /** Identity and Login appearance. Public access and custom code have their own Actions (RV-ARC-10). */
+    public function execute(BrandingSettingsData $data): void
     {
-        $actor ??= auth()->user();
-
         Setting::put('brand.tagline', $data->tagline);
         Setting::put('brand.accent_color', $data->accentColor);
         Setting::put('brand.login_background_overlay', (string) $data->overlay);
         Setting::put('brand.custom_css', $data->customCss === '' ? null : $data->customCss);
-        if ($actor instanceof User && $actor->can('branding.custom_code.manage')) {
-            Setting::put('brand.custom_code', $data->customCode === '' ? null : $data->customCode);
-            if ($data->customCodeOrigins !== null) {
-                // An explicit (possibly empty) list replaces host scraping for good (ADR 0005).
-                Setting::put(Branding::CUSTOM_CODE_ORIGINS, implode("\n", Branding::normalizeOrigins($data->customCodeOrigins)));
-            }
-        }
-        Setting::put('auth.allow_registration', $data->allowRegistration ? 'true' : 'false');
-        Setting::put('brand.landing_page_enabled', $data->landingPageEnabled ? 'true' : 'false');
-        Setting::put('auth.registration_mode', in_array($data->registrationMode, ['immediate', 'otp'], true) ? $data->registrationMode : 'otp');
-
-        // Normalise the allow-list: lowercase, one per line, no blanks/dupes.
-        $domains = collect(preg_split('/[\r\n,]+/', $data->allowedRegistrationDomains) ?: [])
-            ->map(fn (string $domain): string => mb_strtolower(trim($domain)))
-            ->filter()
-            ->unique()
-            ->implode("\n");
-        Setting::put('auth.allowed_registration_domains', $domains === '' ? null : $domains);
-
         Setting::put('brand.meta_title', $data->metaTitle === '' ? null : $data->metaTitle);
         Setting::put('brand.meta_description', $data->metaDescription === '' ? null : $data->metaDescription);
 

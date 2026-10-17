@@ -10,16 +10,17 @@ The **Application identity** card affects signed-in pages, Login, and printable 
 - **Meta description** is optional text for search engines and link previews.
 - **Application logo** accepts PNG, JPG, or WebP up to 1 MB. It appears in navigation, Login, approval reports, and the installed app (PWA) icon. When no logo is saved, ApproveDesk uses its own icon rather than a Laravel mark.
 - **Favicon** accepts ICO, PNG, JPG, or WebP up to 512 KB. It appears in the browser tab, including the approval report preview. If no application logo is saved, the favicon is also used as the mark on the report. ICO files save without a live thumbnail.
-- **Show public landing page** is off by default. Off sends guests to Login and signed-in people to Dashboard. On shows the installed public marketing page. The switch does not edit that page.
 
 The upload cards preview a current or newly selected image. Use **Keep current** if you selected a replacement by mistake. Removing an image restores the product default after save. Identity artwork is public; do not upload confidential images.
 
-## Self-registration
+## Public access
 
-**Allow self-registration** controls whether a visitor can create an account. When it is on:
+The **Public access** card has its own **Save public access** button, which saves only this card. **Save branding** does not include it.
 
-- **After someone registers** can require a 6-digit email confirmation (recommended) or grant immediate access. Confirmation codes expire after 10 minutes.
-- **Registration domains** accepts one domain per line, such as `bluechipanalytical.com`. Leave it empty to accept any email provider. Subdomains match only when listed.
+- **Show public landing page** is off by default. Off sends guests to Login and signed-in people to Dashboard. On shows the installed public marketing page. The switch does not edit that page.
+- **Allow self-registration** controls whether a visitor can create an account. When it is on, more options appear:
+  - **After someone registers** can require a 6-digit email confirmation (recommended) or grant immediate access. Confirmation codes expire after 10 minutes.
+  - **Registration domains** accepts one domain per line, such as `bluechipanalytical.com`. Leave it empty to accept any email provider. Subdomains match only when listed.
 
 Administrator-created and imported users do not use the self-registration domain list. New accounts created with Google or Microsoft must still match the list; existing accounts can link those sign-in methods. The list is an onboarding control, not proof of identity; passwords, two-factor authentication, and passkeys remain the account safeguards.
 
@@ -30,6 +31,8 @@ The **Login page** card controls the public sign-in appearance:
 - Tagline, accent colour, background image, and overlay darkness.
 - Optional CSS under **Advanced: custom CSS** for fine-grained visual adjustments.
 - A live preview for the Login and Browser surfaces.
+
+**Save branding** saves the **Application identity** and **Login page** cards together.
 
 The background is shown in the large-screen side panel and behind the form on smaller screens. Check that text remains readable before saving.
 

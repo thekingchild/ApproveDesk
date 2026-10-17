@@ -146,7 +146,7 @@ class UserOnboardingTest extends TestCase
     {
         $admin = $this->admin();
 
-        Livewire::actingAs($admin)->test('pages::settings.branding')
+        Livewire::actingAs($admin)->test('settings.branding.public-access')
             ->set('allow_registration', true)
             ->set('registration_mode', 'otp')
             ->set('allowed_registration_domains', "BlueChipAnalytical.com,\nmail.corp.example,,")
@@ -162,7 +162,7 @@ class UserOnboardingTest extends TestCase
     {
         $admin = $this->admin();
 
-        Livewire::actingAs($admin)->test('pages::settings.branding')
+        Livewire::actingAs($admin)->test('settings.branding.public-access')
             ->set('allow_registration', true)
             ->set('allowed_registration_domains', "bluechipanalytical.com\nnot a domain")
             ->call('save')

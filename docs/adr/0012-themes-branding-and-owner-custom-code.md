@@ -32,4 +32,4 @@ Organizations want the product to look like their own: a name, logo, favicon, an
 ## Open questions
 
 - `BrandingAssetController` still serves `.svg` and `.gif`. Branding uploads accept only JPG/PNG/WebP (and ICO for favicons), and IMPLEMENTATION_PLAN.md excludes SVG uploads as an XSS risk. Should the route's extension list match what uploads allow?
-- `UpdateBrandingSettingsAction` gates custom code by `$actor->can(...)` but does not check step-up itself. Only the Livewire component enforces RV-SEC-16. Any future caller of the action must repeat that check.
+- `UpdateBrandingSettingsAction` gates custom code by `$actor->can(...)` but does not check step-up itself. Only the Livewire component enforces RV-SEC-16. Any future caller of the action must repeat that check. *Resolved by RV-ARC-10:* custom code now has its own `UpdateCustomCodeAction`. It authorizes `branding.custom_code.manage` and runs the step-up itself (`StepUpConfirmation`); when the step-up is missing it throws `StepUpRequiredException`. The screen only handles the redirect to `password.confirm`.
