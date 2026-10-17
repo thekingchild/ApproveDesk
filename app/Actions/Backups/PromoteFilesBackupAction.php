@@ -51,41 +51,45 @@ final class PromoteFilesBackupAction
         $holding = 'restore-holding/'.now()->format('YmdHis');
         Storage::disk('local')->makeDirectory($holding);
 
-        $absolute = app(MaterializeBackupSnapshotAction::class)->execute($snapshot);
-        $names = $this->integrity->verifiedZipEntryNames($absolute, $snapshot->manifestArray());
-
-        $zip = new ZipArchive;
-        if ($zip->open($absolute) !== true) {
-            throw new InvalidArgumentException('The files snapshot could not be opened.');
-        }
-
+        // The holding copy never outlives the promote, whether it succeeds or fails (RV-BUG-38).
         try {
-            $root = Storage::disk('local')->path($holding);
-            foreach ($names as $name) {
-                $this->extractEntry($zip, $root, $name);
-            }
-        } finally {
-            $zip->close();
-        }
+            $absolute = app(MaterializeBackupSnapshotAction::class)->execute($snapshot);
+            $names = $this->integrity->verifiedZipEntryNames($absolute, $snapshot->manifestArray());
 
-        $stamp = now()->format('YmdHis');
-        $local = Storage::disk('local');
-        $this->swapIn(
-            $local->path($holding.'/submissions'),
-            $local->path('submissions'),
-            $local->path('submissions-previous-'.$stamp),
-            replaceWhenMissing: true,
-        );
-        // Branding artwork is part of the snapshot and lives on the public disk
-        // (RV-BUG-23). The artwork it replaces is set aside on the private disk
-        // so it is not web-reachable. A snapshot without artwork keeps today's.
-        $this->swapIn(
-            $local->path($holding.'/branding'),
-            Storage::disk('public')->path('branding'),
-            $local->path('branding-previous-'.$stamp),
-            replaceWhenMissing: false,
-        );
-        $local->deleteDirectory($holding);
+            $zip = new ZipArchive;
+            if ($zip->open($absolute) !== true) {
+                throw new InvalidArgumentException('The files snapshot could not be opened.');
+            }
+
+            try {
+                $root = Storage::disk('local')->path($holding);
+                foreach ($names as $name) {
+                    $this->extractEntry($zip, $root, $name);
+                }
+            } finally {
+                $zip->close();
+            }
+
+            $stamp = now()->format('YmdHis');
+            $local = Storage::disk('local');
+            $this->swapIn(
+                $local->path($holding.'/submissions'),
+                $local->path('submissions'),
+                $local->path('submissions-previous-'.$stamp),
+                replaceWhenMissing: true,
+            );
+            // Branding artwork is part of the snapshot and lives on the public disk
+            // (RV-BUG-23). The artwork it replaces is set aside on the private disk
+            // so it is not web-reachable. A snapshot without artwork keeps today's.
+            $this->swapIn(
+                $local->path($holding.'/branding'),
+                Storage::disk('public')->path('branding'),
+                $local->path('branding-previous-'.$stamp),
+                replaceWhenMissing: false,
+            );
+        } finally {
+            Storage::disk('local')->deleteDirectory($holding);
+        }
 
         $attributes = [
             'status' => BackupSnapshotStatus::Promoted,

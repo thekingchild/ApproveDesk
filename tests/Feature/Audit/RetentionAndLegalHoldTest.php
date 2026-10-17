@@ -38,10 +38,12 @@ class RetentionAndLegalHoldTest extends TestCase
         $old = Submission::factory()->create([
             'status' => SubmissionStatus::Draft,
             'created_at' => now()->subDays(40),
+            'updated_at' => now()->subDays(40),
         ]);
         $recent = Submission::factory()->create([
             'status' => SubmissionStatus::Draft,
             'created_at' => now()->subDays(5),
+            'updated_at' => now()->subDays(5),
         ]);
 
         (new ApplyRetentionJob)->handle(app(RetentionPolicy::class));
@@ -56,6 +58,7 @@ class RetentionAndLegalHoldTest extends TestCase
         $held = Submission::factory()->create([
             'status' => SubmissionStatus::Draft,
             'created_at' => now()->subDays(40),
+            'updated_at' => now()->subDays(40),
         ]);
         app(PlaceLegalHoldAction::class)->execute($this->admin, $held, 'Litigation');
 

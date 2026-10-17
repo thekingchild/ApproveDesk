@@ -27,12 +27,15 @@ class ReferenceNumberGenerator
 
     private function generateSequential(): string
     {
-        $scope = $this->schema->counterScope();
-        $prefix = $this->schema->numericPrefix();
+        // One clock reading for the counter, the prefix and the formatted ID, so a
+        // request made at the turn of a month or year cannot mix two periods (RV-BUG-38).
+        $at = now();
+        $scope = $this->schema->counterScope($at);
+        $prefix = $this->schema->numericPrefix($at);
         $digitLength = $this->schema->digitLength();
         $maximum = (10 ** $digitLength) - 1;
 
-        return DB::transaction(function () use ($scope, $prefix, $digitLength, $maximum): string {
+        return DB::transaction(function () use ($scope, $prefix, $digitLength, $maximum, $at): string {
             ApprovalReferenceCounter::query()->insertOrIgnore([
                 'scope' => $scope,
                 'current_value' => 0,
@@ -67,7 +70,7 @@ class ReferenceNumberGenerator
             // Numbers issued while random mode was on may sit ahead of the counter.
             // Skip them; otherwise the insert fails, rolls the counter back, and
             // every later request retries the same number (RV-BUG-14).
-            while ($next <= $maximum && $this->isTaken($this->schema->format($next))) {
+            while ($next <= $maximum && $this->isTaken($this->schema->format($next, $at))) {
                 $next++;
             }
 
@@ -77,7 +80,7 @@ class ReferenceNumberGenerator
 
             $counter->update(['current_value' => $next]);
 
-            return $this->schema->format($next);
+            return $this->schema->format($next, $at);
         }, 3);
     }
 

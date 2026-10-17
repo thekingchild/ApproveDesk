@@ -15,6 +15,12 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Fixed
 
+- **Small fixes from the code review (RV-BUG-38).**
+  - A mention added while editing a comment now notifies that person and makes them a follower, as a new comment does.
+  - Draft retention counts from the last edit, so a draft someone is still working on is no longer retired.
+  - A failed files restore no longer leaves a temporary copy of the files behind.
+  - An approval ID made at the turn of a month or year no longer mixes the two periods.
+  - The API guide names the step field correctly (`workflow.current_step.id`), says which requests the list returns, and gives the right webhook retry count; the OpenAPI file now documents the submit and actions endpoints.
 - **Auditors see every request in the list and on the dashboard while their access is active (RV-ARC-16).** An auditor with an active grant could open any request, but the request list and dashboard showed only their own. Both now follow the same rule as the request page, and the menu says **All submissions**. When the grant ends, they see only their own again.
 - **Administrators' accounts show an Edit button only to the System owner (RV-DOC-03).** Other user managers saw **Edit** on an administrator, but saving was always refused with a message about the administrator role. The button is now hidden, an administrator's display-name request is decided by the System owner, and Help describes the rule correctly.
 - **Failed backups are cleared after 30 days (RV-OPS-07).** Backup retention removed old successful backups but kept every failed attempt forever.

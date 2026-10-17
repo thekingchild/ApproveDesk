@@ -20,7 +20,7 @@ The machine-readable contract is at `GET /api/v1/openapi.json` (also stored in `
 | `GET` | `/api/v1/user` | `submissions:read` | Current token owner and granted abilities |
 | `GET` | `/api/v1/request-types` | `request-types:read` or `submissions:read` | Published request-type schemas |
 | `GET` | `/api/v1/request-types/{slug}` | `request-types:read` or `submissions:read` | One published schema |
-| `GET` | `/api/v1/submissions` | `submissions:read` | Accessible submissions; accepts `status`, `type`, `per_page`, and `cursor` |
+| `GET` | `/api/v1/submissions` | `submissions:read` | Submissions the token owner can see: all of them for people who see every request (and auditors with an active grant); otherwise their own, ones they follow, are assigned to or delegated, or have acted on. Accepts `status`, `type`, `per_page`, and `cursor` |
 | `POST` | `/api/v1/submissions` | `submissions:write` | Create a draft; include `submit: true` to submit immediately |
 | `GET` | `/api/v1/submissions/{id}` | `submissions:read` | One accessible submission, workflow, and audit actions |
 | `POST` | `/api/v1/submissions/{id}/submit` | `submissions:write` | Submit an owned eligible draft/returned submission; send `comment` (required when answering an information request) |
@@ -32,7 +32,7 @@ If a submission cannot be sent for approval (for example no approver can be reso
 
 When creating a submission, `department_id` may only be your own department (or omitted); other departments are refused because the department decides department-manager routing.
 
-Send the optional `step_id` (the `workflow_instance.current_step_id` you read before deciding). If the request has moved to another step in the meantime, the action is refused with a 422 instead of being applied to the new step. Clients that retry requests should always send it.
+Send the optional `step_id` (the `workflow.current_step.id` you read before deciding). If the request has moved to another step in the meantime, the action is refused with a 422 instead of being applied to the new step. Clients that retry requests should always send it.
 
 ## Outbound webhooks
 
@@ -55,4 +55,4 @@ Verify the signature against the exact raw request body using:
 HMAC_SHA256(secret, timestamp + "." + raw_body)
 ```
 
-Deliveries are recorded before network I/O. A non-2xx response or connection failure retries five times with increasing delays (1 minute, 5 minutes, 15 minutes, and 1 hour); delivery outcome, response status, body excerpt, and last error remain in the audit record.
+Deliveries are recorded before network I/O. A non-2xx response or connection failure is tried five times in all: the first attempt and four retries after 1 minute, 5 minutes, 15 minutes, and 1 hour; delivery outcome, response status, body excerpt, and last error remain in the audit record.

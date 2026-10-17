@@ -24,7 +24,7 @@ Type a comment, then search by name to mention someone. A mention notifies that 
 
 Reply starts a thread under a top-level comment. You cannot reply to a reply; stay one level deep.
 
-The author can edit for 15 minutes. After that the text is locked. Each edit writes the previous text into an append-only history. Do not treat comments as a place to rewrite a decision; workflow actions remain the audit of approve, reject, return, and the rest.
+The author can edit for 15 minutes. After that the text is locked. Each edit writes the previous text into an append-only history. A mention added by an edit works like one in a new comment: that person is notified and becomes a follower. People already mentioned are not notified again. Do not treat comments as a place to rewrite a decision; workflow actions remain the audit of approve, reject, return, and the rest.
 
 ## Reminders
 

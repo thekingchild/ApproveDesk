@@ -28,7 +28,8 @@ final class RetentionPolicy
     {
         return Submission::query()
             ->where('status', SubmissionStatus::Draft)
-            ->where('created_at', '<', now()->subDays(RetentionSettings::draftDays()))
+            // A draft someone is still working on is not retired: count from the last edit (RV-BUG-38).
+            ->where('updated_at', '<', now()->subDays(RetentionSettings::draftDays()))
             ->whereDoesntHave('legalHolds', $this->activeHold(...));
     }
 
