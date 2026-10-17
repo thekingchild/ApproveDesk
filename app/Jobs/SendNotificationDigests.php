@@ -59,6 +59,7 @@ class SendNotificationDigests implements ShouldBeUnique, ShouldQueue
                 ? (string) $notification->data['reference_number']
                 : null,
             'kind' => (string) ($notification->data['kind'] ?? 'update'),
+            'submission_id' => is_numeric($notification->data['submission_id'] ?? null) ? (int) $notification->data['submission_id'] : null,
             'created_at' => $notification->created_at?->toIso8601String() ?? now()->toIso8601String(),
         ])->all();
 

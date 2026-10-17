@@ -16,10 +16,12 @@ use App\Events\WorkflowReturned;
 use App\Listeners\ApplyOutOfOfficeFallbacks;
 use App\Listeners\DispatchIntegrationActions;
 use App\Listeners\DispatchWebhookDeliveries;
+use App\Listeners\MarkSecondFactorAssurance;
 use App\Listeners\NotifyCurrentApprovers;
 use App\Listeners\NotifyDelegate;
 use App\Listeners\NotifySubmitterOfDecision;
 use App\Listeners\NotifyWatchersOfDecision;
+use App\Listeners\RecordEmailDelivery;
 use App\Listeners\RecordLoginEvent;
 use App\Livewire\Hooks\SupportDomainExceptions;
 use App\Models\Role;
@@ -62,6 +64,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Events\MigrationsEnded;
 use Illuminate\Foundation\Http\Events\RequestHandled;
 use Illuminate\Http\Request;
+use Illuminate\Notifications\Events\NotificationSent;
 use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -73,6 +76,10 @@ use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use Laravel\Fortify\Events\TwoFactorAuthenticationConfirmed;
+use Laravel\Fortify\Events\ValidTwoFactorAuthenticationCodeProvided;
+use Laravel\Passkeys\Events\PasskeyRegistered;
+use Laravel\Passkeys\Events\PasskeyVerified;
 use Livewire\Livewire;
 use Throwable;
 
@@ -264,6 +271,13 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(WorkflowDelegated::class, DispatchWebhookDeliveries::class);
         Event::listen(WorkflowCompleted::class, DispatchIntegrationActions::class);
         Event::listen(Login::class, RecordLoginEvent::class);
+        Event::listen([
+            ValidTwoFactorAuthenticationCodeProvided::class,
+            TwoFactorAuthenticationConfirmed::class,
+            PasskeyVerified::class,
+            PasskeyRegistered::class,
+        ], MarkSecondFactorAssurance::class);
+        Event::listen(NotificationSent::class, RecordEmailDelivery::class);
     }
 
     /**

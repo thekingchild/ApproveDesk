@@ -94,6 +94,27 @@ final class NotificationDeliveryRecorder
         ])->save();
     }
 
+    /**
+     * An email Laravel's mail channel has already handed to the mail server,
+     * recorded against the request it is about so evidence packs can list it
+     * (RV-DATA-09). Mail is not retried from here, so the row is Sent.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    public function recordSent(User $user, int $submissionId, string $kind, string $channel, array $payload = []): NotificationDelivery
+    {
+        return NotificationDelivery::query()->create([
+            'user_id' => $user->id,
+            'submission_id' => $submissionId,
+            'kind' => mb_substr($kind, 0, 40),
+            'channel' => $channel,
+            'status' => NotificationDeliveryStatus::Sent,
+            'attempts' => 1,
+            'payload' => ['submission_id' => $submissionId, ...$payload],
+            'sent_at' => now(),
+        ]);
+    }
+
     public function shouldDeferOptionalChannel(): bool
     {
         return $this->quietHours->isQuiet();

@@ -188,7 +188,7 @@ The email link or Teams/Slack **Approve** button for the current step. Tampered,
 
 ## [Evidence pack](/help/audit-trail)
 
-A signed download of one request: the form, workflow version, actions, comments and their edit history, request and file history, delegations, notifications, file hashes, and timestamps. Verification detects a changed file, an added file, or a changed manifest.
+A signed download of one request: the form, workflow version, actions, comments and their edit history, request and file history, delegations, notifications (including emails about the request), file hashes, and timestamps. Verification detects a changed file, an added file, or a changed manifest.
 
 ## [Auditor access](/help/records)
 
