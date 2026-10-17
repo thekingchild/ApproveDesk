@@ -38,7 +38,7 @@ class DelegationLocalTimeTest extends TestCase
         app(WorkflowEngine::class)->initialize($submission);
 
         Livewire::actingAs($approver)
-            ->test('pages::submissions.show', ['submission' => $submission->fresh()])
+            ->test('submissions.decision', ['submission' => $submission->fresh()])
             ->set('browserTimezone', 'Asia/Tokyo')
             ->set('delegateUserId', (string) $delegate->id)
             ->set('delegationExpiresAt', '2026-10-16T17:00')
@@ -47,7 +47,7 @@ class DelegationLocalTimeTest extends TestCase
 
         // RV-ARC-17: shown back in the zone it was entered in, not the server's.
         Livewire::actingAs($approver)
-            ->test('pages::submissions.show', ['submission' => $submission->fresh()])
+            ->test('submissions.decision', ['submission' => $submission->fresh()])
             ->set('browserTimezone', 'Asia/Tokyo')
             ->assertSee('16 Oct 2026 17:00 (Asia/Tokyo)');
 

@@ -72,7 +72,7 @@ class SubmissionAccessTest extends TestCase
         app(WorkflowEngine::class)->initialize($this->submission);
 
         Livewire::actingAs($this->approver)
-            ->test('pages::submissions.show', ['submission' => $this->submission])
+            ->test('submissions.comments', ['submission' => $this->submission])
             ->set('comment', 'Could you clarify the total?')
             ->call('postComment')
             ->assertHasNoErrors();

@@ -1,94 +1,32 @@
 <?php
 
-use App\Actions\Collaboration\EditCommentAction;
-use App\Actions\Collaboration\FollowSubmissionAction;
 use App\Actions\Collaboration\NudgeApproversAction;
-use App\Actions\Collaboration\PostCommentAction;
-use App\Actions\Collaboration\UnfollowSubmissionAction;
-use App\Actions\Collaboration\UpdateWatcherPreferencesAction;
 use App\Actions\Submissions\ResubmitSubmissionAction;
-use App\Enums\WorkflowActionType;
 use App\Exceptions\CollaborationException;
 use App\Exceptions\WorkflowException;
-use App\Support\RichTextSanitizer;
-use App\Support\SubmissionFileLinks;
-use App\Models\Comment;
-use App\Models\Delegation;
 use App\Models\Submission;
-use App\Models\User;
 use App\Services\Collaboration\ExpectedProgress;
-use App\Services\Collaboration\MentionParser;
-use App\Services\Workflow\AssigneeDirectory;
-use App\Services\Workflow\AssigneeResolver;
-use App\Services\Workflow\StepOutcomes;
 use App\Services\Workflow\WorkflowTimeline;
-use App\Services\Workflow\SeparationOfDuties;
 use App\Services\WorkflowEngine;
+use App\Support\RichTextSanitizer;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
-use Livewire\Attributes\Locked;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
+/*
+ * The request page. The approver's decision panel, comments, followers and
+ * attachments are child components under livewire/submissions (ADR 0006
+ * split, RV-ARC-02); this page shows the request, its progress and history,
+ * and the requester's withdraw / resubmit and reminder actions.
+ */
 new #[Title('Submission')] class extends Component {
-    /** Set from the browser (<x-browser-timezone />) so datetime-local values are read in the viewer's timezone. */
-    public string $browserTimezone = '';
-
     public Submission $submission;
-
-    public string $comment = '';
-
-    public string $actionComment = '';
-
-    public string $delegateUserId = '';
-
-    public string $delegationStartsAt = '';
-
-    public string $delegationExpiresAt = '';
-
-    public string $delegationComment = '';
-
-    public string $watcherQuery = '';
-
-    public string $mentionQuery = '';
 
     public string $nudgeMessage = '';
 
-    public string $replyBody = '';
-
-    public ?int $replyParentId = null;
-
-    #[Locked]
-    public ?int $editingCommentId = null;
-
-    public string $editBody = '';
-
-    public bool $notifyComments = true;
-
-    public bool $notifyStatus = true;
-
-    /** @var array<int, int> */
-    public array $mentionedUserIds = [];
-
     public string $resubmissionComment = '';
-
-    #[Locked]
-    public ?int $previewFileId = null;
-
-    /** The workflow step this page showed; decisions are refused once the request has moved on. */
-    #[Locked]
-    public ?int $renderedStepId = null;
-
-    /** @var array<int, \Illuminate\Database\Eloquent\Collection<int, User>> Approvers per step for this render. */
-    private array $assigneesByStep = [];
-
-    /** @return \Illuminate\Database\Eloquent\Collection<int, User> */
-    private function assigneesFor(\App\Models\WorkflowTemplateStep $step): \Illuminate\Database\Eloquent\Collection
-    {
-        return $this->assigneesByStep[$step->id] ??= $step->assignedUsers($this->submission);
-    }
 
     /** Relations the page renders; reloaded on every request because Livewire rehydrates the model without them. */
     private const RELATIONS = [
@@ -100,7 +38,6 @@ new #[Title('Submission')] class extends Component {
             'workflowInstance.currentStep',
             'workflowInstance.actions.actor',
             'workflowInstance.actions.onBehalfOf:id,name',
-            'watchers.user',
             'revisions.actor:id,name',
             'fileRevisions',
             'submitter.manager',
@@ -117,13 +54,6 @@ new #[Title('Submission')] class extends Component {
     {
         $this->authorize('view', $submission);
         $this->submission = $submission->load(self::RELATIONS);
-        $this->renderedStepId = $this->submission->workflowInstance?->current_step_id;
-
-        $mine = $this->submission->watchers->firstWhere('user_id', Auth::id());
-        if ($mine) {
-            $this->notifyComments = $mine->notify_comments;
-            $this->notifyStatus = $mine->notify_status;
-        }
     }
 
     #[Computed]
@@ -142,7 +72,7 @@ new #[Title('Submission')] class extends Component {
     #[Computed]
     public function timeline(): array
     {
-        return app(WorkflowTimeline::class)->for($this->submission, fn (\App\Models\WorkflowTemplateStep $step) => $this->assigneesFor($step));
+        return app(WorkflowTimeline::class)->for($this->submission);
     }
 
     #[Computed]
@@ -151,353 +81,6 @@ new #[Title('Submission')] class extends Component {
         $instance = $this->submission->workflowInstance;
 
         return $instance !== null && app(WorkflowEngine::class)->canAct($instance, Auth::user());
-    }
-
-    /** True when the viewer would be an approver on the current step but separation of duties excludes them. */
-    #[Computed]
-    public function selfApprovalBlocked(): bool
-    {
-        $step = $this->submission->workflowInstance?->currentStep;
-
-        return $step !== null
-            && $this->submission->workflowInstance->status === \App\Enums\WorkflowStatus::Active
-            && SeparationOfDuties::forbids(Auth::user(), $this->submission)
-            && app(AssigneeResolver::class)->candidates($step, $this->submission)->contains(Auth::user());
-    }
-
-    #[Computed]
-    public function canDelegate(): bool
-    {
-        $instance = $this->submission->workflowInstance;
-
-        return $instance !== null && app(WorkflowEngine::class)->canDelegate($instance, Auth::user());
-    }
-
-    #[Computed]
-    public function delegateCandidates(): \Illuminate\Database\Eloquent\Collection
-    {
-        $step = $this->submission->workflowInstance?->currentStep;
-        $excluded = $step !== null ? $this->assigneesFor($step)->pluck('id')->all() : [];
-
-        if (SeparationOfDuties::enabled()) {
-            $excluded[] = $this->submission->submitter_id;
-        }
-
-        return User::query()
-            ->assignable()
-            ->where('is_active', true)
-            ->whereKeyNot(Auth::id())
-            ->whereNotIn('id', $excluded)
-            ->orderBy('name')
-            ->get(['id', 'name', 'email']);
-    }
-
-    /** The viewer's current or upcoming delegation on this step, if any (for "Take back"). */
-    #[Computed]
-    public function myDelegation(): ?Delegation
-    {
-        $instance = $this->submission->workflowInstance;
-        if ($instance === null || $instance->status !== \App\Enums\WorkflowStatus::Active) {
-            return null;
-        }
-
-        return Delegation::query()
-            ->with('delegate:id,name')
-            ->where('instance_id', $instance->id)
-            ->where('step_id', $instance->current_step_id)
-            ->where('delegator_id', Auth::id())
-            ->where('expires_at', '>', now())
-            ->latest('id')
-            ->first();
-    }
-
-    public function takeBackDelegation(): void
-    {
-        // The workflow engine decides eligibility and explains refusals (ADR 0008).
-        $this->authorize('view', $this->submission);
-        $delegation = $this->myDelegation;
-        if ($delegation === null) {
-            return;
-        }
-
-        app(WorkflowEngine::class)->revokeDelegation($delegation, Auth::user(), __('Taken back by the approver.'));
-        Flux::toast(__('This step is yours again.'), variant: 'success');
-        $this->redirect(route('submissions.show', $this->submission), navigate: true);
-    }
-
-    public function delegateApproval(): void
-    {
-        // The workflow engine decides eligibility and explains refusals (ADR 0008).
-        $this->authorize('view', $this->submission);
-        $validated = $this->validate([
-            'delegateUserId' => ['required', 'integer', Rule::exists(User::class, 'id')->where('is_active', true)],
-            'delegationStartsAt' => ['nullable', 'date'],
-            'delegationExpiresAt' => ['required', 'date'],
-            'delegationComment' => ['nullable', 'string', 'max:1000'],
-        ]);
-
-        $startsAt = filled($validated['delegationStartsAt'] ?? null)
-            ? \App\Support\LocalTime::parse($validated['delegationStartsAt'], $this->browserTimezone)
-            : now();
-        $expiresAt = \App\Support\LocalTime::parse($validated['delegationExpiresAt'], $this->browserTimezone);
-        $delegate = User::query()->findOrFail((int) $validated['delegateUserId']);
-
-        // Dates, the delegate and the step are checked by the workflow engine (RV-ARC-02).
-        try {
-            app(WorkflowEngine::class)->delegate(
-                $this->submission->workflowInstance,
-                Auth::user(),
-                $delegate,
-                $expiresAt,
-                $validated['delegationComment'] ?: null,
-                $startsAt,
-                $this->renderedStepId,
-            );
-        } catch (WorkflowException $exception) {
-            $this->addError('delegateUserId', $exception->userMessage());
-
-            return;
-        }
-
-        Flux::toast('Approval delegated.', variant: 'success');
-        $this->redirect(route('submissions.show', $this->submission), navigate: true);
-    }
-
-    public function act(string $action): void
-    {
-        // The workflow engine decides eligibility and explains refusals (ADR 0008).
-        $this->authorize('view', $this->submission);
-        $this->resetValidation();
-
-        $outcome = collect($this->outcomes)->firstWhere('key', $action);
-
-        if ($outcome === null) {
-            Flux::toast(__('That decision is not available on this step.'), variant: 'danger');
-
-            return;
-        }
-
-        // Checked here too so the message sits under the comment box; the engine enforces it.
-        if ($outcome['requires_comment'] && trim($this->actionComment) === '') {
-            $this->addError('actionComment', 'A comment is required for this action.');
-
-            return;
-        }
-
-        try {
-            $actionType = WorkflowActionType::tryFrom($action) ?? WorkflowActionType::Approve;
-            app(WorkflowEngine::class)->processAction(
-                $this->submission->workflowInstance,
-                Auth::user(),
-                $actionType,
-                trim($this->actionComment) !== '' ? trim($this->actionComment) : null,
-                $action,
-                $this->renderedStepId,
-            );
-        } catch (WorkflowException $exception) {
-            Flux::toast($exception->userMessage(), variant: 'danger');
-
-            return;
-        }
-
-        Flux::toast('Recorded.', variant: 'success');
-        $this->redirect(route('submissions.show', $this->submission), navigate: true);
-    }
-
-    public function postComment(): void
-    {
-        $this->validate(['comment' => ['required', 'string', 'max:5000']]);
-        $this->authorize('comment', $this->submission);
-
-        try {
-            app(PostCommentAction::class)->execute(
-                $this->submission,
-                Auth::user(),
-                $this->comment,
-                null,
-                $this->mentionedUserIds,
-            );
-        } catch (CollaborationException $exception) {
-            $this->addError('comment', $exception->userMessage());
-
-            return;
-        }
-
-        $this->reset('comment', 'mentionedUserIds', 'mentionQuery');
-        $this->refreshCollaboration();
-    }
-
-    public function postReply(): void
-    {
-        $this->validate([
-            'replyBody' => ['required', 'string', 'max:5000'],
-            'replyParentId' => ['required', 'integer'],
-        ]);
-        $this->authorize('comment', $this->submission);
-
-        try {
-            app(PostCommentAction::class)->execute(
-                $this->submission,
-                Auth::user(),
-                $this->replyBody,
-                $this->replyParentId,
-            );
-        } catch (CollaborationException $exception) {
-            $this->addError('replyBody', $exception->userMessage());
-
-            return;
-        }
-
-        $this->reset('replyBody', 'replyParentId');
-        $this->refreshCollaboration();
-    }
-
-    public function startReply(int $commentId): void
-    {
-        $this->replyParentId = $commentId;
-        $this->replyBody = '';
-        $this->editingCommentId = null;
-    }
-
-    public function startEdit(int $commentId): void
-    {
-        $comment = $this->submission->comments()->findOrFail($commentId);
-        $this->authorize('update', $comment);
-        $this->editingCommentId = $comment->id;
-        $this->editBody = $comment->body;
-        $this->replyParentId = null;
-    }
-
-    public function saveEdit(): void
-    {
-        $this->validate(['editBody' => ['required', 'string', 'max:5000']]);
-        // Only a comment on this request that the viewer may still edit (RV-LAR-15).
-        $comment = $this->submission->comments()->findOrFail($this->editingCommentId);
-        $this->authorize('update', $comment);
-
-        try {
-            app(EditCommentAction::class)->execute($comment, Auth::user(), $this->editBody);
-        } catch (CollaborationException $exception) {
-            $this->addError('editBody', $exception->userMessage());
-
-            return;
-        }
-
-        $this->reset('editingCommentId', 'editBody');
-        $this->refreshCollaboration();
-    }
-
-    public function cancelEdit(): void
-    {
-        $this->reset('editingCommentId', 'editBody', 'replyParentId', 'replyBody');
-    }
-
-    public function follow(): void
-    {
-        $this->authorize('follow', $this->submission);
-        try {
-            app(FollowSubmissionAction::class)->execute($this->submission, Auth::user(), Auth::user(), [
-                'notify_comments' => $this->notifyComments,
-                'notify_status' => $this->notifyStatus,
-            ]);
-        } catch (CollaborationException $exception) {
-            Flux::toast($exception->userMessage(), variant: 'danger');
-
-            return;
-        }
-
-        $this->refreshCollaboration();
-        Flux::toast('You are following this request.', variant: 'success');
-    }
-
-    public function unfollow(): void
-    {
-        $this->authorize('view', $this->submission);
-        try {
-            app(UnfollowSubmissionAction::class)->execute($this->submission, Auth::user(), Auth::user());
-        } catch (CollaborationException $exception) {
-            Flux::toast($exception->userMessage(), variant: 'danger');
-
-            return;
-        }
-
-        $this->refreshCollaboration();
-        Flux::toast('You unfollowed this request.', variant: 'success');
-    }
-
-    public function addWatcher(int $userId): void
-    {
-        $this->authorize('addWatcher', $this->submission);
-        try {
-            app(FollowSubmissionAction::class)->execute(
-                $this->submission,
-                Auth::user(),
-                User::query()->findOrFail($userId),
-            );
-        } catch (CollaborationException $exception) {
-            Flux::toast($exception->userMessage(), variant: 'danger');
-
-            return;
-        }
-
-        $this->watcherQuery = '';
-        $this->refreshCollaboration();
-        Flux::toast('Follower added.', variant: 'success');
-    }
-
-    public function removeWatcher(int $userId): void
-    {
-        $this->authorize('addWatcher', $this->submission);
-        try {
-            app(UnfollowSubmissionAction::class)->execute(
-                $this->submission,
-                Auth::user(),
-                User::query()->findOrFail($userId),
-            );
-        } catch (CollaborationException $exception) {
-            Flux::toast($exception->userMessage(), variant: 'danger');
-
-            return;
-        }
-
-        $this->refreshCollaboration();
-    }
-
-    public function saveWatcherPreferences(): void
-    {
-        $this->authorize('follow', $this->submission);
-        try {
-            app(UpdateWatcherPreferencesAction::class)->execute(
-                $this->submission,
-                Auth::user(),
-                $this->notifyComments,
-                $this->notifyStatus,
-            );
-        } catch (CollaborationException $exception) {
-            Flux::toast($exception->userMessage(), variant: 'danger');
-
-            return;
-        }
-
-        Flux::toast('Follow preferences saved.', variant: 'success');
-    }
-
-    public function addMention(int $userId): void
-    {
-        $this->authorize('comment', $this->submission);
-        $parser = app(MentionParser::class);
-        $this->comment = $parser->appendToken($this->comment, $userId);
-        $this->mentionedUserIds = array_values(array_unique([...$this->mentionedUserIds, $userId]));
-        $this->mentionQuery = '';
-        unset($this->mentionResults);
-    }
-
-    public function removeMention(int $userId): void
-    {
-        $this->authorize('comment', $this->submission);
-        $this->mentionedUserIds = array_values(array_filter($this->mentionedUserIds, fn (int $id): bool => $id !== $userId));
-        $this->comment = trim((string) preg_replace('/@\{'.$userId.'\}/', '', $this->comment));
-        unset($this->mentionResults);
     }
 
     public function sendNudge(): void
@@ -524,27 +107,6 @@ new #[Title('Submission')] class extends Component {
         );
     }
 
-    #[Computed]
-    public function commentThreads(): \Illuminate\Database\Eloquent\Collection
-    {
-        $threads = $this->submission->comments()
-            ->with(['author', 'mentions.user', 'revisions.editor', 'replies.author', 'replies.mentions.user', 'replies.revisions.editor'])
-            ->whereNull('parent_id')
-            ->orderBy('id')
-            ->get();
-
-        // Every comment here belongs to this request; hand it over instead of letting
-        // the comment policy lazy-load it once per comment (RV-PERF-03).
-        foreach ($threads as $comment) {
-            $comment->setRelation('commentable', $this->submission);
-            foreach ($comment->replies as $reply) {
-                $reply->setRelation('commentable', $this->submission);
-            }
-        }
-
-        return $threads;
-    }
-
     /** Revision history with editors; loaded here so it survives Livewire rehydration. */
     #[Computed]
     public function revisionHistory(): \Illuminate\Database\Eloquent\Collection
@@ -556,50 +118,6 @@ new #[Title('Submission')] class extends Component {
     public function expectedProgress(): ?array
     {
         return app(ExpectedProgress::class)->for($this->submission);
-    }
-
-    #[Computed]
-    public function watcherResults(): \Illuminate\Support\Collection
-    {
-        $exclude = $this->submission->watchers->pluck('user_id')->all();
-        $exclude[] = $this->submission->submitter_id;
-
-        return app(AssigneeDirectory::class)->search('user', $this->watcherQuery, $exclude);
-    }
-
-    #[Computed]
-    public function mentionResults(): \Illuminate\Support\Collection
-    {
-        return app(AssigneeDirectory::class)->search('user', $this->mentionQuery, [Auth::id(), ...$this->mentionedUserIds]);
-    }
-
-    #[Computed]
-    public function mentionedUsers(): \Illuminate\Support\Collection
-    {
-        // Only people who can be mentioned; a tampered id list must not reveal hidden accounts.
-        return User::query()->assignable()->where('is_active', true)
-            ->whereIn('id', array_map('intval', $this->mentionedUserIds))
-            ->orderBy('name')
-            ->get(['id', 'name', 'email']);
-    }
-
-    protected function displayComment(Comment $comment): string
-    {
-        return app(MentionParser::class)->display(
-            $comment->body,
-            $comment->mentions->map->user->filter(),
-        );
-    }
-
-    private function refreshCollaboration(): void
-    {
-        $this->submission->load(['watchers.user', 'comments.author']);
-        unset($this->commentThreads, $this->watcherResults, $this->mentionResults, $this->mentionedUsers);
-        $mine = $this->submission->watchers->firstWhere('user_id', Auth::id());
-        if ($mine) {
-            $this->notifyComments = $mine->notify_comments;
-            $this->notifyStatus = $mine->notify_status;
-        }
     }
 
     public function withdraw(): void
@@ -644,44 +162,6 @@ new #[Title('Submission')] class extends Component {
         Flux::toast('Resubmitted for approval.', variant: 'success');
 
         $this->redirect(route('submissions.show', $this->submission), navigate: true);
-    }
-
-    protected function fileUrl(\App\Models\SubmissionFile $file): string
-    {
-        return SubmissionFileLinks::download($file);
-    }
-
-    #[Computed]
-    public function previewFile(): ?\App\Models\SubmissionFile
-    {
-        return $this->submission->files->firstWhere('id', $this->previewFileId);
-    }
-
-    public function openPreview(int $fileId): void
-    {
-        $file = $this->submission->files->firstWhere('id', $fileId);
-        abort_unless($file?->isPreviewable(), 404);
-        $this->authorize('downloadFiles', $this->submission);
-
-        $this->previewFileId = $file->id;
-        unset($this->previewFile);
-        $this->modal('file-preview')->show();
-    }
-
-    protected function previewUrl(\App\Models\SubmissionFile $file): string
-    {
-        return SubmissionFileLinks::preview($file);
-    }
-
-    /**
-     * Decisions offered on this request's workflow version, with whether each needs a comment.
-     *
-     * @return list<array{key: string, label: string, behavior: string, requires_comment: bool, custom: bool}>
-     */
-    #[Computed]
-    public function outcomes(): array
-    {
-        return app(StepOutcomes::class)->forVersion($this->submission->workflowInstance?->templateVersion);
     }
 
     #[Computed]
@@ -933,345 +413,14 @@ new #[Title('Submission')] class extends Component {
     @endif
 
     @if ($submission->files->isNotEmpty() || $submission->removedFiles->isNotEmpty())
-        <flux:card>
-            <flux:heading size="sm">{{ __('Attachments') }}</flux:heading>
-            @if ($submission->files->isEmpty())
-                <flux:text class="mt-3 text-sm">{{ __('No current attachments.') }}</flux:text>
-            @endif
-            <ul class="mt-3 space-y-2 text-sm">
-                @foreach ($submission->files as $file)
-                    <li class="flex items-center justify-between gap-3">
-                        <span>📎 {{ $file->original_name }} <span class="text-xs text-zinc-400">({{ number_format($file->size_bytes / 1024) }} KB)</span></span>
-                        <span class="flex items-center gap-3">
-                            @if ($file->isPreviewable())
-                                <flux:button size="xs" variant="ghost" wire:click="openPreview({{ $file->id }})">{{ __('Preview') }}</flux:button>
-                            @endif
-                            <flux:link :href="$this->fileUrl($file)" target="_blank">{{ __('Download') }}</flux:link>
-                        </span>
-                    </li>
-                @endforeach
-            </ul>
-            @if ($submission->removedFiles->isNotEmpty())
-                <flux:separator class="my-4" />
-                <p class="text-sm font-medium">{{ __('Removed by the requester') }}</p>
-                <p class="text-xs text-zinc-500">{{ __('Kept for the record because the request had already been submitted.') }}</p>
-                <ul class="mt-2 space-y-2 text-sm" data-test="removed-attachments">
-                    @foreach ($submission->removedFiles as $file)
-                        <li class="flex items-center justify-between gap-3 text-zinc-500">
-                            <span><span class="line-through">{{ $file->original_name }}</span> <span class="text-xs">· {{ __('removed by :name on :date', ['name' => $file->remover?->name ?? __('a former user'), 'date' => $file->deleted_at !== null ? \App\Support\LocalTime::forViewer($file->deleted_at) : '—']) }}</span></span>
-                            @can('downloadFiles', $submission)
-                                <flux:link :href="$this->fileUrl($file)" target="_blank">{{ __('Download') }}</flux:link>
-                            @endcan
-                        </li>
-                    @endforeach
-                </ul>
-            @endif
-        </flux:card>
-
-        <flux:modal name="file-preview" class="w-full max-w-5xl">
-            @if ($this->previewFile)
-                <flux:heading size="md">{{ $this->previewFile->original_name }}</flux:heading>
-                <div class="mt-4 overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-900">
-                    @if (str_starts_with($this->previewFile->mime_type, 'image/'))
-                        <img src="{{ $this->previewUrl($this->previewFile) }}" alt="{{ $this->previewFile->original_name }}" class="mx-auto max-h-[70vh] object-contain" />
-                    @else
-                        <iframe src="{{ $this->previewUrl($this->previewFile) }}" title="{{ $this->previewFile->original_name }}" class="h-[70vh] w-full"></iframe>
-                    @endif
-                </div>
-            @endif
-        </flux:modal>
+        <livewire:submissions.attachments :submission="$submission" wire:key="submission-attachments" />
     @endif
 
-    @if ($this->myDelegation)
-        <flux:callout variant="secondary" icon="user-plus" class="mt-6" data-test="my-delegation">
-            <flux:callout.heading>{{ __('You delegated this step to :name', ['name' => $this->myDelegation->delegate?->name]) }}</flux:callout.heading>
-            <flux:callout.text>{{ __('Until :time. Take it back to decide yourself; the change is recorded in the history.', ['time' => \App\Support\LocalTime::display($this->myDelegation->expires_at, $this->browserTimezone).' ('.\App\Support\LocalTime::label($this->browserTimezone).')']) }}</flux:callout.text>
-            <x-slot name="actions">
-                <flux:button size="sm" wire:click="takeBackDelegation" wire:confirm="{{ __('Take this step back from :name now?', ['name' => $this->myDelegation->delegate?->name]) }}" data-test="take-back-delegation">{{ __('Take back') }}</flux:button>
-            </x-slot>
-        </flux:callout>
-    @endif
+    <livewire:submissions.decision :submission="$submission" wire:key="submission-decision" />
 
-    @if ($this->selfApprovalBlocked)
-        <flux:callout variant="secondary" icon="information-circle" class="mt-6" data-test="self-approval-blocked">
-            <flux:callout.heading>{{ __('You cannot approve your own request') }}</flux:callout.heading>
-            <flux:callout.text>{{ __('You are on this step, but you submitted this request, so another approver must decide it. You can still comment.') }}</flux:callout.text>
-        </flux:callout>
-    @endif
+    <livewire:submissions.followers :submission="$submission" wire:key="submission-followers" />
 
-    @if ($this->canAct)
-        <flux:card class="sticky bottom-3 z-20 border-blue-200 bg-white/95 shadow-xl backdrop-blur dark:border-blue-900 dark:bg-zinc-900/95">
-            <div class="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                    <flux:heading size="sm">{{ __('Your decision') }}</flux:heading>
-                    <flux:subheading>{{ __('Shortcuts: [ previous, ] next, A approve, R reject') }}</flux:subheading>
-                </div>
-                <div class="flex gap-2">
-                    <flux:button :href="route('approvals.queue', [$submission, 'previous'])" variant="ghost" aria-label="{{ __('Previous request in my queue') }}" data-test="queue-previous">{{ __('Previous') }}</flux:button>
-                    <flux:button :href="route('approvals.queue', [$submission, 'next'])" variant="ghost" aria-label="{{ __('Next request in my queue') }}" data-test="queue-next">{{ __('Next') }}</flux:button>
-                </div>
-            </div>
-            <flux:textarea wire:model="actionComment" :label="__('Comment (required for reject, return, information request, or escalation)')" rows="3" class="mt-3" />
-            <flux:error name="actionComment" />
-
-            <div class="mt-4 flex flex-wrap gap-3">
-                <flux:modal.trigger name="approve-modal">
-                    <flux:button variant="primary" data-test="approve-modal-trigger" data-requires-online>{{ __('Approve') }}</flux:button>
-                </flux:modal.trigger>
-                <flux:button variant="primary" wire:click="act('approve_with_conditions')" data-test="approve-with-conditions" data-requires-online>{{ __('Approve with conditions') }}</flux:button>
-                @foreach ($this->outcomes as $outcome)
-                    @if ($outcome['custom'])
-                        <flux:button variant="subtle" wire:click="act({{ \Illuminate\Support\Js::from($outcome['key']) }})" data-test="outcome-{{ $outcome['key'] }}">{{ $outcome['label'] }}</flux:button>
-                    @endif
-                @endforeach
-                <flux:modal.trigger name="reject-modal">
-                    <flux:button variant="danger" data-test="reject-modal-trigger" data-requires-online>{{ __('Reject') }}</flux:button>
-                </flux:modal.trigger>
-                <flux:modal.trigger name="return-modal">
-                    <flux:button variant="subtle" data-test="return">{{ __('Return for revision') }}</flux:button>
-                </flux:modal.trigger>
-                <flux:modal.trigger name="information-modal">
-                    <flux:button variant="subtle" data-test="request-information">{{ __('Request information') }}</flux:button>
-                </flux:modal.trigger>
-                <flux:modal.trigger name="escalate-modal">
-                    <flux:button variant="ghost" data-test="escalate">{{ __('Escalate') }}</flux:button>
-                </flux:modal.trigger>
-                @if ($this->canDelegate)
-                    <flux:modal.trigger name="delegate-modal">
-                        <flux:button variant="ghost" icon="user-plus">{{ __('Delegate') }}</flux:button>
-                    </flux:modal.trigger>
-                @endif
-            </div>
-
-            <flux:modal name="approve-modal">
-                <flux:heading size="md">{{ __('Approve this submission?') }}</flux:heading>
-                <flux:subheading class="mt-1">{{ __('Your decision is recorded in the immutable audit trail and may advance the workflow.') }}</flux:subheading>
-                <div class="mt-4 flex gap-2">
-                    <flux:modal.close><flux:button variant="ghost">{{ __('Cancel') }}</flux:button></flux:modal.close>
-                    <flux:button variant="primary" wire:click="act('approve')" data-test="approve" data-requires-online>{{ __('Confirm approval') }}</flux:button>
-                </div>
-            </flux:modal>
-
-            <flux:modal name="reject-modal" variant="danger">
-                <flux:heading size="md">{{ __('Reject this submission?') }}</flux:heading>
-                <flux:subheading class="mt-1">{{ __('The workflow terminates and the submitter is notified with your comment.') }}</flux:subheading>
-                <flux:textarea wire:model="actionComment" :label="__('Reason (required)')" rows="3" class="mt-4" dusk="reject-comment" />
-                <div class="mt-4 flex gap-2">
-                    <flux:modal.close><flux:button variant="ghost">{{ __('Cancel') }}</flux:button></flux:modal.close>
-                    <flux:button variant="danger" wire:click="act('reject')" data-requires-online>{{ __('Confirm rejection') }}</flux:button>
-                </div>
-            </flux:modal>
-
-            <flux:modal name="delegate-modal">
-                <form wire:submit="delegateApproval" class="space-y-4">
-                    <div>
-                        <flux:heading size="md">{{ __('Delegate this approval') }}</flux:heading>
-                        <flux:subheading>{{ __('Your decision authority transfers until the selected expiry.') }}</flux:subheading>
-                    </div>
-                    <flux:select wire:model="delegateUserId" :label="__('Delegate')">
-                        <flux:select.option value="">{{ __('Select a user') }}</flux:select.option>
-                        @foreach ($this->delegateCandidates as $candidate)
-                            <flux:select.option :value="$candidate->id">{{ $candidate->name }} — {{ $candidate->email }}</flux:select.option>
-                        @endforeach
-                    </flux:select>
-                    <flux:error name="delegateUserId" />
-                    <flux:input wire:model="delegationStartsAt" type="datetime-local" :label="__('Starts at (optional)')" :description="__('Leave empty to start immediately. A future start keeps your authority until then.')" />
-                    <flux:error name="delegationStartsAt" />
-                    <flux:input wire:model="delegationExpiresAt" type="datetime-local" :label="__('Expires at')" />
-                    <flux:error name="delegationExpiresAt" />
-                    <x-browser-timezone />
-                    <flux:text class="text-xs" data-test="delegation-timezone">{{ __('Times are in your time zone (:zone).', ['zone' => \App\Support\LocalTime::label($this->browserTimezone)]) }}</flux:text>
-                    <flux:textarea wire:model="delegationComment" :label="__('Note (optional)')" rows="2" />
-                    <div class="flex justify-end gap-2">
-                        <flux:modal.close><flux:button variant="ghost">{{ __('Cancel') }}</flux:button></flux:modal.close>
-                        <flux:button type="submit" variant="primary">{{ __('Delegate approval') }}</flux:button>
-                    </div>
-                </form>
-            </flux:modal>
-
-            <flux:modal name="return-modal">
-                <flux:heading size="md">{{ __('Return for revision?') }}</flux:heading>
-                <flux:subheading class="mt-1">{{ __('The submitter revises and resubmits; the approval chain resumes where it paused.') }}</flux:subheading>
-                <flux:textarea wire:model="actionComment" :label="__('What should be revised? (required)')" rows="3" class="mt-4" />
-                <div class="mt-4 flex gap-2">
-                    <flux:modal.close><flux:button variant="ghost">{{ __('Cancel') }}</flux:button></flux:modal.close>
-                    <flux:button variant="subtle" wire:click="act('return')">{{ __('Confirm return') }}</flux:button>
-                </div>
-            </flux:modal>
-
-            <flux:modal name="information-modal">
-                <flux:heading size="md">{{ __('Request more information?') }}</flux:heading>
-                <flux:subheading class="mt-1">{{ __('The workflow pauses at this step until the submitter responds and resubmits.') }}</flux:subheading>
-                <flux:textarea wire:model="actionComment" :label="__('What information is required?')" rows="3" class="mt-4" />
-                <div class="mt-4 flex gap-2">
-                    <flux:modal.close><flux:button variant="ghost">{{ __('Cancel') }}</flux:button></flux:modal.close>
-                    <flux:button variant="subtle" wire:click="act('request_information')">{{ __('Send request') }}</flux:button>
-                </div>
-            </flux:modal>
-
-            <flux:modal name="escalate-modal">
-                <flux:heading size="md">{{ __('Escalate to the next step?') }}</flux:heading>
-                <flux:subheading class="mt-1">{{ __('Your current step will be bypassed and the next configured approvers will be notified.') }}</flux:subheading>
-                <flux:textarea wire:model="actionComment" :label="__('Reason for escalation')" rows="3" class="mt-4" />
-                <div class="mt-4 flex gap-2">
-                    <flux:modal.close><flux:button variant="ghost">{{ __('Cancel') }}</flux:button></flux:modal.close>
-                    <flux:button variant="primary" wire:click="act('escalate')">{{ __('Confirm escalation') }}</flux:button>
-                </div>
-            </flux:modal>
-        </flux:card>
-    @endif
-
-    <flux:card data-test="watchers-card">
-        <div class="flex flex-wrap items-start justify-between gap-3">
-            <div>
-                <flux:heading size="sm">{{ __('Followers') }}</flux:heading>
-                <flux:subheading>{{ __('Followers can open this request. You can unfollow yourself at any time.') }}</flux:subheading>
-            </div>
-            @if ($submission->isWatchedBy(auth()->user()))
-                <flux:button size="sm" variant="ghost" wire:click="unfollow" data-test="unfollow">{{ __('Unfollow') }}</flux:button>
-            @else
-                <flux:button size="sm" variant="subtle" wire:click="follow" data-test="follow">{{ __('Follow') }}</flux:button>
-            @endif
-        </div>
-
-        @if ($submission->isWatchedBy(auth()->user()))
-            <form wire:submit="saveWatcherPreferences" class="mt-3 flex flex-wrap items-end gap-3">
-                <flux:checkbox wire:model="notifyComments" :label="__('Notify me of comments')" />
-                <flux:checkbox wire:model="notifyStatus" :label="__('Notify me of status changes')" />
-                <flux:button type="submit" size="xs" variant="ghost">{{ __('Save') }}</flux:button>
-            </form>
-        @endif
-
-        <ul class="mt-3 flex flex-wrap gap-2" data-test="watcher-list">
-            @forelse ($submission->watchers as $watcher)
-                <li class="inline-flex items-center gap-1 rounded-full border border-zinc-300 bg-zinc-50 px-2 py-1 text-xs dark:border-zinc-600 dark:bg-zinc-800">
-                    {{ $watcher->user->name }}
-                    @if (auth()->id() === $watcher->user_id || auth()->user()?->can('addWatcher', $submission))
-                        <button type="button" class="text-zinc-500" wire:click="removeWatcher({{ $watcher->user_id }})" aria-label="{{ __('Remove :name', ['name' => $watcher->user->name]) }}">×</button>
-                    @endif
-                </li>
-            @empty
-                <li class="text-sm text-zinc-500">{{ __('No followers yet.') }}</li>
-            @endforelse
-        </ul>
-
-        @can('addWatcher', $submission)
-            <div class="mt-4">
-                <x-ui.assignee-picker
-                    type="user"
-                    query="watcherQuery"
-                    :selected="collect()"
-                    :results="$this->watcherResults"
-                    add="addWatcher"
-                    remove="removeWatcher"
-                    :hide-empty="true"
-                    placeholder="Type a name to add a follower…"
-                />
-            </div>
-        @endcan
-    </flux:card>
-
-    <flux:card>
-        <flux:heading size="sm">{{ __('Comments') }}</flux:heading>
-
-        <ul class="mt-4 space-y-4">
-            @forelse ($this->commentThreads as $c)
-                <li class="text-sm" data-test="comment-{{ $c->id }}">
-                    <span class="font-medium">{{ $c->author->name }}</span>
-                    <span class="text-xs text-zinc-400"><x-time :at="$c->created_at" /></span>
-                    @if ($c->edited_at)
-                        <span class="text-xs text-zinc-400">{{ __('(edited)') }}</span>
-                    @endif
-                    @if ($this->editingCommentId === $c->id)
-                        <form wire:submit="saveEdit" class="mt-2 space-y-2">
-                            <flux:textarea wire:model="editBody" rows="2" />
-                            <flux:error name="editBody" />
-                            <div class="flex gap-2">
-                                <flux:button type="submit" size="xs" variant="primary">{{ __('Save') }}</flux:button>
-                                <flux:button type="button" size="xs" variant="ghost" wire:click="cancelEdit">{{ __('Cancel') }}</flux:button>
-                            </div>
-                        </form>
-                    @else
-                        <p class="mt-1 rounded-md bg-zinc-50 p-2 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">{{ $this->displayComment($c) }}</p>
-                    @endif
-                    @if ($c->revisions->isNotEmpty())
-                        <details class="mt-1 text-xs text-zinc-500">
-                            <summary>{{ __('Edit history') }}</summary>
-                            <ul class="mt-1 space-y-1">
-                                @foreach ($c->revisions as $revision)
-                                    <li><x-time :at="$revision->created_at" />: {{ $revision->body }}</li>
-                                @endforeach
-                            </ul>
-                        </details>
-                    @endif
-                    <div class="mt-1 flex gap-2">
-                        @can('comment', $submission)
-                            <flux:button size="xs" variant="ghost" wire:click="startReply({{ $c->id }})" data-test="reply-{{ $c->id }}">{{ __('Reply') }}</flux:button>
-                        @endcan
-                        @can('update', $c)
-                            <flux:button size="xs" variant="ghost" wire:click="startEdit({{ $c->id }})" data-test="edit-comment-{{ $c->id }}">{{ __('Edit') }}</flux:button>
-                        @endcan
-                    </div>
-                    @if ($c->replies->isNotEmpty())
-                        <ul class="mt-2 space-y-2 border-l border-zinc-200 pl-3 dark:border-zinc-700">
-                            @foreach ($c->replies as $reply)
-                                <li>
-                                    <span class="font-medium">{{ $reply->author->name }}</span>
-                                    <span class="text-xs text-zinc-400"><x-time :at="$reply->created_at" /></span>
-                                    @if ($reply->edited_at)
-                                        <span class="text-xs text-zinc-400">{{ __('(edited)') }}</span>
-                                    @endif
-                                    @if ($this->editingCommentId === $reply->id)
-                                        <form wire:submit="saveEdit" class="mt-2 space-y-2">
-                                            <flux:textarea wire:model="editBody" rows="2" />
-                                            <div class="flex gap-2">
-                                                <flux:button type="submit" size="xs" variant="primary">{{ __('Save') }}</flux:button>
-                                                <flux:button type="button" size="xs" variant="ghost" wire:click="cancelEdit">{{ __('Cancel') }}</flux:button>
-                                            </div>
-                                        </form>
-                                    @else
-                                        <p class="mt-1 rounded-md bg-zinc-50 p-2 dark:bg-zinc-800">{{ $this->displayComment($reply) }}</p>
-                                    @endif
-                                    @can('update', $reply)
-                                        <flux:button size="xs" variant="ghost" wire:click="startEdit({{ $reply->id }})">{{ __('Edit') }}</flux:button>
-                                    @endcan
-                                </li>
-                            @endforeach
-                        </ul>
-                    @endif
-                    @if ($this->replyParentId === $c->id)
-                        <form wire:submit="postReply" class="mt-2 space-y-2">
-                            <flux:textarea wire:model="replyBody" :placeholder="__('Write a reply…')" rows="2" />
-                            <flux:error name="replyBody" />
-                            <div class="flex gap-2">
-                                <flux:button type="submit" size="xs" variant="primary" data-test="submit-reply">{{ __('Reply') }}</flux:button>
-                                <flux:button type="button" size="xs" variant="ghost" wire:click="cancelEdit">{{ __('Cancel') }}</flux:button>
-                            </div>
-                        </form>
-                    @endif
-                </li>
-            @empty
-                <li class="text-sm text-zinc-500">{{ __('No comments yet.') }}</li>
-            @endforelse
-        </ul>
-
-        @can('comment', $submission)
-            <form wire:submit="postComment" class="mt-4 space-y-2">
-                <flux:textarea wire:model="comment" :placeholder="__('Add a comment. Use search below to mention someone…')" rows="2" />
-                <flux:error name="comment" />
-                <x-ui.assignee-picker
-                    type="user"
-                    query="mentionQuery"
-                    :selected="$this->mentionedUsers"
-                    :results="$this->mentionResults"
-                    add="addMention"
-                    remove="removeMention"
-                    placeholder="Type two characters to mention someone…"
-                />
-                <flux:button type="submit" variant="ghost" size="sm">{{ __('Comment') }}</flux:button>
-            </form>
-        @endcan
-    </flux:card>
+    <livewire:submissions.comments :submission="$submission" wire:key="submission-comments" />
 
     @can('withdraw', $submission)
         <flux:button variant="ghost" wire:click="withdraw" wire:confirm="{{ __('Withdraw this submission? The approval chain will be cancelled.') }}">

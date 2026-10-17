@@ -57,11 +57,9 @@ class LockedRecordKeysTest extends TestCase
     {
         $submitter = User::factory()->create()->assignRole('submitter');
         $submission = Submission::factory()->for($submitter, 'submitter')->create();
-        $page = Livewire::actingAs($submitter)->test('pages::submissions.show', ['submission' => $submission]);
-
-        foreach (['editingCommentId', 'previewFileId'] as $property) {
+        foreach (['submissions.comments' => 'editingCommentId', 'submissions.attachments' => 'previewFileId'] as $component => $property) {
             try {
-                $page->set($property, 1);
+                Livewire::actingAs($submitter)->test($component, ['submission' => $submission])->set($property, 1);
                 $this->fail("{$property} should be locked.");
             } catch (CannotUpdateLockedPropertyException) {
                 $this->addToAssertionCount(1);
@@ -84,7 +82,7 @@ class LockedRecordKeysTest extends TestCase
         $this->expectException(ModelNotFoundException::class);
 
         Livewire::actingAs($author)
-            ->test('pages::submissions.show', ['submission' => $mine])
+            ->test('submissions.comments', ['submission' => $mine])
             ->call('startEdit', $comment->id);
     }
 }
