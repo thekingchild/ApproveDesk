@@ -14,6 +14,8 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Fixed
 
+- **Times you enter are shown back the way you entered them (RV-ARC-17).** Out-of-office periods, auditor access windows, and the delegation end on a request were read in your browser's time zone but listed in the installation's, under a note saying "Times are in your time zone". They are now listed in your time zone too, and auditor access shows the time as well as the date.
+- **Custom CSS on the sign-in page works as written (RV-BUG-39).** Child selectors (`>`) and quoted strings were turned into HTML entities and broke; the CSS is now output as written, and a `</style` sequence can no longer be rebuilt to close the style block.
 - **Notifications tell the truth and reach the right people.**
   - Chat notifications that Slack, Teams, Telegram or WhatsApp refuse now show as Failed in the delivery log, and approval requests are retried, instead of showing as Sent. Notification types without a WhatsApp template show as Skipped.
   - Chat messages held during reminder quiet hours keep their full wording and secure approval link, and are dropped if the request has moved past that step.

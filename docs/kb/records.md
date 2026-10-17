@@ -12,7 +12,7 @@ Use this screen when an auditor needs time-bounded read access, a request must n
 
 ### Auditor access
 
-Assign the Auditor role on **Users**, then grant a start, an end, and a reason here. While the grant is active the auditor can open requests and download evidence packs. They cannot approve, comment, or manage users. **Revoke** ends the grant immediately. Expired grants stop access on their own.
+Assign the Auditor role on **Users**, then grant a start, an end, and a reason here. Start and end are read and listed in your own time zone, shown under the fields. While the grant is active the auditor can open requests and download evidence packs. They cannot approve, comment, or manage users. **Revoke** ends the grant immediately. Expired grants stop access on their own.
 
 Every evidence-pack download is written to an export log.
 

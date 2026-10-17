@@ -28,7 +28,7 @@ Per-request follower preferences (comments vs status) live on the request, not h
 
 ## Out of office
 
-Open **Out of office** in Settings. Set a start, an end, and an optional fallback approver. Overlapping periods, a fallback who is also away, and circular fallbacks are rejected. While a schedule is active, current steps that allow delegation pass to the fallback. See [Collaboration](collaboration.md).
+Open **Out of office** in Settings. Set a start, an end, and an optional fallback approver. Times are read and listed in your own time zone, shown under the fields. Overlapping periods, a fallback who is also away, and circular fallbacks are rejected. While a schedule is active, current steps that allow delegation pass to the fallback. See [Collaboration](collaboration.md).
 
 ## API tokens
 

@@ -36,7 +36,7 @@ You can approve several requests at once only when they are the same workflow st
 
 ## Delegate, escalate, ask for information
 
-Delegate hands your current step to another active user for a limited time. You can set a future start; until then you still decide. Start and end times are read in your own time zone, which the form shows under the fields. You can end a delegation early with **Take back** on the request page; it is recorded in the history. Your delegate decides in your place: their decision counts as yours, the history shows it as made **on behalf of** you, and you cannot decide the same step again after the delegation ends. Escalate moves the work to the next step when policy allows. Request information pauses the step until the requester replies.
+Delegate hands your current step to another active user for a limited time. You can set a future start; until then you still decide. Start and end times are read in your own time zone, which the form shows under the fields, and the end time shown on the request page uses the same zone. You can end a delegation early with **Take back** on the request page; it is recorded in the history. Your delegate decides in your place: their decision counts as yours, the history shows it as made **on behalf of** you, and you cannot decide the same step again after the delegation ends. Escalate moves the work to the next step when policy allows. Request information pauses the step until the requester replies.
 
 Delegation is refused if the other person is out of office during that window, already holds a seat, is the requester (when separation of duties is on), or the window overlaps a grant you already made.
 

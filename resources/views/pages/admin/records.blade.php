@@ -242,7 +242,7 @@ new #[Title('Records')] class extends Component
                 @forelse ($this->grants as $grant)
                     <li class="flex items-start justify-between gap-3">
                         <span>
-                            {{ $grant->user?->name }} · {{ $grant->starts_at->format('d M Y') }}–{{ $grant->ends_at->format('d M Y') }}
+                            {{ $grant->user?->name }} · {{ \App\Support\LocalTime::display($grant->starts_at, $this->browserTimezone) }}–{{ \App\Support\LocalTime::display($grant->ends_at, $this->browserTimezone) }}
                             @if ($grant->revoked_at)
                                 · {{ __('revoked') }}
                             @endif
