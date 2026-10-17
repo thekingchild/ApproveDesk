@@ -16,9 +16,8 @@ final class AssignedStepConstraint
      */
     public function constrainInstances(Builder $query, User $user): Builder
     {
-        $roleIds = $user->getRoleNames()->isEmpty()
-            ? []
-            : $user->roles()->pluck('id')->all();
+        // The roles Spatie already loaded for permission checks; no second query (RV-LAR-20).
+        $roleIds = $user->loadMissing('roles')->roles->modelKeys();
 
         if (SeparationOfDuties::enabled()) {
             $query->whereHas('submission', fn (Builder $submission) => $submission->where('submitter_id', '!=', $user->id));

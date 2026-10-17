@@ -37,7 +37,7 @@ final class AnnouncementBannerService
         $roleIds = $announcements->contains(
             fn (Announcement $announcement): bool => $announcement->audience === AnnouncementAudience::Roles,
         )
-            ? array_values($user->roles()->pluck('roles.id')->map(fn ($id): int => (int) $id)->all())
+            ? $this->roleIds($user)
             : [];
 
         return $announcements
@@ -88,7 +88,7 @@ final class AnnouncementBannerService
             return false;
         }
 
-        $roleIds = array_values($user->roles()->pluck('roles.id')->map(fn ($id): int => (int) $id)->all());
+        $roleIds = $this->roleIds($user);
 
         return $this->matchesAudience($announcement, $roleIds);
     }
@@ -115,7 +115,7 @@ final class AnnouncementBannerService
         $roleIds = $announcements->contains(
             fn (Announcement $announcement): bool => $announcement->audience === AnnouncementAudience::Roles,
         )
-            ? array_values($user->roles()->pluck('roles.id')->map(fn ($id): int => (int) $id)->all())
+            ? $this->roleIds($user)
             : [];
 
         return $announcements
@@ -131,5 +131,15 @@ final class AnnouncementBannerService
             AnnouncementAudience::Roles => ! empty($announcement->role_ids)
                 && ! empty(array_intersect(array_map('intval', $announcement->role_ids), $roleIds)),
         };
+    }
+
+    /**
+     * The user's role ids from the relation permission checks already loaded (RV-LAR-20).
+     *
+     * @return list<int>
+     */
+    private function roleIds(User $user): array
+    {
+        return array_values(array_map(fn ($id): int => (int) $id, $user->loadMissing('roles')->roles->modelKeys()));
     }
 }
