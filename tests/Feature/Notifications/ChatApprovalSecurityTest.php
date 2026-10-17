@@ -10,9 +10,9 @@ use App\Models\Submission;
 use App\Models\User;
 use App\Models\WorkflowInstance;
 use App\Models\WorkflowTemplate;
-use App\Services\Notifications\ChatActionToken;
 use App\Services\Notifications\ChatCard;
 use App\Services\WorkflowEngine;
+use App\Support\ApprovalLinks;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use InvalidArgumentException;
@@ -44,7 +44,7 @@ class ChatApprovalSecurityTest extends TestCase
 
     public function test_slack_click_from_another_account_is_refused(): void
     {
-        $token = ChatActionToken::issue($this->instance, $this->instance->currentStep, $this->approver);
+        $token = ApprovalLinks::chatToken($this->instance, $this->instance->currentStep, $this->approver);
 
         try {
             app(ApproveSubmissionFromChatAction::class)->execute($token, 'U0SOMEONEELSE');
@@ -61,7 +61,7 @@ class ChatApprovalSecurityTest extends TestCase
 
     public function test_card_issued_before_second_factor_was_required_cannot_approve(): void
     {
-        $token = ChatActionToken::issue($this->instance, $this->instance->currentStep, $this->approver);
+        $token = ApprovalLinks::chatToken($this->instance, $this->instance->currentStep, $this->approver);
         Setting::put('approvals.email_require_second_factor', '1');
 
         $this->expectException(InvalidArgumentException::class);

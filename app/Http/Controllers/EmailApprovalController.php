@@ -7,7 +7,7 @@ use App\Exceptions\WorkflowException;
 use App\Models\User;
 use App\Models\WorkflowInstance;
 use App\Models\WorkflowTemplateStep;
-use App\Support\EmailApprovalLinks;
+use App\Support\ApprovalLinks;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -30,7 +30,7 @@ class EmailApprovalController extends Controller
             'submission' => $instance->submission()->with('submitter:id,name')->firstOrFail(),
             'step' => $step,
             'approver' => $approver,
-            'approvalUrl' => EmailApprovalLinks::approvalUrl($instance, $step, $approver, $expiresAt),
+            'approvalUrl' => ApprovalLinks::approvalUrl($instance, $step, $approver, $expiresAt),
             'expiresAt' => $expiresAt,
         ]);
     }

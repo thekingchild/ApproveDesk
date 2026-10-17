@@ -15,6 +15,7 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Fixed
 
+- **Slack and Teams Approve buttons keep working after the application key is rotated (RV-ARC-18).** Like email approval links, they now accept a previous key listed in `APP_PREVIOUS_KEYS` until they expire. Email and chat approval links are signed in one place, with one lifetime.
 - **Small fixes from the code review (RV-BUG-38).**
   - A mention added while editing a comment now notifies that person and makes them a follower, as a new comment does.
   - Draft retention counts from the last edit, so a draft someone is still working on is no longer retired.

@@ -10,7 +10,7 @@ use App\Models\User;
 use App\Models\WorkflowAction;
 use App\Models\WorkflowTemplate;
 use App\Services\Auth\SecondFactorAssurance;
-use App\Support\EmailApprovalLinks;
+use App\Support\ApprovalLinks;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -158,13 +158,13 @@ class EmailApprovalSecondFactorTest extends TestCase
         ])->save();
         $instance = $this->submission->workflowInstance()->with('currentStep')->firstOrFail();
         $expiresAt = now()->addHour();
-        $confirmationUrl = EmailApprovalLinks::confirmationUrl(
+        $confirmationUrl = ApprovalLinks::confirmationUrl(
             $instance,
             $instance->currentStep,
             $this->approver,
             $expiresAt,
         );
-        $approvalUrl = EmailApprovalLinks::approvalUrl(
+        $approvalUrl = ApprovalLinks::approvalUrl(
             $instance,
             $instance->currentStep,
             $this->approver,
@@ -219,7 +219,7 @@ class EmailApprovalSecondFactorTest extends TestCase
     {
         $instance = $this->submission->workflowInstance()->with('currentStep')->firstOrFail();
 
-        return EmailApprovalLinks::confirmationUrl($instance, $instance->currentStep, $this->approver);
+        return ApprovalLinks::confirmationUrl($instance, $instance->currentStep, $this->approver);
     }
 
     /** @return array<string, array<string, int|string>> */

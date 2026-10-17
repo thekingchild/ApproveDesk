@@ -11,10 +11,10 @@ use App\Enums\BackupSnapshotKind;
 use App\Enums\BackupSnapshotStatus;
 use App\Models\BackupSnapshot;
 use App\Services\Backups\BackupInventory;
+use App\Support\BackupDownloadLinks;
 use Flux\Flux;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
@@ -138,7 +138,7 @@ new class extends Component {
     /** Not an endpoint (ADR 0006, RV-LAR-16): the download route re-checks the permission and the signature. */
     protected function downloadUrl(BackupSnapshot $snapshot): string
     {
-        return URL::temporarySignedRoute('admin.backups.download', now()->addMinutes(5), $snapshot);
+        return BackupDownloadLinks::download($snapshot);
     }
 
     protected function canRemoveLocal(BackupSnapshot $snapshot): bool

@@ -21,7 +21,7 @@ use App\Models\User;
 use App\Models\WorkflowAction;
 use App\Models\WorkflowTemplate;
 use App\Services\Notifications\ChannelSettings;
-use App\Services\Notifications\ChatActionToken;
+use App\Support\ApprovalLinks;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -101,7 +101,7 @@ class PhaseEightAcceptanceTest extends TestCase
             && $request->hasHeader('Authorization', 'Bearer xoxb-test'));
 
         $instance = $submission->workflowInstance()->with('currentStep')->firstOrFail();
-        $token = ChatActionToken::issue($instance, $instance->currentStep, $approver);
+        $token = ApprovalLinks::chatToken($instance, $instance->currentStep, $approver);
         $secret = 'slack-signing';
         $payload = json_encode(['type' => 'block_actions', 'user' => ['id' => $approver->slack_user_id], 'actions' => [['value' => $token]]]);
         $timestamp = (string) time();

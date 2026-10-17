@@ -13,7 +13,7 @@ use App\Models\WorkflowAction;
 use App\Models\WorkflowTemplate;
 use App\Notifications\ActionRequiredNotification;
 use App\Services\WorkflowEngine;
-use App\Support\EmailApprovalLinks;
+use App\Support\ApprovalLinks;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -47,8 +47,8 @@ class EmailApprovalTest extends TestCase
     {
         $instance = $this->submission->workflowInstance()->with('currentStep')->firstOrFail();
         $expiresAt = now()->addHours(12);
-        $confirmationUrl = EmailApprovalLinks::confirmationUrl($instance, $instance->currentStep, $this->approver, $expiresAt);
-        $approvalUrl = EmailApprovalLinks::approvalUrl($instance, $instance->currentStep, $this->approver, $expiresAt);
+        $confirmationUrl = ApprovalLinks::confirmationUrl($instance, $instance->currentStep, $this->approver, $expiresAt);
+        $approvalUrl = ApprovalLinks::approvalUrl($instance, $instance->currentStep, $this->approver, $expiresAt);
 
         $this->get($confirmationUrl)
             ->assertOk()
@@ -74,7 +74,7 @@ class EmailApprovalTest extends TestCase
     public function test_tampered_signature_is_rejected_and_does_not_mutate_workflow(): void
     {
         $instance = $this->submission->workflowInstance()->with('currentStep')->firstOrFail();
-        $url = EmailApprovalLinks::confirmationUrl($instance, $instance->currentStep, $this->approver);
+        $url = ApprovalLinks::confirmationUrl($instance, $instance->currentStep, $this->approver);
         $tampered = (string) preg_replace('/([?&])signature=[^&]+/', '$1signature=deadbeef', $url);
 
         $this->get($tampered)->assertForbidden();
@@ -86,13 +86,13 @@ class EmailApprovalTest extends TestCase
     {
         Carbon::setTestNow('2026-08-17 12:00:00');
         $instance = $this->submission->workflowInstance()->with('currentStep')->firstOrFail();
-        $expiredUrl = EmailApprovalLinks::confirmationUrl($instance, $instance->currentStep, $this->approver, now()->addHour());
+        $expiredUrl = ApprovalLinks::confirmationUrl($instance, $instance->currentStep, $this->approver, now()->addHour());
 
         Carbon::setTestNow('2026-08-17 13:01:00');
         $this->get($expiredUrl)->assertForbidden();
 
         Carbon::setTestNow('2026-08-17 12:00:00');
-        $validUrl = EmailApprovalLinks::confirmationUrl($instance, $instance->currentStep, $this->approver, now()->addHour());
+        $validUrl = ApprovalLinks::confirmationUrl($instance, $instance->currentStep, $this->approver, now()->addHour());
         app(WorkflowEngine::class)->processAction($instance, new WorkflowActionData($this->approver, WorkflowActionType::Approve));
 
         $this->get($validUrl)->assertGone();
@@ -102,7 +102,7 @@ class EmailApprovalTest extends TestCase
     {
         $stranger = User::factory()->create()->assignRole('approver');
         $instance = $this->submission->workflowInstance()->with('currentStep')->firstOrFail();
-        $url = EmailApprovalLinks::confirmationUrl($instance, $instance->currentStep, $stranger);
+        $url = ApprovalLinks::confirmationUrl($instance, $instance->currentStep, $stranger);
 
         $this->get($url)->assertForbidden();
     }

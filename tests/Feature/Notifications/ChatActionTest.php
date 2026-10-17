@@ -12,8 +12,8 @@ use App\Models\User;
 use App\Models\WorkflowAction;
 use App\Models\WorkflowTemplate;
 use App\Services\Notifications\ChannelSettings;
-use App\Services\Notifications\ChatActionToken;
 use App\Services\WorkflowEngine;
+use App\Support\ApprovalLinks;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -37,7 +37,7 @@ class ChatActionTest extends TestCase
         $submission = Submission::factory()->for($submitter, 'submitter')->create(['status' => SubmissionStatus::Draft]);
         app(SubmitSubmissionAction::class)->execute($submission);
         $instance = $submission->workflowInstance()->with('currentStep')->firstOrFail();
-        $token = ChatActionToken::issue($instance, $instance->currentStep, $approver);
+        $token = ApprovalLinks::chatToken($instance, $instance->currentStep, $approver);
 
         $secret = 'slack-signing';
         app(ChannelSettings::class)->putCredentials(
@@ -74,7 +74,7 @@ class ChatActionTest extends TestCase
         $submission = Submission::factory()->for($submitter, 'submitter')->create(['status' => SubmissionStatus::Draft]);
         app(SubmitSubmissionAction::class)->execute($submission);
         $instance = $submission->workflowInstance()->with('currentStep')->firstOrFail();
-        $token = ChatActionToken::issue($instance, $instance->currentStep, $approver);
+        $token = ApprovalLinks::chatToken($instance, $instance->currentStep, $approver);
         app(WorkflowEngine::class)->processAction($instance, new WorkflowActionData($approver, WorkflowActionType::Approve));
 
         app(ChannelSettings::class)->setEnabled(NotificationChannelKey::Teams, true);
@@ -97,7 +97,7 @@ class ChatActionTest extends TestCase
         $submission = Submission::factory()->for($submitter, 'submitter')->create(['status' => SubmissionStatus::Draft]);
         app(SubmitSubmissionAction::class)->execute($submission);
         $instance = $submission->workflowInstance()->with('currentStep')->firstOrFail();
-        $token = ChatActionToken::issue($instance, $instance->currentStep, $approver);
+        $token = ApprovalLinks::chatToken($instance, $instance->currentStep, $approver);
         $tampered = substr($token, 0, -6).'xxxxxx';
 
         app(ChannelSettings::class)->setEnabled(NotificationChannelKey::Teams, true);
@@ -121,9 +121,9 @@ class ChatActionTest extends TestCase
         $submission = Submission::factory()->create();
         app(WorkflowEngine::class)->initialize($submission);
         $instance = $submission->workflowInstance()->with('currentStep')->firstOrFail();
-        $token = ChatActionToken::issue($instance, $instance->currentStep, $approver);
+        $token = ApprovalLinks::chatToken($instance, $instance->currentStep, $approver);
         Carbon::setTestNow('2026-09-01 12:00:00');
         $this->expectException(\InvalidArgumentException::class);
-        ChatActionToken::parse($token);
+        ApprovalLinks::parseChatToken($token);
     }
 }

@@ -7,7 +7,7 @@ use App\Models\User;
 use App\Models\WorkflowTemplate;
 use App\Notifications\ActionRequiredNotification;
 use App\Services\WorkflowEngine;
-use App\Support\EmailApprovalLinks;
+use App\Support\ApprovalLinks;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -111,6 +111,6 @@ class EmailTemplateTest extends TestCase
         $this->assertArrayHasKey('signature', $query);
         $this->assertArrayHasKey('expires', $query);
         $this->assertGreaterThan(now()->timestamp, (int) $query['expires']);
-        $this->assertSame(EmailApprovalLinks::expirationHours() * 3600, (int) $query['expires'] - now()->timestamp);
+        $this->assertSame(ApprovalLinks::expirationHours() * 3600, (int) $query['expires'] - now()->timestamp);
     }
 }

@@ -4,7 +4,7 @@ namespace App\Actions\Settings;
 
 use App\Models\Setting;
 use App\Services\Workflow\BusinessCalendar;
-use App\Support\EmailApprovalLinks;
+use App\Support\ApprovalLinks;
 use InvalidArgumentException;
 
 final class UpdateApprovalSettingsAction
@@ -19,7 +19,7 @@ final class UpdateApprovalSettingsAction
         ?string $workingHoursStart = null,
         ?string $workingHoursEnd = null,
     ): void {
-        if ($expirationHours < 1 || $expirationHours > EmailApprovalLinks::MAX_EXPIRATION_HOURS) {
+        if ($expirationHours < 1 || $expirationHours > ApprovalLinks::MAX_EXPIRATION_HOURS) {
             throw new InvalidArgumentException('Email approval link expiration is outside the supported range.');
         }
 

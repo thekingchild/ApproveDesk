@@ -19,7 +19,7 @@ use App\Services\ReportService;
 use App\Services\Workflow\ActionableStepConstraint;
 use App\Services\Workflow\SeparationOfDuties;
 use App\Services\WorkflowEngine;
-use App\Support\EmailApprovalLinks;
+use App\Support\ApprovalLinks;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Livewire;
@@ -170,7 +170,7 @@ class ApprovalEligibilityParityTest extends TestCase
     public function test_rv_arc_01_an_email_link_after_deciding_explains_instead_of_failing_on_click(): void
     {
         $instance = $this->instance->fresh(['currentStep']);
-        $url = EmailApprovalLinks::confirmationUrl($instance, $instance->currentStep, $this->first);
+        $url = ApprovalLinks::confirmationUrl($instance, $instance->currentStep, $this->first);
         $this->engine->processAction($instance, new WorkflowActionData($this->first, WorkflowActionType::Approve));
 
         $this->get($url)

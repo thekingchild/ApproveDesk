@@ -6,7 +6,7 @@ use App\DTOs\OutboundNotification;
 use App\Enums\WorkflowActionType;
 use App\Models\Submission;
 use App\Models\User;
-use App\Support\EmailApprovalLinks;
+use App\Support\ApprovalLinks;
 
 final class ChatCard
 {
@@ -28,17 +28,17 @@ final class ChatCard
 
         // When approval links require sign-in and a second factor, chat cards link to
         // the confirmation page instead of approving in one click (RV-SEC-10).
-        if (EmailApprovalLinks::requiresSecondFactor()) {
+        if (ApprovalLinks::requiresSecondFactor()) {
             return [
                 'token' => null,
-                'confirmUrl' => EmailApprovalLinks::confirmationUrl($instance, $instance->currentStep, $notifiable),
+                'confirmUrl' => ApprovalLinks::confirmationUrl($instance, $instance->currentStep, $notifiable),
                 'showApprove' => false,
             ];
         }
 
         return [
-            'token' => ChatActionToken::issue($instance, $instance->currentStep, $notifiable, WorkflowActionType::Approve),
-            'confirmUrl' => EmailApprovalLinks::confirmationUrl($instance, $instance->currentStep, $notifiable),
+            'token' => ApprovalLinks::chatToken($instance, $instance->currentStep, $notifiable, WorkflowActionType::Approve),
+            'confirmUrl' => ApprovalLinks::confirmationUrl($instance, $instance->currentStep, $notifiable),
             'showApprove' => true,
         ];
     }
