@@ -18,7 +18,7 @@ use App\Services\Collaboration\MentionParser;
 use App\Services\Workflow\AssigneeDirectory;
 use App\Services\Workflow\AssigneeResolver;
 use App\Services\Workflow\ReviewRound;
-use App\Support\SeparationOfDuties;
+use App\Services\Workflow\SeparationOfDuties;
 use App\Services\WorkflowEngine;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
@@ -834,8 +834,8 @@ new #[Title('Submission')] class extends Component {
                                 @foreach ($revision->before as $field => $old)
                                     @if ($field === 'body')
                                         @php
-                                            $beforeBody = app(\App\Services\RichTextSanitizer::class)->sanitize((string) ($old ?? ''));
-                                            $afterBody = app(\App\Services\RichTextSanitizer::class)->sanitize((string) ($revision->after[$field] ?? ''));
+                                            $beforeBody = app(\App\Support\RichTextSanitizer::class)->sanitize((string) ($old ?? ''));
+                                            $afterBody = app(\App\Support\RichTextSanitizer::class)->sanitize((string) ($revision->after[$field] ?? ''));
                                         @endphp
                                         <details class="mt-2" wire:key="body-revision-{{ $revision->id }}">
                                             <summary class="cursor-pointer font-medium">{{ __('View body changes') }}</summary>
@@ -981,7 +981,7 @@ new #[Title('Submission')] class extends Component {
     @if ($submission->body)
         <flux:card>
             <flux:heading size="sm">{{ __('Body') }}</flux:heading>
-            <div class="prose prose-sm mt-3 max-w-none dark:prose-invert">{!! app(\App\Services\RichTextSanitizer::class)->sanitize($submission->body) !!}</div>
+            <div class="prose prose-sm mt-3 max-w-none dark:prose-invert">{!! app(\App\Support\RichTextSanitizer::class)->sanitize($submission->body) !!}</div>
         </flux:card>
     @endif
 

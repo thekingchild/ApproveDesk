@@ -382,7 +382,7 @@ new #[Title('New submission')] class extends Component {
                     @if ($due_date)<div><dt class="text-xs text-zinc-500">{{ __('Due date') }}</dt><dd class="font-medium">{{ $due_date }}</dd></div>@endif
                     <div><dt class="text-xs text-zinc-500">{{ __('Files') }}</dt>
                         <dd class="font-medium">{{ count($attachments) + $this->savedFiles->count() }}</dd></div>
-                    @if ($body)<div class="sm:col-span-2"><dt class="text-xs text-zinc-500">{{ __('Body') }}</dt><dd class="prose prose-sm dark:prose-invert max-w-none">{!! app(\App\Services\RichTextSanitizer::class)->sanitize($body) !!}</dd></div>@endif
+                    @if ($body)<div class="sm:col-span-2"><dt class="text-xs text-zinc-500">{{ __('Body') }}</dt><dd class="prose prose-sm dark:prose-invert max-w-none">{!! app(\App\Support\RichTextSanitizer::class)->sanitize($body) !!}</dd></div>@endif
                 </dl>
             </flux:card>
         @endif

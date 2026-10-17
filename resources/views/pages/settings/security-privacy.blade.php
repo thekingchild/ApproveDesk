@@ -4,7 +4,7 @@ use App\Actions\Security\UpdateSecuritySettingsAction;
 use App\Models\SensitiveFieldAccess;
 use App\Support\RateLimitProfiles;
 use App\Support\SecuritySettings;
-use App\Support\Turnstile;
+use App\Services\Auth\Turnstile;
 use Flux\Flux;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;

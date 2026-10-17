@@ -4,7 +4,7 @@ namespace Tests\Feature\Operations;
 
 use App\Enums\BackupSnapshotKind;
 use App\Models\Setting;
-use App\Support\ScheduledBackupHealth;
+use App\Services\Backups\ScheduledBackupHealth;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Tests\TestCase;

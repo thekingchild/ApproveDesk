@@ -4,8 +4,8 @@ namespace App\Actions\Settings;
 
 use App\Models\Setting;
 use App\Models\User;
+use App\Services\Auth\SecondFactorAssurance;
 use App\Support\EmailApprovalLinks;
-use App\Support\SecondFactorAssurance;
 use Illuminate\Http\Request;
 use InvalidArgumentException;
 

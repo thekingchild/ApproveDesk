@@ -3,7 +3,7 @@
 namespace App\Actions\Security;
 
 use App\Models\Setting;
-use App\Support\Turnstile;
+use App\Services\Auth\Turnstile;
 
 final class StoreTurnstileCredentialsAction
 {

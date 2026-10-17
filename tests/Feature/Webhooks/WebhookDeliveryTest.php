@@ -3,6 +3,7 @@
 namespace Tests\Feature\Webhooks;
 
 use App\Actions\Submissions\SubmitSubmissionAction;
+use App\Contracts\DnsResolver;
 use App\Enums\SubmissionStatus;
 use App\Enums\WebhookDeliveryStatus;
 use App\Enums\WebhookEvent;
@@ -12,7 +13,6 @@ use App\Models\Submission;
 use App\Models\User;
 use App\Models\WebhookEndpoint;
 use App\Models\WorkflowTemplate;
-use App\Support\DnsResolver;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;

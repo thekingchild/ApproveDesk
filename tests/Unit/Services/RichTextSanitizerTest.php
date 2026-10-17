@@ -2,7 +2,7 @@
 
 namespace Tests\Unit\Services;
 
-use App\Services\RichTextSanitizer;
+use App\Support\RichTextSanitizer;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

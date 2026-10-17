@@ -3,8 +3,8 @@
 namespace Tests\Unit\Services\Backups;
 
 use App\Services\Backups\BackupRecorder;
-use App\Services\Backups\SqlStatementStream;
 use App\Support\LongRunningOperation;
+use App\Support\SqlStatementStream;
 use RuntimeException;
 use Tests\TestCase;
 

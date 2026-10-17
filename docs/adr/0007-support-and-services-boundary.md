@@ -2,7 +2,7 @@
 
 Date: 2026-10-17
 
-Status: Accepted (2026-10-17)
+Status: Accepted (2026-10-17) · Move list items 1–8 done (`feature/rv-arc-support-services-moves`); item 9 (SystemSettings writes) open
 
 ## Context
 

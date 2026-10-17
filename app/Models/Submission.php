@@ -6,7 +6,7 @@ use App\Enums\SubmissionPriority;
 use App\Enums\SubmissionStatus;
 use App\Enums\SubmissionType;
 use App\Services\ReferenceNumberGenerator;
-use App\Services\RichTextSanitizer;
+use App\Support\RichTextSanitizer;
 use Database\Factories\SubmissionFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;

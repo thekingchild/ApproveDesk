@@ -5,7 +5,7 @@ namespace App\Actions\WorkflowTemplates;
 use App\Enums\WorkflowTemplateVersionStatus;
 use App\Models\WorkflowTemplateVersion;
 use App\Services\WorkflowTemplates\WorkflowGraphValidator;
-use App\Services\WorkflowTemplates\WorkflowTemplateSchemaHasher;
+use App\Support\WorkflowTemplateSchemaHasher;
 use DomainException;
 use Illuminate\Support\Facades\DB;
 

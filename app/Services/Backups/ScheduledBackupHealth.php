@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Support;
+namespace App\Services\Backups;
 
 use App\Enums\BackupSnapshotKind;
 use App\Models\BackupSnapshot;

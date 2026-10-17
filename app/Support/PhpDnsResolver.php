@@ -2,6 +2,8 @@
 
 namespace App\Support;
 
+use App\Contracts\DnsResolver;
+
 final class PhpDnsResolver implements DnsResolver
 {
     public function resolve(string $host): array

@@ -767,7 +767,7 @@ new #[Title('Request types')] class extends Component {
                         </flux:select>
                         <flux:input wire:model="selectionRules.{{ $index }}.field" :label="__('Field')" placeholder="metadata.amount or fields.amount" />
                         <flux:select wire:model="selectionRules.{{ $index }}.operator" :label="__('Operator')">
-                            @foreach (\App\Support\StepConditionForm::OPERATORS as $operator => $operatorLabel)
+                            @foreach (\App\Livewire\Forms\StepConditionForm::OPERATORS as $operator => $operatorLabel)
                                 <flux:select.option :value="$operator">{{ __($operatorLabel) }}</flux:select.option>
                             @endforeach
                         </flux:select>

@@ -2,6 +2,7 @@
 
 namespace App\Services\Backups;
 
+use App\Support\SqlStatementStream;
 use InvalidArgumentException;
 use PDO;
 use PDOException;

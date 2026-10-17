@@ -7,7 +7,7 @@ use App\Models\User;
 use App\Models\WorkflowTemplate;
 use App\Models\WorkflowTemplateStep;
 use App\Models\WorkflowTemplateVersion;
-use App\Services\WorkflowTemplates\WorkflowTemplateSchemaHasher;
+use App\Support\WorkflowTemplateSchemaHasher;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**

@@ -5,7 +5,7 @@ namespace App\Services\RequestTypes;
 use App\Enums\RequestFieldType;
 use App\Models\RequestFieldDefinition;
 use App\Models\RequestTypeVersion;
-use App\Services\RichTextSanitizer;
+use App\Support\RichTextSanitizer;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;

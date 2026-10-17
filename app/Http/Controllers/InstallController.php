@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Exceptions\InstallerException;
-use App\Support\Installer;
+use App\Services\Install\Installer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;

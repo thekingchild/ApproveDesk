@@ -113,6 +113,7 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Changed
 
+- **For developers: classes moved (ADR 0007).** `SeparationOfDuties` → `App\Services\Workflow`; `DnsResolver`, `BackupTransport` → `App\Contracts`; `Turnstile`, `SecondFactorAssurance` → `App\Services\Auth`; `ScheduledBackupHealth` → `App\Services\Backups`; `Installer` → `App\Services\Install`; `PublicWebsite` → `App\Http`; `StepConditionForm` → `App\Livewire\Forms`; `RichTextSanitizer`, `SqlStatementStream`, `UserImportReadFilter`, `WorkflowTemplateSchemaHasher` → `App\Support`. Behaviour is unchanged; code that imports the old names must be updated.
 - The **Create comments**, **Send reminders**, **Withdraw requests**, **Export audit evidence**, and **Manage auditor access** permissions are now enforced. An upgrade migration grants them to every existing role that already had the ability, so nobody loses access; removing one from a role now removes that ability. Requesters can always comment on, remind about, and open their own requests.
 - Browser and accessibility tests now block merges in CI. They had been failing unnoticed since v2.8.3 because the CI server and test process used different databases.
 

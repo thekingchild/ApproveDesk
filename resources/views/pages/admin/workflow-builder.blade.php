@@ -16,7 +16,7 @@ use App\Models\WorkflowTemplateVersion;
 use App\Services\Workflow\AssigneeDirectory;
 use App\Services\WorkflowTemplates\WorkflowGraphSimulator;
 use App\Services\WorkflowTemplates\WorkflowGraphValidator;
-use App\Support\StepConditionForm;
+use App\Livewire\Forms\StepConditionForm;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
@@ -666,7 +666,7 @@ new #[Title('Workflow builder')] class extends Component {
                         @if ($selected['stepType'] === 'conditional')
                             @php
                                 $branchLabel = function (mixed $key) use ($steps): string {
-                                    $position = \App\Support\StepConditionForm::position($steps, $key);
+                                    $position = \App\Livewire\Forms\StepConditionForm::position($steps, $key);
                                     if ($position !== null) {
                                         return $position.'. '.$steps[$position - 1]['name'];
                                     }
@@ -677,7 +677,7 @@ new #[Title('Workflow builder')] class extends Component {
                             <flux:input wire:model="steps.{{ $selectedIndex }}.conditionField" :label="__('Field')" placeholder="priority or fields.amount" :description="__('A request field, or a form field as fields.key.')" />
                             <flux:error name="steps.{{ $selectedIndex }}.conditionField" />
                             <flux:select wire:model.live="steps.{{ $selectedIndex }}.conditionOperator" :label="__('Operator')" data-test="condition-operator">
-                                @foreach (\App\Support\StepConditionForm::OPERATORS as $value => $label)
+                                @foreach (\App\Livewire\Forms\StepConditionForm::OPERATORS as $value => $label)
                                     <flux:select.option :value="$value">{{ __($label) }}</flux:select.option>
                                 @endforeach
                             </flux:select>

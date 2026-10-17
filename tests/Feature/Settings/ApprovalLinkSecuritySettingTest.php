@@ -5,7 +5,7 @@ namespace Tests\Feature\Settings;
 use App\Actions\Settings\UpdateEmailApprovalSecurityAction;
 use App\Models\Setting;
 use App\Models\User;
-use App\Support\SecondFactorAssurance;
+use App\Services\Auth\SecondFactorAssurance;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;

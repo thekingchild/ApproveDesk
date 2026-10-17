@@ -3,9 +3,9 @@
 namespace Tests\Feature\Backups;
 
 use App\Actions\Backups\StoreBackupDestinationAction;
+use App\Contracts\DnsResolver;
 use App\Models\User;
 use App\Services\Backups\BackupTransportFactory;
-use App\Support\DnsResolver;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use InvalidArgumentException;

@@ -3,8 +3,8 @@
 namespace App\Http\Middleware;
 
 use App\Models\User;
+use App\Services\Auth\SecondFactorAssurance;
 use App\Support\EmailApprovalLinks;
-use App\Support\SecondFactorAssurance;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;

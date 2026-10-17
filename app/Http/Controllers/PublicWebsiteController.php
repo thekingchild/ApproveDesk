@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\PublicWebsite;
 use App\Support\Branding;
-use App\Support\PublicWebsite;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;

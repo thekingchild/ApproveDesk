@@ -2,7 +2,7 @@
 
 namespace Tests;
 
-use App\Support\DnsResolver;
+use App\Contracts\DnsResolver;
 use App\Support\OutboundDestination;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Laravel\Fortify\Features;

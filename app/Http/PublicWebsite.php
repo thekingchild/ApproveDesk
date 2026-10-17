@@ -1,8 +1,10 @@
 <?php
 
-namespace App\Support;
+namespace App\Http;
 
 use App\Models\User;
+use App\Support\Branding;
+use App\Support\CspNonce;
 use Illuminate\Http\Response;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 

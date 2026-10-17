@@ -6,7 +6,6 @@ use App\Enums\WorkflowActionType;
 use App\Enums\WorkflowStatus;
 use App\Models\User;
 use App\Models\WorkflowInstance;
-use App\Support\SeparationOfDuties;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Query\Builder as QueryBuilder;

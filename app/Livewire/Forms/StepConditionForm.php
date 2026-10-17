@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Support;
+namespace App\Livewire\Forms;
 
 use App\Services\SubmissionConditionEvaluator;
 use Illuminate\Support\Str;

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Support;
+namespace App\Services\Install;
 
 use App\Enums\SystemRole;
 use App\Exceptions\InstallerException;

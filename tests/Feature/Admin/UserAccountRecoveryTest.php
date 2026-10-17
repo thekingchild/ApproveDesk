@@ -7,7 +7,7 @@ use App\Models\SystemOwner;
 use App\Models\User;
 use App\Models\UserSession;
 use App\Notifications\AccountRecoveryInitiatedNotification;
-use App\Support\SecondFactorAssurance;
+use App\Services\Auth\SecondFactorAssurance;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;

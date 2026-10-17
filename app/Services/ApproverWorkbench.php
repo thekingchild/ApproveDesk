@@ -10,7 +10,7 @@ use App\Models\WorkflowInstance;
 use App\Services\Workflow\AssignedStepConstraint;
 use App\Services\Workflow\AssigneeResolver;
 use App\Services\Workflow\ReviewRound;
-use App\Support\SeparationOfDuties;
+use App\Services\Workflow\SeparationOfDuties;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;

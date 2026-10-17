@@ -3,7 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Setting;
-use App\Support\Installer;
+use App\Services\Install\Installer;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\WorkflowTemplates;
+namespace App\Support;
 
 use App\Models\WorkflowTemplateStep;
 use Illuminate\Support\Collection;

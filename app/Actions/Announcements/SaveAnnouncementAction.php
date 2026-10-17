@@ -7,7 +7,7 @@ use App\Enums\AnnouncementDisplayMode;
 use App\Enums\AnnouncementStatus;
 use App\Models\Announcement;
 use App\Models\User;
-use App\Services\RichTextSanitizer;
+use App\Support\RichTextSanitizer;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Validator;

@@ -2,7 +2,7 @@
 
 namespace Tests\Support;
 
-use App\Support\DnsResolver;
+use App\Contracts\DnsResolver;
 
 final class ArrayDnsResolver implements DnsResolver
 {
