@@ -58,6 +58,9 @@ new class extends Component {
                         @if ($destination->last_error)
                             <span class="text-red-600">{{ $destination->last_error }}</span>
                         @endif
+                        @if ($destination->credentialsUnreadable())
+                            <span class="text-red-600" data-test="destination-credentials-unreadable">{{ __('The saved credentials cannot be read, usually because the app key changed. Enter them again.') }}</span>
+                        @endif
                     </span>
                     @if ($destination->kind !== BackupDestinationKind::Local)
                         <form method="POST" action="{{ route('admin.backups.destinations.test', $destination) }}">

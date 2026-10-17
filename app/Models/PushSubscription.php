@@ -26,6 +26,13 @@ class PushSubscription extends Model
 
     protected $fillable = ['user_id', 'endpoint', 'public_key', 'auth_token', 'content_encoding'];
 
+    /** @return array<string, string> */
+    protected function casts(): array
+    {
+        // The auth secret is stored encrypted (RV-LAR-05).
+        return ['auth_token' => 'encrypted'];
+    }
+
     protected static function booted(): void
     {
         static::saving(function (self $subscription): void {
