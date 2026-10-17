@@ -14,7 +14,7 @@
         @csrf
 
         <label for="connection">Connection type</label>
-        <select name="connection" id="connection" onchange="document.querySelectorAll('[data-conn]').forEach(el => el.hidden = el.dataset.conn !== this.value)">
+        <select name="connection" id="connection" data-connection-picker>
             <option value="mysql" @selected(old('connection', 'mysql') === 'mysql')>MySQL / MariaDB (recommended)</option>
             <option value="sqlite" @selected(old('connection') === 'sqlite')>SQLite (small installs)</option>
         </select>
@@ -52,4 +52,9 @@
 
         <button type="submit">Test connection &amp; save configuration</button>
     </form>
+<script nonce="{{ \App\Support\CspNonce::current() }}">
+    document.querySelector('[data-connection-picker]')?.addEventListener('change', (event) => {
+        document.querySelectorAll('[data-conn]').forEach((el) => { el.hidden = el.dataset.conn !== event.target.value })
+    })
+</script>
 @endsection

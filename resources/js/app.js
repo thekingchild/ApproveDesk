@@ -1,5 +1,6 @@
 import './pwa.js'
 import './viewer-timezone.js'
+import './confirm.js'
 
 // Form builder local-draft autosave (P6B-UI-04): stores builder state in
 // this browser only, debounced; the server draft stays the durable record.

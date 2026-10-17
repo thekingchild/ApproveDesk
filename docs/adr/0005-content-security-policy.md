@@ -2,7 +2,7 @@
 
 Date: 2026-10-17
 
-Status: Accepted (2026-10-17)
+Status: Accepted (2026-10-17) · Step 1 implemented (`feature/rv-sec-csp-nonce`)
 
 ## Context
 

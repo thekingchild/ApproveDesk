@@ -70,7 +70,7 @@
         <nav class="toolbar" aria-label="{{ __('Report actions') }}">
             <a href="{{ route('submissions.show', $submission) }}">{{ __('Back to request') }}</a>
             <a href="{{ route('submissions.approval-report.download', $submission) }}">{{ __('Download PDF') }}</a>
-            <button type="button" class="primary" onclick="window.print()">{{ __('Print') }}</button>
+            <button type="button" class="primary" data-print>{{ __('Print') }}</button>
         </nav>
     @endunless
 
@@ -196,5 +196,8 @@
             {{ $submission->reference_number }} · {{ __('Generated') }} {{ $generated_at->format('d M Y H:i:s') }} · {{ $timezone }} · {{ __('Page') }}&nbsp;<span class="page-number"></span>
         </footer>
     </main>
+<script nonce="{{ \App\Support\CspNonce::current() }}">
+    document.querySelectorAll('[data-print]').forEach((button) => button.addEventListener('click', () => window.print()))
+</script>
 </body>
 </html>

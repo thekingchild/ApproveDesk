@@ -34,8 +34,8 @@
 @if ($applicationTheme)
     <style data-application-theme>{!! app(\App\Services\Themes\ThemeService::class)->cssVariables($applicationTheme) !!}</style>
 @endif
-@fluxAppearance
+@fluxAppearance(['nonce' => \App\Support\CspNonce::current()])
 @if ($code = \App\Support\Branding::customCodeHtml())
     <!-- approvedesk-custom-code -->
-    {!! $code !!}
+    {!! \App\Support\CspNonce::addToScripts($code) !!}
 @endif

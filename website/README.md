@@ -61,3 +61,7 @@ Never claim these as website URLs: `/login`, `/register`, `/dashboard`, `/admin`
 ## What Laravel will not serve from here
 
 Path traversal (`..`), dotfiles (`.env`, `.git`), PHP, and unknown extensions. Allowed: html, htm, css, js, map, svg, png, jpg, jpeg, gif, webp, ico, woff, woff2, ttf, eot, txt, xml, json, webmanifest, pdf, mp4, webm.
+
+## Scripts and the Content Security Policy
+
+ApproveDesk sends a Content Security Policy with every page. Inline `<script>` blocks in these files receive the page's nonce automatically when they are served, and scripts in `js/` load as usual. Inline event attributes (`onclick="..."`, `onload="..."`) are blocked by the browser; attach listeners from a script instead.
