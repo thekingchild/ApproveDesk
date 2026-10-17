@@ -94,7 +94,7 @@ class RequestPageRulesTest extends TestCase
         $delegate = User::factory()->create()->assignRole('approver');
         $submission = $this->submitted();
 
-        Livewire::actingAs($this->approver)->test('pages::submissions.show', ['submission' => $submission])
+        Livewire::actingAs($this->approver)->test('submissions.decision', ['submission' => $submission])
             ->set('delegateUserId', (string) $delegate->id)
             ->set('delegationExpiresAt', now()->subHour()->format('Y-m-d\TH:i'))
             ->call('delegateApproval')
@@ -148,25 +148,25 @@ class RequestPageRulesTest extends TestCase
         $this->assertStringNotContainsString('preview=1', SubmissionFileLinks::download($file));
     }
 
-    /** @return array<string, array{string}> */
+    /** @return array<string, array{string, string}> */
     public static function helpers(): array
     {
         return [
-            'file link' => ['fileUrl'],
-            'preview link' => ['previewUrl'],
-            'comment display' => ['displayComment'],
-            'sanitizer' => ['safeHtml'],
-            'field display' => ['fieldDisplayValue'],
+            'file link' => ['submissions.attachments', 'fileUrl'],
+            'preview link' => ['submissions.attachments', 'previewUrl'],
+            'comment display' => ['submissions.comments', 'displayComment'],
+            'sanitizer' => ['pages::submissions.show', 'safeHtml'],
+            'field display' => ['pages::submissions.show', 'fieldDisplayValue'],
         ];
     }
 
     #[DataProvider('helpers')]
-    public function test_template_helpers_are_not_browser_endpoints(string $method): void
+    public function test_template_helpers_are_not_browser_endpoints(string $component, string $method): void
     {
         $submission = $this->submitted();
 
         $this->expectException(MethodNotFoundException::class);
-        Livewire::actingAs($this->requester)->test('pages::submissions.show', ['submission' => $submission])->call($method, 1);
+        Livewire::actingAs($this->requester)->test($component, ['submission' => $submission])->call($method, 1);
     }
 
     private function submitted(): Submission

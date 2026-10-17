@@ -94,7 +94,7 @@ class DelegationWorkflowTest extends TestCase
         Notification::fake();
 
         Livewire::actingAs($this->approver)
-            ->test('pages::submissions.show', ['submission' => $this->instance->submission])
+            ->test('submissions.decision', ['submission' => $this->instance->submission])
             ->assertSee('Delegate')
             ->set('delegateUserId', (string) $this->delegate->id)
             ->set('delegationExpiresAt', now()->addDay()->format('Y-m-d\TH:i'))
@@ -107,7 +107,7 @@ class DelegationWorkflowTest extends TestCase
             ->assertSee($this->instance->submission->reference_number);
 
         Livewire::actingAs($this->delegate)
-            ->test('pages::submissions.show', ['submission' => $this->instance->submission])
+            ->test('submissions.decision', ['submission' => $this->instance->submission])
             ->assertSee('Your decision')
             ->set('actionComment', 'Approved through delegated authority.')
             ->call('act', WorkflowActionType::Approve->value)

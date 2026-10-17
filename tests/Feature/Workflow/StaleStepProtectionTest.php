@@ -62,8 +62,8 @@ class StaleStepProtectionTest extends TestCase
 
     public function test_two_open_request_pages_cannot_decide_two_steps(): void
     {
-        $first = Livewire::actingAs($this->approver)->test('pages::submissions.show', ['submission' => $this->submission->fresh()]);
-        $second = Livewire::actingAs($this->approver)->test('pages::submissions.show', ['submission' => $this->submission->fresh()]);
+        $first = Livewire::actingAs($this->approver)->test('submissions.decision', ['submission' => $this->submission->fresh()]);
+        $second = Livewire::actingAs($this->approver)->test('submissions.decision', ['submission' => $this->submission->fresh()]);
 
         $first->call('act', 'approve');
         $second->call('act', 'approve');

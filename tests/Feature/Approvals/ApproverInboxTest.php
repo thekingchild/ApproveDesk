@@ -140,7 +140,7 @@ class ApproverInboxTest extends TestCase
     public function test_approve_through_the_page_advances_the_chain(): void
     {
         Livewire::actingAs($this->firstApprover)
-            ->test('pages::submissions.show', ['submission' => $this->submission])
+            ->test('submissions.decision', ['submission' => $this->submission])
             ->assertSee('Your decision')
             ->assertSee('Shortcuts: [ previous, ] next, A approve, R reject')
             ->call('act', 'approve')
@@ -160,7 +160,7 @@ class ApproverInboxTest extends TestCase
     public function test_reject_requires_a_comment(): void
     {
         Livewire::actingAs($this->firstApprover)
-            ->test('pages::submissions.show', ['submission' => $this->submission])
+            ->test('submissions.decision', ['submission' => $this->submission])
             ->call('act', 'reject')
             ->assertHasErrors(['actionComment']);
 
@@ -170,7 +170,7 @@ class ApproverInboxTest extends TestCase
     public function test_reject_with_comment_terminates(): void
     {
         Livewire::actingAs($this->firstApprover)
-            ->test('pages::submissions.show', ['submission' => $this->submission])
+            ->test('submissions.decision', ['submission' => $this->submission])
             ->set('actionComment', 'Missing supporting documents.')
             ->call('act', 'reject')
             ->assertHasNoErrors();

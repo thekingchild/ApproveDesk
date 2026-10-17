@@ -37,7 +37,7 @@ class WatchersTest extends TestCase
         $this->actingAs($watcher)->get(route('submissions.show', $submission))->assertForbidden();
 
         Livewire::actingAs($submitter)
-            ->test('pages::submissions.show', ['submission' => $submission])
+            ->test('submissions.followers', ['submission' => $submission])
             ->set('watcherQuery', substr($watcher->name, 0, 4))
             ->call('addWatcher', $watcher->id)
             ->assertHasNoErrors();
@@ -50,7 +50,7 @@ class WatchersTest extends TestCase
         $this->actingAs($watcher)->get(route('submissions.show', $submission))->assertOk();
 
         Livewire::actingAs($watcher)
-            ->test('pages::submissions.show', ['submission' => $submission->fresh()])
+            ->test('submissions.followers', ['submission' => $submission->fresh()])
             ->call('unfollow')
             ->assertHasNoErrors();
 
@@ -92,7 +92,7 @@ class WatchersTest extends TestCase
         ]);
 
         Livewire::actingAs($submitter)
-            ->test('pages::submissions.show', ['submission' => $submission])
+            ->test('submissions.comments', ['submission' => $submission])
             ->set('comment', 'Finance should stay in the loop.')
             ->call('postComment')
             ->assertHasNoErrors();
@@ -100,7 +100,7 @@ class WatchersTest extends TestCase
         Notification::assertSentTo($watcher, CommentPostedNotification::class);
 
         Livewire::actingAs($approver)
-            ->test('pages::submissions.show', ['submission' => $submission->fresh()])
+            ->test('submissions.decision', ['submission' => $submission->fresh()])
             ->call('act', 'approve')
             ->assertHasNoErrors();
 
@@ -124,7 +124,7 @@ class WatchersTest extends TestCase
         ]);
 
         Livewire::actingAs($submitter)
-            ->test('pages::submissions.show', ['submission' => $submission])
+            ->test('submissions.comments', ['submission' => $submission])
             ->set('comment', 'Muted followers should stay quiet.')
             ->call('postComment')
             ->assertHasNoErrors();

@@ -124,7 +124,7 @@ class PhaseOneAcceptanceTest extends TestCase
         );
 
         Livewire::actingAs($firstApprover)
-            ->test('pages::submissions.show', ['submission' => $rejected])
+            ->test('submissions.decision', ['submission' => $rejected])
             ->set('actionComment', 'No approved budget is available.')
             ->call('act', WorkflowActionType::Reject->value)
             ->assertHasNoErrors();
@@ -197,7 +197,7 @@ class PhaseOneAcceptanceTest extends TestCase
     private function approveThroughPage(Submission $submission, User $approver, string $comment): void
     {
         Livewire::actingAs($approver)
-            ->test('pages::submissions.show', ['submission' => $submission->fresh()])
+            ->test('submissions.decision', ['submission' => $submission->fresh()])
             ->assertSee('Your decision')
             ->set('actionComment', $comment)
             ->call('act', WorkflowActionType::Approve->value)
