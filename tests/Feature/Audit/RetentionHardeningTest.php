@@ -7,6 +7,7 @@ use App\Actions\Audit\ReleaseLegalHoldAction;
 use App\Actions\Audit\RequestDispositionAction;
 use App\Actions\Audit\ReviewDispositionAction;
 use App\Actions\Submissions\SubmitSubmissionAction;
+use App\DTOs\WorkflowActionData;
 use App\Enums\DispositionStatus;
 use App\Enums\SubmissionStatus;
 use App\Enums\WorkflowActionType;
@@ -97,7 +98,7 @@ class RetentionHardeningTest extends TestCase
         WorkflowTemplate::factory()->default()->sequential([$approver])->create();
         $submission = Submission::factory()->create(['status' => SubmissionStatus::Draft]);
         app(SubmitSubmissionAction::class)->execute($submission);
-        app(WorkflowEngine::class)->processAction($submission->workflowInstance()->firstOrFail(), $approver, WorkflowActionType::Approve);
+        app(WorkflowEngine::class)->processAction($submission->workflowInstance()->firstOrFail(), new WorkflowActionData($approver, WorkflowActionType::Approve));
         $this->assertSame(SubmissionStatus::Approved, $submission->fresh()->status);
         $actions = DB::table('workflow_actions')->count();
         $this->assertGreaterThan(0, $actions);

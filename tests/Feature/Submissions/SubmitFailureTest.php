@@ -4,6 +4,7 @@ namespace Tests\Feature\Submissions;
 
 use App\Actions\RequestTypes\PublishRequestTypeVersionAction;
 use App\Actions\Submissions\SubmitSubmissionAction;
+use App\DTOs\WorkflowActionData;
 use App\Enums\AssigneeType;
 use App\Enums\RequestFieldType;
 use App\Enums\SubmissionStatus;
@@ -151,7 +152,7 @@ class SubmitFailureTest extends TestCase
         WorkflowTemplate::factory()->default()->sequential([$approver])->create();
         $submission = Submission::factory()->create(['submitter_id' => $this->requester->id, 'status' => SubmissionStatus::Draft]);
         app(SubmitSubmissionAction::class)->execute($submission);
-        app(WorkflowEngine::class)->processAction($submission->workflowInstance()->first(), $approver, WorkflowActionType::RequestInformation, 'Which cost centre?');
+        app(WorkflowEngine::class)->processAction($submission->workflowInstance()->first(), new WorkflowActionData($approver, WorkflowActionType::RequestInformation, 'Which cost centre?'));
         Sanctum::actingAs($this->requester, ['submissions:write', 'submissions:read']);
 
         $this->postJson("/api/v1/submissions/{$submission->id}/submit")
@@ -174,7 +175,7 @@ class SubmitFailureTest extends TestCase
             ->call('review')
             ->call('submit');
         $submission = Submission::query()->where('submitter_id', $this->requester->id)->sole();
-        app(WorkflowEngine::class)->processAction($submission->workflowInstance()->first(), $approver, WorkflowActionType::RequestInformation, 'Which model?');
+        app(WorkflowEngine::class)->processAction($submission->workflowInstance()->first(), new WorkflowActionData($approver, WorkflowActionType::RequestInformation, 'Which model?'));
         $submission->fieldValues()->delete();
 
         Livewire::actingAs($this->requester)->test('pages::submissions.show', ['submission' => $submission->fresh()])

@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Workflow;
 
+use App\DTOs\DelegationData;
+use App\DTOs\WorkflowActionData;
 use App\Enums\AssigneeType;
 use App\Enums\StepType;
 use App\Enums\WorkflowActionType;
@@ -53,14 +55,14 @@ class SeparationOfDutiesTest extends TestCase
         $instance = $this->engine->initialize(Submission::factory()->create(['submitter_id' => $submitter->id]));
 
         try {
-            $this->engine->processAction($instance->fresh(), $submitter, WorkflowActionType::Approve);
+            $this->engine->processAction($instance->fresh(), new WorkflowActionData($submitter, WorkflowActionType::Approve));
             $this->fail('Self-approval was accepted.');
         } catch (WorkflowException $exception) {
             $this->assertStringContainsString('You submitted this request', $exception->getMessage());
         }
 
         // The requester's seat does not count: the other approver alone completes the parallel step.
-        $this->engine->processAction($instance->fresh(), $other, WorkflowActionType::Approve);
+        $this->engine->processAction($instance->fresh(), new WorkflowActionData($other, WorkflowActionType::Approve));
         $this->assertSame(WorkflowStatus::Completed, $instance->fresh()->status);
     }
 
@@ -104,7 +106,7 @@ class SeparationOfDutiesTest extends TestCase
         $this->expectException(WorkflowException::class);
         $this->expectExceptionMessage('the requester cannot act on their own request');
 
-        $this->engine->delegate($instance, $approver, $submitter, now()->addDay());
+        $this->engine->delegate($instance, new DelegationData($approver, $submitter, now()->addDay()));
     }
 
     public function test_delegation_granted_before_the_rule_was_enabled_cannot_be_used(): void
@@ -115,12 +117,12 @@ class SeparationOfDutiesTest extends TestCase
         $instance = $this->engine->initialize(Submission::factory()->create(['submitter_id' => $submitter->id]));
 
         Setting::put(SeparationOfDuties::SETTING, '0');
-        $this->engine->delegate($instance, $approver, $submitter, now()->addDay());
+        $this->engine->delegate($instance, new DelegationData($approver, $submitter, now()->addDay()));
         $this->assertSame(1, Delegation::query()->count());
         Setting::put(SeparationOfDuties::SETTING, '1');
 
         $this->expectException(WorkflowException::class);
-        $this->engine->processAction($instance->fresh(), $submitter, WorkflowActionType::Approve);
+        $this->engine->processAction($instance->fresh(), new WorkflowActionData($submitter, WorkflowActionType::Approve));
     }
 
     public function test_switching_the_rule_off_restores_self_approval(): void
@@ -130,7 +132,7 @@ class SeparationOfDutiesTest extends TestCase
         WorkflowTemplate::factory()->default()->sequential([$submitter])->create();
         $instance = $this->engine->initialize(Submission::factory()->create(['submitter_id' => $submitter->id]));
 
-        $this->engine->processAction($instance, $submitter, WorkflowActionType::Approve);
+        $this->engine->processAction($instance, new WorkflowActionData($submitter, WorkflowActionType::Approve));
 
         $this->assertSame(WorkflowStatus::Completed, $instance->fresh()->status);
     }

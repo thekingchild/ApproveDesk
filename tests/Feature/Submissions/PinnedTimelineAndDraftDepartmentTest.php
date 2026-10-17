@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Submissions;
 
+use App\DTOs\WorkflowActionData;
 use App\Enums\TimelineStepState;
 use App\Enums\WorkflowActionType;
 use App\Models\Department;
@@ -37,7 +38,7 @@ class PinnedTimelineAndDraftDepartmentTest extends TestCase
         $submitter = User::factory()->create()->assignRole('submitter');
         $submission = Submission::factory()->create(['submitter_id' => $submitter->id]);
         $instance = app(WorkflowEngine::class)->initialize($submission);
-        app(WorkflowEngine::class)->processAction($instance->fresh(), $first, WorkflowActionType::Approve);
+        app(WorkflowEngine::class)->processAction($instance->fresh(), new WorkflowActionData($first, WorkflowActionType::Approve));
 
         Livewire::actingAs($admin)->test('pages::admin.workflow-builder', ['template' => $template->id])
             ->set('steps.0.name', 'Finance')->set('steps.1.name', 'Director')
@@ -86,7 +87,7 @@ class PinnedTimelineAndDraftDepartmentTest extends TestCase
         Livewire::actingAs($user)->test('pages::submissions.create')
             ->set('title', 'Printer')->call('submit')->assertHasNoErrors();
         $submission = Submission::query()->where('submitter_id', $user->id)->sole();
-        app(WorkflowEngine::class)->processAction($submission->workflowInstance, $approver, WorkflowActionType::Return, 'Add the model number.');
+        app(WorkflowEngine::class)->processAction($submission->workflowInstance, new WorkflowActionData($approver, WorkflowActionType::Return, 'Add the model number.'));
 
         Livewire::actingAs($user)->test('pages::submissions.create', ['submission' => $submission->fresh()])
             ->set('title', 'Printer XL-200')->call('submit')->assertHasNoErrors();

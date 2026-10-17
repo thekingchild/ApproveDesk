@@ -4,6 +4,8 @@ namespace Tests\Feature\Submissions;
 
 use App\Actions\Submissions\ResubmitSubmissionAction;
 use App\Actions\Submissions\SubmitSubmissionAction;
+use App\DTOs\DelegationData;
+use App\DTOs\WorkflowActionData;
 use App\Enums\SubmissionStatus;
 use App\Enums\TimelineStepState;
 use App\Enums\WorkflowActionType;
@@ -57,13 +59,13 @@ class RequestPageRulesTest extends TestCase
         $this->assertSame([TimelineStepState::Active, TimelineStepState::Pending], array_column($timeline, 'state'));
         $this->assertSame([0, 1], [$timeline[0]['approvals'], $timeline[0]['required']]);
 
-        app(WorkflowEngine::class)->processAction($submission->workflowInstance()->first(), $this->approver, WorkflowActionType::Approve);
+        app(WorkflowEngine::class)->processAction($submission->workflowInstance()->first(), new WorkflowActionData($this->approver, WorkflowActionType::Approve));
         $timeline = app(WorkflowTimeline::class)->for($submission->fresh());
         $this->assertSame([TimelineStepState::Done, TimelineStepState::Active], array_column($timeline, 'state'));
         $this->assertSame(1, $timeline[0]['approvals']);
         $this->assertNotNull($timeline[0]['acted_at']);
 
-        app(WorkflowEngine::class)->processAction($submission->workflowInstance()->first(), $this->second, WorkflowActionType::Reject, 'Over budget.');
+        app(WorkflowEngine::class)->processAction($submission->workflowInstance()->first(), new WorkflowActionData($this->second, WorkflowActionType::Reject, 'Over budget.'));
         $timeline = app(WorkflowTimeline::class)->for($submission->fresh());
         $this->assertSame(TimelineStepState::Rejected, $timeline[1]['state']);
     }
@@ -76,7 +78,7 @@ class RequestPageRulesTest extends TestCase
 
         $submission = $this->submitted();
         $this->expectException(WorkflowException::class);
-        app(WorkflowEngine::class)->processAction($submission->workflowInstance()->first(), $this->approver, WorkflowActionType::Return);
+        app(WorkflowEngine::class)->processAction($submission->workflowInstance()->first(), new WorkflowActionData($this->approver, WorkflowActionType::Return));
     }
 
     public function test_the_engine_refuses_the_hidden_system_owner_as_a_delegate(): void
@@ -86,7 +88,7 @@ class RequestPageRulesTest extends TestCase
         $submission = $this->submitted();
 
         $this->expectException(WorkflowException::class);
-        app(WorkflowEngine::class)->delegate($submission->workflowInstance()->first(), $this->approver, $owner, now()->addDay());
+        app(WorkflowEngine::class)->delegate($submission->workflowInstance()->first(), new DelegationData($this->approver, $owner, now()->addDay()));
     }
 
     public function test_the_page_shows_the_engines_reason_for_a_refused_delegation(): void
@@ -180,7 +182,7 @@ class RequestPageRulesTest extends TestCase
     private function awaitingInformation(): Submission
     {
         $submission = $this->submitted();
-        app(WorkflowEngine::class)->processAction($submission->workflowInstance()->first(), $this->approver, WorkflowActionType::RequestInformation, 'Which cost centre?');
+        app(WorkflowEngine::class)->processAction($submission->workflowInstance()->first(), new WorkflowActionData($this->approver, WorkflowActionType::RequestInformation, 'Which cost centre?'));
 
         return $submission->fresh();
     }

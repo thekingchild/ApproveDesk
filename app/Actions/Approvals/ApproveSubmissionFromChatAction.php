@@ -2,6 +2,7 @@
 
 namespace App\Actions\Approvals;
 
+use App\DTOs\WorkflowActionData;
 use App\Enums\WorkflowActionType;
 use App\Exceptions\WorkflowException;
 use App\Models\User;
@@ -49,10 +50,12 @@ final class ApproveSubmissionFromChatAction
 
         return $this->engine->processAction(
             $instance,
-            $approver,
-            WorkflowActionType::Approve,
-            'Approved through a signed chat action.',
-            expectedStepId: (int) $claims['step_id'],
+            new WorkflowActionData(
+                $approver,
+                WorkflowActionType::Approve,
+                'Approved through a signed chat action.',
+                expectedStepId: (int) $claims['step_id'],
+            ),
         );
     }
 }

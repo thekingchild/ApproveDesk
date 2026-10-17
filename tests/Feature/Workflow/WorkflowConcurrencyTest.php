@@ -3,6 +3,7 @@
 namespace Tests\Feature\Workflow;
 
 use App\Actions\WorkflowTemplates\PublishWorkflowTemplateVersionAction;
+use App\DTOs\WorkflowActionData;
 use App\Enums\GroupCompletion;
 use App\Enums\StepType;
 use App\Enums\WorkflowActionType;
@@ -36,10 +37,10 @@ class WorkflowConcurrencyTest extends TestCase
         $engine = app(WorkflowEngine::class);
         $instance = $engine->initialize(Submission::factory()->create());
 
-        $engine->processAction($instance, $first, WorkflowActionType::Approve);
+        $engine->processAction($instance, new WorkflowActionData($first, WorkflowActionType::Approve));
 
         try {
-            $engine->processAction($instance->fresh(), $second, WorkflowActionType::Approve);
+            $engine->processAction($instance->fresh(), new WorkflowActionData($second, WorkflowActionType::Approve));
             $this->fail('The second concurrent first-response approval must be rejected.');
         } catch (WorkflowException $exception) {
             $this->assertStringContainsString('not an assignee', $exception->getMessage());
@@ -63,8 +64,8 @@ class WorkflowConcurrencyTest extends TestCase
         $engine = app(WorkflowEngine::class);
         $instance = $engine->initialize(Submission::factory()->create());
 
-        $engine->processAction($instance, $a, WorkflowActionType::Approve);
-        $engine->processAction($instance->fresh(), $b, WorkflowActionType::Approve);
+        $engine->processAction($instance, new WorkflowActionData($a, WorkflowActionType::Approve));
+        $engine->processAction($instance->fresh(), new WorkflowActionData($b, WorkflowActionType::Approve));
 
         $this->assertSame(WorkflowStatus::Completed, $instance->fresh()->status);
         $this->assertSame(2, WorkflowAction::query()->where('instance_id', $instance->id)->where('action', WorkflowActionType::Approve)->count());
@@ -109,9 +110,9 @@ class WorkflowConcurrencyTest extends TestCase
         $engine = app(WorkflowEngine::class);
         $instance = $engine->initialize(Submission::factory()->create());
 
-        $engine->processAction($instance, $approver, WorkflowActionType::Approve);
+        $engine->processAction($instance, new WorkflowActionData($approver, WorkflowActionType::Approve));
 
         $this->expectException(WorkflowException::class);
-        $engine->processAction($instance->fresh(), $approver, WorkflowActionType::Approve);
+        $engine->processAction($instance->fresh(), new WorkflowActionData($approver, WorkflowActionType::Approve));
     }
 }

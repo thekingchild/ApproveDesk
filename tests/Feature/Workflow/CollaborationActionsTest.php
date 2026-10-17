@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Workflow;
 
+use App\DTOs\WorkflowActionData;
 use App\Enums\SubmissionStatus;
 use App\Enums\WorkflowActionType;
 use App\Enums\WorkflowStatus;
@@ -34,9 +35,11 @@ class CollaborationActionsTest extends TestCase
 
         $engine->processAction(
             $instance,
-            $approver,
-            WorkflowActionType::RequestInformation,
-            'Please attach the supporting schedule.',
+            new WorkflowActionData(
+                $approver,
+                WorkflowActionType::RequestInformation,
+                'Please attach the supporting schedule.',
+            ),
         );
 
         $this->assertSame(WorkflowStatus::OnHold, $instance->fresh()->status);
@@ -48,7 +51,7 @@ class CollaborationActionsTest extends TestCase
         );
 
         $engine->resume($instance);
-        $engine->processAction($instance, $approver, WorkflowActionType::Approve);
+        $engine->processAction($instance, new WorkflowActionData($approver, WorkflowActionType::Approve));
 
         $this->assertSame(WorkflowStatus::Completed, $instance->fresh()->status);
     }
@@ -63,9 +66,11 @@ class CollaborationActionsTest extends TestCase
 
         app(WorkflowEngine::class)->processAction(
             $instance,
-            $first,
-            WorkflowActionType::Escalate,
-            'Executive review is required.',
+            new WorkflowActionData(
+                $first,
+                WorkflowActionType::Escalate,
+                'Executive review is required.',
+            ),
         );
 
         $this->assertSame(2, $instance->fresh()->currentStep->step_order);
@@ -86,9 +91,11 @@ class CollaborationActionsTest extends TestCase
         try {
             app(WorkflowEngine::class)->processAction(
                 $instance,
-                $approver,
-                WorkflowActionType::Escalate,
-                'No higher step exists.',
+                new WorkflowActionData(
+                    $approver,
+                    WorkflowActionType::Escalate,
+                    'No higher step exists.',
+                ),
             );
             $this->fail('Escalating the final step must be rejected.');
         } catch (WorkflowException $exception) {

@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Workflow;
 
+use App\DTOs\DelegationData;
+use App\DTOs\WorkflowActionData;
 use App\Enums\WorkflowActionType;
 use App\Enums\WorkflowStatus;
 use App\Exceptions\WorkflowException;
@@ -54,10 +56,12 @@ class DelegationWorkflowTest extends TestCase
 
         $delegation = $this->engine->delegate(
             $this->instance,
-            $this->approver,
-            $this->delegate,
-            now()->addDay(),
-            'Cover this approval while I am away.',
+            new DelegationData(
+                $this->approver,
+                $this->delegate,
+                now()->addDay(),
+                'Cover this approval while I am away.',
+            ),
         );
 
         $this->assertSame($this->delegate->id, $delegation->delegate_id);
@@ -71,9 +75,11 @@ class DelegationWorkflowTest extends TestCase
 
         $this->engine->processAction(
             $this->instance,
-            $this->delegate,
-            WorkflowActionType::Approve,
-            'Approved as delegate.',
+            new WorkflowActionData(
+                $this->delegate,
+                WorkflowActionType::Approve,
+                'Approved as delegate.',
+            ),
         );
 
         $this->assertSame(WorkflowStatus::Completed, $this->instance->fresh()->status);
@@ -81,12 +87,12 @@ class DelegationWorkflowTest extends TestCase
 
     public function test_delegator_cannot_decide_while_grant_is_active(): void
     {
-        $this->engine->delegate($this->instance, $this->approver, $this->delegate, now()->addHour());
+        $this->engine->delegate($this->instance, new DelegationData($this->approver, $this->delegate, now()->addHour()));
 
         $this->expectException(WorkflowException::class);
         $this->expectExceptionMessage('currently delegated');
 
-        $this->engine->processAction($this->instance, $this->approver, WorkflowActionType::Approve);
+        $this->engine->processAction($this->instance, new WorkflowActionData($this->approver, WorkflowActionType::Approve));
     }
 
     public function test_delegation_modal_grants_delegate_submission_access(): void
@@ -119,17 +125,17 @@ class DelegationWorkflowTest extends TestCase
     public function test_expired_grant_restores_delegator_and_removes_delegate_access(): void
     {
         Carbon::setTestNow('2026-08-17 09:00:00');
-        $this->engine->delegate($this->instance, $this->approver, $this->delegate, now()->addHour());
+        $this->engine->delegate($this->instance, new DelegationData($this->approver, $this->delegate, now()->addHour()));
         Carbon::setTestNow('2026-08-17 10:00:01');
 
         try {
-            $this->engine->processAction($this->instance, $this->delegate, WorkflowActionType::Approve);
+            $this->engine->processAction($this->instance, new WorkflowActionData($this->delegate, WorkflowActionType::Approve));
             $this->fail('Expired delegate authority must be rejected.');
         } catch (WorkflowException $exception) {
             $this->assertStringContainsString('not an assignee', $exception->getMessage());
         }
 
-        $this->engine->processAction($this->instance, $this->approver, WorkflowActionType::Approve);
+        $this->engine->processAction($this->instance, new WorkflowActionData($this->approver, WorkflowActionType::Approve));
         $this->assertSame(WorkflowStatus::Completed, $this->instance->fresh()->status);
     }
 
@@ -138,7 +144,7 @@ class DelegationWorkflowTest extends TestCase
         $this->instance->currentStep->updateQuietly(['allow_delegation' => false]);
 
         try {
-            $this->engine->delegate($this->instance, $this->approver, $this->delegate, now()->addHour());
+            $this->engine->delegate($this->instance, new DelegationData($this->approver, $this->delegate, now()->addHour()));
             $this->fail('Disabled delegation must be rejected.');
         } catch (WorkflowException $exception) {
             $this->assertStringContainsString('disables it', $exception->getMessage());
@@ -151,13 +157,13 @@ class DelegationWorkflowTest extends TestCase
 
         $this->expectException(WorkflowException::class);
         $this->expectExceptionMessage('already holds a seat');
-        $this->engine->delegate($this->instance, $this->approver, $otherAssigned, now()->addHour());
+        $this->engine->delegate($this->instance, new DelegationData($this->approver, $otherAssigned, now()->addHour()));
     }
 
     public function test_expired_grants_are_kept_as_evidence_but_stop_being_active(): void
     {
         Carbon::setTestNow('2026-08-17 09:00:00');
-        $this->engine->delegate($this->instance, $this->approver, $this->delegate, now()->addHour());
+        $this->engine->delegate($this->instance, new DelegationData($this->approver, $this->delegate, now()->addHour()));
 
         Delegation::factory()->create([
             'instance_id' => $this->instance->id,

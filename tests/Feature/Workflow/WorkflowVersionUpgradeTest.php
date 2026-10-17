@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Workflow;
 
+use App\DTOs\WorkflowActionData;
 use App\Enums\WorkflowActionType;
 use App\Enums\WorkflowStatus;
 use App\Models\Submission;
@@ -53,7 +54,7 @@ class WorkflowVersionUpgradeTest extends TestCase
         $first = User::query()->findOrFail(9102);
         $second = User::query()->findOrFail(9103);
         $engine = app(WorkflowEngine::class);
-        $engine->processAction($instance, $first, WorkflowActionType::Approve, 'Manager approved after upgrade.');
+        $engine->processAction($instance, new WorkflowActionData($first, WorkflowActionType::Approve, 'Manager approved after upgrade.'));
 
         $instance->refresh();
         $this->assertSame(9302, $instance->current_step_id);
@@ -74,7 +75,7 @@ class WorkflowVersionUpgradeTest extends TestCase
         $this->assertSame($originalVersionId, $instance->fresh()->template_version_id);
         $this->assertSame('Director review', $instance->fresh()->currentStep?->name);
 
-        $engine->processAction($instance->fresh(), $second, WorkflowActionType::Approve, 'Director approved original version.');
+        $engine->processAction($instance->fresh(), new WorkflowActionData($second, WorkflowActionType::Approve, 'Director approved original version.'));
 
         $instance->refresh();
         $this->assertSame(WorkflowStatus::Completed, $instance->status);

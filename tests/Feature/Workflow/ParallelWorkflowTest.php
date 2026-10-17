@@ -3,6 +3,7 @@
 namespace Tests\Feature\Workflow;
 
 use App\Actions\Submissions\SubmitSubmissionAction;
+use App\DTOs\WorkflowActionData;
 use App\Enums\AssigneeType;
 use App\Enums\StepType;
 use App\Enums\SubmissionStatus;
@@ -70,15 +71,19 @@ class ParallelWorkflowTest extends TestCase
 
         $this->engine->processAction(
             $this->instance,
-            $this->parallelApprovers[0],
-            WorkflowActionType::Approve,
-            'First approval',
+            new WorkflowActionData(
+                $this->parallelApprovers[0],
+                WorkflowActionType::Approve,
+                'First approval',
+            ),
         );
         $this->engine->processAction(
             $this->instance,
-            $this->parallelApprovers[1],
-            WorkflowActionType::Approve,
-            'Second approval',
+            new WorkflowActionData(
+                $this->parallelApprovers[1],
+                WorkflowActionType::Approve,
+                'Second approval',
+            ),
         );
 
         $this->instance->refresh();
@@ -93,9 +98,11 @@ class ParallelWorkflowTest extends TestCase
 
         $this->engine->processAction(
             $this->instance,
-            $this->parallelApprovers[2],
-            WorkflowActionType::Approve,
-            'Third approval',
+            new WorkflowActionData(
+                $this->parallelApprovers[2],
+                WorkflowActionType::Approve,
+                'Third approval',
+            ),
         );
 
         $this->instance->refresh();
@@ -108,8 +115,10 @@ class ParallelWorkflowTest extends TestCase
 
         $this->engine->processAction(
             $this->instance,
-            $this->finalApprover,
-            WorkflowActionType::Approve,
+            new WorkflowActionData(
+                $this->finalApprover,
+                WorkflowActionType::Approve,
+            ),
         );
 
         $this->instance->refresh();
@@ -122,8 +131,10 @@ class ParallelWorkflowTest extends TestCase
     {
         $this->engine->processAction(
             $this->instance,
-            $this->parallelApprovers[0],
-            WorkflowActionType::Approve,
+            new WorkflowActionData(
+                $this->parallelApprovers[0],
+                WorkflowActionType::Approve,
+            ),
         );
 
         $this->expectException(WorkflowException::class);
@@ -131,8 +142,10 @@ class ParallelWorkflowTest extends TestCase
 
         $this->engine->processAction(
             $this->instance,
-            $this->parallelApprovers[0],
-            WorkflowActionType::Approve,
+            new WorkflowActionData(
+                $this->parallelApprovers[0],
+                WorkflowActionType::Approve,
+            ),
         );
     }
 
@@ -153,22 +166,28 @@ class ParallelWorkflowTest extends TestCase
 
         $this->engine->processAction(
             $parallelInstance,
-            $this->parallelApprovers[0],
-            WorkflowActionType::Approve,
+            new WorkflowActionData(
+                $this->parallelApprovers[0],
+                WorkflowActionType::Approve,
+            ),
         );
         Notification::assertNothingSent();
 
         $this->engine->processAction(
             $parallelInstance,
-            $this->parallelApprovers[1],
-            WorkflowActionType::Approve,
+            new WorkflowActionData(
+                $this->parallelApprovers[1],
+                WorkflowActionType::Approve,
+            ),
         );
         Notification::assertNothingSent();
 
         $this->engine->processAction(
             $parallelInstance,
-            $this->parallelApprovers[2],
-            WorkflowActionType::Approve,
+            new WorkflowActionData(
+                $this->parallelApprovers[2],
+                WorkflowActionType::Approve,
+            ),
         );
         Notification::assertSentTo($this->finalApprover, ActionRequiredNotification::class);
     }
@@ -177,14 +196,18 @@ class ParallelWorkflowTest extends TestCase
     {
         $this->engine->processAction(
             $this->instance,
-            $this->parallelApprovers[0],
-            WorkflowActionType::Approve,
+            new WorkflowActionData(
+                $this->parallelApprovers[0],
+                WorkflowActionType::Approve,
+            ),
         );
         $this->engine->processAction(
             $this->instance,
-            $this->parallelApprovers[1],
-            WorkflowActionType::Reject,
-            'A required control failed.',
+            new WorkflowActionData(
+                $this->parallelApprovers[1],
+                WorkflowActionType::Reject,
+                'A required control failed.',
+            ),
         );
 
         $this->instance->refresh();
@@ -197,21 +220,27 @@ class ParallelWorkflowTest extends TestCase
     {
         $this->engine->processAction(
             $this->instance,
-            $this->parallelApprovers[0],
-            WorkflowActionType::Approve,
+            new WorkflowActionData(
+                $this->parallelApprovers[0],
+                WorkflowActionType::Approve,
+            ),
         );
         $this->engine->processAction(
             $this->instance,
-            $this->parallelApprovers[1],
-            WorkflowActionType::Return,
-            'Please revise the totals.',
+            new WorkflowActionData(
+                $this->parallelApprovers[1],
+                WorkflowActionType::Return,
+                'Please revise the totals.',
+            ),
         );
 
         $this->engine->resume($this->instance);
         $this->engine->processAction(
             $this->instance,
-            $this->parallelApprovers[2],
-            WorkflowActionType::Approve,
+            new WorkflowActionData(
+                $this->parallelApprovers[2],
+                WorkflowActionType::Approve,
+            ),
         );
 
         $this->instance->refresh();
@@ -221,8 +250,10 @@ class ParallelWorkflowTest extends TestCase
         // approver decides again on the revised request instead of being a duplicate.
         $this->engine->processAction(
             $this->instance,
-            $this->parallelApprovers[0],
-            WorkflowActionType::Approve,
+            new WorkflowActionData(
+                $this->parallelApprovers[0],
+                WorkflowActionType::Approve,
+            ),
         );
 
         $this->instance->refresh();

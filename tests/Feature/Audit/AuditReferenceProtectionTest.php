@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Audit;
 
+use App\DTOs\DelegationData;
 use App\Models\RegistrationOtpCode;
 use App\Models\Submission;
 use App\Models\User;
@@ -58,7 +59,7 @@ class AuditReferenceProtectionTest extends TestCase
         }
         WorkflowTemplate::factory()->default()->sequential([$approver])->create();
         $instance = app(WorkflowEngine::class)->initialize(Submission::factory()->create());
-        app(WorkflowEngine::class)->delegate($instance, $approver, $unconfirmedDelegate, now()->addHour());
+        app(WorkflowEngine::class)->delegate($instance, new DelegationData($approver, $unconfirmedDelegate, now()->addHour()));
 
         $this->artisan('users:prune-unconfirmed', ['--hours' => 72])->assertSuccessful();
 
@@ -73,7 +74,7 @@ class AuditReferenceProtectionTest extends TestCase
         $delegate = User::factory()->create();
         WorkflowTemplate::factory()->default()->sequential([$approver])->create();
         $instance = app(WorkflowEngine::class)->initialize(Submission::factory()->create());
-        app(WorkflowEngine::class)->delegate($instance, $approver, $delegate, now()->addHour());
+        app(WorkflowEngine::class)->delegate($instance, new DelegationData($approver, $delegate, now()->addHour()));
         Carbon::setTestNow(now()->addHours(2));
 
         return [$approver, $delegate];

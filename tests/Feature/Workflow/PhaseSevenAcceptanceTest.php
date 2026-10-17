@@ -3,6 +3,7 @@
 namespace Tests\Feature\Workflow;
 
 use App\Actions\WorkflowTemplates\CreateWorkflowTemplateAction;
+use App\DTOs\WorkflowActionData;
 use App\DTOs\WorkflowTemplateData;
 use App\DTOs\WorkflowTemplateStepData;
 use App\Enums\AssigneeType;
@@ -90,7 +91,7 @@ class PhaseSevenAcceptanceTest extends TestCase
         $this->assertSame($versionOne, $inFlight->fresh()->template_version_id);
         $this->assertSame('Director review', $inFlight->fresh()->currentStep?->name);
 
-        app(WorkflowEngine::class)->processAction($inFlight->fresh(), $director, WorkflowActionType::Approve);
+        app(WorkflowEngine::class)->processAction($inFlight->fresh(), new WorkflowActionData($director, WorkflowActionType::Approve));
         $this->assertSame(WorkflowStatus::Completed, $inFlight->fresh()->status);
         $this->assertSame($versionOne, $inFlight->fresh()->template_version_id);
 

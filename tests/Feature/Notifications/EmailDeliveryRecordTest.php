@@ -3,6 +3,8 @@
 namespace Tests\Feature\Notifications;
 
 use App\Actions\Submissions\SubmitSubmissionAction;
+use App\DTOs\DelegationData;
+use App\DTOs\WorkflowActionData;
 use App\Enums\NotificationDeliveryStatus;
 use App\Enums\NotificationFrequency;
 use App\Enums\SubmissionStatus;
@@ -55,7 +57,7 @@ class EmailDeliveryRecordTest extends TestCase
         NotificationFacade::fake();
         $delegate = User::factory()->create();
         $instance = $this->submit()->workflowInstance;
-        app(WorkflowEngine::class)->delegate($instance, $this->approver, $delegate, now()->addDay());
+        app(WorkflowEngine::class)->delegate($instance, new DelegationData($this->approver, $delegate, now()->addDay()));
 
         NotificationFacade::assertSentToTimes($this->approver, ActionRequiredNotification::class, 1);
         NotificationFacade::assertSentToTimes($delegate, DelegationAssignedNotification::class, 1);
@@ -64,7 +66,7 @@ class EmailDeliveryRecordTest extends TestCase
     public function test_emails_about_a_request_are_recorded_against_it(): void
     {
         $submission = $this->submit();
-        app(WorkflowEngine::class)->processAction($submission->workflowInstance, $this->approver, WorkflowActionType::Approve);
+        app(WorkflowEngine::class)->processAction($submission->workflowInstance, new WorkflowActionData($this->approver, WorkflowActionType::Approve));
 
         $mail = NotificationDelivery::query()->where('channel', 'mail')->where('submission_id', $submission->id)->orderBy('id')->get();
 

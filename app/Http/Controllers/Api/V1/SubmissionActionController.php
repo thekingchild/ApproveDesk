@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\DTOs\WorkflowActionData;
 use App\Enums\WorkflowActionType;
 use App\Exceptions\WorkflowException;
 use App\Http\Controllers\Controller;
@@ -21,10 +22,12 @@ class SubmissionActionController extends Controller
         try {
             $engine->processAction(
                 $submission->workflowInstance()->firstOrFail(),
-                $request->user(),
-                WorkflowActionType::from($request->string('action')->toString()),
-                $request->string('comment')->trim()->toString() ?: null,
-                expectedStepId: $request->filled('step_id') ? $request->integer('step_id') : null,
+                new WorkflowActionData(
+                    $request->user(),
+                    WorkflowActionType::from($request->string('action')->toString()),
+                    $request->string('comment')->trim()->toString() ?: null,
+                    expectedStepId: $request->filled('step_id') ? $request->integer('step_id') : null,
+                ),
             );
         } catch (WorkflowException $exception) {
             throw ValidationException::withMessages(['action' => [$exception->userMessage()]]);

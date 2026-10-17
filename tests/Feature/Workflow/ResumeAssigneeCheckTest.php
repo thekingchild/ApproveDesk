@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Workflow;
 
+use App\DTOs\WorkflowActionData;
 use App\Enums\AssigneeType;
 use App\Enums\SubmissionStatus;
 use App\Enums\WorkflowActionType;
@@ -27,7 +28,7 @@ class ResumeAssigneeCheckTest extends TestCase
     {
         $submission = Submission::factory()->for($submitter, 'submitter')->create();
         $instance = app(WorkflowEngine::class)->initialize($submission);
-        app(WorkflowEngine::class)->processAction($instance, $approver, WorkflowActionType::Return, 'Please fix the totals.', null, $step->id);
+        app(WorkflowEngine::class)->processAction($instance, new WorkflowActionData($approver, WorkflowActionType::Return, 'Please fix the totals.', null, $step->id));
         $this->assertSame(WorkflowStatus::OnHold, $instance->fresh()->status);
 
         return $submission->fresh();
@@ -66,7 +67,7 @@ class ResumeAssigneeCheckTest extends TestCase
 
         $submitter->update(['manager_id' => $newManager->id]);
         app(WorkflowEngine::class)->resume($submission->workflowInstance);
-        app(WorkflowEngine::class)->processAction($submission->workflowInstance->fresh(), $newManager, WorkflowActionType::Approve);
+        app(WorkflowEngine::class)->processAction($submission->workflowInstance->fresh(), new WorkflowActionData($newManager, WorkflowActionType::Approve));
 
         $this->assertSame(WorkflowStatus::Completed, $submission->workflowInstance->fresh()->status);
     }

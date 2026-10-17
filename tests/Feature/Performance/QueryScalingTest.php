@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Performance;
 
+use App\DTOs\WorkflowActionData;
 use App\Enums\WorkflowActionType;
 use App\Models\Comment;
 use App\Models\Submission;
@@ -77,7 +78,7 @@ class QueryScalingTest extends TestCase
             $submission = Submission::factory()->create(['submitter_id' => $this->requester->id]);
             $instance = $engine->initialize($submission);
             if ($i % 2 === 0) {
-                $engine->processAction($instance->fresh(), $this->firstApprover, WorkflowActionType::Approve, 'Looks fine.');
+                $engine->processAction($instance->fresh(), new WorkflowActionData($this->firstApprover, WorkflowActionType::Approve, 'Looks fine.'));
             }
             $target ??= $submission;
 

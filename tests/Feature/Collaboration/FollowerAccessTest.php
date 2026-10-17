@@ -5,6 +5,7 @@ namespace Tests\Feature\Collaboration;
 use App\Actions\Audit\GrantAuditorAccessAction;
 use App\Actions\Audit\RevokeAuditorAccessAction;
 use App\Actions\Collaboration\FollowSubmissionAction;
+use App\DTOs\DelegationData;
 use App\Exceptions\CollaborationException;
 use App\Models\Submission;
 use App\Models\User;
@@ -62,7 +63,7 @@ class FollowerAccessTest extends TestCase
         WorkflowTemplate::factory()->default()->sequential([$approver])->create();
         $submission = Submission::factory()->create();
         $instance = app(WorkflowEngine::class)->initialize($submission);
-        app(WorkflowEngine::class)->delegate($instance, $approver, $delegate, now()->addHour());
+        app(WorkflowEngine::class)->delegate($instance, new DelegationData($approver, $delegate, now()->addHour()));
 
         app(FollowSubmissionAction::class)->execute($submission, $delegate, $delegate);
         $this->assertTrue($submission->fresh()->isWatchedBy($delegate));

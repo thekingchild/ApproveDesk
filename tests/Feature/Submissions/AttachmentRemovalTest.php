@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Submissions;
 
+use App\DTOs\WorkflowActionData;
 use App\Enums\SubmissionFileRevisionAction;
 use App\Enums\SubmissionStatus;
 use App\Enums\WorkflowActionType;
@@ -111,7 +112,7 @@ class AttachmentRemovalTest extends TestCase
             ->set('attachments', [UploadedFile::fake()->create('quote.pdf', 10, 'application/pdf')])
             ->call('submit');
         $submission = Submission::query()->where('submitter_id', $this->submitter->id)->sole();
-        app(WorkflowEngine::class)->processAction($submission->workflowInstance()->first(), $this->approver, WorkflowActionType::Return, 'Fix the title');
+        app(WorkflowEngine::class)->processAction($submission->workflowInstance()->first(), new WorkflowActionData($this->approver, WorkflowActionType::Return, 'Fix the title'));
         $this->assertSame(SubmissionStatus::Returned, $submission->fresh()->status);
 
         return [$submission->fresh(), $submission->files()->sole()];

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Workflow;
 
+use App\DTOs\WorkflowActionData;
 use App\Enums\GroupCompletion;
 use App\Enums\StepType;
 use App\Enums\WorkflowActionType;
@@ -51,7 +52,7 @@ class TemplatesPageSavePreservesBuilderSettingsTest extends TestCase
         $this->assertSame('Clarified wording', $template->fresh()->description);
 
         $instance = app(WorkflowEngine::class)->initialize(Submission::factory()->create());
-        app(WorkflowEngine::class)->processAction($instance->fresh(), $a, WorkflowActionType::Approve);
+        app(WorkflowEngine::class)->processAction($instance->fresh(), new WorkflowActionData($a, WorkflowActionType::Approve));
         $this->assertSame(WorkflowStatus::Active, $instance->fresh()->status, 'Both approvers are still required.');
     }
 

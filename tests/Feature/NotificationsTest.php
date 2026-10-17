@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\DTOs\WorkflowActionData;
 use App\Enums\SubmissionStatus;
 use App\Enums\WorkflowActionType;
 use App\Models\Submission;
@@ -57,8 +58,10 @@ class NotificationsTest extends TestCase
 
         $engine->processAction(
             $submission->workflowInstance()->first(),
-            $this->firstApprover,
-            WorkflowActionType::Approve,
+            new WorkflowActionData(
+                $this->firstApprover,
+                WorkflowActionType::Approve,
+            ),
         );
 
         Notification::assertSentTo([$this->secondApprover], ActionRequiredNotification::class);
@@ -69,10 +72,10 @@ class NotificationsTest extends TestCase
         $submission = $this->startSubmission();
         $engine = app(WorkflowEngine::class);
 
-        $engine->processAction($submission->workflowInstance()->first(), $this->firstApprover, WorkflowActionType::Approve);
+        $engine->processAction($submission->workflowInstance()->first(), new WorkflowActionData($this->firstApprover, WorkflowActionType::Approve));
         Notification::fake(); // reset: only assert the final decision below
 
-        $engine->processAction($submission->workflowInstance()->first(), $this->secondApprover, WorkflowActionType::Approve);
+        $engine->processAction($submission->workflowInstance()->first(), new WorkflowActionData($this->secondApprover, WorkflowActionType::Approve));
 
         Notification::assertSentTo(
             [$this->submitter],
@@ -87,9 +90,11 @@ class NotificationsTest extends TestCase
 
         app(WorkflowEngine::class)->processAction(
             $submission->workflowInstance()->first(),
-            $this->firstApprover,
-            WorkflowActionType::Reject,
-            'Insufficient detail.',
+            new WorkflowActionData(
+                $this->firstApprover,
+                WorkflowActionType::Reject,
+                'Insufficient detail.',
+            ),
         );
 
         Notification::assertSentTo(
@@ -106,9 +111,11 @@ class NotificationsTest extends TestCase
 
         $engine->processAction(
             $submission->workflowInstance()->first(),
-            $this->firstApprover,
-            WorkflowActionType::Return,
-            'Extend section 2.',
+            new WorkflowActionData(
+                $this->firstApprover,
+                WorkflowActionType::Return,
+                'Extend section 2.',
+            ),
         );
 
         Notification::assertSentTo(

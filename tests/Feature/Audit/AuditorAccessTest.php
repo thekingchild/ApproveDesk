@@ -4,6 +4,7 @@ namespace Tests\Feature\Audit;
 
 use App\Actions\Audit\GrantAuditorAccessAction;
 use App\Actions\Submissions\SubmitSubmissionAction;
+use App\DTOs\WorkflowActionData;
 use App\Enums\SubmissionStatus;
 use App\Enums\WorkflowActionType;
 use App\Models\AuditExportLog;
@@ -132,6 +133,6 @@ class AuditorAccessTest extends TestCase
 
         $instance = $this->submission->fresh()->workflowInstance()->firstOrFail();
         $this->expectException(\Throwable::class);
-        app(WorkflowEngine::class)->processAction($instance, $this->auditor, WorkflowActionType::Approve);
+        app(WorkflowEngine::class)->processAction($instance, new WorkflowActionData($this->auditor, WorkflowActionType::Approve));
     }
 }

@@ -3,6 +3,7 @@
 namespace Tests\Feature\Workflow;
 
 use App\Actions\Submissions\WithdrawSubmissionAction;
+use App\DTOs\WorkflowActionData;
 use App\Enums\SubmissionStatus;
 use App\Enums\WorkflowActionType;
 use App\Enums\WorkflowStatus;
@@ -61,7 +62,7 @@ class WithdrawThroughEngineTest extends TestCase
 
     public function test_returned_request_can_be_withdrawn(): void
     {
-        app(WorkflowEngine::class)->processAction($this->instance, $this->approver, WorkflowActionType::Return, 'Please revise.');
+        app(WorkflowEngine::class)->processAction($this->instance, new WorkflowActionData($this->approver, WorkflowActionType::Return, 'Please revise.'));
 
         app(WithdrawSubmissionAction::class)->execute($this->submission->fresh(), $this->submitter);
 
@@ -72,7 +73,7 @@ class WithdrawThroughEngineTest extends TestCase
     public function test_a_request_decided_first_cannot_be_withdrawn_afterwards(): void
     {
         $stale = $this->submission->fresh();
-        app(WorkflowEngine::class)->processAction($this->instance, $this->approver, WorkflowActionType::Approve);
+        app(WorkflowEngine::class)->processAction($this->instance, new WorkflowActionData($this->approver, WorkflowActionType::Approve));
 
         try {
             app(WithdrawSubmissionAction::class)->execute($stale, $this->submitter);
