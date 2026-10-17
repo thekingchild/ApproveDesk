@@ -58,6 +58,10 @@ class EmailApprovalController extends Controller
         User $approver,
     ): void {
         abort_unless($instance->current_step_id === $step->id, 410, 'This approval link is no longer current.');
-        Gate::forUser($approver)->authorize('approveViaEmail', $instance->submission);
+        abort_if(
+            Gate::forUser($approver)->denies('approveViaEmail', $instance->submission),
+            403,
+            __('This request is not waiting for your decision. Open it in ApproveDesk to see where it stands.'),
+        );
     }
 }

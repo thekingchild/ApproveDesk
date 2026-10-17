@@ -3,13 +3,11 @@
 namespace App\Services;
 
 use App\Enums\SubmissionStatus;
-use App\Enums\WorkflowActionType;
 use App\Enums\WorkflowStatus;
 use App\Models\Submission;
 use App\Models\User;
 use App\Models\WorkflowInstance;
-use App\Services\Workflow\AssignedStepConstraint;
-use App\Services\Workflow\ReviewRound;
+use App\Services\Workflow\ActionableStepConstraint;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 
@@ -132,36 +130,13 @@ final class ReportService
         return $organization ? 'administrator' : 'viewer';
     }
 
-    /** @return Builder<WorkflowInstance> */
+    /**
+     * The engine's "can act" rule in SQL, shared with every list (RV-ARC-01).
+     *
+     * @return Builder<WorkflowInstance>
+     */
     private function actionRequiredQuery(User $user): Builder
     {
-        return WorkflowInstance::query()
-            ->where('status', WorkflowStatus::Active)
-            ->whereDoesntHave('actions', function (Builder $query) use ($user): void {
-                ReviewRound::constrain($query)
-                    ->where(fn (Builder $seat) => $seat->where('actor_id', $user->id)->orWhere('on_behalf_of_id', $user->id))
-                    ->whereColumn('workflow_actions.step_id', 'workflow_instances.current_step_id')
-                    ->whereIn('action', [
-                        WorkflowActionType::Approve,
-                        WorkflowActionType::ApproveWithConditions,
-                        WorkflowActionType::Reject,
-                        WorkflowActionType::Escalate,
-                    ]);
-            })
-            ->where(function (Builder $eligible) use ($user): void {
-                app(AssignedStepConstraint::class)->constrainInstances($eligible, $user)
-                    ->orWhereHas('delegations', function (Builder $query) use ($user): void {
-                        $query->where('starts_at', '<=', now())
-                            ->where('expires_at', '>', now())
-                            ->where('delegate_id', $user->id)
-                            ->whereColumn('delegations.step_id', 'workflow_instances.current_step_id');
-                    });
-            })
-            ->whereDoesntHave('delegations', function (Builder $query) use ($user): void {
-                $query->where('starts_at', '<=', now())
-                    ->where('expires_at', '>', now())
-                    ->where('delegator_id', $user->id)
-                    ->whereColumn('delegations.step_id', 'workflow_instances.current_step_id');
-            });
+        return app(ActionableStepConstraint::class)->constrain(WorkflowInstance::query(), $user);
     }
 }

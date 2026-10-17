@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Workflow;
 
+use App\Actions\Submissions\SubmitSubmissionAction;
 use App\Enums\AssigneeType;
 use App\Enums\StepType;
 use App\Enums\WorkflowActionType;
@@ -12,10 +13,16 @@ use App\Models\WorkflowInstance;
 use App\Models\WorkflowTemplate;
 use App\Models\WorkflowTemplateStep;
 use App\Services\ApproverWorkbench;
+use App\Services\ReportService;
+use App\Services\Workflow\ActionableStepConstraint;
 use App\Services\WorkflowEngine;
+use App\Support\EmailApprovalLinks;
 use App\Support\SeparationOfDuties;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Livewire;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 /**
@@ -81,6 +88,8 @@ class ApprovalEligibilityParityTest extends TestCase
         $this->assertFalse($this->engine->canAct($instance, $this->first));
         $this->assertFalse(app(ApproverWorkbench::class)->canAct($instance->fresh(), $this->first));
         $this->assertFalse($this->needsMe($this->first, $instance));
+        $this->assertFalse($this->inSql($this->first, $instance));
+        $this->assertTrue($this->inSql($this->second, $instance));
     }
 
     public function test_rv_arc_01_delegation_to_a_since_deactivated_delegate_gives_the_step_back(): void
@@ -95,6 +104,8 @@ class ApprovalEligibilityParityTest extends TestCase
 
         $this->assertRequestPage($this->first, canAct: true, canDelegate: true);
         $this->assertWorkbenchAgrees($this->first, true);
+        $this->first->givePermissionTo(Permission::findOrCreate('approvals.act'));
+        $this->assertSame(1, app(ReportService::class)->dashboard($this->first->fresh())['action_required'], 'Dashboard counts it as waiting on them.');
     }
 
     public function test_rv_arc_01_nobody_can_act_or_delegate_once_the_workflow_is_finished(): void
@@ -104,6 +115,65 @@ class ApprovalEligibilityParityTest extends TestCase
 
         $this->assertRequestPage($this->second, canAct: false, canDelegate: false);
         $this->assertFalse($this->engine->canDelegate($this->instance->fresh(), $this->second));
+    }
+
+    public function test_rv_arc_01_a_delegates_decision_fills_the_delegators_seat_everywhere(): void
+    {
+        $delegate = User::factory()->create();
+        $this->engine->delegate($this->instance, $this->first, $delegate, now()->addDay());
+
+        $this->assertWorkbenchAgrees($delegate, true);
+
+        $this->engine->processAction($this->instance->fresh(), $delegate, WorkflowActionType::Approve);
+
+        $this->assertWorkbenchAgrees($delegate, false);
+        $this->assertWorkbenchAgrees($this->first, false);
+        $this->assertWorkbenchAgrees($this->second, true);
+    }
+
+    public function test_rv_arc_01_a_return_gives_every_seat_the_decision_back(): void
+    {
+        $this->engine->processAction($this->instance, $this->first, WorkflowActionType::Approve);
+        $this->engine->processAction($this->instance->fresh(), $this->second, WorkflowActionType::Return, 'Fix the amount.');
+        app(SubmitSubmissionAction::class)->execute($this->submission->fresh());
+
+        $this->assertWorkbenchAgrees($this->first, true);
+        $this->assertWorkbenchAgrees($this->second, true);
+    }
+
+    public function test_rv_arc_01_role_assignees_and_deactivated_users_agree(): void
+    {
+        $role = Role::findOrCreate('reviewer');
+        $member = User::factory()->create()->assignRole($role);
+        $outsider = User::factory()->create();
+        WorkflowTemplate::query()->update(['is_default' => false]);
+        $template = WorkflowTemplate::factory()->default()->create();
+        WorkflowTemplateStep::factory()->forTemplate($template, 1)->create([
+            'step_type' => StepType::Parallel,
+            'assignee_type' => AssigneeType::Role,
+            'assignee_ids' => [$role->id],
+        ]);
+        $submission = Submission::factory()->create();
+        $instance = $this->engine->initialize($submission);
+
+        $this->assertTrue($this->engine->canAct($instance, $member));
+        $this->assertTrue($this->inSql($member, $instance));
+        $this->assertFalse($this->engine->canAct($instance, $outsider));
+        $this->assertFalse($this->inSql($outsider, $instance));
+
+        $member->forceFill(['is_active' => false])->save();
+        $this->assertFalse($this->inSql($member->fresh(), $instance), 'Deactivated people have nothing to act on.');
+    }
+
+    public function test_rv_arc_01_an_email_link_after_deciding_explains_instead_of_failing_on_click(): void
+    {
+        $instance = $this->instance->fresh(['currentStep']);
+        $url = EmailApprovalLinks::confirmationUrl($instance, $instance->currentStep, $this->first);
+        $this->engine->processAction($instance, $this->first, WorkflowActionType::Approve);
+
+        $this->get($url)
+            ->assertForbidden()
+            ->assertSee('This request is not waiting for your decision.');
     }
 
     private function assertRequestPage(User $viewer, bool $canAct, bool $canDelegate): void
@@ -121,6 +191,16 @@ class ApprovalEligibilityParityTest extends TestCase
         $this->assertSame($expected, $this->engine->canAct($instance, $viewer), 'engine');
         $this->assertSame($expected, app(ApproverWorkbench::class)->canAct($instance, $viewer), 'batch approval');
         $this->assertSame($expected, $this->needsMe($viewer, $instance), 'inbox "needs me"');
+        $this->assertSame($expected, $this->inSql($viewer, $instance), 'dashboard SQL');
+        $this->assertSame($expected, Gate::forUser($viewer)->allows('approveViaEmail', $instance->submission), 'email and chat links');
+    }
+
+    private function inSql(User $viewer, WorkflowInstance $instance): bool
+    {
+        return app(ActionableStepConstraint::class)
+            ->constrain(WorkflowInstance::query(), $viewer)
+            ->whereKey($instance->id)
+            ->exists();
     }
 
     private function needsMe(User $viewer, WorkflowInstance $instance): bool

@@ -7,6 +7,7 @@ use App\Models\Delegation;
 use App\Models\Submission;
 use App\Models\User;
 use App\Models\WorkflowAction;
+use App\Services\WorkflowEngine;
 
 class SubmissionPolicy
 {
@@ -158,24 +159,17 @@ class SubmissionPolicy
         return $user->can('audit.view') && $user->hasActiveAuditorAccess() && $this->view($user, $submission);
     }
 
+    /**
+     * May this person approve through a signed email or chat link right now?
+     * The workflow engine is the only authority on step eligibility (ADR 0008),
+     * so a stale link is refused here instead of failing after the click.
+     */
     public function approveViaEmail(User $user, Submission $submission): bool
     {
-        if (! $user->is_active) {
-            return false;
-        }
-
         $instance = $submission->workflowInstance()->first();
-        $step = $instance?->currentStep;
 
-        if ($instance === null || $step === null) {
-            return false;
-        }
-
-        return $step->assignedUsers($instance->submission)->contains($user)
-            || Delegation::query()->active()
-                ->where('instance_id', $instance->id)
-                ->where('step_id', $step->id)
-                ->where('delegate_id', $user->id)
-                ->exists();
+        return $user->is_active
+            && $instance !== null
+            && app(WorkflowEngine::class)->canAct($instance, $user);
     }
 }
