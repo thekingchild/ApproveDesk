@@ -25,6 +25,7 @@ All notable changes to ApproveDesk are documented here. The project follows
 - **Administrators' accounts show an Edit button only to the System owner (RV-DOC-03).** Other user managers saw **Edit** on an administrator, but saving was always refused with a message about the administrator role. The button is now hidden, an administrator's display-name request is decided by the System owner, and Help describes the rule correctly.
 - **Failed backups are cleared after 30 days (RV-OPS-07).** Backup retention removed old successful backups but kept every failed attempt forever.
 - **Pages read the theme and backup settings with fewer database queries (RV-PERF-20).**
+- **The dashboard and approval pages make fewer database queries (RV-LAR-20).** The pages look and behave the same. Tile counts are combined, role lookups are reused, and new indexes speed up the dashboard on large request tables.
 - **Smaller hardening fixes from the code review.**
   - Branding images are served only as JPG, PNG, WebP or ICO, the types uploads accept; SVG and GIF files are no longer served (RV-SEC-24). A logo or background uploaded as GIF or SVG by an older version needs uploading again.
   - A request holds at most 25 attachments (RV-LAR-21).

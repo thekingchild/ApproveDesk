@@ -16,6 +16,7 @@ use App\Services\ReportService;
 use App\Services\WorkflowEngine;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class DashboardTest extends TestCase
@@ -198,6 +199,64 @@ class DashboardTest extends TestCase
         $after = app(ReportService::class)->dashboard($approver);
         $this->assertSame(0, $after['action_required']);
         $this->assertSame(1, $after['pending_others']);
+    }
+
+    public function test_grouped_tile_counts_match_each_tile_for_an_organization_approver(): void
+    {
+        $admin = User::factory()->create()->assignRole('admin');
+        $colleague = User::factory()->create()->assignRole('approver');
+        $requester = User::factory()->create()->assignRole('submitter');
+        $template = WorkflowTemplate::factory()->default()->create();
+        WorkflowTemplateStep::factory()->forTemplate($template, 1)->create([
+            'step_type' => StepType::Parallel,
+            'assignee_ids' => [$admin->id, $colleague->id],
+        ]);
+        $engine = app(WorkflowEngine::class);
+
+        $waiting = $engine->initialize(Submission::factory()->for($requester, 'submitter')->create());
+        $pendingOthers = $engine->initialize(Submission::factory()->for($requester, 'submitter')->create());
+        $engine->processAction($pendingOthers, new WorkflowActionData($admin, WorkflowActionType::Approve));
+        $completed = $engine->initialize(Submission::factory()->for($requester, 'submitter')->create());
+        $engine->processAction($completed, new WorkflowActionData($admin, WorkflowActionType::Approve));
+        $engine->processAction($completed->refresh(), new WorkflowActionData($colleague, WorkflowActionType::Approve));
+
+        Submission::factory()->for($admin, 'submitter')->create(['status' => SubmissionStatus::Draft]);
+        Submission::factory()->for($admin, 'submitter')->create(['status' => SubmissionStatus::Returned]);
+        Submission::factory()->for($admin, 'submitter')->create(['status' => SubmissionStatus::AwaitingInformation]);
+        Submission::factory()->for($requester, 'submitter')->create(['status' => SubmissionStatus::Draft]);
+
+        $report = app(ReportService::class)->dashboard($admin);
+
+        $this->assertTrue($report['organization']);
+        $this->assertSame(1, $report['action_required']);
+        $this->assertSame([$waiting->id], $report['action_required_items']->modelKeys());
+        $this->assertSame(1, $report['pending_others']);
+        $this->assertSame(1, $report['completed_approvals']);
+        $this->assertSame(1, $report['draft_count']);
+        $this->assertSame(2, $report['needs_response_count']);
+        $this->assertSame(3, $report['requester_attention']);
+        $this->assertSame(7, $report['counts']['total']);
+    }
+
+    public function test_requester_tiles_reuse_the_status_counts_and_skip_empty_lookups(): void
+    {
+        $requester = User::factory()->create()->assignRole('submitter');
+        Submission::factory()->for($requester, 'submitter')->create(['status' => SubmissionStatus::Draft]);
+        Submission::factory()->for($requester, 'submitter')->create(['status' => SubmissionStatus::AwaitingInformation]);
+        Submission::factory()->create(['status' => SubmissionStatus::Draft]);
+
+        DB::enableQueryLog();
+        $report = app(ReportService::class)->dashboard($requester->fresh());
+        $queries = DB::getQueryLog();
+        DB::disableQueryLog();
+
+        $this->assertSame(1, $report['draft_count']);
+        $this->assertSame(1, $report['needs_response_count']);
+        $this->assertCount(0, $report['action_required_items']);
+        // The status counts feed every requester tile, and nothing queries an empty id list (RV-LAR-20).
+        $sql = array_column($queries, 'query');
+        $this->assertCount(1, array_filter($sql, fn (string $query): bool => str_contains($query, 'from "submissions"') && str_contains(strtolower($query), 'count(')));
+        $this->assertCount(0, array_filter($sql, fn (string $query): bool => str_contains($query, '0 = 1')));
     }
 
     public function test_delegated_work_moves_from_the_delegator_dashboard_to_the_delegate(): void

@@ -36,7 +36,7 @@ class QueryBudgetTest extends TestCase
 
         // Global application-theme resolution and announcement eligibility add
         // bounded, row-count-independent lookups to every signed-in page.
-        $this->assertLessThanOrEqual(46, $queries, "Administrator dashboard exceeded its 46-query budget ({$queries}).");
+        $this->assertLessThanOrEqual(28, $queries, "Administrator dashboard exceeded its 28-query budget ({$queries}).");
     }
 
     public function test_approval_inbox_stays_within_its_query_budget(): void
@@ -50,7 +50,7 @@ class QueryBudgetTest extends TestCase
 
         $queries = $this->countQueries(fn () => $this->actingAs($approver)->get(route('approvals.inbox'))->assertOk());
 
-        $this->assertLessThanOrEqual(33, $queries, "Approval inbox exceeded its 33-query budget ({$queries}).");
+        $this->assertLessThanOrEqual(18, $queries, "Approval inbox exceeded its 18-query budget ({$queries}).");
     }
 
     public function test_submission_list_stays_within_its_query_budget(): void

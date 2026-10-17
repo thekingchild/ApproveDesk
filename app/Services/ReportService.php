@@ -10,6 +10,7 @@ use App\Models\WorkflowInstance;
 use App\Services\Workflow\ActionableStepConstraint;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Collection as SupportCollection;
 
 /**
  * Read-only reporting queries used by the role-aware dashboard.
@@ -53,33 +54,41 @@ final class ReportService
             ? $this->actionRequiredQuery($user)->pluck('id')
             : collect();
 
-        $actionRequiredItems = WorkflowInstance::query()
-            ->whereIn('id', $actionRequiredIds)
-            ->with(['submission.submitter', 'currentStep'])
-            ->get()
-            ->sortBy(fn (WorkflowInstance $instance) => $instance->deadlineAt()?->getTimestamp() ?? PHP_INT_MAX)
-            ->take(5)
-            ->values();
+        // Nothing to load when nothing waits on the user (RV-LAR-20).
+        $actionRequiredItems = $actionRequiredIds->isEmpty()
+            ? new Collection
+            : WorkflowInstance::query()
+                ->whereIn('id', $actionRequiredIds)
+                ->with(['submission.submitter', 'currentStep'])
+                ->get()
+                ->sortBy(fn (WorkflowInstance $instance) => $instance->deadlineAt()?->getTimestamp() ?? PHP_INT_MAX)
+                ->take(5)
+                ->values();
 
-        $involvedActive = $canApprove
+        // One grouped count for both approval tiles. Action-required instances are all active,
+        // so leaving them out changes only the in-progress tile (RV-LAR-20).
+        $involvedStatuses = $canApprove
             ? WorkflowInstance::query()
-                ->whereIn('status', [WorkflowStatus::Active, WorkflowStatus::OnHold])
+                ->whereIn('status', [WorkflowStatus::Active, WorkflowStatus::OnHold, WorkflowStatus::Completed, WorkflowStatus::Rejected, WorkflowStatus::Cancelled])
                 ->whereHas('actions', fn (Builder $query) => $query->where('actor_id', $user->id))
                 ->when($actionRequiredIds->isNotEmpty(), fn (Builder $query) => $query->whereNotIn('id', $actionRequiredIds))
-                ->count()
-            : 0;
+                ->selectRaw('status, COUNT(*) as aggregate')
+                ->groupBy('status')
+                ->pluck('aggregate', 'status')
+            : collect();
+        $involvedActive = $this->sumStatuses($involvedStatuses, [WorkflowStatus::Active, WorkflowStatus::OnHold]);
+        $completedApprovals = $this->sumStatuses($involvedStatuses, [WorkflowStatus::Completed, WorkflowStatus::Rejected, WorkflowStatus::Cancelled]);
 
-        $completedApprovals = $canApprove
-            ? WorkflowInstance::query()
-                ->whereIn('status', [WorkflowStatus::Completed, WorkflowStatus::Rejected, WorkflowStatus::Cancelled])
-                ->whereHas('actions', fn (Builder $query) => $query->where('actor_id', $user->id))
-                ->count()
-            : 0;
-
-        $draftCount = (clone $ownSubmissions)->where('status', SubmissionStatus::Draft)->count();
-        $needsResponseCount = (clone $ownSubmissions)
-            ->whereIn('status', [SubmissionStatus::Returned, SubmissionStatus::AwaitingInformation])
-            ->count();
+        // The user's own drafts and returned requests in one grouped count (RV-LAR-20).
+        $ownStatuses = $organization
+            ? (clone $ownSubmissions)
+                ->whereIn('status', [SubmissionStatus::Draft, SubmissionStatus::Returned, SubmissionStatus::AwaitingInformation])
+                ->selectRaw('status, COUNT(*) as aggregate')
+                ->groupBy('status')
+                ->pluck('aggregate', 'status')
+            : $counts;
+        $draftCount = $this->sumStatuses($ownStatuses, [SubmissionStatus::Draft]);
+        $needsResponseCount = $this->sumStatuses($ownStatuses, [SubmissionStatus::Returned, SubmissionStatus::AwaitingInformation]);
         $homeMode = $this->homeMode($user, $canSubmit, $canApprove, $organization);
         $administrator = $homeMode === 'administrator';
 
@@ -108,6 +117,15 @@ final class ReportService
                 ->limit(8)
                 ->get(),
         ];
+    }
+
+    /**
+     * @param  SupportCollection<array-key, mixed>  $counts  aggregate keyed by status value
+     * @param  list<\BackedEnum>  $statuses
+     */
+    private function sumStatuses(SupportCollection $counts, array $statuses): int
+    {
+        return array_sum(array_map(fn (\BackedEnum $status): int => (int) ($counts[$status->value] ?? 0), $statuses));
     }
 
     private function homeMode(User $user, bool $canSubmit, bool $canApprove, bool $organization): string
