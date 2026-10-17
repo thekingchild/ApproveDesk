@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Security\StoreTurnstileCredentialsAction;
+use App\DTOs\TurnstileSettingsData;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -17,12 +18,12 @@ class TurnstileCredentialController extends Controller
             'clear' => ['sometimes', 'boolean'],
         ]);
 
-        $store->execute([
-            'enabled' => $request->boolean('enabled'),
-            'site_key' => $validated['site_key'] ?? '',
-            'secret' => $validated['secret'] ?? null,
-            'clear' => $request->boolean('clear'),
-        ]);
+        $store->execute(new TurnstileSettingsData(
+            enabled: $request->boolean('enabled'),
+            siteKey: (string) ($validated['site_key'] ?? ''),
+            secret: $validated['secret'] ?? null,
+            clear: $request->boolean('clear'),
+        ));
 
         return redirect()
             ->route('settings.security-privacy')

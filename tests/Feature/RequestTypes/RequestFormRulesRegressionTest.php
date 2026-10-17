@@ -6,6 +6,7 @@ use App\Actions\RequestTypes\ArchiveRequestTypeAction;
 use App\Actions\RequestTypes\PublishRequestTypeVersionAction;
 use App\Actions\RequestTypes\SaveRequestTypeDraftAction;
 use App\Actions\RequestTypes\StoreSubmissionFieldValuesAction;
+use App\DTOs\RequestFieldData;
 use App\Enums\RequestFieldType;
 use App\Models\RequestFieldDefinition;
 use App\Models\RequestType;
@@ -195,8 +196,8 @@ class RequestFormRulesRegressionTest extends TestCase
         app(ArchiveRequestTypeAction::class)->execute($type);
 
         app(SaveRequestTypeDraftAction::class)->execute($type->fresh(), $type->name, null, [
-            ['key' => 'reason', 'label' => 'Reason', 'type' => 'short_text'],
-            ['key' => 'notes', 'label' => 'Notes', 'type' => 'long_text'],
+            new RequestFieldData('reason', 'Reason', RequestFieldType::ShortText),
+            new RequestFieldData('notes', 'Notes', RequestFieldType::LongText),
         ], $admin);
         $this->assertFalse($type->fresh()->is_active);
 

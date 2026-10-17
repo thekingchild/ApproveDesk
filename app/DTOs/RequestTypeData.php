@@ -6,7 +6,7 @@ namespace App\DTOs;
 final readonly class RequestTypeData
 {
     /**
-     * @param  array<int, array<string, mixed>>  $fields  in RequestFieldsForm::toStorage() shape
+     * @param  list<RequestFieldData>  $fields
      * @param  array<int, array<string, mixed>>  $selectionRules  as SaveWorkflowSelectionRulesAction takes them
      */
     public function __construct(
