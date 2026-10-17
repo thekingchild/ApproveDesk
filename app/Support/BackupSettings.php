@@ -47,14 +47,21 @@ final class BackupSettings
         return self::value($key, $default) === '1';
     }
 
+    private static bool $settingsTableExists = false;
+
     private static function value(string $key, string $default): string
     {
-        try {
-            if (! Schema::hasTable('settings')) {
+        // Once the table exists it does not go away, so only a "yes" is remembered;
+        // reads stop asking the schema every time (RV-PERF-20).
+        if (! self::$settingsTableExists) {
+            try {
+                self::$settingsTableExists = Schema::hasTable('settings');
+            } catch (\Throwable) {
                 return $default;
             }
-        } catch (\Throwable) {
-            return $default;
+            if (! self::$settingsTableExists) {
+                return $default;
+            }
         }
 
         return (string) (Setting::get($key, $default) ?? $default);

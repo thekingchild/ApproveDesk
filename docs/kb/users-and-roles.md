@@ -6,7 +6,7 @@ The account created during first-time setup is the protected **System owner**. T
 
 ## People with more access than you
 
-You can still edit the name, phone, department, and line manager of someone whose roles go beyond what you could grant. Their **email address** and **account status** are read-only for you, and **Anonymize account** is not offered, because changing them could hand you control of a stronger account. Only the System owner can change these for administrators and for anyone holding permissions above yours.
+Only the System owner can change an administrator's account; for everyone else an administrator's row has no **Edit** button, and an administrator's display-name request is decided by the System owner. For someone else whose roles go beyond what you could grant, you can still edit the name, phone, department, and line manager. Their **email address** and **account status** are read-only for you, and **Anonymize account** is not offered, because changing them could hand you control of a stronger account. Only the System owner can change those.
 
 ## Roles
 

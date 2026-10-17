@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\Themes\ThemeService;
 use Carbon\CarbonImmutable;
 use Database\Factories\ThemeFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -23,6 +24,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Theme extends Model
 {
+    protected static function booted(): void
+    {
+        // ThemeService caches the enabled themes; any change drops that copy (RV-PERF-20).
+        static::saved(fn () => ThemeService::flushCache());
+        static::deleted(fn () => ThemeService::flushCache());
+    }
+
     /** @use HasFactory<ThemeFactory> */
     use HasFactory;
 

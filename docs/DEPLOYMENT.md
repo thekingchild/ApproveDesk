@@ -18,7 +18,7 @@ How ApproveDesk reaches a server and gets configured. Routine releases are autom
 
 On a fresh deploy the app redirects to `/install`. No SSH or artisan knowledge needed for setup:
 
-1. **Welcome & requirements check** — PHP version, extensions, writable `storage/` + `bootstrap/cache/`, DB drivers; green/red per item, blocks progress until greens.
+1. **Welcome & requirements check** — PHP version, extensions, writable `storage/framework/`, `storage/logs/` and `bootstrap/cache/`, a writable application directory (the installer creates `.env` there), DB drivers; green/red per item, blocks progress until greens.
 2. **Database** — enter host/database/user/password (created beforehand in cPanel/Plesk). Installer tests the connection, writes `.env`, generates `APP_KEY`, runs `migrate --force`, seeds roles/permissions/settings.
 3. **First admin** — create the super-admin account (name, email, password).
 4. **Finish** — lock file `storage/app/installed.lock` is written; **every** `/install` URL (including `/install/done`) 404s from then on. Redirect to the branded login page, which shows a one-time “ApproveDesk is ready” message.
@@ -159,7 +159,7 @@ Performance budgets: [PERFORMANCE.md](PERFORMANCE.md).
 |---|---|
 | White page / 500 after upload | `storage/logs/laravel.log`; `.env` present?; PHP version ≥ 8.3 selected in MultiPHP |
 | `/install` is 500 on a brand-new unzip | PHP 8.3+ selected for the domain; `storage/` and `bootstrap/cache/` writable; document root is `public/`. A missing `.env` is expected — the wizard creates it. If the log says `MissingAppKeyException` or `database.sqlite does not exist`, the build is older than the first-run bootstrap fix; replace the app files and retry `/install`. |
-| Installer stuck on requirements | extension missing (compare §1 list); `storage/` not writable |
+| Installer stuck on requirements | extension missing (compare §1 list); `storage/` or the application directory (for `.env`) not writable |
 | Emails not sending | mail credentials in Settings/.env; queue cron running; test via tinker `Mail::raw()` |
 | Styles/JS 404 | `public/build/` missing — deploy the release bundle, not the raw repo |
 | Cron "works" but nothing happens | wrong PHP binary path; check the cron's PHP version matches MultiPHP |

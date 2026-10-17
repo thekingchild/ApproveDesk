@@ -3,7 +3,6 @@
 namespace App\Actions\Users;
 
 use App\DTOs\UserData;
-use App\Enums\SystemRole;
 use App\Models\User;
 use App\Services\Roles\RoleAssignmentService;
 use App\Services\Users\ActiveUserLimitService;
@@ -25,9 +24,7 @@ final class UpdateUserAction
         if ($user->isSystemOwner()) {
             throw ValidationException::withMessages(['user' => __('The System owner cannot be changed from user administration.')]);
         }
-        if (! $actor->can('system_owner') && $user->hasRole(SystemRole::Admin->value)) {
-            throw ValidationException::withMessages(['roles' => __('Only the System owner may change the administrator role.')]);
-        }
+        // Refuses an administrator's account unless the actor is the System owner (UserPolicy::update).
         Gate::forUser($actor)->authorize('update', $user);
         if ($data->isActive !== $user->is_active) {
             Gate::forUser($actor)->authorize('activate', $user);

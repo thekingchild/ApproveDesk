@@ -83,9 +83,11 @@ class UserIdentityProtectionTest extends TestCase
         $this->assertFalse($admin->can('anonymize', $peer));
         $this->assertFalse($admin->can('activate', $peer));
 
+        // A peer administrator cannot even be opened for editing (UserPolicy::update).
+        $this->assertFalse($admin->can('update', $peer));
         Livewire::actingAs($admin)
             ->test('admin.users.user-form')
-            ->call('edit', $peer->id)->call('anonymize')
+            ->call('edit', $peer->id)
             ->assertForbidden();
 
         $this->assertFalse($peer->fresh()->isAnonymized());

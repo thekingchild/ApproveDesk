@@ -12,8 +12,9 @@ use Throwable;
 
 /**
  * App-wide key/value configuration (branding, quotas, mail overrides).
- * Reads are cached forever per key and invalidated on write, so hot paths
- * never touch the table.
+ * All settings are cached together as one key => value map (memoised per
+ * request on top of the cache store) and the map is dropped on every write,
+ * so hot paths never touch the table (ADR 0010).
  *
  * @property int $id
  * @property string $key

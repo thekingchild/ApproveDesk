@@ -4,26 +4,22 @@ namespace App\Services\Themes;
 
 use App\Models\Theme;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
 
 final class ThemeService
 {
     public const MINIMUM_CONTRAST_RATIO = 4.5;
 
+    /** Cache key for the enabled themes; dropped whenever a theme is saved or deleted. */
+    public const CACHE_KEY = 'themes.enabled';
+
     public function effectiveFor(?User $user): Theme
     {
         try {
-            $selected = $user?->theme_id
-                ? Theme::query()->find($user->theme_id)
-                : null;
-            if ($selected instanceof Theme && $selected->is_enabled && $selected->archived_at === null) {
-                return $selected;
-            }
-
-            return Theme::query()->where('is_default', true)->where('is_enabled', true)->whereNull('archived_at')->first()
-                ?? Theme::query()->where('is_enabled', true)->whereNull('archived_at')->orderBy('id')->first()
-                ?? $this->fallback();
+            $themes = $this->enabledThemes();
         } catch (QueryException $exception) {
             if (! Schema::hasTable('themes')) {
                 return $this->fallback();
@@ -31,6 +27,26 @@ final class ThemeService
 
             throw $exception;
         }
+
+        // Resolved from one cached list, so a signed-in page runs no theme queries (RV-PERF-20).
+        return ($user?->theme_id ? $themes->firstWhere('id', $user->theme_id) : null)
+            ?? $themes->firstWhere('is_default', true)
+            ?? $themes->sortBy('id')->first()
+            ?? $this->fallback();
+    }
+
+    /** @return Collection<int, Theme> */
+    private function enabledThemes(): Collection
+    {
+        return Cache::memo()->rememberForever(
+            self::CACHE_KEY,
+            fn (): Collection => Theme::query()->where('is_enabled', true)->whereNull('archived_at')->orderBy('id')->get(),
+        );
+    }
+
+    public static function flushCache(): void
+    {
+        Cache::memo()->forget(self::CACHE_KEY);
     }
 
     public function cssVariables(Theme $theme): string
