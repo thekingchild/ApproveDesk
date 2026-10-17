@@ -11,6 +11,7 @@ use Flux\Flux;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -20,6 +21,7 @@ new #[Title('Webhook endpoints')] class extends Component {
 
     public string $search = '';
 
+    #[Locked]
     public ?int $editingEndpointId = null;
 
     public string $name = '';

@@ -70,8 +70,9 @@ final class Branding
     {
         $css = Setting::get('brand.custom_css');
 
-        // Prevent </style> breakout; this is admin-supplied CSS, not HTML.
-        return $css === null || $css === '' ? null : str_ireplace('</style', '', $css);
+        // Printed raw inside <style>, which only a "</" sequence can end. "<\/" is the
+        // same text to CSS, and one pass can't be rebuilt into "</style" (RV-BUG-39).
+        return $css === null || $css === '' ? null : str_replace('</', '<\\/', $css);
     }
 
     public static function customCodeHtml(): ?string

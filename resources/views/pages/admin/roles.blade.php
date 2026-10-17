@@ -7,10 +7,12 @@ use App\Support\PermissionCatalogue;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
 new #[Title('Roles & permissions')] class extends Component {
+    #[Locked]
     public ?int $editingRoleId = null;
 
     public string $label = '';

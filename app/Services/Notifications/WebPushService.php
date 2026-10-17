@@ -8,6 +8,8 @@ use App\Models\Setting;
 use App\Models\User;
 use App\Support\OutboundDestination;
 use App\Support\OutboundPin;
+use Illuminate\Contracts\Encryption\DecryptException;
+use Illuminate\Support\Facades\Crypt;
 use Minishlink\WebPush\Subscription;
 use Minishlink\WebPush\VAPID;
 use Throwable;
@@ -19,23 +21,58 @@ final class WebPushService
         private readonly OutboundDestination $destination,
     ) {}
 
+    /** Encrypted at rest like every other settings secret (RV-LAR-04). */
+    private const PRIVATE_KEY = 'notifications.web_push.private_key_encrypted';
+
+    /** Plaintext key written before RV-LAR-04; moved to PRIVATE_KEY on first read. */
+    private const LEGACY_PRIVATE_KEY = 'notifications.web_push.private_key';
+
     /**
      * @return array{publicKey: string, privateKey: string}
      */
     public function vapidKeys(): array
     {
         $public = Setting::get('notifications.web_push.public_key');
-        $private = Setting::get('notifications.web_push.private_key');
+        $private = $this->storedPrivateKey();
 
-        if (is_string($public) && $public !== '' && is_string($private) && $private !== '') {
+        if (is_string($public) && $public !== '' && $private !== null) {
             return ['publicKey' => $public, 'privateKey' => $private];
         }
 
         $generated = VAPID::createVapidKeys();
         Setting::put('notifications.web_push.public_key', $generated['publicKey']);
-        Setting::put('notifications.web_push.private_key', $generated['privateKey']);
+        $this->storePrivateKey($generated['privateKey']);
 
         return $generated;
+    }
+
+    private function storedPrivateKey(): ?string
+    {
+        $encrypted = Setting::get(self::PRIVATE_KEY);
+        if (is_string($encrypted) && $encrypted !== '') {
+            try {
+                return Crypt::decryptString($encrypted);
+            } catch (DecryptException) {
+                // Encrypted with another APP_KEY (e.g. a restore onto a new install):
+                // new keys are generated and browsers re-subscribe.
+                return null;
+            }
+        }
+
+        $legacy = Setting::get(self::LEGACY_PRIVATE_KEY);
+        if (! is_string($legacy) || $legacy === '') {
+            return null;
+        }
+
+        $this->storePrivateKey($legacy);
+
+        return $legacy;
+    }
+
+    private function storePrivateKey(string $privateKey): void
+    {
+        Setting::put(self::PRIVATE_KEY, Crypt::encryptString($privateKey));
+        Setting::forget(self::LEGACY_PRIVATE_KEY);
     }
 
     public function publicKey(): string

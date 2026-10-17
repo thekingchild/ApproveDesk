@@ -58,6 +58,7 @@ new #[Title('Submission')] class extends Component {
 
     public ?int $replyParentId = null;
 
+    #[Locked]
     public ?int $editingCommentId = null;
 
     public string $editBody = '';
@@ -71,6 +72,7 @@ new #[Title('Submission')] class extends Component {
 
     public string $resubmissionComment = '';
 
+    #[Locked]
     public ?int $previewFileId = null;
 
     /** The workflow step this page showed; decisions are refused once the request has moved on. */
@@ -190,41 +192,7 @@ new #[Title('Submission')] class extends Component {
     {
         $instance = $this->submission->workflowInstance;
 
-        if ($instance === null || $instance->status->value !== 'active') {
-            return false;
-        }
-
-        $user = Auth::user();
-        $step = $instance->currentStep;
-
-        if ($step === null) {
-            return false;
-        }
-
-        if (SeparationOfDuties::forbids($user, $this->submission)) {
-            return false;
-        }
-
-        $direct = $this->assigneesFor($step)->contains($user);
-        $incoming = Delegation::query()->active()
-            ->where('instance_id', $instance->id)
-            ->where('step_id', $step->id)
-            ->where('delegate_id', $user->id)
-            ->exists();
-        $outgoing = $direct && Delegation::query()->active()
-            ->where('instance_id', $instance->id)
-            ->where('step_id', $step->id)
-            ->where('delegator_id', $user->id)
-            ->whereHas('delegate', fn ($delegate) => $delegate->where('is_active', true))
-            ->exists();
-
-        if ((! $direct && ! $incoming) || $outgoing) {
-            return false;
-        }
-
-        return ! ReviewRound::forSeat($instance->actions, $step->id, (int) $user->id)
-            ->whereIn('action', ['approve', 'reject', 'escalate'])
-            ->isNotEmpty();
+        return $instance !== null && app(WorkflowEngine::class)->canAct($instance, Auth::user());
     }
 
     /** True when the viewer would be an approver on the current step but separation of duties excludes them. */
@@ -243,21 +211,8 @@ new #[Title('Submission')] class extends Component {
     public function canDelegate(): bool
     {
         $instance = $this->submission->workflowInstance;
-        $step = $instance?->currentStep;
-        $user = Auth::user();
 
-        return $instance?->status->value === 'active'
-            && $step?->allow_delegation
-            && $this->assigneesFor($step)->contains($user)
-            && ! Delegation::query()->active()
-                ->where('instance_id', $instance->id)
-                ->where('step_id', $step->id)
-                ->where('delegator_id', $user->id)
-                ->whereHas('delegate', fn ($delegate) => $delegate->where('is_active', true))
-                ->exists()
-            && ! ReviewRound::forSeat($instance->actions, $step->id, (int) $user->id)
-                ->whereIn('action', ['approve', 'reject', 'escalate'])
-                ->isNotEmpty();
+        return $instance !== null && app(WorkflowEngine::class)->canDelegate($instance, Auth::user());
     }
 
     #[Computed]
@@ -464,7 +419,7 @@ new #[Title('Submission')] class extends Component {
 
     public function startEdit(int $commentId): void
     {
-        $comment = Comment::query()->findOrFail($commentId);
+        $comment = $this->submission->comments()->findOrFail($commentId);
         $this->authorize('update', $comment);
         $this->editingCommentId = $comment->id;
         $this->editBody = $comment->body;
@@ -474,7 +429,9 @@ new #[Title('Submission')] class extends Component {
     public function saveEdit(): void
     {
         $this->validate(['editBody' => ['required', 'string', 'max:5000']]);
-        $comment = Comment::query()->findOrFail($this->editingCommentId);
+        // Only a comment on this request that the viewer may still edit (RV-LAR-15).
+        $comment = $this->submission->comments()->findOrFail($this->editingCommentId);
+        $this->authorize('update', $comment);
 
         try {
             app(EditCommentAction::class)->execute($comment, Auth::user(), $this->editBody);
@@ -1075,7 +1032,7 @@ new #[Title('Submission')] class extends Component {
     @if ($this->myDelegation)
         <flux:callout variant="secondary" icon="user-plus" class="mt-6" data-test="my-delegation">
             <flux:callout.heading>{{ __('You delegated this step to :name', ['name' => $this->myDelegation->delegate?->name]) }}</flux:callout.heading>
-            <flux:callout.text>{{ __('Until :time. Take it back to decide yourself; the change is recorded in the history.', ['time' => $this->myDelegation->expires_at->timezone((string) config('app.timezone'))->format('d M Y H:i')]) }}</flux:callout.text>
+            <flux:callout.text>{{ __('Until :time. Take it back to decide yourself; the change is recorded in the history.', ['time' => \App\Support\LocalTime::display($this->myDelegation->expires_at, $this->browserTimezone).' ('.\App\Support\LocalTime::label($this->browserTimezone).')']) }}</flux:callout.text>
             <x-slot name="actions">
                 <flux:button size="sm" wire:click="takeBackDelegation" wire:confirm="{{ __('Take this step back from :name now?', ['name' => $this->myDelegation->delegate?->name]) }}" data-test="take-back-delegation">{{ __('Take back') }}</flux:button>
             </x-slot>

@@ -146,9 +146,9 @@ new #[Title('Out of office')] class extends Component {
         @forelse ($this->schedules as $schedule)
             <li class="rounded-lg border border-zinc-200 p-3 text-sm dark:border-zinc-700">
                 <p class="font-medium">
-                    {{ $schedule->starts_at->format('d M Y H:i') }}
+                    {{ \App\Support\LocalTime::display($schedule->starts_at, $this->browserTimezone) }}
                     –
-                    {{ $schedule->ends_at->format('d M Y H:i') }}
+                    {{ \App\Support\LocalTime::display($schedule->ends_at, $this->browserTimezone) }}
                 </p>
                 <p class="text-zinc-500">
                     {{ $schedule->fallback?->name ? __('Fallback: :name', ['name' => $schedule->fallback->name]) : __('No fallback') }}

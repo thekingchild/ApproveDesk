@@ -14,7 +14,19 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Fixed
 
+- **The request page and the approvals inbox agree with what the workflow will accept (RV-ARC-01).** After you approve (or approve with conditions) a step that several people decide, the decision buttons and **Delegate** no longer stay on the request page. Batch approval and the inbox's "needs me" now apply the separation-of-duties setting, and a delegation to someone who has since been deactivated gives the step back to you in the inbox as it already did in the workflow. All three now ask the workflow engine directly instead of keeping their own copy of the rules.
 - **Announcements only show to the people they are for (RV-SEC-23).** The announcement banner no longer accepts announcement IDs from the browser, and it re-checks that each announcement is still published and aimed at the viewer before showing it. Previously a signed-in user could make the banner display draft, archived, or other-audience announcements.
+- **Integration deliveries include the request's reference number (RV-LAR-02).** HTTP and chat connectors were sent `"reference": null` because the payload read a field that doesn't exist; the mail connector's subject had the same fault.
+- **Secrets and deliveries hold up when something fails.**
+  - The web-push signing key is now encrypted in the database like every other stored secret (RV-LAR-04). Existing keys are moved over on first use, so browsers stay subscribed.
+  - Sign-in alerts, account-recovery notices, and display-name decisions are queued instead of sent during the request, so a mail outage no longer turns a successful sign-in or an administrator's recovery action into an error page (RV-LAR-06).
+  - An integration or webhook delivery whose job times out or runs out of retries is now marked dead-letter or failed (and can be replayed from Operations) instead of staying Pending forever. A connector's rate limit now waits without using up one of the delivery's attempts (RV-LAR-07).
+- **Pages only act on the records they were opened for.**
+  - Updating a backup destination now checks every field the way adding one does, so a bad endpoint or an over-long name shows a form error instead of an error page (RV-LAR-08).
+  - The record a page is editing (user, department, role, workflow template, request type, webhook, announcement, theme, workflow in the builder, inbox preview, comment, and file preview) can no longer be changed from the browser. Editing a comment on a request only finds comments on that request, and saving re-checks that you may still edit it (RV-LAR-15). A lock on the request-type builder that was silently ignored now applies (RV-ARC-04).
+  - CSV user imports are limited to 5,000 rows, as the Help already said and spreadsheets already enforced (RV-LAR-17).
+- **Times you enter are shown back the way you entered them (RV-ARC-17).** Out-of-office periods, auditor access windows, and the delegation end on a request were read in your browser's time zone but listed in the installation's, under a note saying "Times are in your time zone". They are now listed in your time zone too, and auditor access shows the time as well as the date.
+- **Custom CSS on the sign-in page works as written (RV-BUG-39).** Child selectors (`>`) and quoted strings were turned into HTML entities and broke; the CSS is now output as written, and a `</style` sequence can no longer be rebuilt to close the style block.
 - **Notifications tell the truth and reach the right people.**
   - Chat notifications that Slack, Teams, Telegram or WhatsApp refuse now show as Failed in the delivery log, and approval requests are retried, instead of showing as Sent. Notification types without a WhatsApp template show as Skipped.
   - Chat messages held during reminder quiet hours keep their full wording and secure approval link, and are dropped if the request has moved past that step.

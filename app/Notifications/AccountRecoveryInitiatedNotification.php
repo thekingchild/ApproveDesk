@@ -3,12 +3,20 @@
 namespace App\Notifications;
 
 use App\Models\User;
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-final class AccountRecoveryInitiatedNotification extends Notification
+/** Queued so a mail outage can't fail the sign-in or admin action that triggers it (RV-LAR-06). */
+final class AccountRecoveryInitiatedNotification extends Notification implements ShouldQueue
 {
-    public function __construct(private readonly string $kind) {}
+    use Queueable;
+
+    public function __construct(private readonly string $kind)
+    {
+        $this->afterCommit();
+    }
 
     /** @return list<string> */
     public function via(User $notifiable): array
