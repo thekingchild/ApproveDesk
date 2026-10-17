@@ -72,8 +72,8 @@ class WorkflowBuilderStaleSaveTest extends TestCase
 
     public function test_templates_page_edit_is_refused_after_the_builder_saved(): void
     {
-        $stale = Livewire::actingAs($this->first)->test('pages::admin.workflow-templates')
-            ->call('editTemplate', $this->template->id);
+        $stale = Livewire::actingAs($this->first)->test('admin.workflow-templates.editor')
+            ->call('edit', $this->template->id);
 
         Livewire::actingAs($this->second)->test('pages::admin.workflow-builder', ['template' => $this->template->id])
             ->set('steps.0.name', 'Finance')->call('saveDraft')->assertHasNoErrors();
@@ -82,8 +82,8 @@ class WorkflowBuilderStaleSaveTest extends TestCase
         $this->assertSame('Finance', $this->template->fresh()->draftVersion->steps->first()->name);
 
         // A fresh edit loads the latest version and saves normally.
-        Livewire::actingAs($this->first)->test('pages::admin.workflow-templates')
-            ->call('editTemplate', $this->template->id)
+        Livewire::actingAs($this->first)->test('admin.workflow-templates.editor')
+            ->call('edit', $this->template->id)
             ->set('description', 'Edited after reload')->call('save')->assertHasNoErrors();
         $this->assertSame('Edited after reload', $this->template->fresh()->description);
     }

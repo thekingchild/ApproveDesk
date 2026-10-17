@@ -52,8 +52,8 @@ class PhaseOneAcceptanceTest extends TestCase
         );
 
         Livewire::actingAs($admin)
-            ->test('pages::admin.workflow-templates')
-            ->call('createTemplate')
+            ->test('admin.workflow-templates.editor')
+            ->call('create')
             ->set('name', 'Three-level company approval')
             ->set('description', 'Operational acceptance workflow')
             ->set('isDefault', true)

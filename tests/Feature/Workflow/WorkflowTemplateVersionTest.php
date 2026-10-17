@@ -44,8 +44,8 @@ class WorkflowTemplateVersionTest extends TestCase
         $this->assertSame($firstVersion?->steps->first()->id, $instance->current_step_id);
 
         Livewire::actingAs($admin)
-            ->test('pages::admin.workflow-templates')
-            ->call('editTemplate', $template->id)
+            ->test('admin.workflow-templates.editor')
+            ->call('edit', $template->id)
             ->set('steps.0.name', 'Director review')
             ->set('changeSummary', 'Rename the first step.')
             ->call('publish')
@@ -82,8 +82,8 @@ class WorkflowTemplateVersionTest extends TestCase
         $approver = User::factory()->create();
 
         Livewire::actingAs($admin)
-            ->test('pages::admin.workflow-templates')
-            ->call('createTemplate')
+            ->test('admin.workflow-templates.editor')
+            ->call('create')
             ->set('name', 'Versioned chain')
             ->set('isDefault', true)
             ->set('steps.0.assigneeIds', [$approver->id])

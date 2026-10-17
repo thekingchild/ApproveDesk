@@ -10,13 +10,13 @@ use App\Models\User;
 use App\Models\WorkflowTemplate;
 use App\Models\WorkflowTemplateVersion;
 use App\Services\Workflow\StepOutcomes;
-use App\Services\Workflow\WorkflowAssigneeGuard;
+use App\Services\WorkflowTemplates\WorkflowTemplateRules;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 final class UpdateWorkflowTemplateAction
 {
-    public function __construct(private readonly WorkflowAssigneeGuard $assignees) {}
+    public function __construct(private readonly WorkflowTemplateRules $rules) {}
 
     /**
      * @param  string|null  $expectedToken  WorkflowTemplate::editionToken() as the editor
@@ -24,6 +24,8 @@ final class UpdateWorkflowTemplateAction
      */
     public function execute(WorkflowTemplate $template, WorkflowTemplateData $data, User $editor, ?string $expectedToken = null): WorkflowTemplate
     {
+        $this->rules->assertTemplate($data);
+
         return DB::transaction(function () use ($template, $data, $editor, $expectedToken): WorkflowTemplate {
             /** @var WorkflowTemplate $template */
             $template = WorkflowTemplate::query()
@@ -56,7 +58,7 @@ final class UpdateWorkflowTemplateAction
             $baseline = $template->draftVersion ?? $template->publishedVersion;
 
             if ($baseline === null || $this->structureChanged($baseline, $data)) {
-                $this->assignees->assertAssignable($data->steps);
+                $this->rules->assertSteps($data->steps);
                 $draft = $this->editableDraft($template, $editor, $data->changeSummary);
                 StepOutcomes::assertValid($data->outcomes);
                 $draft->forceFill(['outcomes' => $data->outcomes !== [] ? $data->outcomes : null])->save();

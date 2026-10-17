@@ -45,8 +45,8 @@ class WorkflowTemplateManagementTest extends TestCase
         $secondApprover = User::factory()->create();
 
         Livewire::actingAs($this->admin)
-            ->test('pages::admin.workflow-templates')
-            ->call('createTemplate')
+            ->test('admin.workflow-templates.editor')
+            ->call('create')
             ->set('name', 'Executive approvals')
             ->set('description', 'Two approval levels')
             ->set('isDefault', true)
@@ -83,8 +83,8 @@ class WorkflowTemplateManagementTest extends TestCase
         $template = WorkflowTemplate::factory()->default()->sequential([$approver, $approver])->create();
 
         Livewire::actingAs($this->admin)
-            ->test('pages::admin.workflow-templates')
-            ->call('editTemplate', $template->id)
+            ->test('admin.workflow-templates.editor')
+            ->call('edit', $template->id)
             ->call('moveStep', 1, -1)
             ->set('steps.0.name', 'Now first')
             ->set('steps.1.name', 'Now second')
@@ -105,8 +105,8 @@ class WorkflowTemplateManagementTest extends TestCase
         User::factory()->create(['department_id' => $department->id]);
 
         Livewire::actingAs($this->admin)
-            ->test('pages::admin.workflow-templates')
-            ->call('createTemplate')
+            ->test('admin.workflow-templates.editor')
+            ->call('create')
             ->set('name', 'Role and department flow')
             ->set('submissionTypes', ['request'])
             ->set('steps', [
@@ -143,8 +143,8 @@ class WorkflowTemplateManagementTest extends TestCase
         $approvers = User::factory()->count(3)->create();
 
         Livewire::actingAs($this->admin)
-            ->test('pages::admin.workflow-templates')
-            ->call('createTemplate')
+            ->test('admin.workflow-templates.editor')
+            ->call('create')
             ->set('name', 'Committee quorum flow')
             ->set('submissionTypes', ['document'])
             ->set('steps.0.stepType', StepType::Quorum->value)
@@ -169,8 +169,8 @@ class WorkflowTemplateManagementTest extends TestCase
         $approver = User::factory()->create();
 
         Livewire::actingAs($this->admin)
-            ->test('pages::admin.workflow-templates')
-            ->call('createTemplate')
+            ->test('admin.workflow-templates.editor')
+            ->call('create')
             ->set('name', 'Non-delegable flow')
             ->set('submissionTypes', ['request'])
             ->set('steps.0.assigneeIds', [$approver->id])
@@ -192,8 +192,8 @@ class WorkflowTemplateManagementTest extends TestCase
         $approver = User::factory()->create();
 
         Livewire::actingAs($this->admin)
-            ->test('pages::admin.workflow-templates')
-            ->call('createTemplate')
+            ->test('admin.workflow-templates.editor')
+            ->call('create')
             ->set('name', 'Timed approval flow')
             ->set('submissionTypes', ['document'])
             ->set('steps.0.assigneeIds', [$approver->id])
@@ -218,8 +218,8 @@ class WorkflowTemplateManagementTest extends TestCase
         $executiveApprover = User::factory()->create();
 
         Livewire::actingAs($this->admin)
-            ->test('pages::admin.workflow-templates')
-            ->call('createTemplate')
+            ->test('admin.workflow-templates.editor')
+            ->call('create')
             ->set('name', 'Value-based automation')
             ->set('submissionTypes', ['memo'])
             ->set('steps', [
@@ -286,8 +286,8 @@ class WorkflowTemplateManagementTest extends TestCase
         $approvers = User::factory()->count(2)->create();
 
         Livewire::actingAs($this->admin)
-            ->test('pages::admin.workflow-templates')
-            ->call('createTemplate')
+            ->test('admin.workflow-templates.editor')
+            ->call('create')
             ->set('name', 'Impossible committee flow')
             ->set('submissionTypes', ['note'])
             ->set('steps.0.stepType', StepType::Quorum->value)
@@ -308,8 +308,8 @@ class WorkflowTemplateManagementTest extends TestCase
         $publishedStepId = $instance->current_step_id;
 
         Livewire::actingAs($this->admin)
-            ->test('pages::admin.workflow-templates')
-            ->call('editTemplate', $template->id)
+            ->test('admin.workflow-templates.editor')
+            ->call('edit', $template->id)
             ->set('steps.0.name', 'Rewritten historical step')
             ->set('changeSummary', 'Clarify first step.')
             ->call('save')
@@ -321,8 +321,8 @@ class WorkflowTemplateManagementTest extends TestCase
         $this->assertSame($publishedStepId, $instance->fresh()->current_step_id);
 
         Livewire::actingAs($this->admin)
-            ->test('pages::admin.workflow-templates')
-            ->call('editTemplate', $template->id)
+            ->test('admin.workflow-templates.editor')
+            ->call('edit', $template->id)
             ->set('name', 'Renamed safely')
             ->call('save')
             ->assertHasNoErrors();
@@ -339,8 +339,8 @@ class WorkflowTemplateManagementTest extends TestCase
         ]);
 
         Livewire::actingAs($this->admin)
-            ->test('pages::admin.workflow-templates')
-            ->call('createTemplate')
+            ->test('admin.workflow-templates.editor')
+            ->call('create')
             ->set('name', 'Second memo flow')
             ->set('submissionTypes', ['memo'])
             ->set('steps.0.assigneeIds', [$approver->id])
@@ -356,8 +356,8 @@ class WorkflowTemplateManagementTest extends TestCase
         $approver = User::factory()->create();
 
         Livewire::actingAs($this->admin)
-            ->test('pages::admin.workflow-templates')
-            ->call('createTemplate')
+            ->test('admin.workflow-templates.editor')
+            ->call('create')
             ->set('name', 'Unlabelled flow')
             ->set('submissionTypes', [])
             ->set('steps.0.assigneeIds', [$approver->id])
@@ -373,8 +373,8 @@ class WorkflowTemplateManagementTest extends TestCase
         $oldDefault = WorkflowTemplate::factory()->default()->sequential([$approver])->create();
 
         Livewire::actingAs($this->admin)
-            ->test('pages::admin.workflow-templates')
-            ->call('createTemplate')
+            ->test('admin.workflow-templates.editor')
+            ->call('create')
             ->set('name', 'New default')
             ->set('isDefault', true)
             ->set('steps.0.assigneeIds', [$approver->id])
