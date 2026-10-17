@@ -28,7 +28,9 @@ class UserPolicy
             return false;
         }
 
-        return true;
+        // Only the System owner changes an administrator's account, so the Edit
+        // button only shows when the save would be accepted (ADR 0008, RV-DOC-03).
+        return ! $target->hasRole(SystemRole::Admin->value) || $user->isSystemOwner();
     }
 
     /**

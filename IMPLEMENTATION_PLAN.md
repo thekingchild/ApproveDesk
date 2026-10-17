@@ -857,7 +857,7 @@ This phase is additive. It does not reopen Phase 9.3 verification, `workflow_act
 - **Schedule:** existing one-minute cron. Default database backup daily at 02:30, files at 02:45 (before retention at 04:15 so a pre-purge copy exists). Each kind can be disabled. Manual **Backup now** per kind.
 - **Quick restore:** pick a snapshot → copy to a scratch path → run existing `BackupVerifier` / restore drill → only then **Promote** with typed confirmation. Promote of a database snapshot replaces the live schema in a maintenance window; it never UPDATE/DELETEs `workflow_actions` in place. Files promote writes into a new prefix then swaps. Failed verify refuses promote.
 - Credentials encrypted, posted outside Livewire. Secrets redacted from logs and last-error text.
-- Shared hosting: no Redis; queue `database`; PHP table dump when `mysqldump` is absent; SQLite is a consistent file copy. Dump timeout and `withoutOverlapping` required.
+- Shared hosting: no Redis; queue `database`; PHP table dump when `mysqldump` is absent; SQLite is a consistent file copy. Dump timeout and `withoutOverlapping` required. *(As built: the dump is always written in PHP (`CreateDatabaseBackupAction::writeSqlDump`); `mysqldump` is never called. RV-DOC-03.)*
 
 ### BK.1 Domain and storage — Complete (2026-08-24)
 
@@ -876,14 +876,14 @@ This phase is additive. It does not reopen Phase 9.3 verification, `workflow_act
 
 - **BK-DST-01 — Complete (2026-08-24):** Local always available when the disk is writable.
 - **BK-DST-02 — Complete (2026-08-24):** S3-compatible: key, secret, region, bucket, optional endpoint, path-style flag, prefix. Test connection lists the prefix.
-- **BK-DST-03 — Complete (2026-08-24):** Google Drive: service-account JSON or OAuth refresh token stored encrypted; folder id; unattended schedule must work without a browser. Test connection lists the folder. This is not the Phase 8.3 Drive connector.
+- **BK-DST-03 — Complete (2026-08-24):** Google Drive: service-account JSON or OAuth refresh token stored encrypted; folder id; unattended schedule must work without a browser. Test connection lists the folder. This is not the Phase 8.3 Drive connector. *(As built: an OAuth refresh token with its client id and secret; service-account JSON is not supported. RV-DOC-03.)*
 
 ### BK.4 Quick restore — Complete (2026-08-24)
 
 - **BK-RST-01 — Complete (2026-08-24):** Restore preview: download/copy snapshot to scratch, run `BackupVerifier` (database) or file-count/hash manifest (files). Persist `verified_at`.
 - **BK-RST-02 — Complete (2026-08-24):** **Promote database** only after verify. Maintenance flag / 503 for other users. Replace DB from the verified scratch copy. Confirm `workflow_actions` count matches the snapshot manifest. Then `ops:reconcile` (report only).
 - **BK-RST-03 — Complete (2026-08-24):** **Promote files** only after verify. Write to `restore-holding/` then swap directories. Do not delete the previous tree until the swap succeeds.
-- **BK-RST-04 — Complete (2026-08-24):** Promote is `settings.manage`, typed confirmation of the snapshot id, structured log with actor. No WorkflowEngine calls.
+- **BK-RST-04 — Complete (2026-08-24):** Promote is `settings.manage`, typed confirmation of the snapshot id, structured log with actor. No WorkflowEngine calls. *(As built: promote needs the `backups.promote` permission, which replaced `settings.manage` in the permission catalogue. RV-DOC-03.)*
 
 ### BK.5 Tests, docs, and exit gate — Complete (2026-08-24)
 

@@ -72,6 +72,42 @@ jobs:
           path: coverage.xml
           retention-days: 7
 
+  php-newest:
+    # The newest supported PHP, tests only; the php job above (8.4) also runs lint,
+    # static analysis and coverage (RV-TEST-06). Not a required check yet.
+    name: php 8.5
+    runs-on: ubuntu-latest
+
+    env:
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ":memory:"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+        with:
+          php-version: "8.5"
+          extensions: bcmath, ctype, curl, dom, fileinfo, mbstring, openssl, pdo, tokenizer, xml, zip, gd, pdo_sqlite
+          tools: composer:v2
+          coverage: none
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Prepare application
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Parallel tests
+        run: php artisan test --parallel
+
   mysql:
     runs-on: ubuntu-latest
 

@@ -14,13 +14,33 @@ final class RetainBackupSnapshotsAction
 {
     public function __construct(private readonly BackupTransportFactory $transports) {}
 
+    /** Failed attempts are kept this long for diagnosis, then removed (RV-OPS-07). */
+    public const FAILED_KEEP_DAYS = 30;
+
     public function execute(): int
     {
         $deleted = 0;
         $deleted += $this->prune(BackupSnapshotKind::Database, BackupSettings::databaseRetainDays());
         $deleted += $this->prune(BackupSnapshotKind::Files, BackupSettings::filesRetainDays());
+        $deleted += $this->pruneFailed();
 
         return $deleted;
+    }
+
+    private function pruneFailed(): int
+    {
+        $failed = BackupSnapshot::query()
+            ->with('destination')
+            ->where('status', BackupSnapshotStatus::Failed)
+            ->where('created_at', '<', now()->subDays(self::FAILED_KEEP_DAYS))
+            ->get();
+
+        foreach ($failed as $snapshot) {
+            $this->forgetFile($snapshot);
+            $snapshot->delete();
+        }
+
+        return $failed->count();
     }
 
     private function prune(BackupSnapshotKind $kind, int $days): int
@@ -32,6 +52,7 @@ final class RetainBackupSnapshotsAction
             ->first();
 
         $expired = BackupSnapshot::query()
+            ->with('destination')
             ->where('kind', $kind)
             ->where('retained_until', '<', now())
             ->where('status', '!=', BackupSnapshotStatus::Failed)

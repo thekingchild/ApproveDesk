@@ -17,6 +17,7 @@ use App\Services\Backups\MysqlDumpLoader;
 use App\Services\Backups\SqliteSnapshotLoader;
 use App\Services\Operations\BackupVerifier;
 use App\Services\Operations\OperationsReconciler;
+use App\Services\Themes\ThemeService;
 use App\Support\LongRunningOperation;
 use App\Support\PermissionCache;
 use Illuminate\Support\Facades\Artisan;
@@ -91,6 +92,7 @@ final class PromoteDatabaseBackupAction
         $snapshotActions = (int) ($snapshot->manifest['workflow_actions'] ?? $liveActions);
         // The settings and permission tables were replaced wholesale; drop cached copies.
         Setting::flushCache();
+        ThemeService::flushCache();
         PermissionCache::forgetIfReady();
 
         $this->rememberPromoted($snapshot, $actor, [

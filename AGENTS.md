@@ -74,7 +74,7 @@ app/
 - Gate every controller/Livewire action with a Policy class. Never check role names directly in controllers ("`$user->hasRole('admin')`" in a controller is a bug; put it in a Policy).
 - Validate all input via Form Requests with strict types.
 - Sanitize rich-text HTML server-side before storage.
-- Generate reference numbers with a retry loop around the unique constraint (race-safe).
+- Generate reference numbers only through `ReferenceNumberGenerator`: a locked per-scope counter in sequential mode, a bounded reservation loop in random mode, with the unique index on `submissions.reference_number` as the final guard (ADR 0014).
 - Write tests first for engine logic; keep coverage ≥ 80% overall, 100% on `WorkflowEngine`.
 
 **Don't:**

@@ -15,6 +15,9 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Fixed
 
+- **Administrators' accounts show an Edit button only to the System owner (RV-DOC-03).** Other user managers saw **Edit** on an administrator, but saving was always refused with a message about the administrator role. The button is now hidden, an administrator's display-name request is decided by the System owner, and Help describes the rule correctly.
+- **Failed backups are cleared after 30 days (RV-OPS-07).** Backup retention removed old successful backups but kept every failed attempt forever.
+- **Pages read the theme and backup settings with fewer database queries (RV-PERF-20).**
 - **Smaller hardening fixes from the code review.**
   - Branding images are served only as JPG, PNG, WebP or ICO, the types uploads accept; SVG and GIF files are no longer served (RV-SEC-24). A logo or background uploaded as GIF or SVG by an older version needs uploading again.
   - A request holds at most 25 attachments (RV-LAR-21).
@@ -134,6 +137,7 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Changed
 
+- **The default cache store is `file` (RV-DOC-03).** `.env.example` and `config/cache.php` now match what the web installer writes and what shared hosting supports. Installations that already set `CACHE_STORE` are unaffected.
 - **Docker is no longer a supported way to run ApproveDesk (RV-ARC-22).** Shared hosting (cPanel/Plesk) is the only supported deployment. The Docker Compose, EasyPanel and Coolify instructions are removed from the deployment guide; the `Dockerfile` and `compose.yaml` stay in the repository marked as unsupported, because they were never built or tested in CI and the installer probably could not finish inside the image.
 - **For developers: classes moved (ADR 0007).** `SeparationOfDuties` → `App\Services\Workflow`; `DnsResolver`, `BackupTransport` → `App\Contracts`; `Turnstile`, `SecondFactorAssurance` → `App\Services\Auth`; `ScheduledBackupHealth` → `App\Services\Backups`; `Installer` → `App\Services\Install`; `PublicWebsite` → `App\Http`; `StepConditionForm` → `App\Livewire\Forms`; `RichTextSanitizer`, `SqlStatementStream`, `UserImportReadFilter`, `WorkflowTemplateSchemaHasher` → `App\Support`. Behaviour is unchanged; code that imports the old names must be updated.
 - The **Create comments**, **Send reminders**, **Withdraw requests**, **Export audit evidence**, and **Manage auditor access** permissions are now enforced. An upgrade migration grants them to every existing role that already had the ability, so nobody loses access; removing one from a role now removes that ability. Requesters can always comment on, remind about, and open their own requests.

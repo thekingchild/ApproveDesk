@@ -117,7 +117,9 @@ class SystemOwnerAuthorizationTest extends TestCase
         $actor = User::factory()->create()->assignRole('admin');
         $target = User::factory()->create()->assignRole('admin');
 
-        $this->expectException(ValidationException::class);
+        // Refused by UserPolicy::update, which also hides the Edit button (ADR 0008).
+        $this->assertFalse($actor->can('update', $target));
+        $this->expectException(AuthorizationException::class);
 
         app(UpdateUserAction::class)->execute($target, new UserData(
             name: 'Changed Admin',
