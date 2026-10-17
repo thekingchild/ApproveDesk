@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Enums\NotificationFrequency;
 use App\Models\User;
 use App\Notifications\NotificationDigest;
+use App\Services\Notifications\DigestSchedule;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -20,7 +21,7 @@ class SendNotificationDigests implements ShouldBeUnique, ShouldQueue
      */
     public int $uniqueFor = 3600;
 
-    public function handle(): void
+    public function handle(DigestSchedule $schedule): void
     {
         User::query()
             // Deactivated and anonymized people get no digest (RV-BUG-20).
@@ -29,27 +30,22 @@ class SendNotificationDigests implements ShouldBeUnique, ShouldQueue
                 NotificationFrequency::Daily,
                 NotificationFrequency::Weekly,
             ])
-            ->chunkById(100, function ($users): void {
+            ->chunkById(100, function ($users) use ($schedule): void {
                 foreach ($users as $user) {
-                    $this->sendWhenDue($user);
+                    $this->sendWhenDue($user, $schedule);
                 }
             });
     }
 
-    private function sendWhenDue(User $user): void
+    private function sendWhenDue(User $user, DigestSchedule $schedule): void
     {
-        $days = $user->notification_frequency === NotificationFrequency::Weekly ? 7 : 1;
-        $lastSent = $user->last_notification_digest_at;
-
-        // Compare calendar days, not exact instants: a run that starts a few
-        // seconds earlier than yesterday's is still due (RV-BUG-18).
-        if ($lastSent !== null && $lastSent->copy()->startOfDay()->isAfter(now()->subDays($days)->startOfDay())) {
+        $now = now();
+        if (! $schedule->isDue($user, $now)) {
             return;
         }
 
-        $since = $lastSent ?? now()->subDays($days);
         $notifications = $user->notifications()
-            ->where('created_at', '>', $since)
+            ->where('created_at', '>', $schedule->coversSince($user, $now))
             ->oldest('created_at')
             ->get();
 
@@ -67,6 +63,6 @@ class SendNotificationDigests implements ShouldBeUnique, ShouldQueue
         ])->all();
 
         $user->notify(new NotificationDigest($items));
-        $user->update(['last_notification_digest_at' => now()]);
+        $user->update(['last_notification_digest_at' => $now]);
     }
 }

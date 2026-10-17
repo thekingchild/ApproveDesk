@@ -2,17 +2,15 @@
 
 namespace App\Jobs;
 
-use App\Enums\DispositionStatus;
-use App\Enums\SubmissionStatus;
-use App\Models\Setting;
 use App\Models\Submission;
+use App\Services\Audit\RetentionPolicy;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Foundation\Queue\Queueable;
 
 /**
- * Retires requests past their retention window by soft-deleting them. Nothing
+ * Retires the requests RetentionPolicy says are due, by soft-deleting them. Nothing
  * is purged: the request, its workflow history and its files stay stored as
  * audit evidence (RV-DATA-08).
  */
@@ -37,26 +35,12 @@ class ApplyRetentionJob implements ShouldBeUnique, ShouldQueue
 
     private float $deadline = 0.0;
 
-    public function handle(): void
+    public function handle(RetentionPolicy $policy): void
     {
         $this->deadline = microtime(true) + self::TIME_BUDGET_SECONDS;
-        $draftDays = max(1, (int) Setting::get('retention.draft_days', '90'));
-        $completedDays = max(1, (int) Setting::get('retention.completed_days', '2555'));
 
-        $this->retire(Submission::query()
-            ->where('status', SubmissionStatus::Draft)
-            ->where('created_at', '<', now()->subDays($draftDays))
-            ->whereDoesntHave('legalHolds', fn ($query) => $query->active()));
-
-        $this->retire(Submission::query()
-            ->whereIn('status', [
-                SubmissionStatus::Approved,
-                SubmissionStatus::Rejected,
-                SubmissionStatus::Withdrawn,
-            ])
-            ->where('updated_at', '<', now()->subDays($completedDays))
-            ->whereDoesntHave('legalHolds', fn ($query) => $query->active())
-            ->whereHas('dispositionReviews', fn ($query) => $query->where('status', DispositionStatus::Approved->value)));
+        $this->retire($policy->draftsDue());
+        $this->retire($policy->finishedDue());
     }
 
     /**

@@ -10,7 +10,6 @@ use App\Enums\DispositionStatus;
 use App\Models\AuditorAccess;
 use App\Models\DispositionReview;
 use App\Models\LegalHold;
-use App\Models\Setting;
 use App\Models\Submission;
 use App\Models\User;
 use App\Services\Audit\EvidencePackVerifier;
@@ -58,8 +57,8 @@ new #[Title('Records')] class extends Component
     public function mount(): void
     {
         $this->authorize('settings.manage');
-        $this->draftDays = (string) Setting::get('retention.draft_days', '90');
-        $this->completedDays = (string) Setting::get('retention.completed_days', '2555');
+        $this->draftDays = (string) \App\Support\RetentionSettings::draftDays();
+        $this->completedDays = (string) \App\Support\RetentionSettings::completedDays();
         $this->accessStartsAt = \App\Support\LocalTime::inputValue(now());
         $this->accessEndsAt = \App\Support\LocalTime::inputValue(now()->addMonth());
     }
@@ -122,15 +121,11 @@ new #[Title('Records')] class extends Component
         Flux::toast('Auditor access revoked.', variant: 'success');
     }
 
-    public function saveRetention(): void
+    public function saveRetention(\App\Actions\Audit\UpdateRetentionSettingsAction $update): void
     {
         $this->authorize('settings.manage');
-        $this->validate([
-            'draftDays' => ['required', 'integer', 'min:1', 'max:3650'],
-            'completedDays' => ['required', 'integer', 'min:1', 'max:7300'],
-        ]);
-        Setting::put('retention.draft_days', (string) (int) $this->draftDays);
-        Setting::put('retention.completed_days', (string) (int) $this->completedDays);
+        $this->validate(\App\Support\RetentionSettings::rules());
+        $update->execute(Auth::user(), $this->draftDays, $this->completedDays);
         Flux::toast('Retention saved.', variant: 'success');
     }
 

@@ -5,11 +5,15 @@ namespace App\Listeners;
 use App\Models\LoginEvent;
 use App\Models\User;
 use App\Notifications\SuspiciousLoginNotification;
+use App\Services\Auth\NewDeviceDetector;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Support\Facades\Notification;
 
+/** Records each sign-in and alerts on a new device; NewDeviceDetector decides (RV-ARC-14). */
 final class RecordLoginEvent
 {
+    public function __construct(private readonly NewDeviceDetector $devices) {}
+
     public function handle(Login $event): void
     {
         $user = $event->user;
@@ -21,37 +25,23 @@ final class RecordLoginEvent
         $request = request();
         $ip = $request?->ip();
         $userAgent = $request?->userAgent();
-        $fingerprint = LoginEvent::fingerprint($ip, $userAgent);
+        $check = $this->devices->check($user, $ip, $userAgent);
 
-        $hadPrior = LoginEvent::query()->where('user_id', $user->id)->exists();
-        $known = LoginEvent::query()
-            ->where('user_id', $user->id)
-            ->where('fingerprint', $fingerprint)
-            ->exists();
-
-        $duplicate = LoginEvent::query()
-            ->where('user_id', $user->id)
-            ->where('fingerprint', $fingerprint)
-            ->where('created_at', '>=', now()->subMinute())
-            ->exists();
-
-        if ($duplicate) {
+        if ($check->duplicate) {
             return;
         }
-
-        $isNew = $hadPrior && ! $known;
 
         LoginEvent::query()->create([
             'user_id' => $user->id,
             'ip_address' => $ip,
             'user_agent' => $userAgent,
-            'fingerprint' => $fingerprint,
-            'was_new_device' => $isNew,
-            'notified' => $isNew,
+            'fingerprint' => $check->fingerprint,
+            'was_new_device' => $check->newDevice,
+            'notified' => $check->newDevice,
             'created_at' => now(),
         ]);
 
-        if ($isNew) {
+        if ($check->newDevice) {
             Notification::send($user, new SuspiciousLoginNotification(
                 ipAddress: (string) $ip,
                 userAgent: (string) $userAgent,

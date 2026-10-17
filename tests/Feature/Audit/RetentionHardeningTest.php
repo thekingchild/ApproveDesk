@@ -17,6 +17,7 @@ use App\Models\Setting;
 use App\Models\Submission;
 use App\Models\User;
 use App\Models\WorkflowTemplate;
+use App\Services\Audit\RetentionPolicy;
 use App\Services\WorkflowEngine;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -76,7 +77,7 @@ class RetentionHardeningTest extends TestCase
             DB::table('submissions')->insert($chunk);
         }
 
-        (new ApplyRetentionJob)->handle();
+        (new ApplyRetentionJob)->handle(app(RetentionPolicy::class));
 
         $this->assertSame(0, Submission::query()->where('title', 'like', 'Old draft %')->count());
         $this->assertSame($count, Submission::onlyTrashed()->where('title', 'like', 'Old draft %')->count());
@@ -105,7 +106,7 @@ class RetentionHardeningTest extends TestCase
         $review = app(RequestDispositionAction::class)->execute($this->admin, $submission->fresh(), 'Past retention');
         app(ReviewDispositionAction::class)->execute($this->secondAdmin, $review, DispositionStatus::Approved);
 
-        (new ApplyRetentionJob)->handle();
+        (new ApplyRetentionJob)->handle(app(RetentionPolicy::class));
 
         $this->assertSoftDeleted($submission);
         $this->assertNotNull(Submission::withTrashed()->find($submission->id));

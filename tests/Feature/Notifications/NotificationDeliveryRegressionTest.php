@@ -28,6 +28,7 @@ use App\Notifications\NotificationDigest;
 use App\Notifications\SubmissionDecidedNotification;
 use App\Notifications\WatcherStatusNotification;
 use App\Services\Notifications\ChannelSettings;
+use App\Services\Notifications\DigestSchedule;
 use App\Services\WorkflowEngine;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -254,18 +255,18 @@ class NotificationDeliveryRegressionTest extends TestCase
 
         Carbon::setTestNow('2026-10-14 08:01:05');
         $this->inboxItem($user, 'A');
-        (new SendNotificationDigests)->handle();
+        (new SendNotificationDigests)->handle(app(DigestSchedule::class));
         Notification::assertSentToTimes($user, NotificationDigest::class, 1);
 
         // A second run the same day sends nothing new.
         Carbon::setTestNow('2026-10-14 20:00:00');
         $this->inboxItem($user, 'A2');
-        (new SendNotificationDigests)->handle();
+        (new SendNotificationDigests)->handle(app(DigestSchedule::class));
         Notification::assertSentToTimes($user, NotificationDigest::class, 1);
 
         Carbon::setTestNow('2026-10-15 08:01:02');
         $this->inboxItem($user, 'B');
-        (new SendNotificationDigests)->handle();
+        (new SendNotificationDigests)->handle(app(DigestSchedule::class));
         Notification::assertSentToTimes($user, NotificationDigest::class, 2);
     }
 
@@ -294,7 +295,7 @@ class NotificationDeliveryRegressionTest extends TestCase
 
         $follower->forceFill(['notification_frequency' => NotificationFrequency::Daily])->save();
         $this->inboxItem($follower, 'Old item');
-        (new SendNotificationDigests)->handle();
+        (new SendNotificationDigests)->handle(app(DigestSchedule::class));
         Notification::assertNotSentTo($follower, NotificationDigest::class);
     }
 

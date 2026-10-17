@@ -11,6 +11,7 @@ use App\Jobs\ApplyRetentionJob;
 use App\Models\Setting;
 use App\Models\Submission;
 use App\Models\User;
+use App\Services\Audit\RetentionPolicy;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -43,7 +44,7 @@ class RetentionAndLegalHoldTest extends TestCase
             'created_at' => now()->subDays(5),
         ]);
 
-        (new ApplyRetentionJob)->handle();
+        (new ApplyRetentionJob)->handle(app(RetentionPolicy::class));
 
         $this->assertSoftDeleted($old);
         $this->assertNotSoftDeleted($recent);
@@ -58,7 +59,7 @@ class RetentionAndLegalHoldTest extends TestCase
         ]);
         app(PlaceLegalHoldAction::class)->execute($this->admin, $held, 'Litigation');
 
-        (new ApplyRetentionJob)->handle();
+        (new ApplyRetentionJob)->handle(app(RetentionPolicy::class));
 
         $this->assertNotSoftDeleted($held);
     }
@@ -81,7 +82,7 @@ class RetentionAndLegalHoldTest extends TestCase
         $reviewer = User::factory()->create()->assignRole('admin');
         app(ReviewDispositionAction::class)->execute($reviewer, $review, DispositionStatus::Approved, 'OK to close');
 
-        (new ApplyRetentionJob)->handle();
+        (new ApplyRetentionJob)->handle(app(RetentionPolicy::class));
 
         $this->assertSoftDeleted($ready);
         $this->assertNotSoftDeleted($waiting);
