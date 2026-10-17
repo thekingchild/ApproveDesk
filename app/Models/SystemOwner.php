@@ -3,7 +3,9 @@
 namespace App\Models;
 
 use App\Services\Users\SystemOwnerService;
+use Database\Factories\SystemOwnerFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use LogicException;
@@ -11,6 +13,9 @@ use LogicException;
 #[Fillable(['id', 'user_id'])]
 class SystemOwner extends Model
 {
+    /** @use HasFactory<SystemOwnerFactory> */
+    use HasFactory;
+
     public const SINGLETON_ID = 1;
 
     protected static function booted(): void

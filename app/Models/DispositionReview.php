@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Enums\DispositionStatus;
+use Database\Factories\DispositionReviewFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
@@ -18,6 +20,9 @@ use Illuminate\Support\Carbon;
  */
 class DispositionReview extends Model
 {
+    /** @use HasFactory<DispositionReviewFactory> */
+    use HasFactory;
+
     protected $fillable = [
         'submission_id', 'status', 'requested_by', 'reviewed_by', 'notes', 'reviewed_at',
     ];

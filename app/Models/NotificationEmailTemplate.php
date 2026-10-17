@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use Database\Factories\NotificationEmailTemplateFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -15,6 +17,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class NotificationEmailTemplate extends Model
 {
+    /** @use HasFactory<NotificationEmailTemplateFactory> */
+    use HasFactory;
+
     protected $fillable = ['kind', 'subject', 'body', 'is_custom', 'updated_by'];
 
     protected function casts(): array

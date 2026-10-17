@@ -3,7 +3,9 @@
 namespace App\Models;
 
 use App\Enums\BackupSnapshotKind;
+use Database\Factories\BackupRestoreEventFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use LogicException;
@@ -11,6 +13,9 @@ use LogicException;
 #[Fillable(['snapshot_id', 'actor_id', 'actor_name', 'kind', 'snapshot_name', 'discarded_workflow_actions', 'safety_snapshot_id'])]
 class BackupRestoreEvent extends Model
 {
+    /** @use HasFactory<BackupRestoreEventFactory> */
+    use HasFactory;
+
     public const UPDATED_AT = null;
 
     protected function casts(): array

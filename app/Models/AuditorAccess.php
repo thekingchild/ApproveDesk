@@ -3,7 +3,9 @@
 namespace App\Models;
 
 use Carbon\CarbonInterface;
+use Database\Factories\AuditorAccessFactory;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
@@ -21,6 +23,9 @@ use Illuminate\Support\Carbon;
  */
 class AuditorAccess extends Model
 {
+    /** @use HasFactory<AuditorAccessFactory> */
+    use HasFactory;
+
     protected $fillable = [
         'user_id', 'granted_by', 'starts_at', 'ends_at', 'revoked_at', 'revoked_by', 'reason', 'scopes',
     ];

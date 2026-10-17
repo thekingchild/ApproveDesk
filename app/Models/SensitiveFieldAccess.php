@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use Database\Factories\SensitiveFieldAccessFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
@@ -17,6 +19,9 @@ use Illuminate\Support\Carbon;
  */
 class SensitiveFieldAccess extends Model
 {
+    /** @use HasFactory<SensitiveFieldAccessFactory> */
+    use HasFactory;
+
     public const UPDATED_AT = null;
 
     protected $fillable = [

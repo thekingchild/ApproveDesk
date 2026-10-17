@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use Database\Factories\SubmissionRevisionFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
@@ -18,6 +20,9 @@ use RuntimeException;
  */
 class SubmissionRevision extends Model
 {
+    /** @use HasFactory<SubmissionRevisionFactory> */
+    use HasFactory;
+
     public const UPDATED_AT = null;
 
     protected $fillable = ['submission_id', 'actor_id', 'summary', 'before', 'after'];

@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Enums\DisplayNameChangeStatus;
+use Database\Factories\DisplayNameChangeFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
@@ -22,6 +24,9 @@ use Illuminate\Support\Carbon;
  */
 class DisplayNameChange extends Model
 {
+    /** @use HasFactory<DisplayNameChangeFactory> */
+    use HasFactory;
+
     protected $fillable = ['user_id', 'pending_user_id', 'proposed_name', 'normalized_name', 'status', 'decided_by', 'decided_at', 'reason'];
 
     protected function casts(): array

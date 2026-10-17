@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Enums\SubmissionFileRevisionAction;
+use Database\Factories\SubmissionFileRevisionFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
@@ -21,6 +23,9 @@ use RuntimeException;
  */
 class SubmissionFileRevision extends Model
 {
+    /** @use HasFactory<SubmissionFileRevisionFactory> */
+    use HasFactory;
+
     public const UPDATED_AT = null;
 
     protected $fillable = [

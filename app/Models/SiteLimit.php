@@ -2,13 +2,18 @@
 
 namespace App\Models;
 
+use Database\Factories\SiteLimitFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use LogicException;
 
 #[Fillable(['id', 'max_active_users'])]
 class SiteLimit extends Model
 {
+    /** @use HasFactory<SiteLimitFactory> */
+    use HasFactory;
+
     public const SINGLETON_ID = 1;
 
     protected static function booted(): void

@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use Database\Factories\SubmissionFieldValueFactory;
 use DomainException;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
@@ -13,6 +15,9 @@ use Illuminate\Support\Carbon;
  */
 class SubmissionFieldValue extends Model
 {
+    /** @use HasFactory<SubmissionFieldValueFactory> */
+    use HasFactory;
+
     public const VALUE_COLUMNS = [
         'string_value',
         'text_value',

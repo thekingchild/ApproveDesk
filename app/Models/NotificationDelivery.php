@@ -3,7 +3,9 @@
 namespace App\Models;
 
 use App\Enums\NotificationDeliveryStatus;
+use Database\Factories\NotificationDeliveryFactory;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\MassPrunable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -25,6 +27,9 @@ use Illuminate\Support\Carbon;
  */
 class NotificationDelivery extends Model
 {
+    /** @use HasFactory<NotificationDeliveryFactory> */
+    use HasFactory;
+
     use MassPrunable;
 
     /** Delivery attempts are kept this long, then pruned (RV-OPS-05). */

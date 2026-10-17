@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use Database\Factories\OpsBackupVerificationFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
@@ -19,6 +21,9 @@ use Illuminate\Support\Carbon;
  */
 class OpsBackupVerification extends Model
 {
+    /** @use HasFactory<OpsBackupVerificationFactory> */
+    use HasFactory;
+
     public $timestamps = false;
 
     protected $fillable = [

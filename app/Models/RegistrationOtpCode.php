@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use Database\Factories\RegistrationOtpCodeFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 
@@ -13,6 +15,9 @@ use Illuminate\Support\Carbon;
  */
 class RegistrationOtpCode extends Model
 {
+    /** @use HasFactory<RegistrationOtpCodeFactory> */
+    use HasFactory;
+
     protected $fillable = ['email', 'code_hash', 'expires_at', 'attempts', 'consumed_at'];
 
     protected function casts(): array

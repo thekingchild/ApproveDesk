@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use Database\Factories\OpsSnapshotFactory;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\MassPrunable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
@@ -20,6 +22,9 @@ use Illuminate\Support\Carbon;
  */
 class OpsSnapshot extends Model
 {
+    /** @use HasFactory<OpsSnapshotFactory> */
+    use HasFactory;
+
     use MassPrunable;
 
     /** Snapshots are written every minute; keep two weeks (RV-OPS-04). */
