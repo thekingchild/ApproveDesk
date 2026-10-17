@@ -104,6 +104,7 @@ Do not put a real secret in `.env` or fixtures. Organization settings store the 
 - [ ] Authorization via Policy classes, not role checks
 - [ ] New statuses/types are PHP enums with string columns (no MySQL ENUMs)
 - [ ] Eager loading on every relationship used in views (no N+1)
+- [ ] Strict models stay on outside production: lazy loading, reading a column the query did not select (or a misspelled attribute), and filling an attribute the model does not accept all throw in development and tests (RV-LAR-03). Factories set every column the database would default, so a freshly created model is complete; select every column a view reads.
 - [ ] Shared-hosting deployments still have no runtime dependency on Redis, Docker, Node, or a long-running worker
 - [ ] Migrations are additive (never edit merged migrations)
 

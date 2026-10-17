@@ -289,6 +289,10 @@ class AppServiceProvider extends ServiceProvider
 
         // Surface N+1 queries in development and tests; never in production (RV-LAR-01).
         Model::preventLazyLoading(! app()->isProduction());
+        // Reading a column the query did not select, or filling an attribute the
+        // model does not accept, is a bug: fail loudly outside production (RV-LAR-03).
+        Model::preventAccessingMissingAttributes(! app()->isProduction());
+        Model::preventSilentlyDiscardingAttributes(! app()->isProduction());
 
         DB::prohibitDestructiveCommands(
             app()->isProduction(),
