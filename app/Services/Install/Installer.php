@@ -30,8 +30,8 @@ class Installer
         'openssl', 'pdo', 'tokenizer', 'xml', 'zip',
     ];
 
-    /** Nice-to-have extensions surfaced as warnings, not blockers. */
-    private const RECOMMENDED_EXTENSIONS = ['gd', 'pdo_mysql', 'pdo_sqlite'];
+    /** Nice-to-have extensions surfaced as warnings, not blockers. gmp signs browser push messages. */
+    private const RECOMMENDED_EXTENSIONS = ['gd', 'gmp', 'pdo_mysql', 'pdo_sqlite'];
 
     public function isInstalled(): bool
     {

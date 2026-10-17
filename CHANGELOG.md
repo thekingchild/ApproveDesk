@@ -138,6 +138,7 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Changed
 
+- **The installer recommends the PHP GMP extension.** Browser push notifications need it to sign messages. Without it, everything else works and push deliveries are recorded as failed.
 - **ApproveDesk now requires PHP 8.4.1 or newer (8.4 or 8.5) (RV-TEST-06).** The bundled dependencies (Symfony 8.1, spatie/laravel-activitylog 5) already needed PHP 8.4.1, so releases never actually ran on PHP 8.3 even though the docs and installer allowed it. `composer.json`, the installer's requirements check, and the docs now say 8.4.1. **Before upgrading, switch the site to PHP 8.4** in cPanel MultiPHP Manager or Plesk, and point the cron entry at the 8.4 binary (for example `/opt/cpanel/ea-php84/root/usr/bin/php`).
 - **The default cache store is `file` (RV-DOC-03).** `.env.example` and `config/cache.php` now match what the web installer writes and what shared hosting supports. Installations that already set `CACHE_STORE` are unaffected.
 - **Docker is no longer a supported way to run ApproveDesk (RV-ARC-22).** Shared hosting (cPanel/Plesk) is the only supported deployment. The Docker Compose, EasyPanel and Coolify instructions are removed from the deployment guide; the `Dockerfile` and `compose.yaml` stay in the repository marked as unsupported, because they were never built or tested in CI and the installer probably could not finish inside the image.

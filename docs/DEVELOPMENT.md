@@ -6,7 +6,7 @@ Local environment setup and day-to-day commands. For repo rules and architecture
 
 | Tool | Version | Notes |
 |---|---|---|
-| PHP | 8.4.1+ (8.4.1–8.5) | extensions: bcmath, ctype, curl, dom, fileinfo, json, mbstring, openssl, pcre, pdo, tokenizer, xml, zip, gd, **pdo_sqlite** |
+| PHP | 8.4.1+ (8.4.1–8.5) | extensions: bcmath, ctype, curl, dom, fileinfo, json, mbstring, openssl, pcre, pdo, tokenizer, xml, zip, gd, gmp, **pdo_sqlite** |
 | Composer | 2.x | |
 | Node.js | 22 LTS (18+ works) | asset builds via Vite |
 | Git | any recent | |
@@ -16,7 +16,7 @@ Ubuntu/Debian quick install (what Phase 0 runs on this machine):
 ```bash
 sudo apt update
 sudo apt install php8.4-cli php8.4-sqlite3 php8.4-mbstring php8.4-xml php8.4-curl \
-                 php8.4-zip php8.4-bcmath php8.4-gd php8.4-mysql unzip
+                 php8.4-zip php8.4-bcmath php8.4-gd php8.4-gmp php8.4-mysql unzip
 curl -sS https://getcomposer.org/installer | php && sudo mv composer.phar /usr/local/bin/composer
 ```
 
