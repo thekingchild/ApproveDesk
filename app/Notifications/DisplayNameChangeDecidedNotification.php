@@ -3,16 +3,23 @@
 namespace App\Notifications;
 
 use App\Models\User;
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-final class DisplayNameChangeDecidedNotification extends Notification
+/** Queued so a mail outage can't fail the sign-in or admin action that triggers it (RV-LAR-06). */
+final class DisplayNameChangeDecidedNotification extends Notification implements ShouldQueue
 {
+    use Queueable;
+
     public function __construct(
         public readonly string $status,
         public readonly string $proposedName,
         public readonly ?string $reason = null,
-    ) {}
+    ) {
+        $this->afterCommit();
+    }
 
     /** @return list<string> */
     public function via(User $notifiable): array

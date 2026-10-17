@@ -102,6 +102,23 @@ class DeliverWebhook implements ShouldQueue
         ]);
     }
 
+    /**
+     * The queue gave up (timeout, crash, or out of tries): a delivery still
+     * marked Pending would wait forever, so mark it Failed (RV-LAR-07).
+     */
+    public function failed(?Throwable $exception): void
+    {
+        WebhookDelivery::query()
+            ->whereKey($this->deliveryId)
+            ->where('status', WebhookDeliveryStatus::Pending->value)
+            ->update([
+                'status' => WebhookDeliveryStatus::Failed->value,
+                'last_error' => Str::limit('The delivery job stopped: '.($exception?->getMessage() ?? 'unknown error'), 2000, ''),
+                'next_attempt_at' => null,
+                'updated_at' => now(),
+            ]);
+    }
+
     private function failDelivery(
         WebhookDelivery $delivery,
         string $error,
