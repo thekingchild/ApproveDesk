@@ -4,16 +4,23 @@ namespace App\Notifications;
 
 use App\Models\User;
 use Carbon\CarbonInterface;
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-final class SuspiciousLoginNotification extends Notification
+/** Queued so a mail outage can't fail the sign-in or admin action that triggers it (RV-LAR-06). */
+final class SuspiciousLoginNotification extends Notification implements ShouldQueue
 {
+    use Queueable;
+
     public function __construct(
         public readonly string $ipAddress,
         public readonly string $userAgent,
         public readonly CarbonInterface $occurredAt,
-    ) {}
+    ) {
+        $this->afterCommit();
+    }
 
     /**
      * @return list<string>

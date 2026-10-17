@@ -52,8 +52,10 @@ class DeliverIntegrationAction implements ShouldQueue
             if ($connector->last_request_at !== null
                 && $connector->last_request_at->gt(now()->subSeconds(max(1, $connector->min_interval_seconds)))) {
                 $delivery->update(['next_attempt_at' => now()->addSeconds($connector->min_interval_seconds)]);
+                // Wait without counting a failed attempt; failed() covers running out of tries (RV-LAR-07).
+                $this->release(max(1, $connector->min_interval_seconds));
 
-                throw new RuntimeException('Connector rate limit: retry shortly.');
+                return null;
             }
 
             $delivery->increment('attempts');
@@ -91,6 +93,29 @@ class DeliverIntegrationAction implements ShouldQueue
             'next_attempt_at' => null,
         ]);
         $connector->forceFill(['last_error' => null])->save();
+    }
+
+    /**
+     * The queue gave up (timeout, crash, or out of tries): a delivery still
+     * marked Pending would wait forever, so move it to the dead-letter list
+     * where Operations can replay it (RV-LAR-07).
+     */
+    public function failed(?Throwable $exception): void
+    {
+        $delivery = IntegrationDelivery::query()->with('action.connector')->find($this->deliveryId);
+
+        if ($delivery === null || $delivery->status !== IntegrationDeliveryStatus::Pending) {
+            return;
+        }
+
+        $reason = 'The delivery job stopped: '.($exception?->getMessage() ?? 'unknown error');
+        $connector = $delivery->action?->connector;
+
+        $delivery->update([
+            'status' => IntegrationDeliveryStatus::DeadLetter,
+            'last_error' => Str::limit($connector?->redact($reason) ?? $reason, 2000, ''),
+            'next_attempt_at' => null,
+        ]);
     }
 
     private function failDelivery(
