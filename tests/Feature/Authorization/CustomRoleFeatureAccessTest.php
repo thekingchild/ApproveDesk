@@ -43,7 +43,7 @@ class CustomRoleFeatureAccessTest extends TestCase
         $this->actingAs($user)->get(route('admin.backups.index'))->assertOk();
 
         Livewire::actingAs($user)
-            ->test('pages::admin.backups')
+            ->test('admin.backups.snapshots')
             ->call('backupDatabase')
             ->assertForbidden();
     }
@@ -59,7 +59,7 @@ class CustomRoleFeatureAccessTest extends TestCase
         $user = User::factory()->create()->assignRole($role);
 
         Livewire::actingAs($user)
-            ->test('pages::admin.backups')
+            ->test('admin.backups.snapshots')
             ->call('backupDatabase')
             ->assertHasNoErrors();
 

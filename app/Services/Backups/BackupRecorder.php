@@ -29,11 +29,26 @@ final class BackupRecorder
             return $existing;
         }
 
-        return BackupDestination::query()->create([
+        return BackupDestination::query()->create(self::localDefaults());
+    }
+
+    /**
+     * The local disk as it is listed before the first backup creates its row,
+     * so viewing the Backups page never writes (RV-ARC-09).
+     */
+    public function unsavedLocalDestination(): BackupDestination
+    {
+        return new BackupDestination(self::localDefaults());
+    }
+
+    /** @return array{name: string, kind: BackupDestinationKind, enabled: bool} */
+    private static function localDefaults(): array
+    {
+        return [
             'name' => 'Local disk',
             'kind' => BackupDestinationKind::Local,
             'enabled' => true,
-        ]);
+        ];
     }
 
     /**

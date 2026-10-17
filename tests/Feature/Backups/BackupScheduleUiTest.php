@@ -32,7 +32,7 @@ class BackupScheduleUiTest extends TestCase
         $admin = User::factory()->create()->assignRole('admin');
 
         Livewire::actingAs($admin)
-            ->test('pages::admin.backups')
+            ->test('admin.backups.schedule')
             ->assertSeeHtml('type="time"')
             ->assertSee('Times use')
             ->set('databaseHour', '00:00')
@@ -52,7 +52,7 @@ class BackupScheduleUiTest extends TestCase
         $admin = User::factory()->create()->assignRole('admin');
 
         Livewire::actingAs($admin)
-            ->test('pages::admin.backups')
+            ->test('admin.backups.schedule')
             ->assertSee('Africa/Lagos');
     }
 
@@ -61,7 +61,7 @@ class BackupScheduleUiTest extends TestCase
         $admin = User::factory()->create()->assignRole('admin');
 
         Livewire::actingAs($admin)
-            ->test('pages::admin.backups')
+            ->test('admin.backups.schedule')
             ->set('databaseHour', '24:00')
             ->call('saveSettings')
             ->assertHasErrors(['databaseHour']);

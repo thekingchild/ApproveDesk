@@ -15,6 +15,7 @@ All notable changes to ApproveDesk are documented here. The project follows
 
 ### Fixed
 
+- **Backups screen (RV-ARC-09).** Opening the screen no longer writes to the database; the local disk is listed before the first backup creates it. Stored sizes are summed by the database instead of loading every snapshot, and **Backup database** / **Backup files** now sit with the snapshot table they add to. The screen is split into schedule, snapshots, destinations and restore-history sections (ADR 0006); the download link helper is no longer callable from the browser (RV-LAR-16).
 - **Users screen (RV-ARC-08).** Rejecting a display-name request asks for the reason in a field on the page instead of a browser pop-up. Administrators no longer see the hidden System owner's pending name changes, and the line-manager picker can no longer show or accept the owner account. The screen is now split into smaller parts (list, name review, capacity, user dialog) with no change to how it works.
 - **Request-type builder browser drafts work.** The builder's **Restore draft** used to save an empty snapshot and then blank the form; it now keeps what you typed, and opening the builder no longer overwrites a pending draft before you restore or discard it.
 - **Rich-text toolbar on new requests works.** Bold, lists and the other toolbar buttons on the request body failed with an editor error; they now apply.

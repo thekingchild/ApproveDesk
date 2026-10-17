@@ -113,7 +113,7 @@ class FilesPromoteAndBackupsPageTest extends TestCase
             }
         });
 
-        $component = Livewire::actingAs($this->admin)->test('pages::admin.backups')
+        $component = Livewire::actingAs($this->admin)->test('admin.backups.snapshots')
             ->assertOk()
             ->assertSee('delete-local-'.$big->id, false)
             ->assertSee('2 workflow actions recorded after it', false);
@@ -121,7 +121,7 @@ class FilesPromoteAndBackupsPageTest extends TestCase
         foreach ($component->instance()->snapshots as $snapshot) {
             $this->assertArrayNotHasKey('manifest', $snapshot->getAttributes());
         }
-        $this->assertSame(2, $component->instance()->actionsLostBy($database));
+        $this->assertSame(2, $component->instance()->actionsLost[$database->id]);
 
         // No query reads every column, and the per-row "remote copy?" check is one query.
         $this->assertSame([], array_values(array_filter($selects, fn (string $sql): bool => preg_match('/select \* from [`"]backup_snapshots[`"]/', $sql) === 1)));

@@ -247,7 +247,7 @@ class BackupSnapshotsTest extends TestCase
             ->assertDontSee('Add a remote destination');
 
         Livewire::actingAs($admin)
-            ->test('pages::admin.backups')
+            ->test('admin.backups.snapshots')
             ->call('backupDatabase')
             ->assertHasNoErrors();
 
