@@ -101,6 +101,17 @@ class BrandingTest extends TestCase
         $this->assertStringNotContainsString('<script>alert(1)</script>', $response->getContent());
     }
 
+    public function test_rv_bug_39_custom_css_keeps_selectors_and_strings_and_cannot_close_the_style_tag(): void
+    {
+        Setting::put('brand.custom_css', 'nav > a::after { content: "\u2192"; font-family: \'Inter\'; } </sty</stylele><script>alert(2)</script>');
+
+        $html = $this->get('/login')->assertOk()->getContent();
+
+        $this->assertStringContainsString('nav > a::after { content: "\u2192"; font-family: \'Inter\'; }', $html);
+        $this->assertStringNotContainsString('<script>alert(2)</script>', $html);
+        $this->assertStringNotContainsString('</style><script>', $html);
+    }
+
     public function test_login_has_no_custom_code_by_default(): void
     {
         $this->get('/login')

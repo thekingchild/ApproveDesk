@@ -8,7 +8,7 @@
             }
         </style>
         @if ($css = \App\Support\Branding::customCss())
-            <style>{{ $css }}</style>
+            <style>{!! $css !!}</style>
         @endif
     </head>
     <body class="min-h-screen bg-white antialiased dark:bg-linear-to-b dark:from-neutral-950 dark:to-neutral-900">

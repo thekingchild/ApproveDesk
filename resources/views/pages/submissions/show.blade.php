@@ -1032,7 +1032,7 @@ new #[Title('Submission')] class extends Component {
     @if ($this->myDelegation)
         <flux:callout variant="secondary" icon="user-plus" class="mt-6" data-test="my-delegation">
             <flux:callout.heading>{{ __('You delegated this step to :name', ['name' => $this->myDelegation->delegate?->name]) }}</flux:callout.heading>
-            <flux:callout.text>{{ __('Until :time. Take it back to decide yourself; the change is recorded in the history.', ['time' => $this->myDelegation->expires_at->timezone((string) config('app.timezone'))->format('d M Y H:i')]) }}</flux:callout.text>
+            <flux:callout.text>{{ __('Until :time. Take it back to decide yourself; the change is recorded in the history.', ['time' => \App\Support\LocalTime::display($this->myDelegation->expires_at, $this->browserTimezone).' ('.\App\Support\LocalTime::label($this->browserTimezone).')']) }}</flux:callout.text>
             <x-slot name="actions">
                 <flux:button size="sm" wire:click="takeBackDelegation" wire:confirm="{{ __('Take this step back from :name now?', ['name' => $this->myDelegation->delegate?->name]) }}" data-test="take-back-delegation">{{ __('Take back') }}</flux:button>
             </x-slot>

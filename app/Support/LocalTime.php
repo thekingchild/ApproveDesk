@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
 
 /**
@@ -18,6 +19,15 @@ final class LocalTime
         $timezone = self::validTimezone($browserTimezone) ?? $appTimezone;
 
         return Carbon::parse($value, $timezone)->setTimezone($appTimezone);
+    }
+
+    /**
+     * Show a stored time in the same zone the form beside it reads times in,
+     * so what you typed is what you see back (RV-ARC-17).
+     */
+    public static function display(CarbonInterface $at, ?string $browserTimezone, string $format = 'd M Y H:i'): string
+    {
+        return $at->copy()->setTimezone(self::label($browserTimezone))->format($format);
     }
 
     /** The timezone the viewer's times are shown and read in. */
