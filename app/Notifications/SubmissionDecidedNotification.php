@@ -4,6 +4,7 @@ namespace App\Notifications;
 
 use App\Enums\NotificationKind;
 use App\Enums\SubmissionStatus;
+use App\Enums\WorkflowActionType;
 use App\Models\Submission;
 use App\Models\User;
 use App\Notifications\Concerns\RendersNotificationCopy;
@@ -24,13 +25,17 @@ class SubmissionDecidedNotification extends Notification implements ShouldQueue
     use RendersNotificationCopy;
     use RespectsNotificationFrequency;
 
-    /** @var array<string, list<string>> */
-    private const DECIDING_ACTIONS = [
-        'approved' => ['approve', 'approve_with_conditions', 'auto_approve'],
-        'rejected' => ['reject', 'auto_reject'],
-        'returned' => ['return'],
-        'awaiting_information' => ['request_information'],
-    ];
+    /** @return list<WorkflowActionType> the actions that put a request in $status */
+    private static function decidingActions(SubmissionStatus $status): array
+    {
+        return match ($status) {
+            SubmissionStatus::Approved => [WorkflowActionType::Approve, WorkflowActionType::ApproveWithConditions, WorkflowActionType::AutoApprove],
+            SubmissionStatus::Rejected => [WorkflowActionType::Reject, WorkflowActionType::AutoReject],
+            SubmissionStatus::Returned => [WorkflowActionType::Return],
+            SubmissionStatus::AwaitingInformation => [WorkflowActionType::RequestInformation],
+            default => [],
+        };
+    }
 
     public function __construct(
         public readonly Submission $submission,
@@ -82,12 +87,12 @@ class SubmissionDecidedNotification extends Notification implements ShouldQueue
 
         // actions() is ordered oldest first; reorder so latest() really is the newest.
         $latest = $instance?->actions()
-            ->whereIn('action', array_merge(...array_values(self::DECIDING_ACTIONS)))
+            ->whereIn('action', array_merge(...array_map(self::decidingActions(...), [SubmissionStatus::Approved, SubmissionStatus::Rejected, SubmissionStatus::Returned, SubmissionStatus::AwaitingInformation])))
             ->reorder()
             ->latest('id')
             ->first();
 
-        if ($latest === null || ! in_array($latest->action->value, self::DECIDING_ACTIONS[$this->decision->value] ?? [], true)) {
+        if ($latest === null || ! in_array($latest->action, self::decidingActions($this->decision), true)) {
             return null;
         }
 

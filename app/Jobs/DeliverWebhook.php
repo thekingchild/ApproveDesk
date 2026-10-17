@@ -72,7 +72,7 @@ class DeliverWebhook implements ShouldQueue
                 ->withOptions($pin->httpOptions())
                 ->withHeaders([
                     'Content-Type' => 'application/json',
-                    'X-ApproveDesk-Event' => $delivery->event,
+                    'X-ApproveDesk-Event' => $delivery->event->value,
                     'X-ApproveDesk-Delivery' => $delivery->event_id,
                     'X-ApproveDesk-Timestamp' => $timestamp,
                     'X-ApproveDesk-Signature' => 'sha256='.$signature,

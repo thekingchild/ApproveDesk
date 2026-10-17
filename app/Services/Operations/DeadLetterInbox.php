@@ -45,7 +45,7 @@ final class DeadLetterInbox
             ->map(fn (WebhookDelivery $delivery): DeadLetterItem => new DeadLetterItem(
                 type: 'webhook',
                 id: (string) $delivery->id,
-                label: 'Webhook · '.($delivery->endpoint?->name ?? $delivery->event),
+                label: 'Webhook · '.($delivery->endpoint?->name ?? $delivery->event->value),
                 error: $delivery->last_error,
                 failedAt: $delivery->updated_at,
             ));

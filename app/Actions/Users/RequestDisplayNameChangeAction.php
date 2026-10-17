@@ -2,6 +2,7 @@
 
 namespace App\Actions\Users;
 
+use App\Enums\DisplayNameChangeStatus;
 use App\Models\DisplayNameChange;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -22,8 +23,8 @@ final class RequestDisplayNameChangeAction
 
         return DB::transaction(function () use ($user, $name): DisplayNameChange {
             User::query()->whereKey($user->id)->lockForUpdate()->firstOrFail();
-            $pending = DisplayNameChange::query()->where('user_id', $user->id)->where('status', 'pending')->lockForUpdate()->first();
-            $values = ['pending_user_id' => $user->id, 'proposed_name' => $name, 'normalized_name' => Str::lower($name), 'status' => 'pending', 'decided_by' => null, 'decided_at' => null, 'reason' => null];
+            $pending = DisplayNameChange::query()->where('user_id', $user->id)->where('status', DisplayNameChangeStatus::Pending)->lockForUpdate()->first();
+            $values = ['pending_user_id' => $user->id, 'proposed_name' => $name, 'normalized_name' => Str::lower($name), 'status' => DisplayNameChangeStatus::Pending, 'decided_by' => null, 'decided_at' => null, 'reason' => null];
             if ($pending) {
                 $pending->update($values);
                 $change = $pending;
@@ -40,8 +41,8 @@ final class RequestDisplayNameChangeAction
     {
         DB::transaction(function () use ($user, $change): void {
             $locked = DisplayNameChange::query()->lockForUpdate()->findOrFail($change->id);
-            abort_unless($locked->user_id === $user->id && $locked->status === 'pending', 403);
-            $locked->update(['status' => 'cancelled', 'pending_user_id' => null, 'decided_at' => now()]);
+            abort_unless($locked->user_id === $user->id && $locked->status === DisplayNameChangeStatus::Pending, 403);
+            $locked->update(['status' => DisplayNameChangeStatus::Cancelled, 'pending_user_id' => null, 'decided_at' => now()]);
             activity()->performedOn($locked)->causedBy($user)->event('display-name-cancelled')->log('Display name change cancelled');
         });
     }

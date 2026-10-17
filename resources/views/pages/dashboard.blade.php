@@ -253,9 +253,7 @@ new #[Title('Dashboard')] class extends Component {
                             </td>
                             @if ($this->report['organization'])<td class="py-3">{{ $submission->submitter->name }}</td>@endif
                             <td class="py-3">
-                                <flux:badge color="{{ ['draft' => 'zinc', 'pending' => 'blue', 'in_review' => 'blue', 'approved' => 'lime', 'rejected' => 'red', 'returned' => 'amber', 'withdrawn' => 'zinc'][$submission->status->value] ?? 'zinc' }}">
-                                    {{ str_replace('_', ' ', $submission->status->value) }}
-                                </flux:badge>
+                                <x-submission-status-badge :status="$submission->status" />
                             </td>
                             <td class="py-3 text-right text-zinc-500">{{ $submission->updated_at?->diffForHumans() }}</td>
                         </tr>

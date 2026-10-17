@@ -38,9 +38,7 @@
                                 >
                                     <span class="flex flex-wrap items-center justify-between gap-2">
                                         <span class="font-semibold text-zinc-900 group-hover:text-blue-700 dark:text-white dark:group-hover:text-blue-300">{{ $submission->title }}</span>
-                                        <flux:badge :color="['draft' => 'zinc', 'pending' => 'blue', 'in_review' => 'blue', 'approved' => 'lime', 'rejected' => 'red', 'returned' => 'amber', 'awaiting_information' => 'amber', 'withdrawn' => 'zinc'][$submission->status->value] ?? 'zinc'">
-                                            {{ str($submission->status->value)->replace('_', ' ') }}
-                                        </flux:badge>
+                                        <x-submission-status-badge :status="$submission->status" />
                                     </span>
                                     <span class="flex flex-wrap gap-x-3 gap-y-1 text-sm text-zinc-600 dark:text-zinc-300">
                                         <span class="font-mono text-xs">{{ $submission->reference_number }}</span>

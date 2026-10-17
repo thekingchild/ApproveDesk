@@ -2,6 +2,7 @@
 
 namespace App\Listeners;
 
+use App\Enums\WorkflowStatus;
 use App\Events\SubmissionCreated;
 use App\Events\WorkflowAdvanced;
 use App\Models\User;
@@ -22,7 +23,7 @@ class NotifyCurrentApprovers
             default => $event->instance,
         };
 
-        if ($instance === null || $instance->status->value !== 'active') {
+        if ($instance === null || $instance->status !== WorkflowStatus::Active) {
             return;
         }
 

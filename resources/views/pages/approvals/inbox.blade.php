@@ -315,7 +315,7 @@ new #[Title('Approvals')] class extends Component {
                                 @else
                                     <flux:badge color="zinc">{{ __('No SLA') }}</flux:badge>
                                 @endif
-                                <flux:badge color="{{ ['urgent' => 'red', 'high' => 'amber', 'normal' => 'blue', 'low' => 'zinc'][$submission->priority->value] }}">{{ $submission->priority->value }}</flux:badge>
+                                <x-submission-priority-badge :priority="$submission->priority" />
                             </div>
                         </div>
 

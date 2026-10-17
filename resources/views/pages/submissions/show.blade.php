@@ -165,7 +165,7 @@ new #[Title('Submission')] class extends Component {
 
             $state = match (true) {
                 $stepActions->contains('action', WorkflowActionType::Reject) => 'rejected',
-                $instance->current_step_id === $step->id && in_array($instance->status->value, ['active', 'on_hold'], true) => 'active',
+                $instance->current_step_id === $step->id && in_array($instance->status, [\App\Enums\WorkflowStatus::Active, \App\Enums\WorkflowStatus::OnHold], true) => 'active',
                 $stepActions->contains(fn ($action) => in_array($action->action, [
                     WorkflowActionType::Approve,
                     WorkflowActionType::Escalate,
@@ -202,7 +202,7 @@ new #[Title('Submission')] class extends Component {
         $step = $this->submission->workflowInstance?->currentStep;
 
         return $step !== null
-            && $this->submission->workflowInstance->status->value === 'active'
+            && $this->submission->workflowInstance->status === \App\Enums\WorkflowStatus::Active
             && SeparationOfDuties::forbids(Auth::user(), $this->submission)
             && app(AssigneeResolver::class)->candidates($step, $this->submission)->contains(Auth::user());
     }
@@ -239,7 +239,7 @@ new #[Title('Submission')] class extends Component {
     public function myDelegation(): ?Delegation
     {
         $instance = $this->submission->workflowInstance;
-        if ($instance === null || $instance->status->value !== 'active') {
+        if ($instance === null || $instance->status !== \App\Enums\WorkflowStatus::Active) {
             return null;
         }
 
@@ -768,12 +768,8 @@ new #[Title('Submission')] class extends Component {
             @can('update', $submission)
                 <flux:button :href="$submission->requestTypeVersion->requestType->is_system ? route('submissions.edit', $submission) : route('submissions.custom.edit', $submission)" variant="primary" wire:navigate>{{ $submission->status === \App\Enums\SubmissionStatus::Draft ? __('Edit draft') : __('Edit and respond') }}</flux:button>
             @endcan
-            <flux:badge color="{{ ['draft' => 'zinc', 'in_review' => 'blue', 'approved' => 'lime', 'rejected' => 'red', 'returned' => 'amber', 'awaiting_information' => 'amber', 'withdrawn' => 'zinc', 'pending' => 'blue'][$submission->status->value] ?? 'zinc' }}">
-                {{ str_replace('_', ' ', $submission->status->value) }}
-            </flux:badge>
-            <flux:badge color="{{ ['low' => 'zinc', 'normal' => 'blue', 'high' => 'amber', 'urgent' => 'red'][$submission->priority->value] ?? 'zinc' }}">
-                {{ $submission->priority->value }}
-            </flux:badge>
+            <x-submission-status-badge :status="$submission->status" />
+            <x-submission-priority-badge :priority="$submission->priority" />
             @if ($submission->workflowInstance?->deadlineAt())
                 <flux:badge :color="$submission->workflowInstance->isOverdue() ? 'red' : 'zinc'">
                     {{ $submission->workflowInstance->isOverdue()
@@ -782,7 +778,7 @@ new #[Title('Submission')] class extends Component {
                 </flux:badge>
             @endif
             @can('nudge', $submission)
-                @if ($submission->workflowInstance?->status->value === 'active')
+                @if ($submission->workflowInstance?->status === \App\Enums\WorkflowStatus::Active)
                     <flux:modal.trigger name="nudge-modal">
                         <flux:button size="sm" variant="ghost" data-test="nudge-trigger">{{ __('Remind approver') }}</flux:button>
                     </flux:modal.trigger>
@@ -853,7 +849,7 @@ new #[Title('Submission')] class extends Component {
                     </li>
                 @endforeach
                 @foreach ($submission->fileRevisions as $fileRevision)
-                    <li>{{ $fileRevision->action }} · {{ $fileRevision->original_name }}</li>
+                    <li>{{ $fileRevision->action->label() }} · {{ $fileRevision->original_name }}</li>
                 @endforeach
             </ul>
         </flux:card>
@@ -1327,9 +1323,9 @@ new #[Title('Submission')] class extends Component {
     @endcan
 
     @can('submit', $submission)
-        @if (in_array($submission->status->value, ['returned', 'awaiting_information'], true))
+        @if ($submission->status->needsRequester())
             <div class="space-y-3">
-                @if ($submission->status->value === 'awaiting_information')
+                @if ($submission->status === \App\Enums\SubmissionStatus::AwaitingInformation)
                     <flux:textarea wire:model="resubmissionComment" :label="__('Response to the information request')" rows="3" />
                     <flux:error name="resubmissionComment" />
                 @endif

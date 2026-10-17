@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Submissions;
 
+use App\Enums\SubmissionFileRevisionAction;
 use App\Enums\SubmissionStatus;
 use App\Enums\WorkflowActionType;
 use App\Models\LegalHold;
@@ -53,7 +54,7 @@ class AttachmentRemovalTest extends TestCase
         $this->assertTrue($kept->trashed());
         $this->assertSame($this->submitter->id, $kept->removed_by);
         Storage::disk('local')->assertExists($file->stored_path);
-        $this->assertSame(['added', 'removed'], SubmissionFileRevision::query()->orderBy('id')->pluck('action')->all());
+        $this->assertSame([SubmissionFileRevisionAction::Added, SubmissionFileRevisionAction::Removed], SubmissionFileRevision::query()->orderBy('id')->pluck('action')->all());
 
         Livewire::actingAs($this->approver)
             ->test('pages::submissions.show', ['submission' => $submission->fresh()])
@@ -84,7 +85,7 @@ class AttachmentRemovalTest extends TestCase
 
         $this->assertNull(SubmissionFile::withTrashed()->find($file->id));
         Storage::disk('local')->assertMissing($file->stored_path);
-        $this->assertSame(['added', 'removed'], SubmissionFileRevision::query()->orderBy('id')->pluck('action')->all());
+        $this->assertSame([SubmissionFileRevisionAction::Added, SubmissionFileRevisionAction::Removed], SubmissionFileRevision::query()->orderBy('id')->pluck('action')->all());
     }
 
     public function test_files_on_legal_hold_cannot_be_removed(): void
@@ -99,7 +100,7 @@ class AttachmentRemovalTest extends TestCase
             ->assertSee('legal hold');
 
         $this->assertFalse($file->fresh()->trashed());
-        $this->assertSame(['added'], SubmissionFileRevision::query()->pluck('action')->all());
+        $this->assertSame([SubmissionFileRevisionAction::Added], SubmissionFileRevision::query()->pluck('action')->all());
     }
 
     /** @return array{Submission, SubmissionFile} */

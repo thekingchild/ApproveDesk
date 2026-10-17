@@ -2,6 +2,7 @@
 
 namespace App\Services\Roles;
 
+use App\Enums\RoleChangeAction;
 use App\Models\Role;
 use App\Models\RoleChangeEvent;
 use App\Models\RoleProfile;
@@ -115,10 +116,10 @@ final class RoleAssignmentService
 
             $locked->syncRoles($resolved);
             foreach (array_diff($new, $existing) as $roleId) {
-                RoleChangeEvent::query()->create(['actor_id' => $actor->id, 'role_id' => $roleId, 'target_user_id' => $locked->id, 'action' => 'role_assigned', 'after' => ['role_id' => $roleId, 'user_id' => $locked->id]]);
+                RoleChangeEvent::query()->create(['actor_id' => $actor->id, 'role_id' => $roleId, 'target_user_id' => $locked->id, 'action' => RoleChangeAction::RoleAssigned, 'after' => ['role_id' => $roleId, 'user_id' => $locked->id]]);
             }
             foreach (array_diff($existing, $new) as $roleId) {
-                RoleChangeEvent::query()->create(['actor_id' => $actor->id, 'role_id' => $roleId, 'target_user_id' => $locked->id, 'action' => 'role_removed', 'before' => ['role_id' => $roleId, 'user_id' => $locked->id]]);
+                RoleChangeEvent::query()->create(['actor_id' => $actor->id, 'role_id' => $roleId, 'target_user_id' => $locked->id, 'action' => RoleChangeAction::RoleRemoved, 'before' => ['role_id' => $roleId, 'user_id' => $locked->id]]);
             }
 
             return $locked->load('roles');

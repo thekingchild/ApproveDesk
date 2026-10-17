@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\DisplayNameChangeStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
@@ -12,7 +13,7 @@ use Illuminate\Support\Carbon;
  * @property int|null $pending_user_id
  * @property string $proposed_name
  * @property string $normalized_name
- * @property string $status
+ * @property DisplayNameChangeStatus $status
  * @property int|null $decided_by
  * @property Carbon|null $decided_at
  * @property string|null $reason
@@ -25,7 +26,7 @@ class DisplayNameChange extends Model
 
     protected function casts(): array
     {
-        return ['decided_at' => 'datetime'];
+        return ['decided_at' => 'datetime', 'status' => DisplayNameChangeStatus::class];
     }
 
     /** @return BelongsTo<User, $this> */

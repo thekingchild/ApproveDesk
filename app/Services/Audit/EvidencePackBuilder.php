@@ -174,7 +174,7 @@ final class EvidencePackBuilder
         $fileHistory = $submission->fileRevisions->sortBy('id')->values()->map(fn (SubmissionFileRevision $revision): array => [
             'id' => $revision->id,
             'file_id' => $revision->submission_file_id,
-            'action' => $revision->action,
+            'action' => $revision->action->value,
             'name' => $revision->original_name,
             'sha256' => $revision->sha256,
             'size_bytes' => $revision->size_bytes,
