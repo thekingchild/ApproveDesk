@@ -25,6 +25,9 @@ class IntegrationConnector extends Model
     /** @use HasFactory<IntegrationConnectorFactory> */
     use HasFactory;
 
+    /** Connector credentials never appear in arrays or JSON (RV-LAR-05). */
+    protected $hidden = ['credentials'];
+
     protected $fillable = [
         'type', 'name', 'is_enabled', 'credentials', 'last_tested_at',
         'last_error', 'last_request_at', 'min_interval_seconds',

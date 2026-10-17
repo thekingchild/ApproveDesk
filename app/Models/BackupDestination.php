@@ -19,6 +19,9 @@ class BackupDestination extends Model
     /** @use HasFactory<BackupDestinationFactory> */
     use HasFactory;
 
+    /** Encrypted storage credentials never appear in arrays or JSON (RV-LAR-05). */
+    protected $hidden = ['config'];
+
     protected $fillable = ['name', 'kind', 'config', 'enabled', 'last_error', 'last_tested_at'];
 
     /**

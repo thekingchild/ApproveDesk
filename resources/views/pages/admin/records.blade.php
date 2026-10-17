@@ -198,7 +198,7 @@ new #[Title('Records')] class extends Component
     public function verifyPack(EvidencePackVerifier $verifier): void
     {
         $this->authorize('settings.manage');
-        $this->validate(['verifyFile' => ['required', 'file', 'max:20480']]);
+        $this->validate(['verifyFile' => ['required', 'file', 'mimes:zip', 'max:20480']]);
         $path = $this->verifyFile->getRealPath();
         $result = $verifier->verifyPath((string) $path);
         $this->verifyResult = $result->message();

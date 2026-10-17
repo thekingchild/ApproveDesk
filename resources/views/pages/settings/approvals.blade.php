@@ -219,7 +219,7 @@ new #[Title('Approval settings')] class extends Component {
             <form wire:submit="saveReferenceSchema" class="space-y-4">
                 <div class="grid gap-4 sm:grid-cols-2">
                     <flux:input
-                        wire:model.live="referencePrefix"
+                        wire:model.live.debounce.300ms="referencePrefix"
                         :label="__('Prefix')"
                         maxlength="12"
                         description="Letters and numbers only."
@@ -245,7 +245,7 @@ new #[Title('Approval settings')] class extends Component {
                     </flux:select>
 
                     <flux:input
-                        wire:model.live="referenceDigitLength"
+                        wire:model.live.debounce.300ms="referenceDigitLength"
                         type="number"
                         min="4"
                         max="12"

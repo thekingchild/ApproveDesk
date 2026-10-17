@@ -294,6 +294,12 @@ class AppServiceProvider extends ServiceProvider
         Model::preventAccessingMissingAttributes(! app()->isProduction());
         Model::preventSilentlyDiscardingAttributes(! app()->isProduction());
 
+        // Never preview an uploaded SVG from a signed temporary URL: it can carry script (RV-LAR-21).
+        config(['livewire.temporary_file_upload.preview_mimes' => array_values(array_diff(
+            (array) config('livewire.temporary_file_upload.preview_mimes', []),
+            ['svg'],
+        ))]);
+
         DB::prohibitDestructiveCommands(
             app()->isProduction(),
         );

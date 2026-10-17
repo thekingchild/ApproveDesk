@@ -12,14 +12,16 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class BrandingAssetController extends Controller
 {
+    /**
+     * Only what branding uploads accept. SVG is never served: it can carry
+     * script and this route is same-origin (RV-SEC-24).
+     */
     private const MIMES = [
         'jpg' => 'image/jpeg',
         'jpeg' => 'image/jpeg',
         'png' => 'image/png',
         'webp' => 'image/webp',
-        'gif' => 'image/gif',
         'ico' => 'image/x-icon',
-        'svg' => 'image/svg+xml',
     ];
 
     public function __invoke(string $file): StreamedResponse

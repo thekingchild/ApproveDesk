@@ -72,6 +72,7 @@ new #[Title('New submission')] class extends Component {
             'body' => ['nullable', 'string', 'max:65535'],
             'priority' => ['required', 'in:low,normal,high,urgent'],
             'due_date' => ['nullable', 'date', 'after:today'],
+            'attachments' => ['array', 'max:'.AttachSubmissionFilesAction::MAX_FILES],
             'attachments.*' => ['file', 'max:10240', 'mimes:pdf,jpg,jpeg,png,gif,webp,doc,docx,xls,xlsx,csv,txt'],
         ];
     }

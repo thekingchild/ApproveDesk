@@ -18,7 +18,7 @@ Open drafts from **My submissions** using the Drafts view.
 
 ## Files and comments
 
-Attachments are private. People with access to the request download them through a short-lived signed link.
+Attachments are private. People with access to the request download them through a short-lived signed link. A request can hold up to 25 attachments, each up to 10 MB.
 
 You can remove an attachment while editing a draft, a returned request, or an information response. On a draft that was never submitted, the file is deleted. Once a request has been submitted, approvers may already have relied on the file, so removing it only takes it out of the current attachments: the request page lists it under **Removed by the requester** with who removed it and when, it can still be downloaded by people who can download the request's files, and evidence packs include it. Attachments on a request under legal hold cannot be removed. Every addition and removal is recorded in the file history.
 

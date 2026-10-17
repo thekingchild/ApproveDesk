@@ -10,6 +10,7 @@ use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Stores uploaded attachments on the private local disk (outside the
@@ -18,6 +19,9 @@ use Illuminate\Support\Facades\Validator;
  */
 final class AttachSubmissionFilesAction
 {
+    /** Attachments a request may hold, across every upload (RV-LAR-21). */
+    public const MAX_FILES = 25;
+
     /**
      * @param  array<int, UploadedFile>  $files
      * @return array<int, SubmissionFile>
@@ -28,6 +32,12 @@ final class AttachSubmissionFilesAction
             ['files' => $files],
             ['files.*' => ['file', 'max:10240', 'mimes:pdf,jpg,jpeg,png,gif,webp,doc,docx,xls,xlsx,csv,txt']],
         )->validate();
+
+        if ($submission->files()->count() + count($files) > self::MAX_FILES) {
+            throw ValidationException::withMessages([
+                'attachments' => __('A request can hold up to :max attachments. Remove some before adding more.', ['max' => self::MAX_FILES]),
+            ]);
+        }
 
         return collect($files)->map(function (UploadedFile $file) use ($submission, $uploader): SubmissionFile {
             $stored = $file->store("submissions/{$submission->id}", 'local');
