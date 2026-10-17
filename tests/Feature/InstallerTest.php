@@ -6,7 +6,7 @@ use App\Models\Setting;
 use App\Models\SiteLimit;
 use App\Models\SystemOwner;
 use App\Models\User;
-use App\Support\Installer;
+use App\Services\Install\Installer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\TestDox;

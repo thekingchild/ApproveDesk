@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Support\Installer;
+use App\Services\Install\Installer;
 use App\Support\SystemSettings;
 use Database\Factories\SettingFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
