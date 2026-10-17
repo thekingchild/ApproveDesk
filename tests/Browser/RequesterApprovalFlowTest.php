@@ -52,7 +52,7 @@ class RequesterApprovalFlowTest extends DuskTestCase
                 ->pause(300)
                 ->click('@submit-request')
                 ->waitForRoute('submissions.show', $draft)
-                ->assertSee('in review');
+                ->assertSee('In review');
 
             $this->assertSame(SubmissionStatus::InReview, $draft->fresh()->status);
         });
@@ -102,7 +102,7 @@ class RequesterApprovalFlowTest extends DuskTestCase
                 ->assertSee('Family holiday')
                 ->click('@submit-custom-request')
                 ->waitForRoute('submissions.show', $draft)
-                ->assertSee('in review');
+                ->assertSee('In review');
 
             $this->assertSame(SubmissionStatus::InReview, $draft->fresh()->status);
         });
