@@ -153,5 +153,5 @@ new #[Title('Workflow templates')] class extends Component {
         </flux:table.rows>
     </flux:table>
 
-    <livewire:admin.workflow-templates.editor />
+    <livewire:admin.workflow-templates.editor wire:key="workflow-template-editor" />
 </div>

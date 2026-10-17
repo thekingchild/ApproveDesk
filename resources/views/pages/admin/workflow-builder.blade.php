@@ -474,9 +474,9 @@ new #[Title('Workflow builder')] class extends Component {
                 </div>
             </flux:card>
 
-            <livewire:admin.workflow-builder.simulation :template-id="$templateId" :steps="$steps" />
+            <livewire:admin.workflow-builder.simulation :template-id="$templateId" :steps="$steps" wire:key="workflow-simulation" />
 
-            <livewire:admin.workflow-builder.versions :template-id="$templateId" />
+            <livewire:admin.workflow-builder.versions :template-id="$templateId" wire:key="workflow-versions" />
         </aside>
     </div>
 

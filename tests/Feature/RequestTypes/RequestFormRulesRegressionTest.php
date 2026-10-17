@@ -130,16 +130,16 @@ class RequestFormRulesRegressionTest extends TestCase
             RequestFieldDefinition::factory()->for($version)->create([...$field, 'position' => $position, 'label' => ucfirst($field['key'])]);
         }
 
-        $component = Livewire::actingAs($admin)->test('pages::admin.request-types')
+        $component = Livewire::actingAs($admin)->test('admin.request-types.builder')
             ->call('editType', $type->id)
             ->set('previewValues.kind', 'travel')->set('previewValues.mode', 'air');
-        $this->assertTrue($component->instance()->previewVisible(2));
-        $this->assertTrue($component->instance()->previewRequired(2));
+        $this->assertTrue($component->instance()->previewState[2]['visible']);
+        $this->assertTrue($component->instance()->previewState[2]['required']);
 
         $component->set('previewValues.kind', 'other');
-        $this->assertFalse($component->instance()->previewVisible(1));
-        $this->assertFalse($component->instance()->previewVisible(2));
-        $this->assertFalse($component->instance()->previewRequired(2));
+        $this->assertFalse($component->instance()->previewState[1]['visible']);
+        $this->assertFalse($component->instance()->previewState[2]['visible']);
+        $this->assertFalse($component->instance()->previewState[2]['required']);
     }
 
     public function test_review_total_matches_the_stored_total_when_a_source_is_hidden(): void
@@ -213,7 +213,7 @@ class RequestFormRulesRegressionTest extends TestCase
         $this->version([['key' => 'reason', 'type' => RequestFieldType::ShortText]], $type);
         app(ArchiveRequestTypeAction::class)->execute($type);
 
-        Livewire::actingAs($admin)->test('pages::admin.request-types')
+        Livewire::actingAs($admin)->test('admin.request-types.builder')
             ->call('editType', $type->id)
             ->call('save', true)->assertHasNoErrors();
 
