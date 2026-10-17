@@ -8,14 +8,14 @@ use App\Actions\Settings\UpdateNudgeSettingsAction;
 use App\Services\Collaboration\QuietHours;
 use App\Services\Workflow\BusinessCalendar;
 use App\Support\ApprovalReferenceSchema;
-use App\Support\EmailApprovalLinks;
+use App\Support\ApprovalLinks;
 use App\Services\Workflow\SeparationOfDuties;
 use Flux\Flux;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
 new #[Title('Approval settings')] class extends Component {
-    public int $emailLinkExpirationHours = EmailApprovalLinks::DEFAULT_EXPIRATION_HOURS;
+    public int $emailLinkExpirationHours = ApprovalLinks::DEFAULT_EXPIRATION_HOURS;
 
     public string $referencePrefix = ApprovalReferenceSchema::DEFAULT_PREFIX;
 
@@ -49,7 +49,7 @@ new #[Title('Approval settings')] class extends Component {
     public function mount(): void
     {
         $this->authorize('approval_settings.manage');
-        $this->emailLinkExpirationHours = EmailApprovalLinks::expirationHours();
+        $this->emailLinkExpirationHours = ApprovalLinks::expirationHours();
         if (auth()->user()?->can('approval_reference.manage')) {
             $schema = app(ApprovalReferenceSchema::class);
             $this->referencePrefix = $schema->prefix();
@@ -59,7 +59,7 @@ new #[Title('Approval settings')] class extends Component {
             $this->referenceDigitLength = $schema->digitLength();
             $this->referenceGenerationMode = $schema->generationMode();
         }
-        $this->emailApprovalSecondFactorRequired = EmailApprovalLinks::requiresSecondFactor();
+        $this->emailApprovalSecondFactorRequired = ApprovalLinks::requiresSecondFactor();
         $this->blockSelfApproval = SeparationOfDuties::enabled();
         $calendar = app(BusinessCalendar::class);
         $this->workingDays = $calendar->workingDays();
@@ -133,7 +133,7 @@ new #[Title('Approval settings')] class extends Component {
         $this->quietHoursEnd = $this->normalizePostedTime($this->quietHoursEnd);
 
         $validated = $this->validate([
-            'emailLinkExpirationHours' => ['required', 'integer', 'min:1', 'max:'.EmailApprovalLinks::MAX_EXPIRATION_HOURS],
+            'emailLinkExpirationHours' => ['required', 'integer', 'min:1', 'max:'.ApprovalLinks::MAX_EXPIRATION_HOURS],
             'emailApprovalSecondFactorRequired' => ['boolean'],
             'blockSelfApproval' => ['boolean'],
             'workingDays' => ['required', 'array', 'min:1'],
@@ -277,7 +277,7 @@ new #[Title('Approval settings')] class extends Component {
             wire:model="emailLinkExpirationHours"
             type="number"
             min="1"
-            :max="\App\Support\EmailApprovalLinks::MAX_EXPIRATION_HOURS"
+            :max="\App\Support\ApprovalLinks::MAX_EXPIRATION_HOURS"
             :label="__('Email approval link lifetime (hours)')"
             :description="__('Signed links stop working after this period. Choose between 1 and 720 hours.')"
             required

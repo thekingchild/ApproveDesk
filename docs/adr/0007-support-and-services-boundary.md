@@ -17,7 +17,7 @@ AGENTS.md defines `Actions`, `DTOs`, `Services`, and `Events/Listeners/Jobs`. It
   - `PublicWebsite` builds HTTP responses.
   - `StepConditionForm` is Livewire form state.
   - `SystemSettings::put()`/`putSecret()` write from inside a reader.
-- Some Services are pure functions: `RichTextSanitizer`, `SqlStatementStream`, `UserImportReadFilter` and `WorkflowTemplateSchemaHasher`. `ChatActionToken` signs links the same way `Support/EmailApprovalLinks` does.
+- Some Services are pure functions: `RichTextSanitizer`, `SqlStatementStream`, `UserImportReadFilter` and `WorkflowTemplateSchemaHasher`. `ChatActionToken` signed links the same way `Support/EmailApprovalLinks` did; both now live in `Support/ApprovalLinks` (RV-ARC-18).
 - Two interfaces sit outside `app/Contracts`: `Support/DnsResolver` and `Services/Backups/BackupTransport`.
 - Typed settings readers exist (`SystemSettings`, `BackupSettings`, `SecuritySettings`, `RegistrationSettings`, `Branding`), but 45 raw `Setting::get('key', 'default')` calls in 17 files repeat keys and defaults. One example is retention, which is repeated between `ApplyRetentionJob` and the Records page.
 

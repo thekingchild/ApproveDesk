@@ -5,7 +5,7 @@ namespace App\Actions\Settings;
 use App\Models\Setting;
 use App\Models\User;
 use App\Services\Auth\SecondFactorAssurance;
-use App\Support\EmailApprovalLinks;
+use App\Support\ApprovalLinks;
 use Illuminate\Http\Request;
 use InvalidArgumentException;
 
@@ -15,7 +15,7 @@ final readonly class UpdateEmailApprovalSecurityAction
 
     public function execute(bool $required, User $actor, Request $request): void
     {
-        $isEnabling = $required && ! EmailApprovalLinks::requiresSecondFactor();
+        $isEnabling = $required && ! ApprovalLinks::requiresSecondFactor();
 
         if ($isEnabling && ! $actor->hasSatisfiedSecondFactor()) {
             throw new InvalidArgumentException('Add and confirm an authenticator or passkey on your account first.');

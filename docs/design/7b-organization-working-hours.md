@@ -222,7 +222,7 @@ An instant `t` **counts as a Business-hour instant** (`isWorking`) iff:
 
 **Elapsed hours:** ignore `W`, `H`, and office hours. `$step_started_at->addHours($hours)` as today.
 
-**Email approval links:** `EmailApprovalLinks::expirationHours()` remains elapsed wall-clock (1–720). Different clock, different setting.
+**Email approval links:** `ApprovalLinks::expirationHours()` remains elapsed wall-clock (1–720). Different clock, different setting.
 
 **Half-open window:** `[09:00, 17:00)` is 8 hours = 28 800 seconds. `17:00:00` is **not** a counting instant (`isWorking` false) but **may** be returned as a deadline (Monday 09:00:00 + 8h → Monday 17:00:00). `isOverdue()` compares the deadline, not `isWorking(now())`.
 
@@ -556,7 +556,7 @@ Fail-open (`null` deadline ⇒ not overdue) is better than fail-closed (treat as
 | `AnalyticsService::cohort` | `isOverdue()` on a **constrained** `currentStep` select | **Must add `timeout_calendar`** (and keep `timeout_hours`) or Business steps are scored as Elapsed **today**, even with unset hours |
 | `ProcessEscalation` | `isOverdue()` → `WorkflowEngine::processTimeout` | Per-instance `try/catch`. Engine still re-checks `deadlineAt()` under `lockForUpdate` |
 | Submission show/index, dashboard cards | `deadlineAt()` / `isOverdue()` | Fail-open |
-| `EmailApprovalLinks` | elapsed 1–720h | None |
+| `ApprovalLinks` | elapsed 1–720h | None |
 | HTTP / webhooks | no deadline fields | `WebhookPayloadFactory` loads `currentStep:id,name,step_order` only |
 
 `WorkflowEngine::processTimeout` already:
@@ -1093,7 +1093,7 @@ If a later product owner wants per-weekday fields on Approval settings, that is 
 - `app/Services/WorkflowEngine.php` — `processTimeout()`
 - `app/Services/ApproverWorkbench.php`, `app/Services/AnalyticsService.php`, `app/Services/ReportService.php`
 - `app/Services/WorkflowTemplates/WorkflowTemplateSchemaHasher.php`
-- `app/Support/EmailApprovalLinks.php`
+- `app/Support/ApprovalLinks.php`
 - `app/Support/HelpCatalogue.php`
 - `resources/views/pages/settings/approvals.blade.php`
 - `resources/views/pages/admin/workflow-templates.blade.php`, `workflow-builder.blade.php`

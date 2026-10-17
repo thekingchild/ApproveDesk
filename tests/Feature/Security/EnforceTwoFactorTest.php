@@ -10,7 +10,7 @@ use App\Models\Setting;
 use App\Models\Submission;
 use App\Models\User;
 use App\Models\WorkflowTemplate;
-use App\Support\EmailApprovalLinks;
+use App\Support\ApprovalLinks;
 use App\Support\SecuritySettings;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -129,7 +129,7 @@ class EnforceTwoFactorTest extends TestCase
         ]);
         app(SubmitSubmissionAction::class)->execute($submission);
         $instance = $submission->workflowInstance()->with('currentStep')->firstOrFail();
-        $url = EmailApprovalLinks::confirmationUrl($instance, $instance->currentStep, $approver);
+        $url = ApprovalLinks::confirmationUrl($instance, $instance->currentStep, $approver);
 
         $this->get($url)->assertOk()->assertSee($submission->title);
     }

@@ -7,9 +7,8 @@ use App\Enums\WorkflowActionType;
 use App\Exceptions\WorkflowException;
 use App\Models\User;
 use App\Models\WorkflowInstance;
-use App\Services\Notifications\ChatActionToken;
 use App\Services\WorkflowEngine;
-use App\Support\EmailApprovalLinks;
+use App\Support\ApprovalLinks;
 use Illuminate\Support\Facades\Gate;
 use InvalidArgumentException;
 
@@ -23,11 +22,11 @@ final class ApproveSubmissionFromChatAction
     public function execute(string $token, ?string $slackUserId = null): WorkflowInstance
     {
         // Cards issued before the setting was turned on must not bypass it (RV-SEC-10).
-        if (EmailApprovalLinks::requiresSecondFactor()) {
+        if (ApprovalLinks::requiresSecondFactor()) {
             throw new InvalidArgumentException('Open the request in ApproveDesk to approve; sign-in and a second factor are required.');
         }
 
-        $claims = ChatActionToken::parse($token);
+        $claims = ApprovalLinks::parseChatToken($token);
         $instance = WorkflowInstance::query()->with(['currentStep', 'submission'])->find($claims['instance_id']);
         $approver = User::query()->find($claims['approver_id']);
 

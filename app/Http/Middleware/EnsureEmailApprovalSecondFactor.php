@@ -4,7 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Models\User;
 use App\Services\Auth\SecondFactorAssurance;
-use App\Support\EmailApprovalLinks;
+use App\Support\ApprovalLinks;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -17,7 +17,7 @@ final readonly class EnsureEmailApprovalSecondFactor
 
     public function handle(Request $request, Closure $next): Response
     {
-        if (! EmailApprovalLinks::requiresSecondFactor()) {
+        if (! ApprovalLinks::requiresSecondFactor()) {
             return $next($request);
         }
 

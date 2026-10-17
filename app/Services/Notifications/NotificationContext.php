@@ -4,7 +4,7 @@ namespace App\Services\Notifications;
 
 use App\Models\Submission;
 use App\Models\User;
-use App\Support\EmailApprovalLinks;
+use App\Support\ApprovalLinks;
 
 final class NotificationContext
 {
@@ -19,7 +19,7 @@ final class NotificationContext
         $approvalUrl = null;
         $instance = $submission->workflowInstance()->with('currentStep')->first();
         if ($instance?->currentStep) {
-            $approvalUrl = EmailApprovalLinks::confirmationUrl($instance, $instance->currentStep, $recipient);
+            $approvalUrl = ApprovalLinks::confirmationUrl($instance, $instance->currentStep, $recipient);
         }
 
         return array_merge([
