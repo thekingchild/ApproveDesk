@@ -259,7 +259,7 @@ Telegram sends a message to the linked account. ApproveDesk does not keep an alw
 
 ### Your account
 
-**Settings → Notifications** is still Immediate, Daily, Weekly, or In-app only for **email**. In-app only does not mute chat or browser push. You can install the app, allow browser notifications, and link or unlink Telegram when the organisation has Telegram ready.
+**Settings → Notifications** is still Immediate, Daily, Weekly, or In-app only for **email**. In-app only does not mute chat or browser push. You can install the app, allow browser notifications, and link or unlink Telegram when the organisation has Telegram ready. To link Telegram, open the link on that page within two hours and press **Start** in Telegram; the bot confirms. Each link works once. One Telegram account can be linked to only one person: if it is already linked to someone else, the bot says so and nothing changes. Linking and unlinking are recorded in the activity log.
 
 ## What not to do
 

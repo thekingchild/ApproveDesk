@@ -20,6 +20,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Livewire\Livewire;
+use Spatie\Activitylog\Models\Activity;
 use Tests\TestCase;
 
 class IntegrationHubTest extends TestCase
@@ -203,6 +204,35 @@ class IntegrationHubTest extends TestCase
         ])->assertSessionHasErrors('url');
 
         $this->assertSame('https://hooks.example.test/approvedesk', $connector->fresh()->credentialMap()['url']);
+    }
+
+    public function test_credentials_need_the_update_ability_and_log_field_names_only(): void
+    {
+        $connector = IntegrationConnector::factory()->create();
+
+        $this->actingAs($this->submitter)->post(route('admin.integrations.credentials', $connector), [
+            'secret' => 'stolen',
+        ])->assertForbidden();
+        $this->assertNotSame('stolen', $connector->fresh()->credentialMap()['secret'] ?? null);
+
+        $this->actingAs($this->admin)->post(route('admin.integrations.credentials', $connector), [
+            'secret' => 'rotated-secret',
+        ])->assertRedirect(route('admin.integrations.index'));
+
+        $activity = Activity::query()->where('event', 'integration-credentials-changed')->sole();
+        $this->assertSame(['secret'], $activity->properties['fields']);
+        $this->assertStringNotContainsString('rotated-secret', json_encode($activity->properties));
+    }
+
+    public function test_credentials_can_be_cleared(): void
+    {
+        $connector = IntegrationConnector::factory()->create(['last_error' => 'Timed out']);
+
+        $this->actingAs($this->admin)->post(route('admin.integrations.credentials', $connector), ['clear' => '1'])
+            ->assertRedirect(route('admin.integrations.index'));
+
+        $this->assertSame([], $connector->fresh()->credentialMap());
+        $this->assertNull($connector->fresh()->last_error);
     }
 
     public function test_submitter_cannot_open_integration_hub(): void

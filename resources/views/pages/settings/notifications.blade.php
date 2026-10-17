@@ -1,5 +1,7 @@
 <?php
 
+use App\Actions\Notifications\LinkTelegramAccountAction;
+use App\Actions\Settings\SaveUserChannelIdentityAction;
 use App\Enums\NotificationChannelKey;
 use App\Enums\NotificationFrequency;
 use App\Models\Setting;
@@ -7,8 +9,6 @@ use App\Services\Notifications\ChannelSettings;
 use App\Services\Notifications\WebPushService;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -53,7 +53,7 @@ new #[Title('Notification settings')] class extends Component {
 
     public function unlinkTelegram(): void
     {
-        Auth::user()->forceFill(['telegram_user_id' => null])->save();
+        app(SaveUserChannelIdentityAction::class)->execute(Auth::user(), NotificationChannelKey::Telegram, null, Auth::user());
         $this->telegramLinked = false;
         $this->telegramLink = $this->buildTelegramLink();
         Flux::toast('Telegram unlinked.', variant: 'success');
@@ -66,10 +66,7 @@ new #[Title('Notification settings')] class extends Component {
             return null;
         }
 
-        $token = Str::random(32);
-        Cache::put('telegram-link:'.$token, Auth::id(), now()->addHours(2));
-
-        return 'https://t.me/'.$username.'?start='.$token;
+        return 'https://t.me/'.$username.'?start='.LinkTelegramAccountAction::issueToken(Auth::user());
     }
 }; ?>
 
