@@ -6,9 +6,9 @@ use App\Enums\BackupSnapshotKind;
 use App\Enums\BackupSnapshotStatus;
 use App\Models\BackupSnapshot;
 use App\Models\User;
+use App\Services\Backups\BackupExecutionGuard;
 use App\Services\Backups\BackupIntegrity;
 use App\Services\Backups\BackupRestoreTrail;
-use App\Support\LongRunningOperation;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
@@ -23,11 +23,17 @@ final class PromoteFilesBackupAction
         private readonly VerifyBackupSnapshotAction $verify,
         private readonly BackupRestoreTrail $restores,
         private readonly BackupIntegrity $integrity,
+        private readonly BackupExecutionGuard $execution,
     ) {}
 
     public function execute(BackupSnapshot $snapshot, User $actor, string $confirmation): BackupSnapshot
     {
-        LongRunningOperation::prepare();
+        // Never while a backup or another promote runs (RV-OPS-06).
+        return $this->execution->run(fn (): BackupSnapshot => $this->promote($snapshot, $actor, $confirmation));
+    }
+
+    private function promote(BackupSnapshot $snapshot, User $actor, string $confirmation): BackupSnapshot
+    {
         if ($snapshot->kind !== BackupSnapshotKind::Files) {
             throw new InvalidArgumentException('Only a files snapshot can be promoted here.');
         }
