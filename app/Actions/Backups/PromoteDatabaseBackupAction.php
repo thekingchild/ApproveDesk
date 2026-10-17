@@ -9,6 +9,8 @@ use App\Models\BackupSnapshot;
 use App\Models\Setting;
 use App\Models\User;
 use App\Models\WorkflowAction;
+use App\Services\Backups\BackupExecutionGuard;
+use App\Services\Backups\BackupHistoryCarryOver;
 use App\Services\Backups\BackupRecorder;
 use App\Services\Backups\BackupRestoreTrail;
 use App\Services\Backups\MysqlDumpLoader;
@@ -40,6 +42,8 @@ final class PromoteDatabaseBackupAction
         private readonly OperationsReconciler $reconciler,
         private readonly CreateDatabaseBackupAction $createBackup,
         private readonly MysqlDumpLoader $loader,
+        private readonly BackupExecutionGuard $execution,
+        private readonly BackupHistoryCarryOver $history,
     ) {}
 
     public function execute(BackupSnapshot $snapshot, User $actor, string $confirmation): BackupSnapshot
@@ -56,13 +60,19 @@ final class PromoteDatabaseBackupAction
             throw new InvalidArgumentException('Verify the snapshot before promoting it.');
         }
 
-        LongRunningOperation::prepare();
+        // Never while a backup or another promote runs (RV-OPS-06).
+        return $this->execution->run(fn (): BackupSnapshot => $this->promote($snapshot, $actor));
+    }
+
+    private function promote(BackupSnapshot $snapshot, User $actor): BackupSnapshot
+    {
         $this->verify->execute($snapshot);
         $snapshot->loadMissing('destination');
 
         $driver = Schema::getConnection()->getDriverName();
         $liveActions = WorkflowAction::query()->count();
         $safety = null;
+        $history = $this->history->capture();
 
         if ($driver === 'sqlite') {
             $this->promoteSqliteFile($snapshot);
@@ -70,6 +80,12 @@ final class PromoteDatabaseBackupAction
             $safety = $this->promoteSqlDump($snapshot);
         } else {
             throw new InvalidArgumentException('Promote supports SQLite files and MySQL.');
+        }
+
+        // Backups and restores made after the snapshot still exist (RV-DATA-10).
+        $this->history->restore($history);
+        if ($safety !== null) {
+            $safety = $this->reinsert($safety);
         }
 
         $snapshotActions = (int) ($snapshot->manifest['workflow_actions'] ?? $liveActions);
