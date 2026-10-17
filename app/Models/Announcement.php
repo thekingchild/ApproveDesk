@@ -5,7 +5,7 @@ namespace App\Models;
 use App\Enums\AnnouncementAudience;
 use App\Enums\AnnouncementDisplayMode;
 use App\Enums\AnnouncementStatus;
-use App\Services\RichTextSanitizer;
+use App\Support\RichTextSanitizer;
 use Carbon\CarbonImmutable;
 use Database\Factories\AnnouncementFactory;
 use Illuminate\Database\Eloquent\Collection;

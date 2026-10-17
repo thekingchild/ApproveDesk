@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Services\Users;
+namespace App\Support;
 
+use App\Services\Users\UserSpreadsheetImportGuard;
 use PhpOffice\PhpSpreadsheet\Reader\IReadFilter;
 
 final class UserImportReadFilter implements IReadFilter

@@ -359,7 +359,7 @@ new #[Title('Approvals')] class extends Component {
                 <div><dt class="text-xs text-zinc-500">{{ __('Department') }}</dt><dd class="font-medium">{{ $previewSubmission->department?->name ?? '—' }}</dd></div>
             </dl>
             @if ($previewSubmission->body)
-                <div class="prose prose-sm mt-6 max-w-none dark:prose-invert">{!! app(\App\Services\RichTextSanitizer::class)->sanitize($previewSubmission->body) !!}</div>
+                <div class="prose prose-sm mt-6 max-w-none dark:prose-invert">{!! app(\App\Support\RichTextSanitizer::class)->sanitize($previewSubmission->body) !!}</div>
             @endif
             <p class="mt-6 text-sm text-zinc-500">{{ trans_choice('{0} No attachments|{1} 1 attachment|[2,*] :count attachments', $previewSubmission->files_count, ['count' => $previewSubmission->files_count]) }}</p>
             <div class="sticky bottom-0 mt-8 flex flex-wrap justify-end gap-3 border-t border-zinc-200 bg-white py-4 dark:border-zinc-700 dark:bg-zinc-900">

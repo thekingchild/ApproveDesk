@@ -3,6 +3,7 @@
 namespace App\Services\Backups;
 
 use App\Support\SchemaTable;
+use App\Support\SqlStatementStream;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 

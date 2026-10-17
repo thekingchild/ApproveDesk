@@ -12,6 +12,7 @@ use App\Models\WorkflowTemplateStep;
 use App\Models\WorkflowTemplateVersion;
 use App\Services\Workflow\StepOutcomes;
 use App\Support\ApprovalStatusStamp;
+use App\Support\RichTextSanitizer;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;

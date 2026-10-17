@@ -7,6 +7,7 @@ use App\Models\WorkflowInstance;
 use App\Models\WorkflowTemplate;
 use App\Models\WorkflowTemplateStep;
 use App\Models\WorkflowTemplateVersion;
+use App\Support\WorkflowTemplateSchemaHasher;
 
 final class BackfillWorkflowTemplateVersions
 {
