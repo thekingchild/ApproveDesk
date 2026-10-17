@@ -5,6 +5,7 @@ namespace App\Actions\Settings;
 use App\DTOs\BrandingSettingsData;
 use App\Models\Setting;
 use App\Models\User;
+use App\Support\Branding;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
@@ -21,6 +22,10 @@ final class UpdateBrandingSettingsAction
         Setting::put('brand.custom_css', $data->customCss === '' ? null : $data->customCss);
         if ($actor instanceof User && $actor->can('branding.custom_code.manage')) {
             Setting::put('brand.custom_code', $data->customCode === '' ? null : $data->customCode);
+            if ($data->customCodeOrigins !== null) {
+                // An explicit (possibly empty) list replaces host scraping for good (ADR 0005).
+                Setting::put(Branding::CUSTOM_CODE_ORIGINS, implode("\n", Branding::normalizeOrigins($data->customCodeOrigins)));
+            }
         }
         Setting::put('auth.allow_registration', $data->allowRegistration ? 'true' : 'false');
         Setting::put('brand.landing_page_enabled', $data->landingPageEnabled ? 'true' : 'false');

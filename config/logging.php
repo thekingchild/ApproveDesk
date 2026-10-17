@@ -85,6 +85,15 @@ return [
             'replace_placeholders' => true,
         ],
 
+        // Content Security Policy violation reports from browsers (ADR 0005).
+        'csp' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/csp.log'),
+            'level' => 'info',
+            'days' => 14,
+            'replace_placeholders' => true,
+        ],
+
         'monthly' => [
             'driver' => 'monthly',
             'path' => storage_path('logs/laravel.log'),

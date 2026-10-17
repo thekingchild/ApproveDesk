@@ -301,3 +301,90 @@ jobs:
             tests/Browser/screenshots
             tests/Browser/source
           retention-days: 7
+
+  # ADR 0005 step 2: the same suite on Alpine's CSP build with the strict policy
+  # reported (not enforced). Not a required check until step 3; its CSP log shows
+  # what the strict policy would still block.
+  browser-csp-safe:
+    runs-on: ubuntu-latest
+
+    # One database path for the server, the test process, and .env.dusk.local.
+    env:
+      CACHE_STORE: array
+      DB_CONNECTION: sqlite
+      DB_DATABASE: /tmp/approvedesk-dusk.sqlite
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+        with:
+          php-version: "8.4"
+          extensions: bcmath, ctype, curl, dom, fileinfo, mbstring, openssl, pdo, tokenizer, xml, zip, gd, pdo_sqlite
+          tools: composer:v2
+          coverage: none
+
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: |
+          composer install --prefer-dist --no-interaction --no-progress
+          npm ci
+          npm run build
+
+      - name: Prepare browser environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+          cp .env.dusk.example .env.dusk.local
+          touch /tmp/approvedesk-dusk.sqlite
+          php artisan dusk:chrome-driver --detect
+          php artisan migrate --force
+
+      - name: Start application server
+        run: APP_ENV=local APP_KEY="base64:Wm5nY3RxTStlNzhuN3ppMW9NUkFmZ2VrQkRQQnkrNUo=" APP_URL=http://127.0.0.1:8001 CACHE_STORE=array DB_CONNECTION=sqlite DB_DATABASE=/tmp/approvedesk-dusk.sqlite SESSION_DRIVER=file LIVEWIRE_CSP_SAFE=true php artisan serve --no-reload --host=127.0.0.1 --port=8001 > /tmp/approvedesk-dusk-csp-server.log 2>&1 &
+
+      - name: Wait for application server
+        run: |
+          for attempt in {1..20}; do
+            if curl --fail --silent http://127.0.0.1:8001/up > /dev/null; then
+              exit 0
+            fi
+
+            sleep 1
+          done
+
+          cat /tmp/approvedesk-dusk-csp-server.log
+          exit 1
+
+      - name: Run browser and accessibility tests
+        run: php artisan dusk
+
+      - name: Show CSP reports
+        if: always()
+        run: cat storage/logs/csp-*.log 2>/dev/null || echo "No CSP violations reported."
+
+      - name: Show application server log
+        if: failure()
+        run: tail -n 200 /tmp/approvedesk-dusk-csp-server.log
+
+      - name: Upload browser diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: browser-csp-safe-diagnostics
+          path: |
+            /tmp/approvedesk-dusk-csp-server.log
+            tests/Browser/console
+            tests/Browser/screenshots
+            tests/Browser/source
+          retention-days: 7

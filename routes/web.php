@@ -8,6 +8,7 @@ use App\Http\Controllers\ApprovalReportController;
 use App\Http\Controllers\Auth\RegistrationConfirmationController;
 use App\Http\Controllers\BackupDestinationController;
 use App\Http\Controllers\BrandingAssetController;
+use App\Http\Controllers\CspReportController;
 use App\Http\Controllers\DownloadBackupSnapshotController;
 use App\Http\Controllers\DownloadEvidencePackController;
 use App\Http\Controllers\EmailApprovalController;
@@ -280,3 +281,8 @@ require __DIR__.'/settings.php';
 Route::get('/{path}', [PublicWebsiteController::class, 'asset'])
     ->where('path', '.*')
     ->name('website.asset');
+
+// Browsers post Content Security Policy violation reports here (ADR 0005).
+Route::post('csp-report', CspReportController::class)
+    ->middleware('throttle:csp-report')
+    ->name('csp.report');

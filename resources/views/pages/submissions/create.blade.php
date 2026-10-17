@@ -325,7 +325,8 @@ new #[Title('New submission')] class extends Component {
                 <div class="sm:col-span-2">
                     <label class="mb-2 block text-sm font-medium">{{ __('Body') }}</label>
                     <div
-                        x-data="richTextEditor(@js($body))"
+                        x-data="richTextEditor"
+                        data-initial-content="{{ $body }}"
                         x-modelable="content"
                         wire:model="body"
                         class="overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900"

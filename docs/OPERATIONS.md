@@ -111,7 +111,15 @@ Administrators can run the same check and apply from **Administration → Update
 
 Do not run `php artisan migrate:rollback` in production. `workflow_actions` is append-only; rolling back a migration that touched history is unsafe.
 
-## 8. Release rollback
+## 8. Content Security Policy reports
+
+Browsers report Content Security Policy violations to `POST /csp-report` (ADR 0005). Each report becomes one line in `storage/logs/csp-YYYY-MM-DD.log`, kept 14 days. A line holds the page and blocked address without query strings, the directive, and whether the policy blocked (`enforce`) or only reported (`report`). The endpoint is throttled to 30 reports a minute per address and refuses bodies over 8 KB.
+
+Reports from the enforced policy usually mean owner custom code uses inline event attributes, or something injected a script. Investigate them.
+
+**Moving toward the strict policy (ADR 0005 steps 2–3).** Set `LIVEWIRE_CSP_SAFE=true` on a staging site. Livewire then serves Alpine's CSP build, and ApproveDesk adds `Content-Security-Policy-Report-Only` without `'unsafe-eval'`. Use the screens people use, then read the CSP log: `report` lines are what the strict policy would still block. Livewire keeps the same script address for both builds, so browsers that cached the standard build keep using it until their cache expires. Clear the browser cache when testing, and plan a cache-busting release before step 3 enforces the policy.
+
+## 9. Release rollback
 
 1. Keep the previous release tag and its `public/build` assets.
 2. Restore the previous release files from that tag or from a backup zip (rsync or the panel file manager). Do not expect GitHub Actions to deploy the previous tag.

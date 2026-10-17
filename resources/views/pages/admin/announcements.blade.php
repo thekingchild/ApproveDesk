@@ -146,34 +146,10 @@ new #[Title('Announcements')] class extends Component
                 <flux:error name="title" />
                 <div
                     class="space-y-2"
-                    x-data="{
-                        replace(open, close, placeholder) {
-                            const field = this.$refs.message;
-                            const start = field.selectionStart;
-                            const end = field.selectionEnd;
-                            const selected = field.value.slice(start, end) || placeholder;
-                            field.setRangeText(open + selected + close, start, end, 'end');
-                            field.dispatchEvent(new Event('input', { bubbles: true }));
-                            field.focus();
-                        },
-                        list(tag) {
-                            const field = this.$refs.message;
-                            const start = field.selectionStart;
-                            const end = field.selectionEnd;
-                            const selected = field.value.slice(start, end) || 'List item';
-                            const items = selected.split(/\r?\n/).filter(line => line.trim() !== '').map(line => '<li>' + line + '</li>').join('\n');
-                            field.setRangeText('<' + tag + '>\n' + items + '\n</' + tag + '>', start, end, 'end');
-                            field.dispatchEvent(new Event('input', { bubbles: true }));
-                            field.focus();
-                        },
-                        link() {
-                            const url = window.prompt('{{ __('Enter an http, https, mailto, page, or anchor link') }}');
-                            if (! url || ! /^(https?:\/\/|mailto:|\/|#)/i.test(url)) return;
-                            const safe = url.replace(/[\u0022\u0027\u003C\u003E]/g, '');
-                            const open = '\u003Ca href=\u0027' + safe + '\u0027\u003E';
-                            this.replace(open, '</a>', '{{ __('Link text') }}');
-                        }
-                    }"
+                    x-data="announcementFormatter"
+                    data-link-prompt="{{ __('Enter an http, https, mailto, page, or anchor link') }}"
+                    data-link-text="{{ __('Link text') }}"
+                    data-list-item="{{ __('List item') }}"
                 >
                     <div class="flex flex-wrap gap-1 rounded-lg border border-zinc-200 bg-zinc-50 p-1.5 dark:border-zinc-700 dark:bg-zinc-800/60" role="group" aria-label="{{ __('Message formatting') }}" data-test="announcement-format-toolbar">
                         <button type="button" class="min-h-9 min-w-9 rounded-md px-2 font-bold hover:bg-white dark:hover:bg-zinc-700" aria-label="{{ __('Bold') }}" title="{{ __('Bold') }}" x-on:click="replace('<strong>', '</strong>', '{{ __('bold text') }}')">B</button>

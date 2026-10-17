@@ -38,11 +38,15 @@
 
             <div
                 class="space-y-6"
+                data-mailer="{{ $mailer }}"
+                data-google="{{ $oauth['google']['enabled'] ? 'true' : 'false' }}"
+                data-microsoft="{{ $oauth['microsoft']['enabled'] ? 'true' : 'false' }}"
+                data-github="{{ $oauth['github']['enabled'] ? 'true' : 'false' }}"
                 x-data="{
-                    mailer: @js($mailer),
-                    google: @js($oauth['google']['enabled']),
-                    microsoft: @js($oauth['microsoft']['enabled']),
-                    github: @js($oauth['github']['enabled']),
+                    mailer: $el.dataset.mailer,
+                    google: $el.dataset.google === 'true',
+                    microsoft: $el.dataset.microsoft === 'true',
+                    github: $el.dataset.github === 'true',
                 }"
             >
                 <form method="POST" action="{{ route('settings.system.update') }}" class="space-y-6">

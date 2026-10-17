@@ -162,6 +162,9 @@ class AppServiceProvider extends ServiceProvider
             (string) ($request->user()?->getAuthIdentifier() ?? $request->ip()),
         ));
 
+        // Violation reports are anonymous; a page can send several, so allow a burst per IP.
+        RateLimiter::for('csp-report', fn (Request $request): Limit => Limit::perMinute(30)->by((string) $request->ip()));
+
         RateLimiter::for('approval-links', fn (Request $request): Limit => RateLimitProfiles::limit(
             'approval_links',
             (string) $request->ip(),
