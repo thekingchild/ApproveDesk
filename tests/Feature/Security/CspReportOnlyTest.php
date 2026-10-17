@@ -2,13 +2,13 @@
 
 namespace Tests\Feature\Security;
 
-use App\Actions\Settings\UpdateBrandingSettingsAction;
-use App\DTOs\BrandingSettingsData;
+use App\Actions\Settings\UpdateCustomCodeAction;
 use App\Models\Setting;
 use App\Models\SystemOwner;
 use App\Models\User;
 use App\Support\Branding;
 use Database\Seeders\RolesAndPermissionsSeeder;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\RateLimiter;
 use Tests\TestCase;
@@ -87,21 +87,19 @@ class CspReportOnlyTest extends TestCase
         $owner = User::factory()->create()->assignRole('super-admin');
         SystemOwner::query()->create(['id' => SystemOwner::SINGLETON_ID, 'user_id' => $owner->id]);
 
-        app(UpdateBrandingSettingsAction::class)->execute(new BrandingSettingsData(
-            tagline: 'Approvals', accentColor: '#4f46e5', overlay: 40, customCss: null, allowRegistration: false,
-            customCode: (string) Setting::get('brand.custom_code'),
-            customCodeOrigins: "https://www.googletagmanager.com/\nhttp://insecure.example.com\nhttps://evil.example.com/path",
-        ), $owner);
+        // Narrowing the list (and leaving the code alone) needs no step-up.
+        app(UpdateCustomCodeAction::class)->execute(
+            $owner,
+            (string) Setting::get('brand.custom_code'),
+            "https://www.googletagmanager.com/\nhttp://insecure.example.com\nhttps://evil.example.com/path",
+        );
 
         $this->assertSame(['https://www.googletagmanager.com'], Branding::customCodeOrigins(), 'Only valid HTTPS origins are kept; a host in a comment no longer counts.');
         $csp = (string) $this->get(route('login'))->headers->get('Content-Security-Policy');
         $this->assertStringContainsString('https://www.googletagmanager.com', $csp);
         $this->assertStringNotContainsString('legacy.example.com', $csp);
 
-        app(UpdateBrandingSettingsAction::class)->execute(new BrandingSettingsData(
-            tagline: 'Approvals', accentColor: '#4f46e5', overlay: 40, customCss: null, allowRegistration: false,
-            customCode: (string) Setting::get('brand.custom_code'), customCodeOrigins: '',
-        ), $owner);
+        app(UpdateCustomCodeAction::class)->execute($owner, (string) Setting::get('brand.custom_code'), '');
         $this->assertSame([], Branding::customCodeOrigins(), 'An empty list stays empty instead of falling back to scraping.');
     }
 
@@ -109,10 +107,11 @@ class CspReportOnlyTest extends TestCase
     {
         $admin = User::factory()->create()->assignRole('admin');
 
-        app(UpdateBrandingSettingsAction::class)->execute(new BrandingSettingsData(
-            tagline: 'Approvals', accentColor: '#4f46e5', overlay: 40, customCss: null, allowRegistration: false,
-            customCodeOrigins: 'https://attacker.example.com',
-        ), $admin);
+        try {
+            app(UpdateCustomCodeAction::class)->execute($admin, null, 'https://attacker.example.com');
+            $this->fail('An administrator changed the custom-code origin list.');
+        } catch (AuthorizationException) {
+        }
 
         $this->assertNull(Setting::get(Branding::CUSTOM_CODE_ORIGINS));
     }

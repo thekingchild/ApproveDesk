@@ -2,8 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Actions\Settings\UpdateBrandingSettingsAction;
-use App\DTOs\BrandingSettingsData;
+use App\Actions\Settings\UpdateCustomCodeAction;
+use App\Enums\StepUpStatus;
+use App\Exceptions\StepUpRequiredException;
 use App\Models\Setting;
 use App\Models\SystemOwner;
 use App\Models\User;
@@ -11,7 +12,9 @@ use App\Services\Auth\SecondFactorAssurance;
 use App\Services\Roles\RolePermissionService;
 use App\Services\Users\SystemOwnerService;
 use App\Support\Branding;
+use Closure;
 use Database\Seeders\RolesAndPermissionsSeeder;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
@@ -224,12 +227,19 @@ class BrandingTest extends TestCase
             ->set('accent_color', '#00aa55')
             ->set('overlay', 55)
             ->set('custom_css', '.brand-mark { border-radius: 0; }')
-            ->set('custom_code', 'window.ADMIN_TRACK = 1;')
-            ->set('allow_registration', false)
             ->set('meta_title', 'Desk of Approvals')
             ->set('meta_description', 'Internal request desk.')
             ->call('save')
             ->assertHasNoErrors();
+
+        Livewire::actingAs($admin)
+            ->test('settings.branding.public-access')
+            ->set('allow_registration', false)
+            ->call('save')
+            ->assertHasNoErrors();
+
+        // Custom code is the System owner's alone (RV-ARC-10).
+        Livewire::actingAs($admin)->test('settings.branding.custom-code')->assertForbidden();
 
         $this->assertSame('Approve everything.', Setting::get('brand.tagline'));
         $this->assertSame('#00aa55', Setting::get('brand.accent_color'));
@@ -254,7 +264,7 @@ class BrandingTest extends TestCase
         $admin = User::factory()->create()->assignRole('admin');
 
         Livewire::actingAs($admin)
-            ->test('pages::settings.branding')
+            ->test('settings.branding.public-access')
             ->set('landing_page_enabled', true)
             ->call('save')
             ->assertHasNoErrors();
@@ -267,7 +277,7 @@ class BrandingTest extends TestCase
         $this->get('/css/app.css')->assertOk();
 
         Livewire::actingAs($admin)
-            ->test('pages::settings.branding')
+            ->test('settings.branding.public-access')
             ->set('landing_page_enabled', false)
             ->call('save')
             ->assertHasNoErrors();
@@ -317,7 +327,8 @@ class BrandingTest extends TestCase
 
         $this->assertFalse($upload->isPreviewable());
         $component = Livewire::actingAs($admin)->test('pages::settings.branding');
-        $this->assertNull($component->instance()->previewUploadUrl($upload, null, false));
+        $preview = fn (): ?string => $this->previewUploadUrl($upload, null, false);
+        $this->assertNull($preview->call($component->instance()));
     }
 
     public function test_logo_and_favicon_upload_appear_on_login_and_in_the_app(): void
@@ -416,26 +427,23 @@ class BrandingTest extends TestCase
     {
         $owner = $this->owner();
         $admin = User::factory()->create()->assignRole('admin');
+        $snippet = '<script src="https://owner.test/tracker.js"></script>';
 
-        app(UpdateBrandingSettingsAction::class)->execute(new BrandingSettingsData(
-            tagline: 'T',
-            accentColor: '#4f46e5',
-            overlay: 40,
-            customCss: null,
-            allowRegistration: true,
-            customCode: '<script src="https://owner.test/tracker.js"></script>',
-        ), $admin);
+        $this->expectsAuthorizationRefusal(fn () => app(UpdateCustomCodeAction::class)->execute($admin, $snippet, ''));
         $this->assertTrue(blank(Setting::get('brand.custom_code')));
 
-        app(UpdateBrandingSettingsAction::class)->execute(new BrandingSettingsData(
-            tagline: 'T',
-            accentColor: '#4f46e5',
-            overlay: 40,
-            customCss: null,
-            allowRegistration: true,
-            customCode: '<script src="https://owner.test/tracker.js"></script>',
-        ), $owner);
-        $this->assertSame('<script src="https://owner.test/tracker.js"></script>', Setting::get('brand.custom_code'));
+        // RV-ARC-10: the step-up lives in the Action, not only on the screen.
+        try {
+            app(UpdateCustomCodeAction::class)->execute($owner, $snippet, '');
+            $this->fail('Custom code saved without a fresh password confirmation.');
+        } catch (StepUpRequiredException $exception) {
+            $this->assertSame(StepUpStatus::NeedsPassword, $exception->status);
+        }
+        $this->assertTrue(blank(Setting::get('brand.custom_code')));
+
+        session($this->ownerSession($owner));
+        app(UpdateCustomCodeAction::class)->execute($owner, $snippet, '');
+        $this->assertSame($snippet, Setting::get('brand.custom_code'));
 
         auth()->forgetGuards();
 
@@ -458,9 +466,11 @@ class BrandingTest extends TestCase
             ->test('pages::settings.branding')
             ->assertDontSee('data-test="custom-code"', false)
             ->set('tagline', 'Brand desk.')
-            ->set('custom_code', 'window.PWNED = 1;')
             ->call('save')
             ->assertHasNoErrors();
+
+        Livewire::actingAs($manager)->test('settings.branding.custom-code')->assertForbidden();
+        $this->expectsAuthorizationRefusal(fn () => app(UpdateCustomCodeAction::class)->execute($manager, 'window.PWNED = 1;', ''));
 
         $this->assertSame('Brand desk.', Setting::get('brand.tagline'));
         $this->assertSame('<script src="https://kept.test/tracker.js"></script>', Setting::get('brand.custom_code'));
@@ -471,7 +481,7 @@ class BrandingTest extends TestCase
         $owner = $this->owner();
 
         Livewire::actingAs($owner)
-            ->test('pages::settings.branding')
+            ->test('settings.branding.custom-code')
             ->set('custom_code', '<script src="https://owner.test/tracker.js"></script>')
             ->call('save')
             ->assertRedirect(route('password.confirm'));
@@ -492,7 +502,7 @@ class BrandingTest extends TestCase
         session($this->ownerSession($owner));
 
         Livewire::actingAs($owner)
-            ->test('pages::settings.branding')
+            ->test('settings.branding.custom-code')
             ->set('custom_code', $snippet)
             ->call('save')
             ->assertHasNoErrors();
@@ -509,7 +519,7 @@ class BrandingTest extends TestCase
             + array_diff_key($this->ownerSession($owner), ['auth.password_confirmed_at' => true]));
 
         Livewire::actingAs($owner)
-            ->test('pages::settings.branding')
+            ->test('settings.branding.custom-code')
             ->set('custom_code', '<script src="https://owner.test/late.js"></script>')
             ->call('save')
             ->assertRedirect(route('password.confirm'));
@@ -524,11 +534,10 @@ class BrandingTest extends TestCase
         session($this->ownerSession($owner));
         $this->assertTrue($owner->can('branding.custom_code.manage'));
 
-        $component = Livewire::actingAs($owner)
-            ->test('pages::settings.branding')
-            ->assertSee('data-test="custom-code"', false);
-
-        $this->assertTrue($component->instance()->canManageCustomCode());
+        $this->get(route('settings.branding'))
+            ->assertOk()
+            ->assertSee('data-test="custom-code"', false)
+            ->assertSee('data-test="save-custom-code"', false);
     }
 
     public function test_administrator_does_not_receive_custom_code_permission(): void
@@ -558,6 +567,16 @@ class BrandingTest extends TestCase
         $role = app(RolePermissionService::class)->create($this->owner(), 'Brand editor', null, ['branding.manage']);
 
         return User::factory()->create()->assignRole($role->name);
+    }
+
+    private function expectsAuthorizationRefusal(Closure $run): void
+    {
+        try {
+            $run();
+            $this->fail('The action ran without the custom-code permission.');
+        } catch (AuthorizationException) {
+            $this->addToAssertionCount(1);
+        }
     }
 
     /** @return array<string, mixed> */
