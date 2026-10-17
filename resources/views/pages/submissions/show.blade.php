@@ -755,14 +755,10 @@ new #[Title('Submission')] class extends Component {
 
 <div
     class="space-y-6"
-    x-data="{ previous: @js($this->canAct ? route('approvals.queue', [$submission, 'previous']) : null), next: @js($this->canAct ? route('approvals.queue', [$submission, 'next']) : null) }"
-    x-on:keydown.window="
-        if (['INPUT', 'TEXTAREA', 'SELECT'].includes($event.target.tagName) || $event.metaKey || $event.ctrlKey || $event.altKey) return;
-        if ($event.key === '[' && previous) window.location.assign(previous);
-        if ($event.key === ']' && next) window.location.assign(next);
-        if ($event.key.toLowerCase() === 'a') document.querySelector('[data-test=approve-modal-trigger]')?.click();
-        if ($event.key.toLowerCase() === 'r') document.querySelector('[data-test=reject-modal-trigger]')?.click();
-    "
+    x-data="approvalShortcuts"
+    data-previous-url="{{ $this->canAct ? route('approvals.queue', [$submission, 'previous']) : '' }}"
+    data-next-url="{{ $this->canAct ? route('approvals.queue', [$submission, 'next']) : '' }}"
+    x-on:keydown.window="handle($event)"
 >
     <x-ui.breadcrumbs :items="[['label' => __('Submissions'), 'url' => route('submissions.index')], ['label' => $submission->reference_number]]" :back="route('submissions.index')" back-label="Back to submissions" />
 

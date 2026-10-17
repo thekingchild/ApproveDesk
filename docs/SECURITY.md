@@ -28,7 +28,14 @@ on them; injected `<script>` tags and inline event attributes are blocked.
 `'unsafe-eval'` remains until Alpine runs in its CSP build (ADR 0005 step 2),
 and `style-src` keeps `'unsafe-inline'`. Owner custom code and the drop-in
 public website are trusted owner content: their `<script>` tags receive the
-nonce when rendered (`App\Support\CspNonce`). In local development the Vite
+nonce when rendered (`App\Support\CspNonce`). Violation reports go to
+`POST /csp-report` (`report-uri`, plus `report-to` over HTTPS), which is
+throttled, capped at 8 KB, strips query strings, and writes only to the `csp`
+log channel. With `LIVEWIRE_CSP_SAFE=true`, Alpine runs in its CSP build and a
+`Content-Security-Policy-Report-Only` header without `'unsafe-eval'` shows what
+the strict policy would block (ADR 0005 step 2). Custom code may load only from
+the owner's list of allowed HTTPS origins; until the owner first saves that list,
+hosts mentioned in the code are used. In local development the Vite
 dev server origin is allowed while `npm run dev` runs, and debug-mode error
 pages are sent without a CSP so stack traces stay usable. When an
 administrator saves analytics or custom code, HTTPS hosts found in that

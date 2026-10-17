@@ -25,6 +25,9 @@ new #[Title('Branding settings')] class extends Component {
 
     public string $custom_code = '';
 
+    /** HTTPS origins custom code may load from, one per line (ADR 0005). */
+    public string $custom_code_origins = '';
+
     public bool $allow_registration = true;
 
     public bool $landing_page_enabled = false;
@@ -69,6 +72,12 @@ new #[Title('Branding settings')] class extends Component {
         $pendingCode = session('branding.pending_custom_code');
         if (is_string($pendingCode) && $pendingCode !== '' && $this->canManageCustomCode()) {
             $this->custom_code = $pendingCode;
+        }
+        // Until the owner saves an explicit list, show the hosts the policy uses today.
+        $this->custom_code_origins = implode("\n", \App\Support\Branding::customCodeOrigins());
+        $pendingOrigins = session('branding.pending_custom_code_origins');
+        if (is_string($pendingOrigins) && $this->canManageCustomCode()) {
+            $this->custom_code_origins = $pendingOrigins;
         }
         $this->allow_registration = Setting::get('auth.allow_registration', 'true') !== 'false';
         $this->landing_page_enabled = Setting::get('brand.landing_page_enabled', 'false') === 'true';
@@ -121,6 +130,7 @@ new #[Title('Branding settings')] class extends Component {
             'overlay' => ['required', 'integer', 'min:0', 'max:90'],
             'custom_css' => ['nullable', 'string', 'max:5000'],
             'custom_code' => ['nullable', 'string', 'max:8000'],
+            'custom_code_origins' => ['nullable', 'string', 'max:2000'],
             'meta_title' => ['nullable', 'string', 'max:80'],
             'meta_description' => ['nullable', 'string', 'max:180'],
             'registration_mode' => ['required', \Illuminate\Validation\Rule::in(['immediate', 'otp'])],
@@ -141,11 +151,26 @@ new #[Title('Branding settings')] class extends Component {
             }
         }
 
+        foreach (preg_split('/[\r\n,]+/', $this->custom_code_origins) ?: [] as $origin) {
+            $origin = rtrim(mb_strtolower(trim((string) $origin)), '/');
+
+            if ($origin !== '' && ! \App\Support\Branding::isOrigin($origin)) {
+                $this->addError('custom_code_origins', __('":origin" is not an HTTPS origin. One per line, e.g. https://www.googletagmanager.com.', ['origin' => $origin]));
+
+                return;
+            }
+        }
+
         $existingCode = Setting::get('brand.custom_code');
         $existingCode = $existingCode === '' ? null : $existingCode;
         $submittedCode = $this->custom_code === '' ? null : $this->custom_code;
 
-        if ($submittedCode !== $existingCode) {
+        // Widening where custom code may load from is as sensitive as the code itself.
+        $currentOrigins = \App\Support\Branding::customCodeOrigins();
+        $submittedOrigins = $this->canManageCustomCode() ? \App\Support\Branding::normalizeOrigins($this->custom_code_origins) : $currentOrigins;
+        $addsOrigins = array_diff($submittedOrigins, $currentOrigins) !== [];
+
+        if ($submittedCode !== $existingCode || $addsOrigins) {
             if ($this->canManageCustomCode()) {
                 if (! $this->ensureCustomCodeSaveAuthorized()) {
                     return;
@@ -162,6 +187,7 @@ new #[Title('Branding settings')] class extends Component {
             overlay: $this->overlay,
             customCss: $this->custom_css === '' ? null : $this->custom_css,
             customCode: $submittedCode,
+            customCodeOrigins: $this->canManageCustomCode() ? implode("\n", $submittedOrigins) : null,
             allowRegistration: $this->allow_registration,
             landingPageEnabled: $this->landing_page_enabled,
             registrationMode: $this->registration_mode,
@@ -176,7 +202,7 @@ new #[Title('Branding settings')] class extends Component {
             removeFavicon: $this->remove_favicon,
         ), auth()->user());
 
-        session()->forget('branding.pending_custom_code');
+        session()->forget(['branding.pending_custom_code', 'branding.pending_custom_code_origins']);
 
         $this->current_background = Setting::get('brand.login_background');
         $this->current_logo = Setting::get('brand.logo');
@@ -210,6 +236,7 @@ new #[Title('Branding settings')] class extends Component {
         if (! is_numeric($confirmedAt) || time() - (int) $confirmedAt > (int) config('auth.password_timeout', 10800)) {
             session()->put('url.intended', route('settings.branding'));
             session()->put('branding.pending_custom_code', $this->custom_code);
+            session()->put('branding.pending_custom_code_origins', $this->custom_code_origins);
             $this->redirect(route('password.confirm'));
 
             return false;
@@ -436,6 +463,9 @@ new #[Title('Branding settings')] class extends Component {
                             <div class="mt-3 space-y-2">
                                 <flux:textarea wire:model="custom_code" rows="6" placeholder="<!-- Google tag or other tracking snippet -->" data-test="custom-code" />
                                 <flux:error name="custom_code" />
+                                <flux:textarea wire:model="custom_code_origins" rows="3" :label="__('Allowed sites for this code')" placeholder="https://www.googletagmanager.com" data-test="custom-code-origins" />
+                                <flux:error name="custom_code_origins" />
+                                <p class="text-xs text-zinc-500 dark:text-zinc-400">{{ __('One HTTPS address per line, without a path. The browser lets custom code load scripts, images, frames, and connections only from these sites. Only the System owner can change this list, with the same confirmation as the code.') }}</p>
                                 <p class="text-xs text-zinc-500 dark:text-zinc-400">{{ __('Optional. Paste a tracking snippet or JavaScript from your analytics provider. It is added to login, the signed-in app, and the public home page. Only the System owner can change this, after confirming their password and second factor. Do not paste secrets.') }}</p>
                             </div>
                         </details>

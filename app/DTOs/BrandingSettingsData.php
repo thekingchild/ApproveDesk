@@ -24,5 +24,7 @@ final readonly class BrandingSettingsData
         public ?UploadedFile $favicon = null,
         public bool $removeFavicon = false,
         public ?string $customCode = null,
+        /** Null leaves the stored list unchanged. */
+        public ?string $customCodeOrigins = null,
     ) {}
 }

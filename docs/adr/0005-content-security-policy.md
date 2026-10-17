@@ -2,7 +2,7 @@
 
 Date: 2026-10-17
 
-Status: Accepted (2026-10-17) · Step 1 implemented (`feature/rv-sec-csp-nonce`)
+Status: Accepted (2026-10-17) · Step 1 implemented (#76) · Step 2 implemented (`feature/rv-sec-csp-report-only`)
 
 ## Context
 
@@ -46,3 +46,12 @@ Two rules hold at every step:
 - Owners whose custom code relies on hosts mentioned only in comments will need to add them to the allow-list. The Help article for organization settings documents the allow-list.
 - The report endpoint adds a public, unauthenticated route. Its throttle and size cap are part of the design, not optional.
 - Help (`docs/kb/organization-settings.md`) and `docs/SECURITY.md` are updated in the PRs that change behaviour.
+
+## Implementation notes (step 2)
+
+- The report-only strict policy is sent only while `livewire.csp_safe` is on (`LIVEWIRE_CSP_SAFE=true`). With Alpine's standard build every expression is an `eval`, so reports would be noise.
+- Both policies carry `report-uri /csp-report`. `report-to` and `Reporting-Endpoints` are added only over HTTPS: the Reporting API does not deliver to plain-HTTP endpoints, and browsers ignore `report-uri` when `report-to` is present.
+- View logic the CSP build cannot parse lives in `resources/js/alpine-components.js` (`Alpine.data`). Values reach components through `data-*` attributes, not `@js()`: the CSP parser does not understand the `\u` escapes `@js()` writes for quotes, `<`, `>` and `&`. `Tests\Unit\AlpineCspSafeTemplatesTest` keeps templates within the rules.
+- **Before step 3:** Livewire serves both builds from the same versioned URL, so browsers that cached the standard build keep it after `csp_safe` is turned on. Step 3 needs a cache-busting change (for example a distinct `livewire.asset_url`) before enforcing the strict policy.
+- A browser check with `csp_safe` on (login, passkeys, two-factor setup and challenge, notification settings, announcements, request-type builder, new submission, request page, system and branding settings) found no violations once the CSP build was actually loaded. CI runs the Dusk suite the same way in the non-required `browser-csp-safe` job.
+

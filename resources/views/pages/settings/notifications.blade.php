@@ -88,15 +88,14 @@ new #[Title('Notification settings')] class extends Component {
     <div class="mt-10 space-y-4">
         <flux:heading size="sm">{{ __('This device') }}</flux:heading>
         <p class="text-sm text-zinc-500">{{ __('Install ApproveDesk and allow browser notifications if you want alerts when this tab is closed.') }}</p>
-        <div class="flex flex-wrap gap-3">
+        <div class="flex flex-wrap gap-3" x-data="pushSubscription" data-vapid-public-key="{{ $vapidPublicKey }}">
             <flux:button type="button" id="install-app-button" data-install-fallback="{{ __('Use your browser’s Install or Add to Home Screen command if the prompt does not appear.') }}">{{ __('Install app') }}</flux:button>
             <flux:button
                 type="button"
-                x-data
-                x-on:click="window.approveDeskPush.subscribe(@js($vapidPublicKey)).then(() => window.location.reload())"
+                x-on:click="subscribe()"
             >{{ $pushEnabled ? __('Browser notifications on') : __('Enable browser notifications') }}</flux:button>
             @if ($pushEnabled)
-                <flux:button type="button" variant="ghost" x-data x-on:click="window.approveDeskPush.unsubscribe().then(() => window.location.reload())">{{ __('Turn off browser notifications') }}</flux:button>
+                <flux:button type="button" variant="ghost" x-on:click="unsubscribe()">{{ __('Turn off browser notifications') }}</flux:button>
             @endif
         </div>
     </div>

@@ -27,7 +27,17 @@ final class SecurityHeaders
         $response->headers->set('Cross-Origin-Opener-Policy', 'same-origin');
         // Laravel's local debug error page inlines its own scripts; production never runs with debug on.
         if (! (config('app.debug') && $response->getStatusCode() >= 500)) {
-            $response->headers->set('Content-Security-Policy', $this->policy());
+            $response->headers->set('Content-Security-Policy', $this->policy(strict: false, secure: $request->secure()));
+            // The Reporting API only delivers to HTTPS; on plain HTTP browsers use report-uri.
+            if ($request->secure()) {
+                $response->headers->set('Reporting-Endpoints', 'csp-endpoint="'.route('csp.report').'"');
+            }
+
+            // Step 2: while Alpine runs in its CSP build, report what the strict
+            // policy (no 'unsafe-eval') would block, without blocking it yet.
+            if (config('livewire.csp_safe')) {
+                $response->headers->set('Content-Security-Policy-Report-Only', $this->policy(strict: true, secure: $request->secure()));
+            }
         }
 
         if ($request->secure()) {
@@ -37,12 +47,13 @@ final class SecurityHeaders
         return $response;
     }
 
-    private function policy(): string
+    private function policy(bool $strict, bool $secure): string
     {
-        // Step 1 of ADR 0005: inline scripts need this response's nonce; injected
-        // <script> tags and on* attributes no longer run. 'unsafe-eval' stays until
-        // Alpine runs in its CSP build (step 2).
-        $script = "script-src 'self' 'nonce-".CspNonce::current()."' 'unsafe-eval'";
+        // ADR 0005: inline scripts need this response's nonce, so injected <script>
+        // tags and on* attributes never run. The enforced policy keeps
+        // 'unsafe-eval' for Alpine's standard build; the strict one (report-only
+        // until step 3) drops it.
+        $script = "script-src 'self' 'nonce-".CspNonce::current()."'".($strict ? '' : " 'unsafe-eval'");
         $connect = "connect-src 'self'";
         $frame = "frame-src 'self'";
         $img = "img-src 'self' data: blob:";
@@ -80,6 +91,8 @@ final class SecurityHeaders
             "base-uri 'self'",
             "form-action 'self'",
             "frame-ancestors 'self'",
+            'report-uri '.route('csp.report', absolute: false),
+            ...($secure ? ['report-to csp-endpoint'] : []),
         ]);
     }
 }

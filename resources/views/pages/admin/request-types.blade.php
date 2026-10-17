@@ -722,13 +722,7 @@ new #[Title('Request types')] class extends Component {
 
     <flux:modal name="request-type-builder" class="w-full max-w-6xl">
         <div class="space-y-5"
-            x-data="requestTypeBuilderDraft({
-                key: 'approvedesk.request-type-builder.' + ($wire.editingTypeId ?? 'new'),
-                snapshot: () => $wire.localDraftSnapshot(),
-                restore: (draft) => $wire.restoreLocalDraft(draft),
-                discardFlag: () => $wire.discardLocalDraft(),
-                onReady: (api) => { window.__builderDraft = api },
-            })"
+            x-data="requestTypeBuilderDraft"
             x-on:builder-draft-saved.window="discardDraft()"
         >
             @if ($localDraftAvailable)

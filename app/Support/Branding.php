@@ -88,10 +88,54 @@ final class Branding
         return $html === '' ? null : $html;
     }
 
+    /** Owner-entered HTTPS origins custom code may load from (ADR 0005). */
+    public const CUSTOM_CODE_ORIGINS = 'brand.custom_code_origins';
+
     /**
+     * Origins added to the Content Security Policy for custom code. The owner
+     * lists them explicitly; until they first save that list, the hosts found
+     * in the code itself are used so upgrades keep working.
+     *
      * @return list<string>
      */
     public static function customCodeOrigins(): array
+    {
+        $stored = Setting::get(self::CUSTOM_CODE_ORIGINS);
+
+        return is_string($stored) ? self::normalizeOrigins($stored) : self::scrapedCustomCodeOrigins();
+    }
+
+    /**
+     * One origin per line (or comma separated): https, a host, an optional
+     * port, nothing else. Anything else is dropped.
+     *
+     * @return list<string>
+     */
+    public static function normalizeOrigins(string $list): array
+    {
+        $origins = [];
+        foreach (preg_split('/[\r\n,]+/', $list) ?: [] as $line) {
+            $origin = rtrim(mb_strtolower(trim($line)), '/');
+            if (self::isOrigin($origin)) {
+                $origins[$origin] = true;
+            }
+        }
+
+        return array_keys($origins);
+    }
+
+    public static function isOrigin(string $origin): bool
+    {
+        return preg_match('#^https://[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+(:\d{1,5})?$#', $origin) === 1;
+    }
+
+    /**
+     * The hosts mentioned anywhere in the custom code (comments included):
+     * the behaviour before the explicit list existed.
+     *
+     * @return list<string>
+     */
+    public static function scrapedCustomCodeOrigins(): array
     {
         $html = self::customCodeHtml();
 
