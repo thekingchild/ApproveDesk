@@ -2,16 +2,18 @@
 
 use App\Actions\Settings\UpdateBrandingSettingsAction;
 use App\DTOs\BrandingSettingsData;
-use App\Models\Setting;
-use App\Models\User;
 use App\Support\Branding;
-use App\Services\Auth\SecondFactorAssurance;
 use Flux\Flux;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
 
+/*
+ * Identity and Login appearance, with the live preview. Public access and
+ * owner custom code are child components under livewire/settings/branding
+ * with their own Actions (ADR 0006 split, RV-ARC-10).
+ */
 new #[Title('Branding settings')] class extends Component {
     use WithFileUploads;
 
@@ -23,22 +25,9 @@ new #[Title('Branding settings')] class extends Component {
 
     public string $custom_css = '';
 
-    public string $custom_code = '';
-
-    /** HTTPS origins custom code may load from, one per line (ADR 0005). */
-    public string $custom_code_origins = '';
-
-    public bool $allow_registration = true;
-
-    public bool $landing_page_enabled = false;
-
     public string $meta_title = '';
 
     public string $meta_description = '';
-
-    public string $registration_mode = 'otp';
-
-    public string $allowed_registration_domains = '';
 
     /** @var \Livewire\Features\SupportFileUploads\TemporaryUploadedFile|null */
     public $background = null;
@@ -64,51 +53,28 @@ new #[Title('Branding settings')] class extends Component {
     public function mount(): void
     {
         $this->authorize('branding.manage');
-        $this->tagline = (string) Setting::get('brand.tagline', 'Approvals, clearly tracked.');
-        $this->accent_color = (string) Setting::get('brand.accent_color', '#4f46e5');
-        $this->overlay = (int) Setting::get('brand.login_background_overlay', '40');
-        $this->custom_css = (string) Setting::get('brand.custom_css', '');
-        $this->custom_code = (string) Setting::get('brand.custom_code', '');
-        $pendingCode = session('branding.pending_custom_code');
-        if (is_string($pendingCode) && $pendingCode !== '' && $this->canManageCustomCode()) {
-            $this->custom_code = $pendingCode;
-        }
-        // Until the owner saves an explicit list, show the hosts the policy uses today.
-        $this->custom_code_origins = implode("\n", \App\Support\Branding::customCodeOrigins());
-        $pendingOrigins = session('branding.pending_custom_code_origins');
-        if (is_string($pendingOrigins) && $this->canManageCustomCode()) {
-            $this->custom_code_origins = $pendingOrigins;
-        }
-        $this->allow_registration = Setting::get('auth.allow_registration', 'true') !== 'false';
-        $this->landing_page_enabled = Setting::get('brand.landing_page_enabled', 'false') === 'true';
-        $this->meta_title = (string) Setting::get('brand.meta_title', '');
-        $this->meta_description = (string) Setting::get('brand.meta_description', '');
-        $this->registration_mode = (string) Setting::get('auth.registration_mode', 'otp');
-        $this->allowed_registration_domains = (string) Setting::get('auth.allowed_registration_domains', '');
-        $this->current_background = Setting::get('brand.login_background');
-        $this->current_logo = Setting::get('brand.logo');
-        $this->current_favicon = Setting::get('brand.favicon');
+        $this->tagline = Branding::tagline();
+        $this->accent_color = Branding::accentColor();
+        $this->overlay = Branding::overlayPercent();
+        $this->custom_css = Branding::customCssSource();
+        $this->meta_title = Branding::storedName();
+        $this->meta_description = (string) Branding::metaDescription();
+        $this->loadCurrentAssets();
     }
 
     public function updatedBackground(): void
     {
-        $this->validate([
-            'background' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
-        ]);
+        $this->validate(['background' => $this->assetRules()['background']]);
     }
 
     public function updatedLogo(): void
     {
-        $this->validate([
-            'logo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:1024'],
-        ]);
+        $this->validate(['logo' => $this->assetRules()['logo']]);
     }
 
     public function updatedFavicon(): void
     {
-        $this->validate([
-            'favicon' => ['nullable', 'mimes:ico,png,jpg,jpeg,webp', 'max:512'],
-        ]);
+        $this->validate(['favicon' => $this->assetRules()['favicon']]);
     }
 
     /** Clear a pending replacement so the stored asset stays in place. */
@@ -129,69 +95,16 @@ new #[Title('Branding settings')] class extends Component {
             'accent_color' => ['required', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
             'overlay' => ['required', 'integer', 'min:0', 'max:90'],
             'custom_css' => ['nullable', 'string', 'max:5000'],
-            'custom_code' => ['nullable', 'string', 'max:8000'],
-            'custom_code_origins' => ['nullable', 'string', 'max:2000'],
             'meta_title' => ['nullable', 'string', 'max:80'],
             'meta_description' => ['nullable', 'string', 'max:180'],
-            'registration_mode' => ['required', \Illuminate\Validation\Rule::in(['immediate', 'otp'])],
-            'allowed_registration_domains' => ['nullable', 'string', 'max:5000', 'regex:/^[a-z0-9\.\-\s\r\n,]*$/i'],
-            'background' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
-            'logo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:1024'],
-            'favicon' => ['nullable', 'mimes:ico,png,jpg,jpeg,webp', 'max:512'],
+            ...$this->assetRules(),
         ]);
-
-        // Each allow-list entry must look like a hostname.
-        foreach (preg_split('/[\r\n,]+/', $this->allowed_registration_domains) ?: [] as $domain) {
-            $domain = trim((string) $domain);
-
-            if ($domain !== '' && preg_match('/^(?!-)[a-z0-9-]+(\.[a-z0-9-]+)+$/', mb_strtolower($domain)) !== 1) {
-                $this->addError('allowed_registration_domains', __('":domain" does not look like a domain name. One per line, e.g. example.com.', ['domain' => $domain]));
-
-                return;
-            }
-        }
-
-        foreach (preg_split('/[\r\n,]+/', $this->custom_code_origins) ?: [] as $origin) {
-            $origin = rtrim(mb_strtolower(trim((string) $origin)), '/');
-
-            if ($origin !== '' && ! \App\Support\Branding::isOrigin($origin)) {
-                $this->addError('custom_code_origins', __('":origin" is not an HTTPS origin. One per line, e.g. https://www.googletagmanager.com.', ['origin' => $origin]));
-
-                return;
-            }
-        }
-
-        $existingCode = Setting::get('brand.custom_code');
-        $existingCode = $existingCode === '' ? null : $existingCode;
-        $submittedCode = $this->custom_code === '' ? null : $this->custom_code;
-
-        // Widening where custom code may load from is as sensitive as the code itself.
-        $currentOrigins = \App\Support\Branding::customCodeOrigins();
-        $submittedOrigins = $this->canManageCustomCode() ? \App\Support\Branding::normalizeOrigins($this->custom_code_origins) : $currentOrigins;
-        $addsOrigins = array_diff($submittedOrigins, $currentOrigins) !== [];
-
-        if ($submittedCode !== $existingCode || $addsOrigins) {
-            if ($this->canManageCustomCode()) {
-                if (! $this->ensureCustomCodeSaveAuthorized()) {
-                    return;
-                }
-            } else {
-                $submittedCode = $existingCode;
-                $this->custom_code = (string) ($existingCode ?? '');
-            }
-        }
 
         $updateBranding->execute(new BrandingSettingsData(
             tagline: $this->tagline,
             accentColor: $this->accent_color,
             overlay: $this->overlay,
             customCss: $this->custom_css === '' ? null : $this->custom_css,
-            customCode: $submittedCode,
-            customCodeOrigins: $this->canManageCustomCode() ? implode("\n", $submittedOrigins) : null,
-            allowRegistration: $this->allow_registration,
-            landingPageEnabled: $this->landing_page_enabled,
-            registrationMode: $this->registration_mode,
-            allowedRegistrationDomains: $this->allowed_registration_domains,
             metaTitle: $this->meta_title,
             metaDescription: $this->meta_description,
             background: $this->background,
@@ -200,13 +113,9 @@ new #[Title('Branding settings')] class extends Component {
             removeLogo: $this->remove_logo,
             favicon: $this->favicon,
             removeFavicon: $this->remove_favicon,
-        ), auth()->user());
+        ));
 
-        session()->forget(['branding.pending_custom_code', 'branding.pending_custom_code_origins']);
-
-        $this->current_background = Setting::get('brand.login_background');
-        $this->current_logo = Setting::get('brand.logo');
-        $this->current_favicon = Setting::get('brand.favicon');
+        $this->loadCurrentAssets();
         $this->background = null;
         $this->logo = null;
         $this->favicon = null;
@@ -214,49 +123,12 @@ new #[Title('Branding settings')] class extends Component {
         $this->remove_logo = false;
         $this->remove_favicon = false;
 
-        Flux::toast('Branding updated.', variant: 'success');
+        Flux::toast(__('Branding updated.'), variant: 'success');
     }
 
-    public function canManageCustomCode(): bool
+    protected function previewStyle(): string
     {
-        return auth()->user()?->can('branding.custom_code.manage') === true;
-    }
-
-    private function ensureCustomCodeSaveAuthorized(): bool
-    {
-        $this->authorize('branding.custom_code.manage');
-
-        $user = auth()->user();
-        if (! $user instanceof User) {
-            abort(403);
-        }
-
-        // A confirmation older than auth.password_timeout no longer counts (RV-SEC-16).
-        $confirmedAt = session('auth.password_confirmed_at');
-        if (! is_numeric($confirmedAt) || time() - (int) $confirmedAt > (int) config('auth.password_timeout', 10800)) {
-            session()->put('url.intended', route('settings.branding'));
-            session()->put('branding.pending_custom_code', $this->custom_code);
-            session()->put('branding.pending_custom_code_origins', $this->custom_code_origins);
-            $this->redirect(route('password.confirm'));
-
-            return false;
-        }
-
-        if (! $user->hasSatisfiedSecondFactor() || ! app(SecondFactorAssurance::class)->satisfied(request(), $user)) {
-            $this->addError('custom_code', __('Confirm an authenticator or passkey in this session before saving analytics code.'));
-
-            return false;
-        }
-
-        return true;
-    }
-
-    public function previewStyle(): string
-    {
-        $url = $this->background?->temporaryUrl()
-            ?? ($this->current_background && ! $this->remove_background
-                ? Branding::urlFor($this->current_background)
-                : null);
+        $url = $this->previewUploadUrl($this->background, $this->current_background, $this->remove_background);
 
         if ($url !== null) {
             return 'background-image: url('.$url.'); background-size: cover; background-position: center;';
@@ -265,12 +137,7 @@ new #[Title('Branding settings')] class extends Component {
         return 'background: linear-gradient(150deg, '.$this->accent_color.' 0%, #17173a 45%, #0a0a0b 100%);';
     }
 
-    public function previewLogoUrl(): ?string
-    {
-        return $this->previewUploadUrl($this->logo, $this->current_logo, $this->remove_logo);
-    }
-
-    public function previewUploadUrl($upload, ?string $stored, bool $removing): ?string
+    protected function previewUploadUrl(mixed $upload, ?string $stored, bool $removing): ?string
     {
         if ($upload instanceof TemporaryUploadedFile) {
             return $upload->isPreviewable() ? $upload->temporaryUrl() : null;
@@ -281,6 +148,23 @@ new #[Title('Branding settings')] class extends Component {
         }
 
         return null;
+    }
+
+    /** @return array<string, list<string>> */
+    private function assetRules(): array
+    {
+        return [
+            'background' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'logo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:1024'],
+            'favicon' => ['nullable', 'mimes:ico,png,jpg,jpeg,webp', 'max:512'],
+        ];
+    }
+
+    private function loadCurrentAssets(): void
+    {
+        $this->current_background = Branding::backgroundPath();
+        $this->current_logo = Branding::logoPath();
+        $this->current_favicon = Branding::faviconPath();
     }
 } ?>
 
@@ -315,8 +199,8 @@ new #[Title('Branding settings')] class extends Component {
                                 <p class="mb-2 text-sm font-medium">{{ __('Application logo') }}</p>
                                 <div class="flex items-center gap-4 rounded-xl border border-dashed border-zinc-300 p-3 dark:border-zinc-700">
                                     <div class="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-800">
-                                        @if ($logo = $this->previewLogoUrl())
-                                            <img src="{{ $logo }}" alt="" class="h-full w-full object-contain p-1" />
+                                        @if ($logoPreview = $this->previewUploadUrl($logo, $current_logo, $remove_logo))
+                                            <img src="{{ $logoPreview }}" alt="" class="h-full w-full object-contain p-1" />
                                         @else
                                             <span class="text-xs font-semibold text-zinc-400">{{ __('None') }}</span>
                                         @endif
@@ -328,7 +212,7 @@ new #[Title('Branding settings')] class extends Component {
                                     </div>
                                 </div>
                                 <div class="mt-2 space-y-1.5">
-                                    @if ($logo instanceof \Livewire\Features\SupportFileUploads\TemporaryUploadedFile)
+                                    @if ($logo instanceof TemporaryUploadedFile)
                                         <button type="button" wire:click="keepCurrent('logo')" class="text-xs text-zinc-500 underline decoration-dotted hover:text-zinc-700 dark:hover:text-zinc-300">{{ __('Keep current logo instead') }}</button>
                                     @elseif ($current_logo && ! $remove_logo)
                                         <flux:checkbox wire:model="remove_logo" :label="__('Remove current logo')" />
@@ -356,7 +240,7 @@ new #[Title('Branding settings')] class extends Component {
                                     </div>
                                 </div>
                                 <div class="mt-2 space-y-1.5">
-                                    @if ($favicon instanceof \Livewire\Features\SupportFileUploads\TemporaryUploadedFile)
+                                    @if ($favicon instanceof TemporaryUploadedFile)
                                         <button type="button" wire:click="keepCurrent('favicon')" class="text-xs text-zinc-500 underline decoration-dotted hover:text-zinc-700 dark:hover:text-zinc-300">{{ __('Keep current favicon instead') }}</button>
                                     @elseif ($current_favicon && ! $remove_favicon)
                                         <flux:checkbox wire:model="remove_favicon" :label="__('Remove current favicon')" />
@@ -366,36 +250,6 @@ new #[Title('Branding settings')] class extends Component {
                                 </div>
                             </div>
                         </div>
-
-                        <div class="space-y-1.5 rounded-xl border border-zinc-200 p-4 dark:border-zinc-700">
-                            <flux:checkbox wire:model="landing_page_enabled" :label="__('Show public landing page')" />
-                            <p class="text-xs text-zinc-500 dark:text-zinc-400">{{ __('When off, the site address opens Login. Turn it on to show the public website.') }}</p>
-                        </div>
-
-                        <flux:checkbox wire:model="allow_registration" :label="__('Allow self-registration')" />
-
-                        @if ($allow_registration)
-                            <div class="space-y-3 rounded-xl border border-zinc-200 p-4 dark:border-zinc-700" data-test="registration-controls">
-                                <flux:select wire:model="registration_mode" :label="__('After someone registers')">
-                                    <flux:select.option value="otp">{{ __('Require email confirmation (recommended)') }}</flux:select.option>
-                                    <flux:select.option value="immediate">{{ __('Grant immediate access') }}</flux:select.option>
-                                </flux:select>
-                                <p class="text-xs text-zinc-500 dark:text-zinc-400">
-                                    {{ __('With email confirmation, the account cannot sign in until the person enters the 6-digit code sent to their address. Codes expire after 10 minutes.') }}
-                                </p>
-
-                                <flux:textarea
-                                    wire:model="allowed_registration_domains"
-                                    :label="__('Registration domains')"
-                                    rows="3"
-                                    placeholder="{{ __('example.com') }}&#10;{{ __('mail.example.com') }}"
-                                />
-                                <flux:error name="allowed_registration_domains" />
-                                <p class="text-xs text-zinc-500 dark:text-zinc-400">
-                                    {{ __('One domain per line. Only people with an email at these domains may register — useful when only organization addresses should sign up. Leave empty to allow any email provider.') }}
-                                </p>
-                            </div>
-                        @endif
                     </div>
                 </flux:card>
 
@@ -426,7 +280,7 @@ new #[Title('Branding settings')] class extends Component {
                         <div data-test="branding-background-card">
                             <div class="flex items-center gap-4 rounded-xl border border-dashed border-zinc-300 p-3 dark:border-zinc-700">
                                 <div class="hidden h-16 w-24 shrink-0 overflow-hidden rounded-lg bg-zinc-100 sm:block dark:bg-zinc-800">
-                                    @if ($bgThumb = ($background?->temporaryUrl() ?? (($current_background && ! $remove_background) ? \App\Support\Branding::urlFor($current_background) : null)))
+                                    @if ($bgThumb = $this->previewUploadUrl($background, $current_background, $remove_background))
                                         <img src="{{ $bgThumb }}" alt="" class="h-full w-full object-cover" />
                                     @endif
                                 </div>
@@ -438,7 +292,7 @@ new #[Title('Branding settings')] class extends Component {
                                 </div>
                             </div>
                             <div class="mt-2 space-y-1.5">
-                                @if ($background instanceof \Livewire\Features\SupportFileUploads\TemporaryUploadedFile)
+                                @if ($background instanceof TemporaryUploadedFile)
                                     <button type="button" wire:click="keepCurrent('background')" class="text-xs text-zinc-500 underline decoration-dotted hover:text-zinc-700 dark:hover:text-zinc-300">{{ __('Keep current background instead') }}</button>
                                 @elseif ($current_background && ! $remove_background)
                                     <flux:checkbox wire:model="remove_background" :label="__('Remove current background')" />
@@ -457,25 +311,18 @@ new #[Title('Branding settings')] class extends Component {
                             </div>
                         </details>
 
-                        @if ($this->canManageCustomCode())
-                        <details class="rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
-                            <summary class="cursor-pointer text-sm font-medium">{{ __('Advanced: analytics and custom code') }}</summary>
-                            <div class="mt-3 space-y-2">
-                                <flux:textarea wire:model="custom_code" rows="6" placeholder="<!-- Google tag or other tracking snippet -->" data-test="custom-code" />
-                                <flux:error name="custom_code" />
-                                <flux:textarea wire:model="custom_code_origins" rows="3" :label="__('Allowed sites for this code')" placeholder="https://www.googletagmanager.com" data-test="custom-code-origins" />
-                                <flux:error name="custom_code_origins" />
-                                <p class="text-xs text-zinc-500 dark:text-zinc-400">{{ __('One HTTPS address per line, without a path. The browser lets custom code load scripts, images, frames, and connections only from these sites. Only the System owner can change this list, with the same confirmation as the code.') }}</p>
-                                <p class="text-xs text-zinc-500 dark:text-zinc-400">{{ __('Optional. Paste a tracking snippet or JavaScript from your analytics provider. It is added to login, the signed-in app, and the public home page. Only the System owner can change this, after confirming their password and second factor. Do not paste secrets.') }}</p>
-                            </div>
-                        </details>
-                        @endif
                     </div>
                 </flux:card>
 
                 <div class="flex items-center justify-end gap-4">
                     <flux:button variant="primary" wire:click="save" data-test="save-branding">{{ __('Save branding') }}</flux:button>
                 </div>
+
+                <livewire:settings.branding.public-access />
+
+                @can('branding.custom_code.manage')
+                    <livewire:settings.branding.custom-code />
+                @endcan
             </div>
 
             {{-- Sticky live preview --}}
@@ -496,8 +343,8 @@ new #[Title('Branding settings')] class extends Component {
                         @endif
                         <div class="relative z-10 flex h-full flex-col justify-between p-4 text-white">
                             <div class="flex items-center gap-2 text-sm font-medium">
-                                @if ($logo = $this->previewLogoUrl())
-                                    <img src="{{ $logo }}" alt="" class="h-7 w-7 rounded-md object-contain" />
+                                @if ($logoPreview = $this->previewUploadUrl($logo, $current_logo, $remove_logo))
+                                    <img src="{{ $logoPreview }}" alt="" class="h-7 w-7 rounded-md object-contain" />
                                 @else
                                     <span class="flex h-7 w-7 items-center justify-center rounded-md" style="background: {{ $accent_color }}">AD</span>
                                 @endif
@@ -522,8 +369,8 @@ new #[Title('Branding settings')] class extends Component {
                                 <span class="truncate text-xs text-zinc-500">{{ $meta_description !== '' || $meta_title !== '' ? trim(($meta_title !== '' ? $meta_title.' — ' : '').$meta_description) : config('app.name') }}</span>
                             </div>
                             <div class="flex items-center gap-2 px-3 py-2.5">
-                                @if ($logo = $this->previewLogoUrl())
-                                    <img src="{{ $logo }}" alt="" class="h-6 w-6 rounded-md object-contain" />
+                                @if ($logoPreview = $this->previewUploadUrl($logo, $current_logo, $remove_logo))
+                                    <img src="{{ $logoPreview }}" alt="" class="h-6 w-6 rounded-md object-contain" />
                                 @else
                                     <span class="flex h-6 w-6 items-center justify-center rounded-md text-[10px] font-bold text-white" style="background: {{ $accent_color }}">AD</span>
                                 @endif

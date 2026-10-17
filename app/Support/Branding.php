@@ -48,17 +48,49 @@ final class Branding
 
     public static function backgroundUrl(): ?string
     {
-        return self::urlFor(Setting::get('brand.login_background'));
+        return self::urlFor(self::backgroundPath());
     }
 
     public static function logoUrl(): ?string
     {
-        return self::urlFor(Setting::get('brand.logo'));
+        return self::urlFor(self::logoPath());
     }
 
     public static function faviconUrl(): ?string
     {
-        return self::urlFor(Setting::get('brand.favicon'));
+        return self::urlFor(self::faviconPath());
+    }
+
+    /** Stored file paths and texts, as the Branding settings form edits them (RV-ARC-10). */
+    public static function backgroundPath(): ?string
+    {
+        return Setting::get('brand.login_background');
+    }
+
+    public static function logoPath(): ?string
+    {
+        return Setting::get('brand.logo');
+    }
+
+    public static function faviconPath(): ?string
+    {
+        return Setting::get('brand.favicon');
+    }
+
+    /** The saved company name, blank when the installed application name is used. */
+    public static function storedName(): string
+    {
+        return (string) Setting::get('brand.meta_title', '');
+    }
+
+    public static function customCssSource(): string
+    {
+        return (string) Setting::get('brand.custom_css', '');
+    }
+
+    public static function customCodeSource(): string
+    {
+        return (string) Setting::get('brand.custom_code', '');
     }
 
     public static function overlayPercent(): int

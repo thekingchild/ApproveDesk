@@ -41,11 +41,11 @@ Use **Save custom theme** to add a palette, **Make default** to choose the organ
 
 ## Analytics and custom code
 
-Open **Settings → Branding → Advanced: analytics and custom code**. This content can run on Login, the signed-in application, and the public landing page.
+Open **Settings → Branding** and use the **Analytics and custom code** card. It has its own **Save custom code** button. This content can run on Login, the signed-in application, and the public landing page.
 
 - Add only code from a reviewed provider or a source you control.
 - Never put passwords, API secrets, private keys, or user-specific data in the field.
-- Confirm your password and second factor before saving. If this session has not confirmed your password recently (within the password-confirmation window, three hours by default), **Save branding** opens the confirmation page and keeps the snippet you entered.
+- Confirm your password and second factor before saving. If this session has not confirmed your password recently (within the password-confirmation window, three hours by default), **Save custom code** opens the confirmation page and keeps the snippet you entered. Removing a site from the list needs no confirmation.
 - Remove the code immediately if it causes an unsafe redirect, captures form data, or breaks navigation.
 - List every site the code loads from under **Allowed sites for this code**, one HTTPS address per line without a path (for example `https://www.googletagmanager.com`). The browser blocks anything the code tries to load from other sites. After an update the list starts with the sites found in your existing code; review it and remove any you do not need. Adding a site needs the same password and second-factor confirmation as changing the code.
 - `<script>` blocks and scripts loaded from the allowed sites run as usual. Inline event attributes such as `onclick="..."` or `onload="..."` do not run, because the browser security policy blocks them; put that code in a `<script>` block instead.
