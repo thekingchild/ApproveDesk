@@ -3,6 +3,7 @@
 namespace Tests\Feature\Audit;
 
 use App\Actions\Submissions\AttachSubmissionFilesAction;
+use App\Enums\SubmissionFileRevisionAction;
 use App\Enums\SubmissionStatus;
 use App\Models\Submission;
 use App\Models\SubmissionFileRevision;
@@ -161,7 +162,7 @@ class SubmissionRevisionTest extends TestCase
         ]);
 
         $revision = SubmissionFileRevision::query()->where('submission_id', $submission->id)->sole();
-        $this->assertSame('added', $revision->action);
+        $this->assertSame(SubmissionFileRevisionAction::Added, $revision->action);
         $this->assertSame('quote.pdf', $revision->original_name);
         $this->assertNotNull($revision->sha256);
     }

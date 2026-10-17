@@ -2,6 +2,7 @@
 
 namespace App\Services\Roles;
 
+use App\Enums\RoleChangeAction;
 use App\Models\Role;
 use App\Models\RoleChangeEvent;
 use App\Models\RoleProfile;
@@ -20,14 +21,14 @@ final class RolePermissionService
         $this->assertManager($actor);
         $this->assertPermissionCeiling($actor, $permissions);
 
-        return $this->persistNewRole($actor, $label, $description, $permissions, 'role_created');
+        return $this->persistNewRole($actor, $label, $description, $permissions, RoleChangeAction::RoleCreated);
     }
 
     /**
      * @param  list<string>  $permissions
      * @param  array<string, mixed>|null  $before
      */
-    private function persistNewRole(User $actor, string $label, ?string $description, array $permissions, string $action, ?array $before = null): Role
+    private function persistNewRole(User $actor, string $label, ?string $description, array $permissions, RoleChangeAction $action, ?array $before = null): Role
     {
         return DB::transaction(function () use ($actor, $label, $description, $permissions, $action, $before): Role {
             $slug = $this->uniqueSlug($label);
@@ -63,7 +64,7 @@ final class RolePermissionService
             $before = ['role_id' => $locked->id, 'permissions' => $locked->permissions()->pluck('name')->sort()->values()->all()];
             $profile->update(['label' => $label, 'description' => $description, 'updated_by' => $actor->id]);
             $locked->syncPermissions($permissions);
-            $this->record($actor, $locked, 'permissions_changed', $before, ['role_id' => $locked->id, 'permissions' => collect($permissions)->sort()->values()->all()]);
+            $this->record($actor, $locked, RoleChangeAction::PermissionsChanged, $before, ['role_id' => $locked->id, 'permissions' => collect($permissions)->sort()->values()->all()]);
 
             return $locked->load(['permissions']);
         });
@@ -82,7 +83,7 @@ final class RolePermissionService
         $this->assertPermissionCeiling($actor, $permissions);
         $description = RoleProfile::query()->where('role_id', $source->id)->value('description');
 
-        return $this->persistNewRole($actor, $label, $description, $permissions, 'role_cloned', ['source_role_id' => $source->id]);
+        return $this->persistNewRole($actor, $label, $description, $permissions, RoleChangeAction::RoleCloned, ['source_role_id' => $source->id]);
     }
 
     public function archive(User $actor, Role $role): void
@@ -92,7 +93,7 @@ final class RolePermissionService
         DB::transaction(function () use ($actor, $role): void {
             $profile = RoleProfile::query()->where('role_id', $role->id)->lockForUpdate()->firstOrFail();
             $profile->update(['is_archived' => true, 'updated_by' => $actor->id]);
-            $this->record($actor, $role, 'role_archived', ['is_archived' => false], ['is_archived' => true]);
+            $this->record($actor, $role, RoleChangeAction::RoleArchived, ['is_archived' => false], ['is_archived' => true]);
         });
     }
 
@@ -106,7 +107,7 @@ final class RolePermissionService
         DB::transaction(function () use ($actor, $role): void {
             $profile = RoleProfile::query()->where('role_id', $role->id)->lockForUpdate()->firstOrFail();
             $profile->update(['is_archived' => false, 'updated_by' => $actor->id]);
-            $this->record($actor, $role, 'role_restored', ['is_archived' => true], ['is_archived' => false]);
+            $this->record($actor, $role, RoleChangeAction::RoleRestored, ['is_archived' => true], ['is_archived' => false]);
         });
     }
 
@@ -215,7 +216,7 @@ final class RolePermissionService
      * @param  array<string, mixed>|null  $before
      * @param  array<string, mixed>|null  $after
      */
-    private function record(User $actor, Role $role, string $action, ?array $before, ?array $after): void
+    private function record(User $actor, Role $role, RoleChangeAction $action, ?array $before, ?array $after): void
     {
         RoleChangeEvent::query()->create(['actor_id' => $actor->id, 'role_id' => $role->id, 'action' => $action, 'before' => $before, 'after' => $after]);
     }

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\WorkflowActionType;
+use App\Enums\WorkflowStatus;
 use App\Models\Setting;
 use App\Models\Submission;
 use App\Models\User;
@@ -83,9 +84,9 @@ final class ApprovalReportService
                     ->values();
                 $isCurrent = $instance !== null
                     && $instance->current_step_id === $step->id
-                    && in_array($instance->status->value, ['active', 'on_hold'], true);
+                    && in_array($instance->status, [WorkflowStatus::Active, WorkflowStatus::OnHold], true);
                 $decided = $stepActions->filter(fn ($action): bool => array_key_exists($action->action->value, self::STEP_OUTCOME_STATES));
-                $finished = $instance !== null && ! in_array($instance->status->value, ['active', 'on_hold'], true);
+                $finished = $instance !== null && ! in_array($instance->status, [WorkflowStatus::Active, WorkflowStatus::OnHold], true);
 
                 // The step's state comes from its last recorded outcome, so a
                 // withdrawn step is not reported as completed (RV-BUG-22).

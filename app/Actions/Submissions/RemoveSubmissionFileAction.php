@@ -2,6 +2,7 @@
 
 namespace App\Actions\Submissions;
 
+use App\Enums\SubmissionFileRevisionAction;
 use App\Models\Submission;
 use App\Models\SubmissionFile;
 use App\Models\SubmissionFileRevision;
@@ -42,7 +43,7 @@ final class RemoveSubmissionFileAction
                 'submission_id' => $submission->id,
                 'submission_file_id' => $file->id,
                 'actor_id' => $actor->id,
-                'action' => 'removed',
+                'action' => SubmissionFileRevisionAction::Removed,
                 'original_name' => $file->original_name,
                 'sha256' => is_string($contents) ? hash('sha256', $contents) : null,
                 'size_bytes' => $file->size_bytes,

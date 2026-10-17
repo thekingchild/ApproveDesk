@@ -2,6 +2,7 @@
 
 namespace App\Actions\Backups;
 
+use App\Enums\BackupDestinationKind;
 use App\Enums\BackupSnapshotKind;
 use App\Enums\BackupSnapshotStatus;
 use App\Models\BackupSnapshot;
@@ -62,7 +63,7 @@ final class RetainBackupSnapshotsAction
             }
         }
 
-        if (is_string($snapshot->remote_id) && $snapshot->destination?->kind->value !== 'local') {
+        if (is_string($snapshot->remote_id) && $snapshot->destination?->kind !== BackupDestinationKind::Local) {
             try {
                 $this->transports->make($snapshot->destination)->delete($snapshot->remote_id);
             } catch (\Throwable) {

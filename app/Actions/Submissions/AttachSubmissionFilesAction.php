@@ -2,6 +2,7 @@
 
 namespace App\Actions\Submissions;
 
+use App\Enums\SubmissionFileRevisionAction;
 use App\Models\Submission;
 use App\Models\SubmissionFile;
 use App\Models\SubmissionFileRevision;
@@ -45,7 +46,7 @@ final class AttachSubmissionFilesAction
                 'submission_id' => $submission->id,
                 'submission_file_id' => $record->id,
                 'actor_id' => $uploader->id,
-                'action' => 'added',
+                'action' => SubmissionFileRevisionAction::Added,
                 'original_name' => $record->original_name,
                 'sha256' => is_string($contents) ? hash('sha256', $contents) : null,
                 'size_bytes' => $record->size_bytes,

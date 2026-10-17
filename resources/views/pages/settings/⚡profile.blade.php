@@ -57,7 +57,7 @@ new #[Title('Profile settings')] class extends Component {
 
     public function cancelNameChange(): void
     {
-        $change = Auth::user()->displayNameChanges()->where('status', 'pending')->firstOrFail();
+        $change = Auth::user()->displayNameChanges()->where('status', \App\Enums\DisplayNameChangeStatus::Pending)->firstOrFail();
         app(\App\Actions\Users\RequestDisplayNameChangeAction::class)->cancel(Auth::user(), $change);
     }
 
@@ -89,7 +89,7 @@ new #[Title('Profile settings')] class extends Component {
     @include('partials.settings-heading')
     <flux:heading class="sr-only">{{ __('Profile settings') }}</flux:heading>
     <x-pages::settings.layout :heading="__('Profile')" :subheading="__('Update your photo and email, or request a reviewed display-name change')">
-        @php($pendingName = auth()->user()->displayNameChanges()->where('status', 'pending')->latest()->first())
+        @php($pendingName = auth()->user()->displayNameChanges()->where('status', \App\Enums\DisplayNameChangeStatus::Pending)->latest()->first())
         @if($pendingName)
             <flux:callout variant="warning" icon="clock">{{ __('Name change to “:name” is awaiting review.', ['name' => $pendingName->proposed_name]) }} <flux:button size="sm" variant="ghost" wire:click="cancelNameChange">{{ __('Cancel') }}</flux:button></flux:callout>
         @endif

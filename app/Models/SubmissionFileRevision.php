@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\SubmissionFileRevisionAction;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
@@ -12,7 +13,7 @@ use RuntimeException;
  * @property int $submission_id
  * @property int|null $submission_file_id
  * @property int|null $actor_id
- * @property string $action
+ * @property SubmissionFileRevisionAction $action
  * @property string $original_name
  * @property string|null $sha256
  * @property int|null $size_bytes
@@ -30,6 +31,7 @@ class SubmissionFileRevision extends Model
     {
         return [
             'size_bytes' => 'integer',
+            'action' => SubmissionFileRevisionAction::class,
         ];
     }
 

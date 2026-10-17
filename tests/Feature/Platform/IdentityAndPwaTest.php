@@ -5,6 +5,7 @@ namespace Tests\Feature\Platform;
 use App\Actions\Users\DecideDisplayNameChangeAction;
 use App\Actions\Users\RequestDisplayNameChangeAction;
 use App\Actions\Users\StoreProfileImageAction;
+use App\Enums\DisplayNameChangeStatus;
 use App\Models\DisplayNameChange;
 use App\Models\Setting;
 use App\Models\SystemOwner;
@@ -36,12 +37,12 @@ class IdentityAndPwaTest extends TestCase
 
         $this->assertSame('Original Name', $requester->fresh()->name);
         $this->assertSame('Safer Name', $change->proposed_name);
-        $this->assertSame('pending', $change->status);
+        $this->assertSame(DisplayNameChangeStatus::Pending, $change->status);
 
         app(DecideDisplayNameChangeAction::class)->approve($reviewer, $change);
 
         $this->assertSame('Safer Name', $requester->fresh()->name);
-        $this->assertSame('approved', $change->fresh()->status);
+        $this->assertSame(DisplayNameChangeStatus::Approved, $change->fresh()->status);
         $this->assertSame($reviewer->id, $change->fresh()->decided_by);
     }
 
@@ -57,7 +58,7 @@ class IdentityAndPwaTest extends TestCase
         $this->assertSame('Second', $second->fresh()->proposed_name);
 
         $action->cancel($user, $second);
-        $this->assertSame('cancelled', $second->fresh()->status);
+        $this->assertSame(DisplayNameChangeStatus::Cancelled, $second->fresh()->status);
         $this->assertSame('Current', $user->fresh()->name);
     }
 
