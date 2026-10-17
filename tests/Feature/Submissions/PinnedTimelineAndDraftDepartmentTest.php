@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Submissions;
 
+use App\Enums\TimelineStepState;
 use App\Enums\WorkflowActionType;
 use App\Models\Department;
 use App\Models\Submission;
@@ -50,7 +51,7 @@ class PinnedTimelineAndDraftDepartmentTest extends TestCase
             ->instance()->timeline;
 
         $this->assertSame(['Approval Level 1', 'Approval Level 2'], array_column($timeline, 'name'));
-        $this->assertSame(['done', 'active'], array_column($timeline, 'state'));
+        $this->assertSame([TimelineStepState::Done, TimelineStepState::Active], array_column($timeline, 'state'));
         $this->assertSame($second->name, $timeline[1]['actors']);
     }
 

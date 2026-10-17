@@ -122,13 +122,7 @@ class WorkflowEngine
 
             $onBehalfOf = $this->authorize($instance, $actor, $action);
 
-            if (in_array($action, [
-                WorkflowActionType::ApproveWithConditions,
-                WorkflowActionType::Reject,
-                WorkflowActionType::Return,
-                WorkflowActionType::RequestInformation,
-                WorkflowActionType::Escalate,
-            ], true) && trim((string) $comment) === '') {
+            if ($action->requiresComment() && trim((string) $comment) === '') {
                 throw WorkflowException::commentRequired($action->value);
             }
 
@@ -381,7 +375,8 @@ class WorkflowEngine
     ): void {
         $step = $this->authorizeDelegator($instance, $delegator);
 
-        if (! $delegate->is_active || $delegate->is($delegator)) {
+        // The hidden System owner is never handed someone else's decision (ADR 0009).
+        if (! $delegate->is_active || $delegate->is($delegator) || $delegate->isSystemOwner()) {
             throw WorkflowException::delegationNotAllowed('select a different active user');
         }
 

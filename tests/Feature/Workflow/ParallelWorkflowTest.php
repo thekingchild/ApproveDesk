@@ -6,6 +6,7 @@ use App\Actions\Submissions\SubmitSubmissionAction;
 use App\Enums\AssigneeType;
 use App\Enums\StepType;
 use App\Enums\SubmissionStatus;
+use App\Enums\TimelineStepState;
 use App\Enums\WorkflowActionType;
 use App\Enums\WorkflowStatus;
 use App\Events\WorkflowAdvanced;
@@ -88,7 +89,7 @@ class ParallelWorkflowTest extends TestCase
         $timeline = Livewire::actingAs($this->instance->submission->submitter)
             ->test('pages::submissions.show', ['submission' => $this->instance->submission])
             ->get('timeline');
-        $this->assertSame('active', $timeline[0]['state']);
+        $this->assertSame(TimelineStepState::Active, $timeline[0]['state']);
 
         $this->engine->processAction(
             $this->instance,
