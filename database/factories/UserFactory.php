@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\NotificationFrequency;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
@@ -37,6 +38,17 @@ class UserFactory extends Factory
             'department_id' => null,
             'is_active' => true,
             'avatar' => null,
+            // Every column the database would default, so a freshly created user
+            // has the full attribute set strict mode expects (RV-LAR-03).
+            'notification_frequency' => NotificationFrequency::Immediate,
+            'last_notification_digest_at' => null,
+            'manager_id' => null,
+            'teams_user_id' => null,
+            'slack_user_id' => null,
+            'telegram_user_id' => null,
+            'theme_id' => null,
+            'profile_image_path' => null,
+            'profile_image_mime' => null,
         ];
     }
 

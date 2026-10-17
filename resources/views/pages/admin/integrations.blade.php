@@ -268,7 +268,7 @@ new #[Title('Integration hub')] class extends Component {
                 @foreach ($this->deliveries as $delivery)
                     <flux:table.row :key="'d-'.$delivery->id">
                         <flux:table.cell>{{ $delivery->created_at?->diffForHumans() }}</flux:table.cell>
-                        <flux:table.cell>{{ $delivery->submission?->reference }} · {{ $delivery->action?->name }}</flux:table.cell>
+                        <flux:table.cell>{{ $delivery->submission?->reference_number }} · {{ $delivery->action?->name }}</flux:table.cell>
                         <flux:table.cell>
                             {{ $delivery->status->value }}
                             @if ($delivery->last_error)

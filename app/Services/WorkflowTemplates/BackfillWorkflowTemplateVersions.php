@@ -8,12 +8,28 @@ use App\Models\WorkflowTemplate;
 use App\Models\WorkflowTemplateStep;
 use App\Models\WorkflowTemplateVersion;
 use App\Support\WorkflowTemplateSchemaHasher;
+use Illuminate\Database\Eloquent\Model;
 
 final class BackfillWorkflowTemplateVersions
 {
     public function __construct(private readonly WorkflowTemplateSchemaHasher $hasher) {}
 
     public function execute(): void
+    {
+        // Runs from a 2026-08-19 migration, before later migrations add columns
+        // such as assignee_config. Read those as null, as production always has,
+        // instead of failing under strict mode (RV-LAR-03).
+        $strict = Model::preventsAccessingMissingAttributes();
+        Model::preventAccessingMissingAttributes(false);
+
+        try {
+            $this->backfill();
+        } finally {
+            Model::preventAccessingMissingAttributes($strict);
+        }
+    }
+
+    private function backfill(): void
     {
         WorkflowTemplate::query()->orderBy('id')->each(function (WorkflowTemplate $template): void {
             if ($template->versions()->exists()) {

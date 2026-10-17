@@ -166,6 +166,8 @@ class IntegrationHubTest extends TestCase
 
         Livewire::actingAs($this->admin)
             ->test('pages::admin.integrations')
+            // The dead-letter row names the request; it read a column that does not exist (RV-LAR-03).
+            ->assertSee($delivery->submission->reference_number)
             ->call('replay', $delivery->id)
             ->assertHasNoErrors();
 
