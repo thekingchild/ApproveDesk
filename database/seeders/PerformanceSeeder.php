@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\DTOs\WorkflowActionData;
 use App\Enums\WorkflowActionType;
 use App\Models\Comment;
 use App\Models\Department;
@@ -65,7 +66,7 @@ class PerformanceSeeder extends Seeder
                 $action = ($level === $steps - 1 && random_int(1, 10) === 1)
                     ? WorkflowActionType::Reject
                     : WorkflowActionType::Approve;
-                $instance = $engine->processAction($instance->fresh(), $approver, $action, 'Reviewed.');
+                $instance = $engine->processAction($instance->fresh(), new WorkflowActionData($approver, $action, 'Reviewed.'));
                 if ($action === WorkflowActionType::Reject) {
                     break;
                 }

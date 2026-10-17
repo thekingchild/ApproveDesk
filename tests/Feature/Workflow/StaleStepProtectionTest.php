@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Workflow;
 
+use App\DTOs\DelegationData;
+use App\DTOs\WorkflowActionData;
 use App\Enums\WorkflowActionType;
 use App\Enums\WorkflowStatus;
 use App\Exceptions\WorkflowException;
@@ -47,10 +49,10 @@ class StaleStepProtectionTest extends TestCase
         $firstStep = (int) $this->instance->current_step_id;
         $engine = app(WorkflowEngine::class);
 
-        $engine->processAction($this->instance, $this->approver, WorkflowActionType::Approve, expectedStepId: $firstStep);
+        $engine->processAction($this->instance, new WorkflowActionData($this->approver, WorkflowActionType::Approve, expectedStepId: $firstStep));
 
         try {
-            $engine->processAction($this->instance, $this->approver, WorkflowActionType::Approve, expectedStepId: $firstStep);
+            $engine->processAction($this->instance, new WorkflowActionData($this->approver, WorkflowActionType::Approve, expectedStepId: $firstStep));
             $this->fail('A replayed approval decided the next step.');
         } catch (WorkflowException $exception) {
             $this->assertStringContainsString('moved on', $exception->getMessage());
@@ -90,11 +92,11 @@ class StaleStepProtectionTest extends TestCase
     {
         $firstStep = (int) $this->instance->current_step_id;
         $engine = app(WorkflowEngine::class);
-        $engine->processAction($this->instance, $this->approver, WorkflowActionType::Approve, expectedStepId: $firstStep);
+        $engine->processAction($this->instance, new WorkflowActionData($this->approver, WorkflowActionType::Approve, expectedStepId: $firstStep));
 
         $this->expectException(WorkflowException::class);
         $this->expectExceptionMessage('moved on');
 
-        $engine->delegate($this->instance, $this->approver, User::factory()->create(), now()->addDay(), expectedStepId: $firstStep);
+        $engine->delegate($this->instance, new DelegationData($this->approver, User::factory()->create(), now()->addDay(), expectedStepId: $firstStep));
     }
 }

@@ -3,6 +3,7 @@
 namespace Tests\Feature\Workflow;
 
 use App\Contracts\ExternalAssigneeResolver;
+use App\DTOs\WorkflowActionData;
 use App\Enums\AssigneeType;
 use App\Enums\GroupCompletion;
 use App\Enums\RequestFieldType;
@@ -164,7 +165,7 @@ class AssigneeResolverContractTest extends TestCase
         $first = WorkflowTemplate::factory()->default()->sequential([$a, $b])->create();
         $first->steps->first()->updateQuietly(['assignee_ids' => [$a->id, $b->id], 'completion_rule' => GroupCompletion::FirstResponse->value]);
         $instance = $engine->initialize(Submission::factory()->create());
-        $engine->processAction($instance, $a, WorkflowActionType::Approve);
+        $engine->processAction($instance, new WorkflowActionData($a, WorkflowActionType::Approve));
         $this->assertSame(2, $instance->fresh()->currentStep?->step_order);
 
         $all = WorkflowTemplate::factory()->default()->create();
@@ -174,9 +175,9 @@ class AssigneeResolverContractTest extends TestCase
             'completion_rule' => GroupCompletion::All->value,
         ]);
         $open = $engine->initialize(Submission::factory()->create());
-        $engine->processAction($open, $a, WorkflowActionType::Approve);
+        $engine->processAction($open, new WorkflowActionData($a, WorkflowActionType::Approve));
         $this->assertSame(WorkflowStatus::Active, $open->fresh()->status);
-        $engine->processAction($open->fresh(), $b, WorkflowActionType::Approve);
+        $engine->processAction($open->fresh(), new WorkflowActionData($b, WorkflowActionType::Approve));
         $this->assertSame(WorkflowStatus::Completed, $open->fresh()->status);
 
         $quorum = WorkflowTemplate::factory()->default()->create();
@@ -188,9 +189,9 @@ class AssigneeResolverContractTest extends TestCase
             'completion_rule' => GroupCompletion::Quorum->value,
         ]);
         $committee = $engine->initialize(Submission::factory()->create());
-        $engine->processAction($committee, $a, WorkflowActionType::Approve);
+        $engine->processAction($committee, new WorkflowActionData($a, WorkflowActionType::Approve));
         $this->assertSame(WorkflowStatus::Active, $committee->fresh()->status);
-        $engine->processAction($committee->fresh(), $b, WorkflowActionType::Approve);
+        $engine->processAction($committee->fresh(), new WorkflowActionData($b, WorkflowActionType::Approve));
         $this->assertSame(WorkflowStatus::Completed, $committee->fresh()->status);
     }
 

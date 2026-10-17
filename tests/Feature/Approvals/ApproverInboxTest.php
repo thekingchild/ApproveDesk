@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Approvals;
 
+use App\DTOs\WorkflowActionData;
 use App\Enums\SubmissionPriority;
 use App\Enums\SubmissionStatus;
 use App\Enums\SubmissionType;
@@ -192,9 +193,11 @@ class ApproverInboxTest extends TestCase
 
         $engine->processAction(
             $this->submission->workflowInstance()->first(),
-            $this->firstApprover,
-            WorkflowActionType::Return,
-            'Please extend section 2.',
+            new WorkflowActionData(
+                $this->firstApprover,
+                WorkflowActionType::Return,
+                'Please extend section 2.',
+            ),
         );
 
         $this->assertSame(SubmissionStatus::Returned, $this->submission->fresh()->status);

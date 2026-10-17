@@ -4,6 +4,7 @@ namespace Tests\Feature\Submissions;
 
 use App\Actions\Submissions\SubmitSubmissionAction;
 use App\Actions\Submissions\WithdrawSubmissionAction;
+use App\DTOs\WorkflowActionData;
 use App\Enums\SubmissionStatus;
 use App\Enums\WorkflowActionType;
 use App\Models\Submission;
@@ -74,7 +75,7 @@ class ApprovalReportStepStateTest extends TestCase
     public function test_decided_step_names_who_acted_even_after_they_are_deactivated(): void
     {
         $submission = $this->submitted();
-        app(WorkflowEngine::class)->processAction($submission->workflowInstance()->firstOrFail(), $this->first, WorkflowActionType::Approve);
+        app(WorkflowEngine::class)->processAction($submission->workflowInstance()->firstOrFail(), new WorkflowActionData($this->first, WorkflowActionType::Approve));
         $this->first->forceFill(['is_active' => false])->save();
 
         $steps = $this->steps($submission);
@@ -88,7 +89,7 @@ class ApprovalReportStepStateTest extends TestCase
     public function test_step_approved_then_withdrawn_later_keeps_its_completed_state_and_actor(): void
     {
         $submission = $this->submitted();
-        app(WorkflowEngine::class)->processAction($submission->workflowInstance()->firstOrFail(), $this->first, WorkflowActionType::Approve);
+        app(WorkflowEngine::class)->processAction($submission->workflowInstance()->firstOrFail(), new WorkflowActionData($this->first, WorkflowActionType::Approve));
         app(WithdrawSubmissionAction::class)->execute($submission->fresh(), $this->submitter);
 
         $steps = $this->steps($submission);
@@ -100,7 +101,7 @@ class ApprovalReportStepStateTest extends TestCase
     public function test_rejected_step_names_the_rejector(): void
     {
         $submission = $this->submitted();
-        app(WorkflowEngine::class)->processAction($submission->workflowInstance()->firstOrFail(), $this->first, WorkflowActionType::Reject, 'Out of budget');
+        app(WorkflowEngine::class)->processAction($submission->workflowInstance()->firstOrFail(), new WorkflowActionData($this->first, WorkflowActionType::Reject, 'Out of budget'));
 
         $steps = $this->steps($submission);
 

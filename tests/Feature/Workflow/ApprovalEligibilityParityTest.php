@@ -3,6 +3,8 @@
 namespace Tests\Feature\Workflow;
 
 use App\Actions\Submissions\SubmitSubmissionAction;
+use App\DTOs\DelegationData;
+use App\DTOs\WorkflowActionData;
 use App\Enums\AssigneeType;
 use App\Enums\StepType;
 use App\Enums\WorkflowActionType;
@@ -63,7 +65,7 @@ class ApprovalEligibilityParityTest extends TestCase
 
     public function test_rv_arc_01_decision_panel_hides_after_the_viewer_approves_an_open_parallel_step(): void
     {
-        $this->engine->processAction($this->instance, $this->first, WorkflowActionType::Approve);
+        $this->engine->processAction($this->instance, new WorkflowActionData($this->first, WorkflowActionType::Approve));
 
         $this->assertRequestPage($this->first, canAct: false, canDelegate: false);
         $this->assertRequestPage($this->second, canAct: true, canDelegate: true);
@@ -73,7 +75,7 @@ class ApprovalEligibilityParityTest extends TestCase
 
     public function test_rv_arc_01_approve_with_conditions_counts_as_the_viewers_decision(): void
     {
-        $this->engine->processAction($this->instance, $this->first, WorkflowActionType::ApproveWithConditions, 'Within budget only.');
+        $this->engine->processAction($this->instance, new WorkflowActionData($this->first, WorkflowActionType::ApproveWithConditions, 'Within budget only.'));
 
         $this->assertRequestPage($this->first, canAct: false, canDelegate: false);
         $this->assertWorkbenchAgrees($this->first, false);
@@ -95,7 +97,7 @@ class ApprovalEligibilityParityTest extends TestCase
     public function test_rv_arc_01_delegation_to_a_since_deactivated_delegate_gives_the_step_back(): void
     {
         $delegate = User::factory()->create();
-        $this->engine->delegate($this->instance, $this->first, $delegate, now()->addDay());
+        $this->engine->delegate($this->instance, new DelegationData($this->first, $delegate, now()->addDay()));
 
         $this->assertRequestPage($this->first, canAct: false, canDelegate: false);
         $this->assertWorkbenchAgrees($this->first, false);
@@ -110,8 +112,8 @@ class ApprovalEligibilityParityTest extends TestCase
 
     public function test_rv_arc_01_nobody_can_act_or_delegate_once_the_workflow_is_finished(): void
     {
-        $this->engine->processAction($this->instance, $this->first, WorkflowActionType::Approve);
-        $this->engine->processAction($this->instance, $this->second, WorkflowActionType::Approve);
+        $this->engine->processAction($this->instance, new WorkflowActionData($this->first, WorkflowActionType::Approve));
+        $this->engine->processAction($this->instance, new WorkflowActionData($this->second, WorkflowActionType::Approve));
 
         $this->assertRequestPage($this->second, canAct: false, canDelegate: false);
         $this->assertFalse($this->engine->canDelegate($this->instance->fresh(), $this->second));
@@ -120,11 +122,11 @@ class ApprovalEligibilityParityTest extends TestCase
     public function test_rv_arc_01_a_delegates_decision_fills_the_delegators_seat_everywhere(): void
     {
         $delegate = User::factory()->create();
-        $this->engine->delegate($this->instance, $this->first, $delegate, now()->addDay());
+        $this->engine->delegate($this->instance, new DelegationData($this->first, $delegate, now()->addDay()));
 
         $this->assertWorkbenchAgrees($delegate, true);
 
-        $this->engine->processAction($this->instance->fresh(), $delegate, WorkflowActionType::Approve);
+        $this->engine->processAction($this->instance->fresh(), new WorkflowActionData($delegate, WorkflowActionType::Approve));
 
         $this->assertWorkbenchAgrees($delegate, false);
         $this->assertWorkbenchAgrees($this->first, false);
@@ -133,8 +135,8 @@ class ApprovalEligibilityParityTest extends TestCase
 
     public function test_rv_arc_01_a_return_gives_every_seat_the_decision_back(): void
     {
-        $this->engine->processAction($this->instance, $this->first, WorkflowActionType::Approve);
-        $this->engine->processAction($this->instance->fresh(), $this->second, WorkflowActionType::Return, 'Fix the amount.');
+        $this->engine->processAction($this->instance, new WorkflowActionData($this->first, WorkflowActionType::Approve));
+        $this->engine->processAction($this->instance->fresh(), new WorkflowActionData($this->second, WorkflowActionType::Return, 'Fix the amount.'));
         app(SubmitSubmissionAction::class)->execute($this->submission->fresh());
 
         $this->assertWorkbenchAgrees($this->first, true);
@@ -169,7 +171,7 @@ class ApprovalEligibilityParityTest extends TestCase
     {
         $instance = $this->instance->fresh(['currentStep']);
         $url = EmailApprovalLinks::confirmationUrl($instance, $instance->currentStep, $this->first);
-        $this->engine->processAction($instance, $this->first, WorkflowActionType::Approve);
+        $this->engine->processAction($instance, new WorkflowActionData($this->first, WorkflowActionType::Approve));
 
         $this->get($url)
             ->assertForbidden()

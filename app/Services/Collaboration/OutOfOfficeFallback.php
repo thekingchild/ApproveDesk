@@ -2,6 +2,7 @@
 
 namespace App\Services\Collaboration;
 
+use App\DTOs\DelegationData;
 use App\Enums\AssigneeType;
 use App\Enums\WorkflowStatus;
 use App\Exceptions\WorkflowException;
@@ -127,14 +128,16 @@ final class OutOfOfficeFallback
         try {
             $this->engine->delegate(
                 $instance,
-                $assignee,
-                $fallback,
-                $schedule->ends_at,
-                trim((string) $schedule->message) !== ''
-                    ? $schedule->message
-                    : 'Out of office until '.$schedule->ends_at->toIso8601String(),
-                now(),
-                $step->id,
+                new DelegationData(
+                    $assignee,
+                    $fallback,
+                    $schedule->ends_at,
+                    trim((string) $schedule->message) !== ''
+                        ? $schedule->message
+                        : 'Out of office until '.$schedule->ends_at->toIso8601String(),
+                    now(),
+                    $step->id,
+                ),
             );
 
             return true;

@@ -2,6 +2,7 @@
 
 namespace App\Actions\Approvals;
 
+use App\DTOs\WorkflowActionData;
 use App\Enums\WorkflowActionType;
 use App\Exceptions\WorkflowException;
 use App\Models\User;
@@ -48,7 +49,7 @@ class BatchApproveSubmissionsAction
             }
 
             foreach ($instances as $instance) {
-                $this->engine->processAction($instance, $approver, WorkflowActionType::Approve, expectedStepId: (int) $instance->current_step_id);
+                $this->engine->processAction($instance, new WorkflowActionData($approver, WorkflowActionType::Approve, expectedStepId: (int) $instance->current_step_id));
             }
 
             return $instances->count();

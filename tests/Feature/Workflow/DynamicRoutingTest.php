@@ -6,6 +6,7 @@ use App\Actions\RequestTypes\PublishRequestTypeVersionAction;
 use App\Actions\WorkflowTemplates\CreateWorkflowTemplateAction;
 use App\Actions\WorkflowTemplates\SaveWorkflowSelectionRulesAction;
 use App\Contracts\ExternalAssigneeResolver;
+use App\DTOs\WorkflowActionData;
 use App\DTOs\WorkflowTemplateData;
 use App\DTOs\WorkflowTemplateStepData;
 use App\Enums\AssigneeType;
@@ -146,7 +147,7 @@ class DynamicRoutingTest extends TestCase
         ), User::factory()->create());
 
         $instance = app(WorkflowEngine::class)->initialize(Submission::factory()->create());
-        app(WorkflowEngine::class)->processAction($instance, $first, WorkflowActionType::Approve);
+        app(WorkflowEngine::class)->processAction($instance, new WorkflowActionData($first, WorkflowActionType::Approve));
         $this->assertSame(WorkflowStatus::Completed, $instance->fresh()->status);
 
         $all = app(CreateWorkflowTemplateAction::class)->execute(new WorkflowTemplateData(
@@ -169,9 +170,9 @@ class DynamicRoutingTest extends TestCase
         ), User::factory()->create());
 
         $open = app(WorkflowEngine::class)->initialize(Submission::factory()->create());
-        app(WorkflowEngine::class)->processAction($open, $first, WorkflowActionType::Approve);
+        app(WorkflowEngine::class)->processAction($open, new WorkflowActionData($first, WorkflowActionType::Approve));
         $this->assertSame(WorkflowStatus::Active, $open->fresh()->status);
-        app(WorkflowEngine::class)->processAction($open->fresh(), $second, WorkflowActionType::Approve);
+        app(WorkflowEngine::class)->processAction($open->fresh(), new WorkflowActionData($second, WorkflowActionType::Approve));
         $this->assertSame(WorkflowStatus::Completed, $open->fresh()->status);
         $this->assertSame($all->id, $open->template_id);
     }
@@ -193,7 +194,7 @@ class DynamicRoutingTest extends TestCase
         $instance = app(WorkflowEngine::class)->initialize(Submission::factory()->create());
 
         try {
-            app(WorkflowEngine::class)->processAction($instance, $approver, WorkflowActionType::ApproveWithConditions);
+            app(WorkflowEngine::class)->processAction($instance, new WorkflowActionData($approver, WorkflowActionType::ApproveWithConditions));
             $this->fail('Approve with conditions must require a comment.');
         } catch (WorkflowException $exception) {
             $this->assertStringContainsString('comment', strtolower($exception->getMessage()));
@@ -203,9 +204,11 @@ class DynamicRoutingTest extends TestCase
 
         app(WorkflowEngine::class)->processAction(
             $instance->fresh(),
-            $approver,
-            WorkflowActionType::ApproveWithConditions,
-            'Approved if finance signs the invoice.',
+            new WorkflowActionData(
+                $approver,
+                WorkflowActionType::ApproveWithConditions,
+                'Approved if finance signs the invoice.',
+            ),
         );
 
         $this->assertSame(WorkflowStatus::Completed, $instance->fresh()->status);
@@ -239,10 +242,12 @@ class DynamicRoutingTest extends TestCase
         $instance = app(WorkflowEngine::class)->initialize(Submission::factory()->create());
         app(WorkflowEngine::class)->processAction(
             $instance,
-            $approver,
-            WorkflowActionType::Approve,
-            'Not a fit.',
-            'decline_with_advice',
+            new WorkflowActionData(
+                $approver,
+                WorkflowActionType::Approve,
+                'Not a fit.',
+                'decline_with_advice',
+            ),
         );
 
         $this->assertSame(WorkflowStatus::Rejected, $instance->fresh()->status);

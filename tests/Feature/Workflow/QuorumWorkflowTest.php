@@ -3,6 +3,7 @@
 namespace Tests\Feature\Workflow;
 
 use App\Actions\Submissions\SubmitSubmissionAction;
+use App\DTOs\WorkflowActionData;
 use App\Enums\AssigneeType;
 use App\Enums\StepType;
 use App\Enums\SubmissionStatus;
@@ -72,8 +73,10 @@ class QuorumWorkflowTest extends TestCase
 
         $this->engine->processAction(
             $this->instance,
-            $this->quorumApprovers[0],
-            WorkflowActionType::Approve,
+            new WorkflowActionData(
+                $this->quorumApprovers[0],
+                WorkflowActionType::Approve,
+            ),
         );
 
         $this->instance->refresh();
@@ -86,8 +89,10 @@ class QuorumWorkflowTest extends TestCase
 
         $this->engine->processAction(
             $this->instance,
-            $this->quorumApprovers[1],
-            WorkflowActionType::Approve,
+            new WorkflowActionData(
+                $this->quorumApprovers[1],
+                WorkflowActionType::Approve,
+            ),
         );
 
         $this->instance->refresh();
@@ -97,8 +102,10 @@ class QuorumWorkflowTest extends TestCase
 
         $this->engine->processAction(
             $this->instance,
-            $this->finalApprover,
-            WorkflowActionType::Approve,
+            new WorkflowActionData(
+                $this->finalApprover,
+                WorkflowActionType::Approve,
+            ),
         );
 
         $this->instance->refresh();
@@ -109,23 +116,25 @@ class QuorumWorkflowTest extends TestCase
 
     public function test_remaining_assignees_cannot_act_after_quorum_advances(): void
     {
-        $this->engine->processAction($this->instance, $this->quorumApprovers[0], WorkflowActionType::Approve);
-        $this->engine->processAction($this->instance, $this->quorumApprovers[1], WorkflowActionType::Approve);
+        $this->engine->processAction($this->instance, new WorkflowActionData($this->quorumApprovers[0], WorkflowActionType::Approve));
+        $this->engine->processAction($this->instance, new WorkflowActionData($this->quorumApprovers[1], WorkflowActionType::Approve));
 
         $this->expectException(WorkflowException::class);
         $this->expectExceptionMessage('not an assignee');
 
-        $this->engine->processAction($this->instance, $this->quorumApprovers[2], WorkflowActionType::Approve);
+        $this->engine->processAction($this->instance, new WorkflowActionData($this->quorumApprovers[2], WorkflowActionType::Approve));
     }
 
     public function test_any_quorum_assignee_can_reject_before_threshold_is_met(): void
     {
-        $this->engine->processAction($this->instance, $this->quorumApprovers[0], WorkflowActionType::Approve);
+        $this->engine->processAction($this->instance, new WorkflowActionData($this->quorumApprovers[0], WorkflowActionType::Approve));
         $this->engine->processAction(
             $this->instance,
-            $this->quorumApprovers[2],
-            WorkflowActionType::Reject,
-            'Committee rejected the request.',
+            new WorkflowActionData(
+                $this->quorumApprovers[2],
+                WorkflowActionType::Reject,
+                'Committee rejected the request.',
+            ),
         );
 
         $this->instance->refresh();
@@ -141,8 +150,10 @@ class QuorumWorkflowTest extends TestCase
             try {
                 $this->engine->processAction(
                     $this->instance,
-                    $this->quorumApprovers[0],
-                    WorkflowActionType::Approve,
+                    new WorkflowActionData(
+                        $this->quorumApprovers[0],
+                        WorkflowActionType::Approve,
+                    ),
                 );
 
                 $this->fail('An impossible quorum must not be accepted.');
@@ -168,10 +179,10 @@ class QuorumWorkflowTest extends TestCase
 
         Notification::fake();
         $instance = $submission->workflowInstance()->firstOrFail();
-        $this->engine->processAction($instance, $this->quorumApprovers[0], WorkflowActionType::Approve);
+        $this->engine->processAction($instance, new WorkflowActionData($this->quorumApprovers[0], WorkflowActionType::Approve));
         Notification::assertNothingSent();
 
-        $this->engine->processAction($instance, $this->quorumApprovers[1], WorkflowActionType::Approve);
+        $this->engine->processAction($instance, new WorkflowActionData($this->quorumApprovers[1], WorkflowActionType::Approve));
         Notification::assertSentTo($this->finalApprover, ActionRequiredNotification::class);
     }
 }

@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\DTOs\DelegationData;
+use App\DTOs\WorkflowActionData;
 use App\Enums\GroupCompletion;
 use App\Enums\StepType;
 use App\Enums\SubmissionStatus;
@@ -91,14 +93,14 @@ class WorkflowEngine
      * so a replayed, double-submitted, or delayed request cannot decide a later
      * step that happens to be assigned to the same actor (RV-ENG-02).
      */
-    public function processAction(
-        WorkflowInstance $instance,
-        User $actor,
-        WorkflowActionType $action,
-        ?string $comment = null,
-        ?string $outcomeKey = null,
-        ?int $expectedStepId = null,
-    ): WorkflowInstance {
+    public function processAction(WorkflowInstance $instance, WorkflowActionData $data): WorkflowInstance
+    {
+        $actor = $data->actor;
+        $action = $data->action;
+        $comment = $data->comment;
+        $outcomeKey = $data->outcomeKey;
+        $expectedStepId = $data->expectedStepId;
+
         $applied = DB::transaction(function () use ($instance, $actor, $action, $comment, $outcomeKey, $expectedStepId): WorkflowInstance {
             /** @var WorkflowInstance $instance */
             $instance = WorkflowInstance::query()
@@ -160,16 +162,14 @@ class WorkflowEngine
         return $applied;
     }
 
-    public function delegate(
-        WorkflowInstance $instance,
-        User $delegator,
-        User $delegate,
-        CarbonInterface $expiresAt,
-        ?string $comment = null,
-        ?CarbonInterface $startsAt = null,
-        ?int $expectedStepId = null,
-    ): Delegation {
-        $startsAt ??= now();
+    public function delegate(WorkflowInstance $instance, DelegationData $data): Delegation
+    {
+        $delegator = $data->delegator;
+        $delegate = $data->delegate;
+        $expiresAt = $data->expiresAt;
+        $comment = $data->comment;
+        $startsAt = $data->startsAt ?? now();
+        $expectedStepId = $data->expectedStepId;
 
         $delegation = DB::transaction(function () use ($instance, $delegator, $delegate, $expiresAt, $comment, $startsAt, $expectedStepId): Delegation {
             /** @var WorkflowInstance $instance */

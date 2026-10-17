@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\DTOs\DelegationData;
+use App\DTOs\WorkflowActionData;
 use App\Enums\StepType;
 use App\Enums\SubmissionStatus;
 use App\Enums\WorkflowActionType;
@@ -191,7 +193,7 @@ class DashboardTest extends TestCase
         $before = app(ReportService::class)->dashboard($approver);
         $this->assertSame(1, $before['action_required']);
 
-        app(WorkflowEngine::class)->processAction($instance, $approver, WorkflowActionType::Approve);
+        app(WorkflowEngine::class)->processAction($instance, new WorkflowActionData($approver, WorkflowActionType::Approve));
 
         $after = app(ReportService::class)->dashboard($approver);
         $this->assertSame(0, $after['action_required']);
@@ -207,7 +209,7 @@ class DashboardTest extends TestCase
         $submission = Submission::factory()->for($submitter, 'submitter')->create();
         $instance = app(WorkflowEngine::class)->initialize($submission);
 
-        app(WorkflowEngine::class)->delegate($instance, $delegator, $delegate, now()->addDay());
+        app(WorkflowEngine::class)->delegate($instance, new DelegationData($delegator, $delegate, now()->addDay()));
 
         $delegatorReport = app(ReportService::class)->dashboard($delegator);
         $delegateReport = app(ReportService::class)->dashboard($delegate);

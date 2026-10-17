@@ -2,6 +2,7 @@
 
 namespace App\Actions\Approvals;
 
+use App\DTOs\WorkflowActionData;
 use App\Enums\WorkflowActionType;
 use App\Models\User;
 use App\Models\WorkflowInstance;
@@ -15,10 +16,12 @@ final readonly class ApproveSubmissionFromEmailAction
     {
         return $this->engine->processAction(
             $instance,
-            $approver,
-            WorkflowActionType::Approve,
-            'Approved through a secure email link.',
-            expectedStepId: $stepId,
+            new WorkflowActionData(
+                $approver,
+                WorkflowActionType::Approve,
+                'Approved through a secure email link.',
+                expectedStepId: $stepId,
+            ),
         );
     }
 }

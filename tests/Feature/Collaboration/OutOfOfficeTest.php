@@ -3,6 +3,8 @@
 namespace Tests\Feature\Collaboration;
 
 use App\Actions\Collaboration\SaveOutOfOfficeAction;
+use App\DTOs\DelegationData;
+use App\DTOs\WorkflowActionData;
 use App\Enums\WorkflowActionType;
 use App\Enums\WorkflowStatus;
 use App\Exceptions\CollaborationException;
@@ -62,7 +64,7 @@ class OutOfOfficeTest extends TestCase
             'delegate_id' => $fallback->id,
         ]);
 
-        app(WorkflowEngine::class)->processAction($instance, $fallback, WorkflowActionType::Approve, 'Covered.');
+        app(WorkflowEngine::class)->processAction($instance, new WorkflowActionData($fallback, WorkflowActionType::Approve, 'Covered.'));
         $this->assertSame(WorkflowStatus::Completed, $instance->fresh()->status);
     }
 
@@ -99,14 +101,16 @@ class OutOfOfficeTest extends TestCase
 
         app(WorkflowEngine::class)->delegate(
             $instance,
-            $approver,
-            $delegate,
-            now()->addDays(2),
-            'Starts tomorrow.',
-            now()->addDay(),
+            new DelegationData(
+                $approver,
+                $delegate,
+                now()->addDays(2),
+                'Starts tomorrow.',
+                now()->addDay(),
+            ),
         );
 
-        app(WorkflowEngine::class)->processAction($instance, $approver, WorkflowActionType::Approve);
+        app(WorkflowEngine::class)->processAction($instance, new WorkflowActionData($approver, WorkflowActionType::Approve));
         $this->assertSame(WorkflowStatus::Completed, $instance->fresh()->status);
     }
 
@@ -121,17 +125,17 @@ class OutOfOfficeTest extends TestCase
         $instance = app(WorkflowEngine::class)->initialize(Submission::factory()->create());
         $engine = app(WorkflowEngine::class);
 
-        $engine->delegate($instance, $approver, $delegate, now()->addDays(2), null, now()->addDay());
+        $engine->delegate($instance, new DelegationData($approver, $delegate, now()->addDays(2), null, now()->addDay()));
 
         try {
-            $engine->delegate($instance, $approver, $other, now()->addDays(3), null, now()->addHours(30));
+            $engine->delegate($instance, new DelegationData($approver, $other, now()->addDays(3), null, now()->addHours(30)));
             $this->fail('Overlapping future delegation must be rejected.');
         } catch (WorkflowException $exception) {
             $this->assertStringContainsString('already have an active delegation', $exception->getMessage());
         }
 
         try {
-            $engine->delegate($instance, $approver, $other, now()->addHour(), null, now()->addHours(2));
+            $engine->delegate($instance, new DelegationData($approver, $other, now()->addHour(), null, now()->addHours(2)));
             $this->fail('Inverted window must be rejected.');
         } catch (WorkflowException $exception) {
             $this->assertStringContainsString('start must be before', $exception->getMessage());
@@ -147,7 +151,7 @@ class OutOfOfficeTest extends TestCase
         ]);
 
         try {
-            $engine->delegate($instance, $approver, $other, now()->addDays(5), null, now()->addDays(4)->addHour());
+            $engine->delegate($instance, new DelegationData($approver, $other, now()->addDays(5), null, now()->addDays(4)->addHour()));
             $this->fail('Overlapping incoming delegation must be rejected.');
         } catch (WorkflowException $exception) {
             $this->assertStringContainsString('already holds a seat', $exception->getMessage());
@@ -161,7 +165,7 @@ class OutOfOfficeTest extends TestCase
         ]);
 
         try {
-            $engine->delegate($instance, $approver, $away, now()->addDays(5), null, now()->addDays(4)->addHour());
+            $engine->delegate($instance, new DelegationData($approver, $away, now()->addDays(5), null, now()->addDays(4)->addHour()));
             $this->fail('Delegation onto an OOO user must be rejected.');
         } catch (WorkflowException $exception) {
             $this->assertStringContainsString('out of office', $exception->getMessage());

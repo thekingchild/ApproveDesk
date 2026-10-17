@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Workflow;
 
+use App\DTOs\WorkflowActionData;
 use App\Enums\StepType;
 use App\Enums\SubmissionStatus;
 use App\Enums\TimeoutAction;
@@ -159,9 +160,11 @@ class WorkflowTimeoutTest extends TestCase
         Carbon::setTestNow('2026-08-17 10:00:00');
         app(WorkflowEngine::class)->processAction(
             $instance,
-            $approver,
-            WorkflowActionType::RequestInformation,
-            'Please clarify.',
+            new WorkflowActionData(
+                $approver,
+                WorkflowActionType::RequestInformation,
+                'Please clarify.',
+            ),
         );
         Carbon::setTestNow('2026-08-18 09:00:00');
 

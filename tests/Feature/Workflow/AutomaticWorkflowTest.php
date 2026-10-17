@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Workflow;
 
+use App\DTOs\WorkflowActionData;
 use App\Enums\AssigneeType;
 use App\Enums\StepType;
 use App\Enums\SubmissionPriority;
@@ -157,7 +158,7 @@ class AutomaticWorkflowTest extends TestCase
         $submission = Submission::factory()->priority(SubmissionPriority::Urgent)->create();
         $instance = app(WorkflowEngine::class)->initialize($submission);
 
-        app(WorkflowEngine::class)->processAction($instance, $firstApprover, WorkflowActionType::Approve);
+        app(WorkflowEngine::class)->processAction($instance, new WorkflowActionData($firstApprover, WorkflowActionType::Approve));
 
         $this->assertSame($final->id, $instance->fresh()->current_step_id);
         $this->assertDatabaseHas('workflow_actions', [

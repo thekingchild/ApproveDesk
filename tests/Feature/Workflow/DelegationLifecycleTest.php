@@ -4,6 +4,8 @@ namespace Tests\Feature\Workflow;
 
 use App\Actions\Collaboration\DeleteOutOfOfficeAction;
 use App\Actions\Collaboration\SaveOutOfOfficeAction;
+use App\DTOs\DelegationData;
+use App\DTOs\WorkflowActionData;
 use App\Enums\WorkflowActionType;
 use App\Enums\WorkflowStatus;
 use App\Models\Delegation;
@@ -55,10 +57,10 @@ class DelegationLifecycleTest extends TestCase
 
     public function test_deactivating_the_delegate_gives_the_step_back(): void
     {
-        $this->engine->delegate($this->instance, $this->approver, $this->delegate, now()->addDays(14));
+        $this->engine->delegate($this->instance, new DelegationData($this->approver, $this->delegate, now()->addDays(14)));
         $this->delegate->update(['is_active' => false]);
 
-        $this->engine->processAction($this->instance->fresh(), $this->approver, WorkflowActionType::Approve);
+        $this->engine->processAction($this->instance->fresh(), new WorkflowActionData($this->approver, WorkflowActionType::Approve));
 
         $this->assertSame(WorkflowStatus::Completed, $this->instance->fresh()->status);
     }
@@ -72,13 +74,13 @@ class DelegationLifecycleTest extends TestCase
 
         $this->assertSame(0, Delegation::query()->active()->count());
         $this->assertSame(1, WorkflowAction::query()->where('action', WorkflowActionType::DelegationRevoked)->count());
-        $this->engine->processAction($this->instance->fresh(), $this->approver, WorkflowActionType::Approve);
+        $this->engine->processAction($this->instance->fresh(), new WorkflowActionData($this->approver, WorkflowActionType::Approve));
         $this->assertSame(WorkflowStatus::Completed, $this->instance->fresh()->status);
     }
 
     public function test_delegator_can_take_the_step_back_from_the_request_page(): void
     {
-        $this->engine->delegate($this->instance, $this->approver, $this->delegate, now()->addDays(3));
+        $this->engine->delegate($this->instance, new DelegationData($this->approver, $this->delegate, now()->addDays(3)));
 
         Livewire::actingAs($this->approver)
             ->test('submissions.decision', ['submission' => $this->instance->submission->fresh()])
@@ -86,13 +88,13 @@ class DelegationLifecycleTest extends TestCase
             ->call('takeBackDelegation');
 
         $this->assertSame(0, Delegation::query()->active()->count());
-        $this->engine->processAction($this->instance->fresh(), $this->approver, WorkflowActionType::Approve);
+        $this->engine->processAction($this->instance->fresh(), new WorkflowActionData($this->approver, WorkflowActionType::Approve));
         $this->assertSame(WorkflowStatus::Completed, $this->instance->fresh()->status);
     }
 
     public function test_expired_delegations_still_name_the_delegate_in_the_evidence_pack(): void
     {
-        $this->engine->delegate($this->instance, $this->approver, $this->delegate, now()->addHour());
+        $this->engine->delegate($this->instance, new DelegationData($this->approver, $this->delegate, now()->addHour()));
         Carbon::setTestNow(now()->addDays(2));
         $admin = User::factory()->create()->assignRole('admin');
 

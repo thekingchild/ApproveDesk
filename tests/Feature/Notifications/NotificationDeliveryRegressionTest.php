@@ -5,6 +5,7 @@ namespace Tests\Feature\Notifications;
 use App\Actions\Collaboration\FollowSubmissionAction;
 use App\Actions\Collaboration\PostCommentAction;
 use App\Actions\Submissions\SubmitSubmissionAction;
+use App\DTOs\WorkflowActionData;
 use App\Enums\AssigneeType;
 use App\Enums\NotificationChannelKey;
 use App\Enums\NotificationDeliveryStatus;
@@ -188,7 +189,7 @@ class NotificationDeliveryRegressionTest extends TestCase
         $approver->notify(new ActionRequiredNotification($submission->fresh()));
 
         Carbon::setTestNow('2026-10-16 23:30:00');
-        app(WorkflowEngine::class)->processAction($instance->fresh(), $approver, WorkflowActionType::Approve);
+        app(WorkflowEngine::class)->processAction($instance->fresh(), new WorkflowActionData($approver, WorkflowActionType::Approve));
 
         Carbon::setTestNow('2026-10-17 07:15:00');
         $this->runRetries();
@@ -235,12 +236,12 @@ class NotificationDeliveryRegressionTest extends TestCase
         $mail = (new SubmissionDecidedNotification($submission, SubmissionStatus::Approved))->toMail($submitter);
         $this->assertStringNotContainsString('{{', implode("\n", $mail->introLines));
 
-        $engine->processAction($instance->fresh(), $approver, WorkflowActionType::Return, 'Please fix section 2.');
+        $engine->processAction($instance->fresh(), new WorkflowActionData($approver, WorkflowActionType::Return, 'Please fix section 2.'));
         $returned = (new SubmissionDecidedNotification($submission->fresh(), SubmissionStatus::Returned))->toMail($submitter);
         $this->assertContains('Please fix section 2.', $returned->introLines);
 
         $engine->resume($instance->fresh());
-        $engine->processAction($instance->fresh(), $approver, WorkflowActionType::Approve, 'Thanks, looks right now.');
+        $engine->processAction($instance->fresh(), new WorkflowActionData($approver, WorkflowActionType::Approve, 'Thanks, looks right now.'));
         $approved = (new SubmissionDecidedNotification($submission->fresh(), SubmissionStatus::Approved))->toMail($submitter);
         $body = implode("\n", $approved->introLines);
         $this->assertStringNotContainsString('Please fix section 2.', $body);
@@ -287,7 +288,7 @@ class NotificationDeliveryRegressionTest extends TestCase
         $follower->forceFill(['is_active' => false])->save();
 
         app(PostCommentAction::class)->execute($submission, $approver, 'Checking the numbers.');
-        app(WorkflowEngine::class)->processAction($submission->workflowInstance()->firstOrFail(), $approver, WorkflowActionType::Approve);
+        app(WorkflowEngine::class)->processAction($submission->workflowInstance()->firstOrFail(), new WorkflowActionData($approver, WorkflowActionType::Approve));
 
         Notification::assertNotSentTo($submitter, SubmissionDecidedNotification::class);
         Notification::assertNotSentTo($follower, WatcherStatusNotification::class);
@@ -311,7 +312,7 @@ class NotificationDeliveryRegressionTest extends TestCase
         $follower = User::factory()->create()->assignRole('approver');
         app(FollowSubmissionAction::class)->execute($submission, $submitter, $follower);
 
-        app(WorkflowEngine::class)->processAction($submission->workflowInstance()->firstOrFail(), $approver, WorkflowActionType::Approve);
+        app(WorkflowEngine::class)->processAction($submission->workflowInstance()->firstOrFail(), new WorkflowActionData($approver, WorkflowActionType::Approve));
 
         Notification::assertSentTo($submitter, SubmissionDecidedNotification::class, fn ($n, array $channels): bool => in_array('mail', $channels, true));
         Notification::assertSentTo($follower, WatcherStatusNotification::class);

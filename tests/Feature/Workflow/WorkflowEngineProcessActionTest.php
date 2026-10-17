@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Workflow;
 
+use App\DTOs\WorkflowActionData;
 use App\Enums\SubmissionStatus;
 use App\Enums\WorkflowActionType;
 use App\Enums\WorkflowStatus;
@@ -53,7 +54,7 @@ class WorkflowEngineProcessActionTest extends TestCase
     {
         Event::fake([WorkflowAdvanced::class]);
 
-        $this->engine->processAction($this->instance, $this->firstApprover, WorkflowActionType::Approve, 'Looks good');
+        $this->engine->processAction($this->instance, new WorkflowActionData($this->firstApprover, WorkflowActionType::Approve, 'Looks good'));
 
         $this->instance->refresh();
 
@@ -67,8 +68,8 @@ class WorkflowEngineProcessActionTest extends TestCase
     {
         Event::fake([WorkflowCompleted::class]);
 
-        $this->engine->processAction($this->instance, $this->firstApprover, WorkflowActionType::Approve);
-        $this->engine->processAction($this->instance, $this->secondApprover, WorkflowActionType::Approve);
+        $this->engine->processAction($this->instance, new WorkflowActionData($this->firstApprover, WorkflowActionType::Approve));
+        $this->engine->processAction($this->instance, new WorkflowActionData($this->secondApprover, WorkflowActionType::Approve));
 
         $this->instance->refresh();
 
@@ -84,7 +85,7 @@ class WorkflowEngineProcessActionTest extends TestCase
     {
         Event::fake([WorkflowRejected::class]);
 
-        $this->engine->processAction($this->instance, $this->firstApprover, WorkflowActionType::Reject, 'Not enough detail');
+        $this->engine->processAction($this->instance, new WorkflowActionData($this->firstApprover, WorkflowActionType::Reject, 'Not enough detail'));
 
         $this->instance->refresh();
 
@@ -97,7 +98,7 @@ class WorkflowEngineProcessActionTest extends TestCase
 
     public function test_return_for_revision_puts_instance_on_hold(): void
     {
-        $this->engine->processAction($this->instance, $this->firstApprover, WorkflowActionType::Return, 'Please expand section 2');
+        $this->engine->processAction($this->instance, new WorkflowActionData($this->firstApprover, WorkflowActionType::Return, 'Please expand section 2'));
 
         $this->instance->refresh();
 
@@ -108,7 +109,7 @@ class WorkflowEngineProcessActionTest extends TestCase
 
     public function test_comment_is_recorded_without_state_change(): void
     {
-        $this->engine->processAction($this->instance, $this->firstApprover, WorkflowActionType::Comment, 'Checking with finance');
+        $this->engine->processAction($this->instance, new WorkflowActionData($this->firstApprover, WorkflowActionType::Comment, 'Checking with finance'));
 
         $this->instance->refresh();
 
@@ -125,7 +126,7 @@ class WorkflowEngineProcessActionTest extends TestCase
         $this->expectException(WorkflowException::class);
         $this->expectExceptionMessage('not an assignee');
 
-        $this->engine->processAction($this->instance, $outsider, WorkflowActionType::Approve);
+        $this->engine->processAction($this->instance, new WorkflowActionData($outsider, WorkflowActionType::Approve));
     }
 
     public function test_next_step_approver_cannot_act_early(): void
@@ -133,13 +134,13 @@ class WorkflowEngineProcessActionTest extends TestCase
         $this->expectException(WorkflowException::class);
         $this->expectExceptionMessage('not an assignee');
 
-        $this->engine->processAction($this->instance, $this->secondApprover, WorkflowActionType::Approve);
+        $this->engine->processAction($this->instance, new WorkflowActionData($this->secondApprover, WorkflowActionType::Approve));
     }
 
     public function test_comments_are_repeatable_and_cannot_be_double_spent(): void
     {
-        $this->engine->processAction($this->instance, $this->firstApprover, WorkflowActionType::Comment, 'first');
-        $this->engine->processAction($this->instance, $this->firstApprover, WorkflowActionType::Comment, 'second');
+        $this->engine->processAction($this->instance, new WorkflowActionData($this->firstApprover, WorkflowActionType::Comment, 'first'));
+        $this->engine->processAction($this->instance, new WorkflowActionData($this->firstApprover, WorkflowActionType::Comment, 'second'));
 
         $this->assertSame(2, $this->instance->actions()->count(), 'comments remain repeatable');
     }
@@ -149,27 +150,27 @@ class WorkflowEngineProcessActionTest extends TestCase
         // Approve level 1; the engine advances to level 2 under lock. A caller
         // holding the stale pre-advance instance must not be able to apply a
         // second action against level 1 — the engine re-reads the locked row.
-        $this->engine->processAction($this->instance, $this->firstApprover, WorkflowActionType::Approve);
+        $this->engine->processAction($this->instance, new WorkflowActionData($this->firstApprover, WorkflowActionType::Approve));
 
         $this->expectException(WorkflowException::class);
         $this->expectExceptionMessage('not an assignee');
 
-        $this->engine->processAction($this->instance, $this->firstApprover, WorkflowActionType::Approve);
+        $this->engine->processAction($this->instance, new WorkflowActionData($this->firstApprover, WorkflowActionType::Approve));
     }
 
     public function test_no_actions_accepted_after_rejection(): void
     {
-        $this->engine->processAction($this->instance, $this->firstApprover, WorkflowActionType::Reject, 'no');
+        $this->engine->processAction($this->instance, new WorkflowActionData($this->firstApprover, WorkflowActionType::Reject, 'no'));
 
         $this->expectException(WorkflowException::class);
         $this->expectExceptionMessage('not active');
 
-        $this->engine->processAction($this->instance, $this->secondApprover, WorkflowActionType::Approve);
+        $this->engine->processAction($this->instance, new WorkflowActionData($this->secondApprover, WorkflowActionType::Approve));
     }
 
     public function test_every_action_is_recorded_in_the_audit_log_with_context(): void
     {
-        $this->engine->processAction($this->instance, $this->firstApprover, WorkflowActionType::Approve, 'ok');
+        $this->engine->processAction($this->instance, new WorkflowActionData($this->firstApprover, WorkflowActionType::Approve, 'ok'));
 
         /** @var WorkflowAction $action */
         $action = WorkflowAction::query()->first();
@@ -182,8 +183,8 @@ class WorkflowEngineProcessActionTest extends TestCase
 
     public function test_full_approval_history_is_preserved_across_steps(): void
     {
-        $this->engine->processAction($this->instance, $this->firstApprover, WorkflowActionType::Approve, 'level 1 ok');
-        $this->engine->processAction($this->instance, $this->secondApprover, WorkflowActionType::Approve, 'level 2 ok');
+        $this->engine->processAction($this->instance, new WorkflowActionData($this->firstApprover, WorkflowActionType::Approve, 'level 1 ok'));
+        $this->engine->processAction($this->instance, new WorkflowActionData($this->secondApprover, WorkflowActionType::Approve, 'level 2 ok'));
 
         $history = $this->instance->actions->pluck('comment')->all();
 

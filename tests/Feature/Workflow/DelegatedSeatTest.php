@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Workflow;
 
+use App\DTOs\DelegationData;
+use App\DTOs\WorkflowActionData;
 use App\Enums\AssigneeType;
 use App\Enums\StepType;
 use App\Enums\WorkflowActionType;
@@ -49,19 +51,19 @@ class DelegatedSeatTest extends TestCase
         $delegate = User::factory()->create();
         $instance = $this->instanceFor(StepType::Quorum, [$a, $b, $c], quorum: 2);
 
-        $this->engine->delegate($instance, $a, $delegate, now()->addHour());
-        $this->engine->processAction($instance, $delegate, WorkflowActionType::Approve);
+        $this->engine->delegate($instance, new DelegationData($a, $delegate, now()->addHour()));
+        $this->engine->processAction($instance, new WorkflowActionData($delegate, WorkflowActionType::Approve));
         Carbon::setTestNow(now()->addHours(2));
 
         try {
-            $this->engine->processAction($instance, $a, WorkflowActionType::Approve);
+            $this->engine->processAction($instance, new WorkflowActionData($a, WorkflowActionType::Approve));
             $this->fail('The delegator counted a second time.');
         } catch (WorkflowException $exception) {
             $this->assertStringContainsString('already acted', $exception->getMessage());
         }
         $this->assertSame(WorkflowStatus::Active, $instance->fresh()->status);
 
-        $this->engine->processAction($instance, $b, WorkflowActionType::Approve);
+        $this->engine->processAction($instance, new WorkflowActionData($b, WorkflowActionType::Approve));
         $this->assertSame(WorkflowStatus::Completed, $instance->fresh()->status);
     }
 
@@ -71,12 +73,12 @@ class DelegatedSeatTest extends TestCase
         $delegate = User::factory()->create();
         $instance = $this->instanceFor(StepType::Parallel, [$a, $b]);
 
-        $this->engine->delegate($instance, $a, $delegate, now()->addHour());
-        $this->engine->processAction($instance, $delegate, WorkflowActionType::Approve);
+        $this->engine->delegate($instance, new DelegationData($a, $delegate, now()->addHour()));
+        $this->engine->processAction($instance, new WorkflowActionData($delegate, WorkflowActionType::Approve));
 
         $this->assertSame(WorkflowStatus::Active, $instance->fresh()->status);
 
-        $this->engine->processAction($instance, $b, WorkflowActionType::Approve);
+        $this->engine->processAction($instance, new WorkflowActionData($b, WorkflowActionType::Approve));
         $this->assertSame(WorkflowStatus::Completed, $instance->fresh()->status);
     }
 
@@ -86,8 +88,8 @@ class DelegatedSeatTest extends TestCase
         $delegate = User::factory()->create(['name' => 'Dee Delegate']);
         $instance = $this->instanceFor(StepType::Sequential, [$approver]);
 
-        $this->engine->delegate($instance, $approver, $delegate, now()->addHour());
-        $this->engine->processAction($instance, $delegate, WorkflowActionType::Approve);
+        $this->engine->delegate($instance, new DelegationData($approver, $delegate, now()->addHour()));
+        $this->engine->processAction($instance, new WorkflowActionData($delegate, WorkflowActionType::Approve));
 
         $approval = WorkflowAction::query()->where('action', 'approve')->sole();
         $this->assertSame($delegate->id, $approval->actor_id);
@@ -104,7 +106,7 @@ class DelegatedSeatTest extends TestCase
         $approver = User::factory()->create();
         $instance = $this->instanceFor(StepType::Sequential, [$approver]);
 
-        $this->engine->processAction($instance, $approver, WorkflowActionType::Approve);
+        $this->engine->processAction($instance, new WorkflowActionData($approver, WorkflowActionType::Approve));
 
         $this->assertNull(WorkflowAction::query()->where('action', 'approve')->sole()->on_behalf_of_id);
     }

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Workflow;
 
+use App\DTOs\WorkflowActionData;
 use App\Enums\AssigneeType;
 use App\Enums\StepType;
 use App\Enums\WorkflowActionType;
@@ -27,7 +28,7 @@ class WorkflowEngineCoverageTest extends TestCase
 
         $this->expectException(WorkflowException::class);
         $this->expectExceptionMessage('not defined');
-        app(WorkflowEngine::class)->processAction($instance, $approver, WorkflowActionType::Approve, 'note', 'missing_outcome');
+        app(WorkflowEngine::class)->processAction($instance, new WorkflowActionData($approver, WorkflowActionType::Approve, 'note', 'missing_outcome'));
     }
 
     public function test_system_action_types_cannot_be_submitted_by_actors(): void
@@ -37,7 +38,7 @@ class WorkflowEngineCoverageTest extends TestCase
         $instance = app(WorkflowEngine::class)->initialize(Submission::factory()->create());
 
         $this->expectException(WorkflowException::class);
-        app(WorkflowEngine::class)->processAction($instance, $approver, WorkflowActionType::AutoApprove);
+        app(WorkflowEngine::class)->processAction($instance, new WorkflowActionData($approver, WorkflowActionType::AutoApprove));
     }
 
     public function test_active_instance_with_no_current_step_rejects_the_actor(): void
@@ -49,7 +50,7 @@ class WorkflowEngineCoverageTest extends TestCase
 
         $this->expectException(WorkflowException::class);
         $this->expectExceptionMessage('not an assignee');
-        app(WorkflowEngine::class)->processAction($instance->fresh(), $approver, WorkflowActionType::Approve);
+        app(WorkflowEngine::class)->processAction($instance->fresh(), new WorkflowActionData($approver, WorkflowActionType::Approve));
     }
 
     public function test_timeout_is_a_no_op_when_the_deadline_has_not_elapsed(): void
@@ -109,7 +110,7 @@ class WorkflowEngineCoverageTest extends TestCase
 
         $this->expectException(WorkflowException::class);
         $this->expectExceptionMessage('not implemented');
-        app(WorkflowEngine::class)->processAction($instance->fresh(), $approver, WorkflowActionType::Approve);
+        app(WorkflowEngine::class)->processAction($instance->fresh(), new WorkflowActionData($approver, WorkflowActionType::Approve));
     }
 
     public function test_invalid_conditional_configuration_is_rejected(): void

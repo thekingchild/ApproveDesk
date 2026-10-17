@@ -3,6 +3,7 @@
 namespace Tests\Feature\Notifications;
 
 use App\Actions\Submissions\SubmitSubmissionAction;
+use App\DTOs\WorkflowActionData;
 use App\Enums\NotificationChannelKey;
 use App\Enums\SubmissionStatus;
 use App\Enums\WorkflowActionType;
@@ -74,7 +75,7 @@ class ChatActionTest extends TestCase
         app(SubmitSubmissionAction::class)->execute($submission);
         $instance = $submission->workflowInstance()->with('currentStep')->firstOrFail();
         $token = ChatActionToken::issue($instance, $instance->currentStep, $approver);
-        app(WorkflowEngine::class)->processAction($instance, $approver, WorkflowActionType::Approve);
+        app(WorkflowEngine::class)->processAction($instance, new WorkflowActionData($approver, WorkflowActionType::Approve));
 
         app(ChannelSettings::class)->setEnabled(NotificationChannelKey::Teams, true);
         app(ChannelSettings::class)->putCredentials(

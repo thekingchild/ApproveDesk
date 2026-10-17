@@ -1,5 +1,7 @@
 <?php
 
+use App\DTOs\DelegationData;
+use App\DTOs\WorkflowActionData;
 use App\Enums\WorkflowActionType;
 use App\Exceptions\WorkflowException;
 use App\Models\Delegation;
@@ -163,12 +165,14 @@ new class extends Component {
         try {
             app(WorkflowEngine::class)->delegate(
                 $this->submission->workflowInstance,
-                Auth::user(),
-                $delegate,
-                $expiresAt,
-                $validated['delegationComment'] ?: null,
-                $startsAt,
-                $this->renderedStepId,
+                new DelegationData(
+                    delegator: Auth::user(),
+                    delegate: $delegate,
+                    expiresAt: $expiresAt,
+                    comment: $validated['delegationComment'] ?: null,
+                    startsAt: $startsAt,
+                    expectedStepId: $this->renderedStepId,
+                ),
             );
         } catch (WorkflowException $exception) {
             $this->addError('delegateUserId', $exception->userMessage());
@@ -205,11 +209,13 @@ new class extends Component {
             $actionType = WorkflowActionType::tryFrom($action) ?? WorkflowActionType::Approve;
             app(WorkflowEngine::class)->processAction(
                 $this->submission->workflowInstance,
-                Auth::user(),
-                $actionType,
-                trim($this->actionComment) !== '' ? trim($this->actionComment) : null,
-                $action,
-                $this->renderedStepId,
+                new WorkflowActionData(
+                    actor: Auth::user(),
+                    action: $actionType,
+                    comment: trim($this->actionComment) !== '' ? trim($this->actionComment) : null,
+                    outcomeKey: $action,
+                    expectedStepId: $this->renderedStepId,
+                ),
             );
         } catch (WorkflowException $exception) {
             Flux::toast($exception->userMessage(), variant: 'danger');

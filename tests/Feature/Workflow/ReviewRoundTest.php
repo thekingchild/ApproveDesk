@@ -3,6 +3,7 @@
 namespace Tests\Feature\Workflow;
 
 use App\Actions\Submissions\SubmitSubmissionAction;
+use App\DTOs\WorkflowActionData;
 use App\Enums\AssigneeType;
 use App\Enums\StepType;
 use App\Enums\WorkflowActionType;
@@ -54,19 +55,19 @@ class ReviewRoundTest extends TestCase
         $this->submission = Submission::factory()->create();
         $this->instance = $this->engine->initialize($this->submission);
 
-        $this->engine->processAction($this->instance, $this->first, WorkflowActionType::Approve);
-        $this->engine->processAction($this->instance, $this->second, WorkflowActionType::Return, 'Fix the amount.');
+        $this->engine->processAction($this->instance, new WorkflowActionData($this->first, WorkflowActionType::Approve));
+        $this->engine->processAction($this->instance, new WorkflowActionData($this->second, WorkflowActionType::Return, 'Fix the amount.'));
         app(SubmitSubmissionAction::class)->execute($this->submission->fresh());
     }
 
     public function test_approvals_before_a_return_do_not_complete_the_revised_request(): void
     {
-        $this->engine->processAction($this->instance, $this->second, WorkflowActionType::Approve);
+        $this->engine->processAction($this->instance, new WorkflowActionData($this->second, WorkflowActionType::Approve));
 
         $this->assertSame(WorkflowStatus::Active, $this->instance->fresh()->status);
 
         // The earlier approver reviews the revision and is not treated as a duplicate.
-        $this->engine->processAction($this->instance, $this->first, WorkflowActionType::Approve);
+        $this->engine->processAction($this->instance, new WorkflowActionData($this->first, WorkflowActionType::Approve));
 
         $this->assertSame(WorkflowStatus::Completed, $this->instance->fresh()->status);
         $this->assertSame(3, WorkflowAction::query()->where('action', 'approve')->count(), 'History keeps the first-round approval.');

@@ -3,6 +3,7 @@
 namespace Tests\Feature\Approvals;
 
 use App\Actions\Submissions\SubmitSubmissionAction;
+use App\DTOs\WorkflowActionData;
 use App\Enums\SubmissionStatus;
 use App\Enums\WorkflowActionType;
 use App\Models\Setting;
@@ -92,7 +93,7 @@ class EmailApprovalTest extends TestCase
 
         Carbon::setTestNow('2026-08-17 12:00:00');
         $validUrl = EmailApprovalLinks::confirmationUrl($instance, $instance->currentStep, $this->approver, now()->addHour());
-        app(WorkflowEngine::class)->processAction($instance, $this->approver, WorkflowActionType::Approve);
+        app(WorkflowEngine::class)->processAction($instance, new WorkflowActionData($this->approver, WorkflowActionType::Approve));
 
         $this->get($validUrl)->assertGone();
     }
