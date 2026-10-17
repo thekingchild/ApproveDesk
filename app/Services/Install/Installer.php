@@ -74,7 +74,7 @@ class Installer
     public function requirements(): array
     {
         $requirements = [
-            ['label' => 'PHP >= 8.3', 'ok' => PHP_VERSION_ID >= 80300, 'note' => PHP_VERSION, 'required' => true], // @phpstan-ignore greaterOrEqual.alwaysTrue (defensive: hosts without composer-verified PHP)
+            ['label' => 'PHP >= 8.4.1', 'ok' => PHP_VERSION_ID >= 80401, 'note' => PHP_VERSION, 'required' => true], // @phpstan-ignore greaterOrEqual.alwaysTrue (defensive: hosts without composer-verified PHP)
         ];
 
         foreach (self::REQUIRED_EXTENSIONS as $extension) {

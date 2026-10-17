@@ -10,7 +10,7 @@ ApproveDesk is meant for organizations that run ordinary cPanel or Plesk account
 
 ## Decision
 
-- **Primary target: shared hosting (cPanel/Plesk).** PHP 8.3–8.5 (`composer.json` requires `^8.3`, and the installer blocks below 8.3). MySQL 8.0+ or MariaDB 10.6+ in production. SQLite is used for development and tests.
+- **Primary target: shared hosting (cPanel/Plesk).** PHP 8.4.1–8.5 (`composer.json` requires `^8.4.1`, and the installer blocks below 8.4.1). Raised from 8.3 on 2026-10-17 (RV-TEST-06): the locked dependencies (Symfony 8.1, spatie/laravel-activitylog 5) need PHP 8.4.1, so 8.3 was never actually runnable. MySQL 8.0+ or MariaDB 10.6+ in production. SQLite is used for development and tests.
 - Queue is `database`, cache is `file`, and sessions are `file`. Redis, Docker, Node at runtime, and long-running workers are never required (AGENTS.md, docs/OPERATIONS.md). Release bundles include `vendor/` and `public/build/`, so the host needs no Composer or Node.
 - **One cron entry** runs `php artisan schedule:run` every minute. The schedule starts the queue worker itself (`routes/console.php:27-30`): `queue:work --stop-when-empty --max-time=50 --tries=3 --timeout=90`, `everyMinute()`, `withoutOverlapping(5)`, `runInBackground()`. Each tick drains the database queue and exits. It stops after 50 s so ticks do not stack, and the overlap lock expires after 5 minutes if the host kills the worker. `DB_QUEUE_RETRY_AFTER` defaults to 150 so it stays above `--timeout` (`config/queue.php:45`). `ops:heartbeat` runs each minute, and `ops:scheduler-check` reports a stale heartbeat.
 - **First run uses the web installer at `/install`**: requirements, database, migrations and seed, first administrator, finish. `Installer::finalize()` writes `APP_INSTALLED=true` to `.env` and the lock file `storage/app/installed.lock`. After that, `EnsureAppConfigured` returns 404 for every `/install` URL. `Installer::isInstalled()` also accepts `APP_INSTALLED=true` for hosts that cannot write the lock.
@@ -24,11 +24,11 @@ ApproveDesk is meant for organizations that run ordinary cPanel or Plesk account
 
 - Background work runs up to about a minute late, which is acceptable for notifications, escalations, and retention. Scheduled jobs must finish inside the worker's 90 s timeout or continue on the next run.
 - The installer needs a writable application directory for the duration of setup. Operators tighten `.env` permissions afterwards (docs/DEPLOYMENT.md §2).
-- CI (`.github/workflows/ci.yml`) tests PHP 8.4 only, against SQLite, MySQL 8.0, and MariaDB 10.6. No workflow builds the Docker image (`publish-release.yml` only creates a GitHub release). Docker regressions and PHP 8.3/8.5 differences can therefore ship unnoticed.
+- CI (`.github/workflows/ci.yml`) tests the latest PHP 8.4 against SQLite, MySQL 8.0, and MariaDB 10.6, the minimum PHP 8.4.1 and the newest PHP 8.5 against SQLite. No workflow builds the Docker image (`publish-release.yml` only creates a GitHub release).
 - Docker issues are not fixed. Supporting containers again would need a new decision, an image that lets the installer write `.env` to a persistent volume, and a CI job that builds the image and smoke-tests `/install`.
 
 ## Open questions
 
 - **RV-ARC-22** is closed by this amendment rather than fixed: the image probably cannot pass the installer's `.env` check (only `storage/` and `bootstrap/cache` are writable by `www-data`, `Dockerfile:58-60`). It was never confirmed by a run.
 - docs/DEPLOYMENT.md §2 says the requirements check covers writable `storage/` and `bootstrap/cache/`. The code also requires the `.env` directory to be writable. The doc understates the requirement.
-- AGENTS.md and the installer claim PHP 8.3–8.5, but CI runs only 8.4. `^8.3` would also accept a future 8.6. Should CI add a PHP version matrix?
+- `^8.4.1` would also accept a future PHP 8.6; CI only proves 8.4.1–8.5. Revisit when 8.6 is released.

@@ -93,7 +93,7 @@ class InstallerTest extends TestCase
     {
         $this->get(route('install.welcome'))
             ->assertOk()
-            ->assertSee('PHP >= 8.3')
+            ->assertSee('PHP >= 8.4.1')
             ->assertSee('ext/mbstring');
     }
 

@@ -55,7 +55,7 @@ class InstallerFreshDeployTest extends TestCase
     {
         $this->get('/install')
             ->assertOk()
-            ->assertSee('PHP >= 8.3');
+            ->assertSee('PHP >= 8.4.1');
     }
 
     #[TestDox('settings reads return the default when the cache or settings table is missing')]

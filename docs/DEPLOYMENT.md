@@ -6,9 +6,9 @@ How ApproveDesk reaches a server and gets configured. Routine releases are autom
 
 | Requirement | Spec |
 |---|---|
-| PHP | 8.3+ with: BCMath, Ctype, cURL, DOM, FileInfo, JSON, Mbstring, OpenSSL, PCRE, PDO, Tokenizer, XML, ZIP, GD; pdo_mysql |
+| PHP | 8.4.1+ (8.4 or 8.5) with: BCMath, Ctype, cURL, DOM, FileInfo, JSON, Mbstring, OpenSSL, PCRE, PDO, Tokenizer, XML, ZIP, GD; pdo_mysql |
 | Database | MySQL 8.0+ / MariaDB 10.6+ |
-| Web server | Apache/Nginx+PHP-FPM, or the supplied container |
+| Web server | Apache/Nginx+PHP-FPM |
 | Scheduler | 1 cron entry per minute on shared hosting; managed inside the container |
 | SSL | Let's Encrypt (AutoSSL / Plesk SSL/TLS) |
 | Disk / RAM | 2 GB / 512 MB minimum; 10 GB / 2 GB recommended |
@@ -53,7 +53,7 @@ Custom S3-compatible backup endpoints must be public HTTPS. For a private MinIO 
 * * * * * /usr/local/bin/php /home/<user>/approvedesk/artisan schedule:run >> /dev/null 2>&1
 ```
 
-Find the right PHP binary via MultiPHP Manager (e.g. `/opt/cpanel/ea-php83/root/usr/bin/php`). The scheduler itself launches the queue worker on shared hosting (`routes/console.php`). Verify it without running scheduled work:
+Find the right PHP binary via MultiPHP Manager (e.g. `/opt/cpanel/ea-php84/root/usr/bin/php`). The scheduler itself launches the queue worker on shared hosting (`routes/console.php`). Verify it without running scheduled work:
 
 ```bash
 php artisan ops:scheduler-check
@@ -82,11 +82,11 @@ RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
 ## 4. Plesk Bring-Up (once per server)
 
-1. Websites & Domains → Add subdomain/domain; docroot `httpdocs/public`; PHP 8.3 FPM; Let's Encrypt on.
+1. Websites & Domains → Add subdomain/domain; docroot `httpdocs/public`; PHP 8.4 FPM (8.4.1 or newer); Let's Encrypt on.
 2. **Git deployment:** Plesk → Git → connect the repo; deploy path `/var/www/vhosts/<domain>/approvedesk`; enable the post-deploy webhook so CI's SSH nudge (see [CI-CD.md §6](CI-CD.md)) pulls automatically. Docroot then serves `approvedesk/public` (set via symlink or vhost config).
 3. **Scheduled task:** Tools & Settings → Scheduled Tasks → every minute:
    ```
-   /opt/plesk/php/8.3/bin/php /var/www/vhosts/<domain>/approvedesk/artisan schedule:run
+   /opt/plesk/php/8.4/bin/php /var/www/vhosts/<domain>/approvedesk/artisan schedule:run
    ```
 4. Nginx additional directives: `client_max_body_size 50M;` (uploads) and the standard `try_files … /index.php?$query_string` front-controller block.
 5. Visit the domain → `/install` wizard (§2).

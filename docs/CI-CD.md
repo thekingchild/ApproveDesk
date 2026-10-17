@@ -35,9 +35,11 @@ npm run build
 
 ## 3. Quality workflow — `.github/workflows/ci.yml`
 
-The checked-in workflow is the source of truth. It runs five jobs:
+The checked-in workflow is the source of truth. Its main jobs:
 
-- **php** — SQLite in-memory: dependency audit, Pint, PHPStan, parallel tests, 80% `app/` coverage, 97% `WorkflowEngine`.
+- **php** — latest PHP 8.4, SQLite in-memory: dependency audit, Pint, PHPStan, parallel tests, 80% `app/` coverage, 97% `WorkflowEngine`.
+- **php 8.4.1** — the minimum supported PHP, exactly (official `php:8.4.1-cli` image): parallel tests only.
+- **php 8.5** — the newest supported PHP: parallel tests only.
 - **mysql** — sequential PHPUnit against MySQL 8.
 - **mariadb** — sequential PHPUnit against MariaDB 10.6 (the oldest supported MariaDB).
 - **assets** — production Composer install and Vite build; uploads `public/build`.

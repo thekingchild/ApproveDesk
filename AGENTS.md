@@ -16,14 +16,14 @@ ApproveDesk is an approval workflow application: organizations submit documents,
 
 | Component   | Decision                                          |
 |-------------|---------------------------------------------------|
-| Framework   | Laravel 13.x (PHP 8.3–8.5)                        |
+| Framework   | Laravel 13.x (PHP 8.4.1–8.5)                      |
 | Frontend    | Livewire 4 + Alpine.js + Tailwind CSS 4 + Flux UI |
 | Database    | MySQL 8.0+/MariaDB 10.6+ in production; SQLite for dev/tests |
 | Queue/Cache | `database` driver (file cache) — Redis only optional later |
 | Auth        | Official Livewire starter kit + spatie/laravel-permission |
 | Files       | Local disk, configurable to S3/R2; served via signed URLs |
 
-**Laravel 12 fallback only** if a target host maxes out at PHP 8.2. Laravel 11 from the original spec is superseded.
+**Laravel 12 fallback only** if a target host cannot run PHP 8.4.1 (the locked Symfony 8 and activitylog 5 dependencies need it; a fallback would also pin dependency versions). Laravel 11 from the original spec is superseded.
 
 ## Essential Commands
 

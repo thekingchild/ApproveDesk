@@ -18,7 +18,7 @@ Approval Workflow Application — submit documents, notes, and memos; route them
 
 ## Quick Start (development)
 
-Requires PHP 8.3+, Composer 2, Node 18+ (22 recommended). Full details in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
+Requires PHP 8.4.1+, Composer 2, Node 18+ (22 recommended). Full details in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 
 ```bash
 composer install
