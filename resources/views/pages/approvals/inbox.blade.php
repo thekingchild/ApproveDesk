@@ -172,7 +172,7 @@ new #[Title('Approvals')] class extends Component {
         try {
             $count = app(BatchApproveSubmissionsAction::class)->execute($ids, Auth::user());
         } catch (WorkflowException $exception) {
-            $this->addError('selected', $exception->getMessage());
+            $this->addError('selected', $exception->userMessage());
 
             return;
         }

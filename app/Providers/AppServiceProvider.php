@@ -19,6 +19,7 @@ use App\Listeners\NotifyDelegate;
 use App\Listeners\NotifySubmitterOfDecision;
 use App\Listeners\NotifyWatchersOfDecision;
 use App\Listeners\RecordLoginEvent;
+use App\Livewire\Hooks\SupportDomainExceptions;
 use App\Models\Role;
 use App\Models\User;
 use App\Notifications\Channels\OptionalLaravelNotificationChannel;
@@ -71,6 +72,7 @@ use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use Livewire\Livewire;
 use Throwable;
 
 class AppServiceProvider extends ServiceProvider
@@ -122,6 +124,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // One place turns a refused domain rule into a message on every page (RV-ARC-19).
+        Livewire::componentHook(SupportDomainExceptions::class);
+
         $this->configureDefaults();
         $this->configureCloudflareCompatibility();
         $this->configureSystemRuntime();

@@ -46,7 +46,7 @@ new #[Title('Out of office')] class extends Component {
                 $validated['message'] ?? null,
             );
         } catch (CollaborationException $exception) {
-            $this->addError('startsAt', $exception->getMessage());
+            $this->addError('startsAt', $exception->userMessage());
 
             return;
         }
@@ -61,7 +61,7 @@ new #[Title('Out of office')] class extends Component {
         try {
             $delete->execute(Auth::user(), $scheduleId);
         } catch (CollaborationException $exception) {
-            Flux::toast($exception->getMessage(), variant: 'danger');
+            Flux::toast($exception->userMessage(), variant: 'danger');
 
             return;
         }

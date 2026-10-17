@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\Approvals\ApproveSubmissionFromChatAction;
 use App\Enums\NotificationChannelKey;
+use App\Exceptions\DomainException;
 use App\Exceptions\WorkflowException;
 use App\Services\Notifications\ChannelSettings;
 use Illuminate\Http\JsonResponse;
@@ -25,7 +26,7 @@ class TeamsActionsController extends Controller
         try {
             $approve->execute($token);
         } catch (InvalidArgumentException|WorkflowException $exception) {
-            return response()->json(['status' => 'stale', 'message' => $exception->getMessage()]);
+            return response()->json(['status' => 'stale', 'message' => DomainException::messageFor($exception)]);
         } catch (Throwable) {
             return response()->json(['status' => 'error']);
         }
