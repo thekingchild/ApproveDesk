@@ -5,7 +5,7 @@ use App\DTOs\BrandingSettingsData;
 use App\Models\Setting;
 use App\Models\User;
 use App\Support\Branding;
-use App\Support\SecondFactorAssurance;
+use App\Services\Auth\SecondFactorAssurance;
 use Flux\Flux;
 use Livewire\Attributes\Title;
 use Livewire\Component;

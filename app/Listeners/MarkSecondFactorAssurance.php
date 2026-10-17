@@ -3,7 +3,7 @@
 namespace App\Listeners;
 
 use App\Models\User;
-use App\Support\SecondFactorAssurance;
+use App\Services\Auth\SecondFactorAssurance;
 use Illuminate\Http\Request;
 use Laravel\Fortify\Events\TwoFactorAuthenticationConfirmed;
 use Laravel\Fortify\Events\ValidTwoFactorAuthenticationCodeProvided;

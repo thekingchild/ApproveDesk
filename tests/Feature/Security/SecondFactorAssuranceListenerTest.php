@@ -4,7 +4,7 @@ namespace Tests\Feature\Security;
 
 use App\Listeners\MarkSecondFactorAssurance;
 use App\Models\User;
-use App\Support\SecondFactorAssurance;
+use App\Services\Auth\SecondFactorAssurance;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Illuminate\Session\ArraySessionHandler;

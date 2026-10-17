@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Support;
+namespace App\Services\Auth;
 
 use App\Models\Setting;
 use Illuminate\Support\Facades\Crypt;

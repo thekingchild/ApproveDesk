@@ -2,9 +2,9 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\Auth\Turnstile;
 use App\Support\Branding;
 use App\Support\CspNonce;
-use App\Support\Turnstile;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Vite;

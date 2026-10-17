@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Support\Turnstile;
+use App\Services\Auth\Turnstile;
 use Illuminate\Http\RedirectResponse;
 
 class TestTurnstileController extends Controller

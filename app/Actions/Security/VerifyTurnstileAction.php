@@ -2,7 +2,7 @@
 
 namespace App\Actions\Security;
 
-use App\Support\Turnstile;
+use App\Services\Auth\Turnstile;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 

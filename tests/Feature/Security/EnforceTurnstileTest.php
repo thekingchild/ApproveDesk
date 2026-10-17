@@ -4,7 +4,7 @@ namespace Tests\Feature\Security;
 
 use App\Models\Setting;
 use App\Models\User;
-use App\Support\Turnstile;
+use App\Services\Auth\Turnstile;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
