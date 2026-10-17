@@ -10,11 +10,13 @@ use App\Services\Themes\ThemeService;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
 new #[Title('Application themes')] class extends Component
 {
+    #[Locked]
     public ?int $editingId = null;
 
     public string $name = '';

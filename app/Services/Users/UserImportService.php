@@ -403,6 +403,14 @@ class UserImportService
                 continue;
             }
 
+            // Same limit as spreadsheets (header + 5,000 data rows), so a large CSV
+            // can't build an unbounded preview (RV-LAR-17).
+            if (count($rows) + 1 >= UserSpreadsheetImportGuard::MAX_ROWS) {
+                fclose($handle);
+
+                throw new RuntimeException(__('This spreadsheet cannot be imported.'));
+            }
+
             $rows[] = $this->combine($header, $data);
         }
 

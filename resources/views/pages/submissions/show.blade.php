@@ -58,6 +58,7 @@ new #[Title('Submission')] class extends Component {
 
     public ?int $replyParentId = null;
 
+    #[Locked]
     public ?int $editingCommentId = null;
 
     public string $editBody = '';
@@ -71,6 +72,7 @@ new #[Title('Submission')] class extends Component {
 
     public string $resubmissionComment = '';
 
+    #[Locked]
     public ?int $previewFileId = null;
 
     /** The workflow step this page showed; decisions are refused once the request has moved on. */
@@ -464,7 +466,7 @@ new #[Title('Submission')] class extends Component {
 
     public function startEdit(int $commentId): void
     {
-        $comment = Comment::query()->findOrFail($commentId);
+        $comment = $this->submission->comments()->findOrFail($commentId);
         $this->authorize('update', $comment);
         $this->editingCommentId = $comment->id;
         $this->editBody = $comment->body;
@@ -474,7 +476,9 @@ new #[Title('Submission')] class extends Component {
     public function saveEdit(): void
     {
         $this->validate(['editBody' => ['required', 'string', 'max:5000']]);
-        $comment = Comment::query()->findOrFail($this->editingCommentId);
+        // Only a comment on this request that the viewer may still edit (RV-LAR-15).
+        $comment = $this->submission->comments()->findOrFail($this->editingCommentId);
+        $this->authorize('update', $comment);
 
         try {
             app(EditCommentAction::class)->execute($comment, Auth::user(), $this->editBody);

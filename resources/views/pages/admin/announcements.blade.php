@@ -12,11 +12,13 @@ use App\Models\User;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
 new #[Title('Announcements')] class extends Component
 {
+    #[Locked]
     public ?int $editingId = null;
 
     public string $title = '';

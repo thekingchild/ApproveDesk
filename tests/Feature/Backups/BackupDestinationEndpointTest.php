@@ -66,6 +66,32 @@ class BackupDestinationEndpointTest extends TestCase
         ])->assertSessionHasErrors('endpoint');
     }
 
+    public function test_rv_lar_08_destination_update_is_validated_like_create(): void
+    {
+        $admin = User::factory()->create()->assignRole('admin');
+        $destination = app(StoreBackupDestinationAction::class)->execute([
+            'name' => 'Offsite', 'kind' => 's3', 'enabled' => true,
+            'key' => 'id', 'secret' => 'secret', 'bucket' => 'bucket',
+        ]);
+
+        $this->actingAs($admin)->post(route('admin.backups.destinations.update', $destination), [
+            'name' => str_repeat('x', 81),
+            'endpoint' => 'https://10.0.0.5:9000',
+            'bucket' => ['not', 'a', 'string'],
+        ])->assertSessionHasErrors(['name', 'endpoint', 'bucket']);
+
+        $this->assertSame('Offsite', $destination->fresh()->name);
+        $this->assertArrayNotHasKey('endpoint', array_filter($destination->fresh()->credentials()));
+
+        $this->actingAs($admin)->post(route('admin.backups.destinations.update', $destination), [
+            'name' => 'Offsite copy',
+            'enabled' => '1',
+        ])->assertSessionHasNoErrors()->assertRedirect(route('admin.backups.index'));
+
+        $this->assertSame('Offsite copy', $destination->fresh()->name);
+        $this->assertSame('bucket', $destination->fresh()->credentials()['bucket'], 'Fields not posted are kept.');
+    }
+
     public function test_virtual_hosted_bucket_name_resolving_to_a_private_address_is_refused(): void
     {
         // RV-SEC-17: {bucket}.{endpoint} is what the SDK actually connects to.

@@ -17,6 +17,7 @@ use Flux\Flux;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -24,6 +25,7 @@ use Livewire\WithPagination;
 new #[Title('Request types')] class extends Component {
     use WithPagination;
 
+    #[Locked]
     public ?int $editingTypeId = null;
     public string $name = '';
     public string $description = '';

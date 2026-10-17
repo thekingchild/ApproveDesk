@@ -26,6 +26,7 @@ use Livewire\Attributes\Title;
 use Livewire\Component;
 
 new #[Title('Workflow builder')] class extends Component {
+    #[Locked]
     public int $templateId;
 
     public string $name = '';

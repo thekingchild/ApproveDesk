@@ -20,6 +20,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -30,6 +31,7 @@ new #[Title('User management')] class extends Component {
 
     public string $search = '';
 
+    #[Locked]
     public ?int $editingUserId = null;
 
     public string $name = '';
