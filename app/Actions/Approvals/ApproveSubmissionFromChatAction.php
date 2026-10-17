@@ -43,7 +43,9 @@ final class ApproveSubmissionFromChatAction
             throw new WorkflowException('This approval action is no longer current.');
         }
 
-        Gate::forUser($approver)->authorize('approveViaEmail', $instance->submission);
+        if (Gate::forUser($approver)->denies('approveViaEmail', $instance->submission)) {
+            throw new WorkflowException('This request is not waiting for your decision.');
+        }
 
         return $this->engine->processAction(
             $instance,

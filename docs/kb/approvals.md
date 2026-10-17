@@ -48,4 +48,4 @@ A requester or watcher can send a reminder to the current approver. Quiet hours 
 
 ## Email links
 
-If your organization sends approval emails, the link opens a confirmation page and records the decision. Links expire after the lifetime set in Organization settings (1 to 720 hours). Stale links, reused links, tampered links, and steps that have already moved on are refused. Teams and Slack **Approve** buttons use the same stale-step rules.
+If your organization sends approval emails, the link opens a confirmation page and records the decision. Links expire after the lifetime set in Organization settings (1 to 720 hours). Stale links, reused links, tampered links, and steps that have already moved on are refused. A link is also refused, with an explanation, when the step is no longer yours to decide: you have already decided it, you have delegated it, or you submitted the request yourself. Teams and Slack **Approve** buttons use the same stale-step rules.
