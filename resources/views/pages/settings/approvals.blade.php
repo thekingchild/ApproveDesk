@@ -9,7 +9,7 @@ use App\Services\Collaboration\QuietHours;
 use App\Services\Workflow\BusinessCalendar;
 use App\Support\ApprovalReferenceSchema;
 use App\Support\EmailApprovalLinks;
-use App\Support\SeparationOfDuties;
+use App\Services\Workflow\SeparationOfDuties;
 use Flux\Flux;
 use Livewire\Attributes\Title;
 use Livewire\Component;

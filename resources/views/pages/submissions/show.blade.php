@@ -18,7 +18,7 @@ use App\Services\Collaboration\MentionParser;
 use App\Services\Workflow\AssigneeDirectory;
 use App\Services\Workflow\AssigneeResolver;
 use App\Services\Workflow\ReviewRound;
-use App\Support\SeparationOfDuties;
+use App\Services\Workflow\SeparationOfDuties;
 use App\Services\WorkflowEngine;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;

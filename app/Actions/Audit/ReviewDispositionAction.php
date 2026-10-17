@@ -6,7 +6,7 @@ use App\Enums\DispositionStatus;
 use App\Models\DispositionReview;
 use App\Models\Submission;
 use App\Models\User;
-use App\Support\SeparationOfDuties;
+use App\Services\Workflow\SeparationOfDuties;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 

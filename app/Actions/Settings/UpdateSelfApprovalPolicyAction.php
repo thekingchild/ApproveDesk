@@ -3,7 +3,7 @@
 namespace App\Actions\Settings;
 
 use App\Models\Setting;
-use App\Support\SeparationOfDuties;
+use App\Services\Workflow\SeparationOfDuties;
 
 final readonly class UpdateSelfApprovalPolicyAction
 {

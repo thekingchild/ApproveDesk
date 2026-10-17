@@ -13,7 +13,7 @@ use App\Models\Department;
 use App\Models\Setting;
 use App\Models\Submission;
 use App\Models\User;
-use App\Support\SeparationOfDuties;
+use App\Services\Workflow\SeparationOfDuties;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use InvalidArgumentException;
