@@ -1,3 +1,5 @@
+# NOT SUPPORTED: kept from v2.0.0 only. ApproveDesk supports shared hosting;
+# this stack is not built or tested in CI (docs/DEPLOYMENT.md §6, ADR 0013).
 name: approvedesk
 
 services:
