@@ -6,9 +6,12 @@ use App\Actions\Collaboration\NudgeApproversAction;
 use App\Actions\Collaboration\PostCommentAction;
 use App\Actions\Collaboration\UnfollowSubmissionAction;
 use App\Actions\Collaboration\UpdateWatcherPreferencesAction;
+use App\Actions\Submissions\ResubmitSubmissionAction;
 use App\Enums\WorkflowActionType;
 use App\Exceptions\CollaborationException;
 use App\Exceptions\WorkflowException;
+use App\Support\RichTextSanitizer;
+use App\Support\SubmissionFileLinks;
 use App\Models\Comment;
 use App\Models\Delegation;
 use App\Models\Submission;
@@ -17,13 +20,12 @@ use App\Services\Collaboration\ExpectedProgress;
 use App\Services\Collaboration\MentionParser;
 use App\Services\Workflow\AssigneeDirectory;
 use App\Services\Workflow\AssigneeResolver;
-use App\Services\Workflow\ReviewRound;
+use App\Services\Workflow\StepOutcomes;
+use App\Services\Workflow\WorkflowTimeline;
 use App\Services\Workflow\SeparationOfDuties;
 use App\Services\WorkflowEngine;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
@@ -136,55 +138,11 @@ new #[Title('Submission')] class extends Component {
             });
     }
 
-    /** Per-step timeline state: pending, active, done, rejected. */
+    /** Per-step progress of the approval chain (WorkflowTimeline, RV-ARC-02). */
     #[Computed]
     public function timeline(): array
     {
-        $instance = $this->submission->workflowInstance;
-
-        if ($instance === null) {
-            return [];
-        }
-
-        $actions = $instance->actions->groupBy('step_id');
-
-        // The chain this request is pinned to, not whatever was published since (RV-BUG-28).
-        $steps = $instance->templateVersion?->steps ?? $instance->template->steps;
-
-        return $steps->map(function ($step) use ($instance, $actions) {
-            $stepActions = $actions->get($step->id, collect());
-            $assignedUsers = $this->assigneesFor($step);
-            $automatic = $step->step_type->isAutomatic();
-            $approvalCount = ReviewRound::filter($stepActions, $step->id)->whereIn('action', [WorkflowActionType::Approve, WorkflowActionType::ApproveWithConditions])->unique('actor_id')->count();
-            $requiredApprovals = match ($step->groupCompletion()) {
-                \App\Enums\GroupCompletion::FirstResponse => 1,
-                \App\Enums\GroupCompletion::All => $assignedUsers->count(),
-                \App\Enums\GroupCompletion::Quorum => $step->quorum_count,
-                default => null,
-            };
-
-            $state = match (true) {
-                $stepActions->contains('action', WorkflowActionType::Reject) => 'rejected',
-                $instance->current_step_id === $step->id && in_array($instance->status, [\App\Enums\WorkflowStatus::Active, \App\Enums\WorkflowStatus::OnHold], true) => 'active',
-                $stepActions->contains(fn ($action) => in_array($action->action, [
-                    WorkflowActionType::Approve,
-                    WorkflowActionType::Escalate,
-                    WorkflowActionType::AutoApprove,
-                    WorkflowActionType::ConditionMatched,
-                    WorkflowActionType::ConditionNotMatched,
-                ], true)) => 'done',
-                default => 'pending',
-            };
-
-            return [
-                'name' => $step->name,
-                'order' => $step->step_order,
-                'state' => $state,
-                'actors' => $automatic ? __('System') : $assignedUsers->pluck('name')->implode(', '),
-                'progress' => $requiredApprovals === null ? null : "{$approvalCount} / {$requiredApprovals} approvals",
-                'acted_at' => ($actedAt = $stepActions->first()?->created_at) !== null ? \App\Support\LocalTime::forViewer($actedAt) : null,
-            ];
-        })->all();
+        return app(WorkflowTimeline::class)->for($this->submission, fn (\App\Models\WorkflowTemplateStep $step) => $this->assigneesFor($step));
     }
 
     #[Computed]
@@ -282,29 +240,9 @@ new #[Title('Submission')] class extends Component {
             ? \App\Support\LocalTime::parse($validated['delegationStartsAt'], $this->browserTimezone)
             : now();
         $expiresAt = \App\Support\LocalTime::parse($validated['delegationExpiresAt'], $this->browserTimezone);
+        $delegate = User::query()->findOrFail((int) $validated['delegateUserId']);
 
-        if (! $expiresAt->isFuture()) {
-            $this->addError('delegationExpiresAt', __('The expiry must be in the future.'));
-
-            return;
-        }
-
-        if ($startsAt->greaterThanOrEqualTo($expiresAt)) {
-            $this->addError('delegationStartsAt', __('The start must be before the expiry.'));
-
-            return;
-        }
-
-        $delegate = User::query()
-            ->assignable()
-            ->where('is_active', true)
-            ->find((int) $validated['delegateUserId']);
-        if (! $delegate instanceof User) {
-            $this->addError('delegateUserId', __('Choose an available delegate.'));
-
-            return;
-        }
-
+        // Dates, the delegate and the step are checked by the workflow engine (RV-ARC-02).
         try {
             app(WorkflowEngine::class)->delegate(
                 $this->submission->workflowInstance,
@@ -331,18 +269,16 @@ new #[Title('Submission')] class extends Component {
         $this->authorize('view', $this->submission);
         $this->resetValidation();
 
-        $outcomes = app(\App\Services\Workflow\StepOutcomes::class)->forVersion($this->submission->workflowInstance?->templateVersion);
-        $outcome = collect($outcomes)->firstWhere('key', $action);
+        $outcome = collect($this->outcomes)->firstWhere('key', $action);
 
-        if ($outcome === null && WorkflowActionType::tryFrom($action) === null) {
+        if ($outcome === null) {
             Flux::toast(__('That decision is not available on this step.'), variant: 'danger');
 
             return;
         }
 
-        $requiresComment = $outcome['requires_comment'] ?? in_array($action, ['reject', 'return', 'request_information', 'escalate', 'approve_with_conditions'], true);
-
-        if ($requiresComment && trim($this->actionComment) === '') {
+        // Checked here too so the message sits under the comment box; the engine enforces it.
+        if ($outcome['requires_comment'] && trim($this->actionComment) === '') {
             $this->addError('actionComment', 'A comment is required for this action.');
 
             return;
@@ -355,7 +291,7 @@ new #[Title('Submission')] class extends Component {
                 Auth::user(),
                 $actionType,
                 trim($this->actionComment) !== '' ? trim($this->actionComment) : null,
-                $outcome !== null ? $action : null,
+                $action,
                 $this->renderedStepId,
             );
         } catch (WorkflowException $exception) {
@@ -647,7 +583,7 @@ new #[Title('Submission')] class extends Component {
             ->get(['id', 'name', 'email']);
     }
 
-    public function displayComment(Comment $comment): string
+    protected function displayComment(Comment $comment): string
     {
         return app(MentionParser::class)->display(
             $comment->body,
@@ -693,15 +629,8 @@ new #[Title('Submission')] class extends Component {
             ? $this->validate(['resubmissionComment' => ['required', 'string', 'max:5000']])['resubmissionComment']
             : null;
 
-        // The answer and the resubmit land together or not at all (RV-BUG-07).
         try {
-            DB::transaction(function () use ($comment): void {
-                if ($comment !== null) {
-                    app(PostCommentAction::class)->execute($this->submission, Auth::user(), $comment);
-                }
-
-                app(\App\Actions\Submissions\SubmitSubmissionAction::class)->execute($this->submission);
-            });
+            app(ResubmitSubmissionAction::class)->execute($this->submission, Auth::user(), $comment);
         } catch (WorkflowException $exception) {
             $message = __('This request could not be sent for approval: :reason', ['reason' => $exception->userMessage()]);
             if ($comment !== null) {
@@ -717,13 +646,9 @@ new #[Title('Submission')] class extends Component {
         $this->redirect(route('submissions.show', $this->submission), navigate: true);
     }
 
-    public function fileUrl(\App\Models\SubmissionFile $file): string
+    protected function fileUrl(\App\Models\SubmissionFile $file): string
     {
-        return URL::temporarySignedRoute(
-            'submissions.files.download',
-            now()->addHours(2),
-            ['submission' => $this->submission->id, 'file' => $file->id],
-        );
+        return SubmissionFileLinks::download($file);
     }
 
     #[Computed]
@@ -743,13 +668,36 @@ new #[Title('Submission')] class extends Component {
         $this->modal('file-preview')->show();
     }
 
-    public function previewUrl(\App\Models\SubmissionFile $file): string
+    protected function previewUrl(\App\Models\SubmissionFile $file): string
     {
-        return URL::temporarySignedRoute(
-            'submissions.files.download',
-            now()->addMinutes(30),
-            ['submission' => $this->submission->id, 'file' => $file->id, 'preview' => 1],
-        );
+        return SubmissionFileLinks::preview($file);
+    }
+
+    /**
+     * Decisions offered on this request's workflow version, with whether each needs a comment.
+     *
+     * @return list<array{key: string, label: string, behavior: string, requires_comment: bool, custom: bool}>
+     */
+    #[Computed]
+    public function outcomes(): array
+    {
+        return app(StepOutcomes::class)->forVersion($this->submission->workflowInstance?->templateVersion);
+    }
+
+    #[Computed]
+    public function expectedCalendarLabel(): ?string
+    {
+        return $this->expectedProgress === null ? null : app(ExpectedProgress::class)->calendarLabel($this->expectedProgress['calendar']);
+    }
+
+    protected function safeHtml(mixed $html): string
+    {
+        return app(RichTextSanitizer::class)->sanitize(is_scalar($html) ? (string) $html : '');
+    }
+
+    protected function fieldDisplayValue(?\App\Models\SubmissionFieldValue $stored): string
+    {
+        return app(\App\Services\RequestFieldAccess::class)->displayValue($stored);
     }
 } ?>
 
@@ -834,8 +782,8 @@ new #[Title('Submission')] class extends Component {
                                 @foreach ($revision->before as $field => $old)
                                     @if ($field === 'body')
                                         @php
-                                            $beforeBody = app(\App\Support\RichTextSanitizer::class)->sanitize((string) ($old ?? ''));
-                                            $afterBody = app(\App\Support\RichTextSanitizer::class)->sanitize((string) ($revision->after[$field] ?? ''));
+                                            $beforeBody = $this->safeHtml($old ?? '');
+                                            $afterBody = $this->safeHtml($revision->after[$field] ?? '');
                                         @endphp
                                         <details class="mt-2" wire:key="body-revision-{{ $revision->id }}">
                                             <summary class="cursor-pointer font-medium">{{ __('View body changes') }}</summary>
@@ -877,7 +825,7 @@ new #[Title('Submission')] class extends Component {
                         @php
                             $stored = $submission->fieldValues->firstWhere('request_field_definition_id', $field->id);
                         @endphp
-                        <div><dt class="text-xs text-zinc-500">{{ $field->label }}</dt><dd class="font-medium">{{ app(\App\Services\RequestFieldAccess::class)->displayValue($stored) }}</dd></div>
+                        <div><dt class="text-xs text-zinc-500">{{ $field->label }}</dt><dd class="font-medium">{{ $this->fieldDisplayValue($stored) }}</dd></div>
                     @endforeach
                 </dl>
             </flux:card>
@@ -925,7 +873,7 @@ new #[Title('Submission')] class extends Component {
                         <dd class="font-medium" data-test="estimated-due">
                             @if ($this->expectedProgress['estimated_due_at'])
                                 <x-time :at="$this->expectedProgress['estimated_due_at']" />
-                                <span class="text-xs font-normal text-zinc-500">({{ app(\App\Services\Collaboration\ExpectedProgress::class)->calendarLabel($this->expectedProgress['calendar']) }})</span>
+                                <span class="text-xs font-normal text-zinc-500">({{ $this->expectedCalendarLabel }})</span>
                             @else
                                 {{ __('No step deadline') }}
                             @endif
@@ -937,15 +885,14 @@ new #[Title('Submission')] class extends Component {
             @if (count($this->timeline))
                 <ol class="mt-4 space-y-0">
                     @foreach ($this->timeline as $step)
-                        @php($styles = ['pending' => 'bg-zinc-400', 'active' => 'bg-blue-500', 'done' => 'bg-green-500', 'rejected' => 'bg-red-500'])
                         <li class="relative flex gap-4 pb-6 last:pb-0">
                             @if (! $loop->last)<div class="absolute top-4 bottom-0 w-px bg-zinc-200 dark:bg-zinc-700" style="left: 11px"></div>@endif
-                            <span class="z-10 mt-1 h-6 w-6 shrink-0 rounded-full border-4 border-white dark:border-zinc-900 {{ $styles[$step['state']] ?? 'bg-zinc-400' }}"></span>
+                            <span class="z-10 mt-1 h-6 w-6 shrink-0 rounded-full border-4 border-white dark:border-zinc-900 {{ $step['state']->dotClass() }}"></span>
                             <div>
                                 <p class="text-sm font-medium">{{ $loop->iteration }}. {{ $step['name'] }}</p>
                                 <p class="text-xs text-zinc-500">{{ $step['actors'] }}</p>
-                                @if ($step['progress'])<p class="text-xs text-zinc-500">{{ $step['progress'] }}</p>@endif
-                                @if ($step['acted_at'])<p class="text-xs text-zinc-400">{{ $step['acted_at'] }}</p>@endif
+                                @if ($step['required'] !== null)<p class="text-xs text-zinc-500">{{ __(':done / :required approvals', ['done' => $step['approvals'], 'required' => $step['required']]) }}</p>@endif
+                                @if ($step['acted_at'])<p class="text-xs text-zinc-400">{{ \App\Support\LocalTime::forViewer($step['acted_at']) }}</p>@endif
                             </div>
                         </li>
                     @endforeach
@@ -966,7 +913,7 @@ new #[Title('Submission')] class extends Component {
                             @if ($entry->on_behalf_of_id)
                                 <span class="text-zinc-500" data-test="on-behalf-of">{{ __('on behalf of :name', ['name' => $entry->onBehalfOf?->name ?? __('a former user')]) }}</span>
                             @endif
-                            <flux:badge class="mx-1" color="{{ ['approve' => 'lime', 'auto_approve' => 'lime', 'condition_matched' => 'blue', 'condition_not_matched' => 'zinc', 'reject' => 'red', 'return' => 'amber', 'comment' => 'zinc', 'delegate' => 'blue', 'delegation_revoked' => 'zinc', 'escalate' => 'blue', 'withdraw' => 'zinc'][$entry->action->value] ?? 'zinc' }}">{{ str($entry->action->value)->replace('_', ' ') }}</flux:badge>
+                            <flux:badge class="mx-1" color="{{ $entry->action->color() }}">{{ $entry->action->label() }}</flux:badge>
                             <span class="text-xs text-zinc-400"><x-time :at="$entry->created_at" /></span>
                             @if ($entry->comment)<p class="mt-1 rounded-md bg-zinc-50 p-2 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">{{ $entry->comment }}</p>@endif
                         </li>
@@ -981,7 +928,7 @@ new #[Title('Submission')] class extends Component {
     @if ($submission->body)
         <flux:card>
             <flux:heading size="sm">{{ __('Body') }}</flux:heading>
-            <div class="prose prose-sm mt-3 max-w-none dark:prose-invert">{!! app(\App\Support\RichTextSanitizer::class)->sanitize($submission->body) !!}</div>
+            <div class="prose prose-sm mt-3 max-w-none dark:prose-invert">{!! $this->safeHtml($submission->body) !!}</div>
         </flux:card>
     @endif
 
@@ -1072,7 +1019,7 @@ new #[Title('Submission')] class extends Component {
                     <flux:button variant="primary" data-test="approve-modal-trigger" data-requires-online>{{ __('Approve') }}</flux:button>
                 </flux:modal.trigger>
                 <flux:button variant="primary" wire:click="act('approve_with_conditions')" data-test="approve-with-conditions" data-requires-online>{{ __('Approve with conditions') }}</flux:button>
-                @foreach (app(\App\Services\Workflow\StepOutcomes::class)->forVersion($submission->workflowInstance?->templateVersion) as $outcome)
+                @foreach ($this->outcomes as $outcome)
                     @if ($outcome['custom'])
                         <flux:button variant="subtle" wire:click="act({{ \Illuminate\Support\Js::from($outcome['key']) }})" data-test="outcome-{{ $outcome['key'] }}">{{ $outcome['label'] }}</flux:button>
                     @endif
