@@ -2,9 +2,9 @@
 
 namespace Tests\Unit\Support;
 
+use App\Http\PublicWebsite;
 use App\Models\Setting;
 use App\Models\User;
-use App\Support\PublicWebsite;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 

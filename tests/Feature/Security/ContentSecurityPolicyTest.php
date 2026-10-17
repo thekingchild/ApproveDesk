@@ -2,10 +2,10 @@
 
 namespace Tests\Feature\Security;
 
+use App\Http\PublicWebsite;
 use App\Models\Setting;
 use App\Models\Submission;
 use App\Models\User;
-use App\Support\PublicWebsite;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Vite;
