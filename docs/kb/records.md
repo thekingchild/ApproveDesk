@@ -22,7 +22,7 @@ Enter a request reference and a reason. A hold stops retention from retiring the
 
 ### Retention and disposition
 
-Set how many days drafts and finished requests are kept (drafts 1 to 3,650 days, default 90; finished requests 1 to 7,300 days, default 2,555, about seven years). Each change is recorded in the activity log with who made it and the old and new values. Drafts older than the draft window are retired unless they have a hold. Finished requests (approved, rejected, or withdrawn) are retired only after that window **and** an approved disposition review. Retention runs once a day; a very large backlog is worked through over several days.
+Set how many days drafts and finished requests are kept (drafts 1 to 3,650 days, default 90; finished requests 1 to 7,300 days, default 2,555, about seven years). Each change is recorded in the activity log with who made it and the old and new values. Drafts that nobody has edited for longer than the draft window are retired unless they have a hold; editing a draft starts its window again. Finished requests (approved, rejected, or withdrawn) are retired only after that window **and** an approved disposition review. Retention runs once a day; a very large backlog is worked through over several days.
 
 **Retired** means the request disappears from lists, search, dashboards, and its own page. It is **not erased**: ApproveDesk keeps the request, its workflow history, comments, and files stored as audit evidence, and its reference number is never reused. ApproveDesk never permanently deletes a request on its own.
 

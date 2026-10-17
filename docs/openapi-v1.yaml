@@ -41,6 +41,9 @@ paths:
         - in: query
           name: status
           schema: { type: string }
+        - in: query
+          name: type
+          schema: { type: string }
       responses:
         "200": { description: Page or cursor page of submissions }
     post:
@@ -63,6 +66,54 @@ paths:
           schema: { type: integer }
       responses:
         "200": { description: One submission }
+  /submissions/{id}/submit:
+    post:
+      security: [{ bearerAuth: [] }]
+      description: "Submit an owned draft, returned or awaiting-information submission. Requires submissions:write. A comment is required when answering an information request."
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+        - in: header
+          name: Idempotency-Key
+          schema: { type: string, maxLength: 255 }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                comment: { type: string, maxLength: 5000 }
+      responses:
+        "200": { description: The submitted submission }
+        "422": { description: "Not eligible, a required answer or field is missing, or nobody can approve (errors.submit)" }
+  /submissions/{id}/actions:
+    post:
+      security: [{ bearerAuth: [] }]
+      description: Record an approver decision through the workflow engine. Requires approvals:act.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+        - in: header
+          name: Idempotency-Key
+          schema: { type: string, maxLength: 255 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action: { type: string, enum: [approve, reject, return, request_information, escalate, comment] }
+                comment: { type: string, description: "Required for reject, return, request_information and escalate" }
+                step_id: { type: integer, description: "workflow.current_step.id as read before deciding; refused with 422 if the request has moved on" }
+      responses:
+        "200": { description: The updated submission }
+        "422": { description: Refused by the workflow engine }
   /openapi.json:
     get:
       responses:
