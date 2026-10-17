@@ -11,13 +11,15 @@ use Illuminate\Support\Facades\DB;
 final class FollowSubmissionAction
 {
     /**
-     * @param  array{notify_comments?: bool, notify_status?: bool}  $preferences
+     * @param  bool|null  $notifyComments  null keeps the follower's current choice (new followers: on)
+     * @param  bool|null  $notifyStatus  null keeps the follower's current choice (new followers: on)
      */
     public function execute(
         Submission $submission,
         User $actor,
         User $target,
-        array $preferences = [],
+        ?bool $notifyComments = null,
+        ?bool $notifyStatus = null,
         bool $fromMention = false,
     ): SubmissionWatcher {
         if ($target->isSystemOwner() && ! $actor->is($target)) {
@@ -46,7 +48,7 @@ final class FollowSubmissionAction
             throw CollaborationException::cannotWatch('you cannot add followers to this request');
         }
 
-        return DB::transaction(function () use ($submission, $actor, $target, $preferences): SubmissionWatcher {
+        return DB::transaction(function () use ($submission, $actor, $target, $notifyComments, $notifyStatus): SubmissionWatcher {
             $watcher = SubmissionWatcher::query()->firstOrNew([
                 'submission_id' => $submission->id,
                 'user_id' => $target->id,
@@ -56,8 +58,8 @@ final class FollowSubmissionAction
                 $watcher->added_by_id = $actor->id;
             }
 
-            $watcher->notify_comments = $preferences['notify_comments'] ?? $watcher->notify_comments ?? true;
-            $watcher->notify_status = $preferences['notify_status'] ?? $watcher->notify_status ?? true;
+            $watcher->notify_comments = $notifyComments ?? $watcher->notify_comments ?? true;
+            $watcher->notify_status = $notifyStatus ?? $watcher->notify_status ?? true;
             $watcher->save();
 
             return $watcher->load(['user', 'addedBy']);

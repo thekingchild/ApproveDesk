@@ -1,6 +1,7 @@
 <?php
 
 use App\Actions\RequestTypes\SaveRequestTypeAction;
+use App\DTOs\RequestFieldData;
 use App\DTOs\RequestTypeData;
 use App\Livewire\Forms\RequestFieldsForm;
 use App\Models\RequestType;
@@ -308,7 +309,7 @@ new class extends Component {
         app(SaveRequestTypeAction::class)->execute($type, new RequestTypeData(
             name: $this->name,
             description: $this->description !== '' ? $this->description : null,
-            fields: array_map(RequestFieldsForm::toStorage(...), $this->fields),
+            fields: array_values(array_map(fn (array $field): RequestFieldData => RequestFieldData::fromArray(RequestFieldsForm::toStorage($field)), $this->fields)),
             workflowTemplateId: $this->workflowTemplateId !== '' ? (int) $this->workflowTemplateId : null,
             selectionRules: $this->selectionRules,
         ), Auth::user(), $publish);

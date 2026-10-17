@@ -41,10 +41,13 @@ new class extends Component {
     {
         $this->authorize('follow', $this->submission);
         try {
-            app(FollowSubmissionAction::class)->execute($this->submission, Auth::user(), Auth::user(), [
-                'notify_comments' => $this->notifyComments,
-                'notify_status' => $this->notifyStatus,
-            ]);
+            app(FollowSubmissionAction::class)->execute(
+                $this->submission,
+                Auth::user(),
+                Auth::user(),
+                notifyComments: $this->notifyComments,
+                notifyStatus: $this->notifyStatus,
+            );
         } catch (CollaborationException $exception) {
             Flux::toast($exception->userMessage(), variant: 'danger');
 

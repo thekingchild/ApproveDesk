@@ -4,6 +4,7 @@ namespace Tests\Feature\Security;
 
 use App\Actions\Security\UpdateSecuritySettingsAction;
 use App\Actions\Submissions\SubmitSubmissionAction;
+use App\DTOs\SecuritySettingsData;
 use App\Enums\SubmissionStatus;
 use App\Models\Setting;
 use App\Models\Submission;
@@ -162,7 +163,7 @@ class EnforceTwoFactorTest extends TestCase
         $this->expectException(\InvalidArgumentException::class);
 
         app(UpdateSecuritySettingsAction::class)->execute(
-            ['two_factor_required' => true],
+            new SecuritySettingsData(watermarkDownloads: false, rateLimits: [], twoFactorRequired: true),
             User::factory()->create(),
         );
     }

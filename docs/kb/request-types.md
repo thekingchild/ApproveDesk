@@ -85,7 +85,7 @@ While the builder is open, your edits are autosaved in this browser only (about 
 
 ## Search and reporting flags
 
-Mark a field searchable, filterable, reportable, sensitive, or approver-summary. Those flags freeze with the published version.
+Mark a field searchable, filterable, reportable, sensitive, or approver-summary. Those flags freeze with the published version. **Clone** copies them along with the fields, so a copy of a form keeps its sensitive fields hidden.
 
 Sensitive values are hidden from unauthorized search, reports, list columns, and approver detail. Owners and administrators with the sensitive-fields ability can still see them. Opening a sensitive value is recorded on **Settings → Security & privacy**. Exports and evidence packs replace a value the downloader is not allowed to see.
 

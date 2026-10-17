@@ -1,5 +1,6 @@
 <?php
 
+use App\DTOs\SecuritySettingsData;
 use App\Actions\Security\UpdateSecuritySettingsAction;
 use App\Models\SensitiveFieldAccess;
 use App\Support\RateLimitProfiles;
@@ -57,11 +58,13 @@ new #[Title('Security and privacy')] class extends Component {
         ]);
 
         try {
-            $action->execute([
-                'watermark_downloads' => $validated['watermarkDownloads'],
-                'two_factor_required' => $validated['twoFactorRequired'],
-                ...$validated,
-            ], \Illuminate\Support\Facades\Auth::user());
+            $action->execute(new SecuritySettingsData(
+                watermarkDownloads: (bool) $validated['watermarkDownloads'],
+                rateLimits: collect(array_keys(RateLimitProfiles::DEFAULTS))
+                    ->mapWithKeys(fn (string $profile): array => [$profile => (int) $validated['rate_limit_'.$profile]])
+                    ->all(),
+                twoFactorRequired: (bool) $validated['twoFactorRequired'],
+            ), \Illuminate\Support\Facades\Auth::user());
         } catch (\InvalidArgumentException $exception) {
             throw \Illuminate\Validation\ValidationException::withMessages([
                 'twoFactorRequired' => $exception->getMessage(),

@@ -1,5 +1,6 @@
 <?php
 
+use App\DTOs\BackupSettingsData;
 use App\Actions\Backups\UpdateBackupSettingsAction;
 use App\Enums\BackupSnapshotKind;
 use App\Services\Backups\ScheduledBackupHealth;
@@ -47,14 +48,14 @@ new class extends Component {
             'filesHour' => ['required', 'date_format:H:i'],
         ]);
 
-        $action->execute([
-            'database_enabled' => $validated['databaseEnabled'],
-            'files_enabled' => $validated['filesEnabled'],
-            'database_retain_days' => $validated['databaseRetainDays'],
-            'files_retain_days' => $validated['filesRetainDays'],
-            'database_hour' => $validated['databaseHour'],
-            'files_hour' => $validated['filesHour'],
-        ]);
+        $action->execute(new BackupSettingsData(
+            databaseEnabled: (bool) $validated['databaseEnabled'],
+            filesEnabled: (bool) $validated['filesEnabled'],
+            databaseRetainDays: (int) $validated['databaseRetainDays'],
+            filesRetainDays: (int) $validated['filesRetainDays'],
+            databaseHour: $validated['databaseHour'],
+            filesHour: $validated['filesHour'],
+        ));
 
         unset($this->summary);
         Flux::toast(__('Backup settings saved.'), variant: 'success');
