@@ -47,7 +47,7 @@ class RequestTypeBuilderTest extends TestCase
             'requiredField' => '', 'requiredOperator' => 'equals', 'requiredValue' => '', 'calculationFields' => '',
         ];
 
-        Livewire::actingAs($admin)->test('pages::admin.request-types')
+        Livewire::actingAs($admin)->test('admin.request-types.builder')
             ->call('createType')
             ->set('name', 'Leave Request')
             ->set('description', 'Request time away')
@@ -78,7 +78,7 @@ class RequestTypeBuilderTest extends TestCase
         ];
 
         Livewire::actingAs($admin)
-            ->test('pages::admin.request-types')
+            ->test('admin.request-types.builder')
             ->call('createType')
             ->assertDontSee('dusk="field-key-0"', false)
             ->set('name', 'Auto Key Form')
@@ -108,7 +108,7 @@ class RequestTypeBuilderTest extends TestCase
         ]);
 
         Livewire::actingAs($admin)
-            ->test('pages::admin.request-types')
+            ->test('admin.request-types.builder')
             ->call('editType', $type->id)
             ->set('fields.0.label', 'Reason for absence')
             ->call('save', false)
@@ -157,7 +157,7 @@ class RequestTypeBuilderTest extends TestCase
     {
         $admin = User::factory()->create()->assignRole('admin');
 
-        $component = Livewire::actingAs($admin)->test('pages::admin.request-types')
+        $component = Livewire::actingAs($admin)->test('admin.request-types.builder')
             ->call('createType')
             ->set('name', 'Warning Form')
             ->set('fields.0.label', 'Leave category')
@@ -205,18 +205,18 @@ class RequestTypeBuilderTest extends TestCase
             ],
         ]);
 
-        $component = Livewire::actingAs($admin)->test('pages::admin.request-types')
+        $component = Livewire::actingAs($admin)->test('admin.request-types.builder')
             ->call('editType', $type->id);
 
-        $this->assertFalse($component->instance()->previewVisible(1));
-        $this->assertFalse($component->instance()->previewRequired(1));
+        $this->assertFalse($component->instance()->previewState[1]['visible']);
+        $this->assertFalse($component->instance()->previewState[1]['required']);
 
         $component->set('previewValues.category', 'Equipment');
-        $this->assertFalse($component->instance()->previewVisible(1));
+        $this->assertFalse($component->instance()->previewState[1]['visible']);
 
         $component->set('previewValues.category', 'Travel');
-        $this->assertTrue($component->instance()->previewVisible(1));
-        $this->assertTrue($component->instance()->previewRequired(1));
+        $this->assertTrue($component->instance()->previewState[1]['visible']);
+        $this->assertTrue($component->instance()->previewState[1]['required']);
     }
 
     public function test_condition_value_pickers_offer_source_field_options(): void
@@ -234,7 +234,7 @@ class RequestTypeBuilderTest extends TestCase
         ]);
         app(PublishRequestTypeVersionAction::class)->execute($version);
 
-        Livewire::actingAs($admin)->test('pages::admin.request-types')
+        Livewire::actingAs($admin)->test('admin.request-types.builder')
             ->call('editType', $type->id)
             ->assertSee('Travel</option>', false)
             ->assertSee('Equipment</option>', false)
@@ -268,7 +268,7 @@ class RequestTypeBuilderTest extends TestCase
             'selectionRules' => [],
         ];
 
-        $component = Livewire::actingAs($admin)->test('pages::admin.request-types')
+        $component = Livewire::actingAs($admin)->test('admin.request-types.builder')
             ->call('editType', $type->id);
 
         // A matching snapshot restores the unsaved browser edits.
@@ -277,14 +277,14 @@ class RequestTypeBuilderTest extends TestCase
             ->assertSet('localDraftAvailable', false);
 
         // A snapshot from a different type is rejected.
-        Livewire::actingAs($admin)->test('pages::admin.request-types')
+        Livewire::actingAs($admin)->test('admin.request-types.builder')
             ->call('editType', $type->id)
             ->set('name', 'Fresh Edit')
             ->call('restoreLocalDraft', ['editingTypeId' => $type->id + 999, 'fields' => []])
             ->assertSet('name', 'Fresh Edit');
 
         // Discard blocks later restores in the same session.
-        Livewire::actingAs($admin)->test('pages::admin.request-types')
+        Livewire::actingAs($admin)->test('admin.request-types.builder')
             ->call('editType', $type->id)
             ->call('discardLocalDraft')
             ->call('restoreLocalDraft', $snapshot)
@@ -296,7 +296,7 @@ class RequestTypeBuilderTest extends TestCase
     {
         $admin = User::factory()->create()->assignRole('admin');
 
-        $component = Livewire::actingAs($admin)->test('pages::admin.request-types')
+        $component = Livewire::actingAs($admin)->test('admin.request-types.builder')
             ->call('createType')
             ->set('name', 'Calendar Bounds')
             ->set('fields.0.label', 'Start date')

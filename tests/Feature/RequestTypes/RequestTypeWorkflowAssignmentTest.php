@@ -38,14 +38,14 @@ class RequestTypeWorkflowAssignmentTest extends TestCase
         $purchase = $this->publishedType('Purchase Request');
 
         Livewire::actingAs($admin)
-            ->test('pages::admin.request-types')
+            ->test('admin.request-types.builder')
             ->call('editType', $leave->id)
             ->set('workflowTemplateId', (string) $shared->id)
             ->call('save')
             ->assertHasNoErrors();
 
         Livewire::actingAs($admin)
-            ->test('pages::admin.request-types')
+            ->test('admin.request-types.builder')
             ->call('editType', $purchase->id)
             ->set('workflowTemplateId', (string) $shared->id)
             ->call('save')

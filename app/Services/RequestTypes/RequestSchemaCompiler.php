@@ -17,32 +17,54 @@ final class RequestSchemaCompiler
 
     public function __construct(private readonly RichTextSanitizer $sanitizer) {}
 
-    /** @param Collection<int, RequestFieldDefinition> $fields */
+    /**
+     * Refuse a schema no request could be filled in against. Save and publish
+     * call this; the builder shows schemaProblems() as draft checks, so both
+     * use the same rules and messages (RV-ARC-05).
+     *
+     * @param  Collection<int, RequestFieldDefinition>  $fields
+     *
+     * @throws ValidationException
+     */
     public function assertSchemaValid(Collection $fields): void
     {
+        $problem = $this->schemaProblems($fields)[0] ?? null;
+
+        if ($problem !== null) {
+            throw ValidationException::withMessages(["fields.{$problem['index']}.{$problem['key']}" => $problem['message']]);
+        }
+    }
+
+    /**
+     * Every problem in the schema, in field order.
+     *
+     * @param  Collection<int, RequestFieldDefinition>  $fields
+     * @return list<array{index: int, key: string, message: string}>
+     */
+    public function schemaProblems(Collection $fields): array
+    {
+        $problems = [];
         $knownKeys = [];
         $knownTypes = [];
+        $choiceTypes = [RequestFieldType::Select, RequestFieldType::MultiSelect, RequestFieldType::Radio];
+        $add = function (int $index, string $key, string $message) use (&$problems): void {
+            $problems[] = ['index' => $index, 'key' => $key, 'message' => $message];
+        };
 
         foreach ($fields->sortBy('position')->values() as $index => $field) {
             $configuration = $field->configuration ?? [];
 
-            if (in_array($field->type, [RequestFieldType::Select, RequestFieldType::MultiSelect, RequestFieldType::Radio], true)
-                && blank($configuration['options'] ?? [])) {
-                throw ValidationException::withMessages(["fields.{$index}.options" => 'Choice fields require at least one option.']);
+            if (in_array($field->type, $choiceTypes, true) && blank($configuration['options'] ?? [])) {
+                $add($index, 'options', __('Choice fields need at least one option.'));
             }
 
-            foreach (['visibility', 'required_when'] as $ruleName) {
+            foreach (['visibility' => __('show when'), 'required_when' => __('require when')] as $ruleName => $ruleLabel) {
                 $condition = $configuration[$ruleName] ?? null;
 
-                if ($condition === null) {
-                    continue;
-                }
-
-                if (! in_array($condition['operator'] ?? null, self::CONDITION_OPERATORS, true)
-                    || ! in_array($condition['field'] ?? null, $knownKeys, true)) {
-                    throw ValidationException::withMessages([
-                        "fields.{$index}.{$ruleName}" => 'Conditions may only reference an earlier field and an allowed operator.',
-                    ]);
+                if ($condition !== null
+                    && (! in_array($condition['operator'] ?? null, self::CONDITION_OPERATORS, true)
+                        || ! in_array($condition['field'] ?? null, $knownKeys, true))) {
+                    $add($index, $ruleName, __('The ":label" rule must use an earlier field that still exists and an allowed operator.', ['label' => $ruleLabel]));
                 }
             }
 
@@ -56,19 +78,16 @@ final class RequestSchemaCompiler
                 if (($configuration['calculation']['operation'] ?? null) !== 'sum'
                     || $sources === []
                     || array_diff($sources, $numericSources) !== []) {
-                    throw ValidationException::withMessages([
-                        "fields.{$index}.calculation" => 'Calculated fields support only a sum of earlier numeric fields.',
-                    ]);
+                    $add($index, 'calculation', __('Calculated fields must sum at least one earlier number or currency field.'));
                 }
             }
 
-            if (in_array($field->type, [RequestFieldType::Select, RequestFieldType::MultiSelect, RequestFieldType::Radio], true)
+            if (in_array($field->type, $choiceTypes, true)
                 && isset($configuration['default'])
                 && $configuration['default'] !== ''
+                && ! blank($configuration['options'] ?? [])
                 && ! in_array($configuration['default'], $configuration['options'] ?? [], true)) {
-                throw ValidationException::withMessages([
-                    "fields.{$index}.default" => 'The default value must be one of the field options.',
-                ]);
+                $add($index, 'default', __('The default value must be one of the field options.'));
             }
 
             if (in_array($field->type, [RequestFieldType::Date, RequestFieldType::DateTime], true)) {
@@ -76,25 +95,50 @@ final class RequestSchemaCompiler
                     'min' => $configuration['min'] ?? null,
                     'max' => $configuration['max'] ?? null,
                 ], fn ($bound): bool => $bound !== null && $bound !== '');
+                $valid = true;
 
                 foreach ($bounds as $boundName => $bound) {
                     if (strtotime((string) $bound) === false || preg_match('/^\d{4}-\d{2}-\d{2}/', (string) $bound) !== 1) {
-                        throw ValidationException::withMessages([
-                            "fields.{$index}.{$boundName}" => __('Date limits must be actual dates in YYYY-MM-DD format, not numbers or free text.'),
-                        ]);
+                        $valid = false;
+                        $add($index, $boundName, __('The :label date limit is not a real date. Date limits must be actual dates (YYYY-MM-DD): pick them from the calendar instead of typing numbers.', [
+                            'label' => $boundName === 'min' ? __('earliest') : __('latest'),
+                        ]));
                     }
                 }
 
-                if (count($bounds) === 2 && strtotime((string) $configuration['min']) > strtotime((string) $configuration['max'])) {
-                    throw ValidationException::withMessages([
-                        "fields.{$index}.min" => 'The earliest date must not be after the latest date.',
-                    ]);
+                if ($valid && isset($bounds['min'], $bounds['max']) && strtotime((string) $bounds['min']) > strtotime((string) $bounds['max'])) {
+                    $add($index, 'min', __('The earliest date is after the latest date.'));
                 }
             }
 
             $knownKeys[] = $field->key;
             $knownTypes[$field->key] = $field->type;
         }
+
+        return $problems;
+    }
+
+    /**
+     * Which fields show and which are required for sample values, worked out
+     * exactly as on the live form. The builder preview uses this (RV-ARC-05).
+     *
+     * @param  Collection<int, RequestFieldDefinition>  $fields  in form order; may be unsaved
+     * @param  array<string, mixed>  $values
+     * @return array<int, array{visible: bool, required: bool}>
+     */
+    public function previewState(Collection $fields, array $values): array
+    {
+        $version = new RequestTypeVersion;
+        $version->setRelation('fields', $fields->values());
+        $visible = $this->visibleValues($version, $values);
+        $state = [];
+
+        foreach ($fields->values() as $index => $field) {
+            $shown = $this->isVisible($field, $visible);
+            $state[$index] = ['visible' => $shown, 'required' => $shown && $this->isRequired($field, $visible)];
+        }
+
+        return $state;
     }
 
     /**

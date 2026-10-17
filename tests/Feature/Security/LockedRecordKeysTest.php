@@ -36,8 +36,8 @@ class LockedRecordKeysTest extends TestCase
             'departments' => ['pages::admin.departments', 'editingDepartmentId'],
             'roles' => ['pages::admin.roles', 'editingRoleId'],
             'workflow templates' => ['admin.workflow-templates.editor', 'editingTemplateId'],
-            'request types' => ['pages::admin.request-types', 'editingTypeId'],
-            'request types draft flag (import was missing)' => ['pages::admin.request-types', 'localDraftDiscarded'],
+            'request types' => ['admin.request-types.builder', 'editingTypeId'],
+            'request types draft flag (import was missing)' => ['admin.request-types.builder', 'localDraftDiscarded'],
             'webhooks' => ['pages::admin.webhooks', 'editingEndpointId'],
             'approvals inbox preview' => ['pages::approvals.inbox', 'previewInstanceId'],
         ];

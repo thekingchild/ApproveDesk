@@ -54,6 +54,8 @@ Type a label for each field. If you later rename the field, visibility rules and
 
 Visibility and required-when rules may only reference an earlier field, and only with equals, not equals, in, and not empty.
 
+For **in**, list the values separated by commas (for example `Laptop, Phone`): the rule matches when the answer is any of them. When the earlier field is a multi-choice field, **equals** matches when the answer includes that value.
+
 A hidden field counts as empty. If a requester answers a field and then changes an earlier answer so that field is hidden, the old answer is ignored. Fields that depend on the hidden field are hidden too and are not required, and a calculated total leaves out hidden amounts. The total on the review screen is the total that is saved.
 
 A required checkbox must be ticked before the request can be submitted. Drafts can still be saved with it unticked.
@@ -69,7 +71,13 @@ A required checkbox must be ticked before the request can be submitted. Drafts c
 
 Open **Preview form** at the bottom of the builder to try conditional rules before publishing. Enter sample values in the preview: fields appear and disappear exactly as requesters will see them, and a field required by a rule is marked while the rule matches.
 
-The **Draft checks** panel under it lists problems while you build — a choice field without options, an inverted date range, a default outside its options, a condition pointing at a missing earlier field, or a calculated field with nothing to sum. Draft checks are warnings; they do not block drafting. Saving and publishing still run the full server-side validation, which is the authority.
+The **Draft checks** panel under it lists problems while you build — a choice field without options, an inverted date range, a default outside its options, a condition pointing at a missing or later field, or a calculated field that does not sum earlier number or currency fields. These are the same checks **Save draft** and **Publish** run, so a form with draft checks listed cannot be saved yet. Your unsaved work stays in the builder and in the browser draft while you fix them.
+
+The preview and the draft checks use the same rules as the live form, so what you see while building is what requesters get.
+
+## Saving
+
+**Save draft** and **Publish** save the fields, the workflow template, and the selection rules together. If any part is refused — for example a selection rule without a template — nothing is saved, and the builder shows what to fix. Changing the workflow template needs the **Assign workflows** permission; saving a form without changing its template does not.
 
 ## Browser draft protection
 
